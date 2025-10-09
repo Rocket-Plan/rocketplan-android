@@ -1,15 +1,27 @@
 package com.example.rocketplan_android.ui.login
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.GetCredentialResponse
+import androidx.credentials.exceptions.GetCredentialException
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.databinding.FragmentLoginBinding
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import kotlinx.coroutines.launch
 
 /**
  * Login screen Fragment
@@ -21,6 +33,7 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: LoginViewModel by viewModels()
+    private lateinit var credentialManager: CredentialManager
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -33,6 +46,8 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        credentialManager = CredentialManager.create(requireContext())
 
         setupInputFields()
         setupButtons()
@@ -50,13 +65,95 @@ class LoginFragment : Fragment() {
     }
 
     private fun setupButtons() {
-        // Google Sign-In button - currently not implemented
-        // TODO: Implement Google Sign-In functionality
+        // Google Sign-In button
         binding.googleSignInButton.setOnClickListener {
             hideKeyboard()
-            // Google Sign-In not yet implemented
-            Toast.makeText(requireContext(), "Google Sign-In not yet implemented", Toast.LENGTH_SHORT).show()
+            signInWithGoogle()
         }
+    }
+
+    /**
+     * Initiate Google Sign-In flow using Credential Manager API
+     */
+    private fun signInWithGoogle() {
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(false)
+            .setServerClientId("411614400810-76fu021sm4ap6kbfk9qf5uiaec475qn1.apps.googleusercontent.com")
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(googleIdOption)
+            .build()
+
+        lifecycleScope.launch {
+            try {
+                val result = credentialManager.getCredential(
+                    request = request,
+                    context = requireContext()
+                )
+                handleSignIn(result)
+            } catch (e: GetCredentialException) {
+                handleGoogleSignInFailure(e)
+            }
+        }
+    }
+
+    /**
+     * Handle successful Google Sign-In credential response
+     */
+    private fun handleSignIn(result: GetCredentialResponse) {
+        when (val credential = result.credential) {
+            is CustomCredential -> {
+                if (credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
+                    try {
+                        val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                        val idToken = googleIdTokenCredential.idToken
+
+                        if (BuildConfig.ENABLE_LOGGING) {
+                            Log.d("LoginFragment", "Google ID Token received: ${idToken.take(20)}...")
+                        }
+
+                        // Send ID token to backend via ViewModel
+                        viewModel.signInWithGoogle(idToken)
+
+                    } catch (e: GoogleIdTokenParsingException) {
+                        Log.e("LoginFragment", "Invalid Google ID token", e)
+                        Toast.makeText(
+                            requireContext(),
+                            "Failed to process Google Sign-In",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    Log.e("LoginFragment", "Unexpected credential type: ${credential.type}")
+                    Toast.makeText(
+                        requireContext(),
+                        "Unexpected credential type",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+            else -> {
+                Log.e("LoginFragment", "Unexpected credential: ${credential}")
+                Toast.makeText(
+                    requireContext(),
+                    "Unexpected credential",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    /**
+     * Handle Google Sign-In failures
+     */
+    private fun handleGoogleSignInFailure(e: GetCredentialException) {
+        Log.e("LoginFragment", "Google Sign-In failed", e)
+        Toast.makeText(
+            requireContext(),
+            "Google Sign-In failed: ${e.message}",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     private fun observeViewModel() {

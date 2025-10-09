@@ -238,4 +238,41 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     fun onBiometricPromptDismissed() {
         _biometricPromptVisible.value = false
     }
+
+    /**
+     * Sign in with Google
+     * Receives Google ID token and sends to backend for verification
+     */
+    fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+
+            try {
+                val result = authRepository.signInWithGoogle(idToken)
+
+                if (result.isSuccess) {
+                    if (AppConfig.isLoggingEnabled) {
+                        println("Google sign-in successful")
+                        println("Token: ${result.getOrNull()?.token?.take(20)}...")
+                    }
+                    _signInSuccess.value = true
+                } else {
+                    val error = result.exceptionOrNull()
+                    _errorMessage.value = error?.message ?: "Google sign-in failed"
+
+                    if (AppConfig.isLoggingEnabled) {
+                        error?.printStackTrace()
+                    }
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Network error: ${e.message}"
+                if (AppConfig.isLoggingEnabled) {
+                    e.printStackTrace()
+                }
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 }

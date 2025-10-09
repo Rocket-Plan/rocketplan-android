@@ -8,6 +8,8 @@ import com.example.rocketplan_android.data.model.ResetPasswordRequest
 import com.example.rocketplan_android.data.model.ResetPasswordResponse
 import com.example.rocketplan_android.data.model.LoginRequest
 import com.example.rocketplan_android.data.model.LoginResponse
+import com.example.rocketplan_android.data.model.GoogleSignInRequest
+import com.example.rocketplan_android.data.model.GoogleSignInResponse
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
 
@@ -88,6 +90,41 @@ class AuthRepository(
                 Result.success(response.body()!!)
             } else {
                 val errorMessage = response.errorBody()?.string() ?: "Failed to reset password"
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Sign in with Google
+     * Sends Google ID token to backend for verification
+     * Returns Sanctum token on success
+     */
+    suspend fun signInWithGoogle(idToken: String): Result<GoogleSignInResponse> {
+        return try {
+            val response = authService.googleSignIn(GoogleSignInRequest(idToken))
+
+            if (response.isSuccessful && response.body() != null) {
+                val googleSignInResponse = response.body()!!
+
+                // Save token (format: "1|plainTextTokenString...")
+                saveAuthToken(googleSignInResponse.token)
+
+                // Save user email if available
+                googleSignInResponse.user?.email?.let { email ->
+                    secureStorage.saveUserEmail(email)
+                }
+
+                Result.success(googleSignInResponse)
+            } else {
+                val errorMessage = when (response.code()) {
+                    401 -> "Google authentication failed"
+                    422 -> "Invalid Google credentials"
+                    429 -> "Too many login attempts. Please try again later."
+                    else -> response.errorBody()?.string() ?: "Google sign-in failed"
+                }
                 Result.failure(Exception(errorMessage))
             }
         } catch (e: Exception) {

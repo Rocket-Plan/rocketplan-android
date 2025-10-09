@@ -74,3 +74,21 @@ data class ResetPasswordRequest(
 data class ResetPasswordResponse(
     val message: String
 )
+
+/**
+ * Request model for Google Sign-In
+ * Sends Google ID token to backend for verification
+ */
+data class GoogleSignInRequest(
+    @SerializedName("id_token")
+    val idToken: String
+)
+
+/**
+ * Response model for Google Sign-In
+ * Returns authentication token (same as regular login)
+ */
+data class GoogleSignInResponse(
+    val token: String,
+    val user: User? = null
+)
