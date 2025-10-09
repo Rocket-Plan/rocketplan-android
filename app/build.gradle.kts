@@ -122,6 +122,7 @@ dependencies {
 
     // Google Sign-In
     implementation(libs.google.play.services.auth)
+    implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services)
     implementation(libs.google.googleid)
 
