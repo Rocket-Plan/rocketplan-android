@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default Material colors -->
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Primary Colors -->
+    <color name="main_purple">#9A00FF</color>
+    <color name="light_purple">#F4E5FF</color>
+    <color name="secondary_purple">#6D00E6</color>
+    <color name="button_gradient_top_purple">#9601FF</color>
+    <color name="button_gradient_bottom_purple">#6D00E6</color>
+
+    <!-- Secondary Colors -->
+    <color name="background">#F3F3F6</color>
+    <color name="card_border">#D2CFDA</color>
+    <color name="icon_colour">#5B476B</color>
+    <color name="light_border">#E8E7ED</color>
+    <color name="light_text_rp">#777185</color>
+    <color name="placeholder">#B3ABC6</color>
+    <color name="secondary_background">#F0F0F4</color>
+
+    <!-- Other Colors -->
+    <color name="dark_green">#007760</color>
+    <color name="dark_red">#C50000</color>
+    <color name="drop_shadow">#267A6FFC</color>
+    <color name="error_fill">#FFF0F0</color>
+    <color name="focused_border">#FFF0F0</color>
+    <color name="foreman_tag">#FCF5EC</color>
+    <color name="light_background">#FEFAFF</color>
+    <color name="light_green">#DCF5F0</color>
+    <color name="moss_green">#4C7C18</color>
+    <color name="secondary_brown">#AB5E38</color>
+    <color name="secondary_yellow">#E39600</color>
+    <color name="team_member_tag">#DFF1FE</color>
+    <color name="team_member_tag_dark">#4AB2FE</color>
+    <color name="warning_red">#E82828</color>
+</resources>

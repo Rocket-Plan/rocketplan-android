@@ -1,0 +1,36 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.Rocketplan_android" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
+        <!-- Primary brand color - RocketPlan Purple -->
+        <item name="colorPrimary">@color/main_purple</item>
+        <item name="colorPrimaryVariant">@color/secondary_purple</item>
+        <item name="colorOnPrimary">@color/white</item>
+
+        <!-- Secondary brand color -->
+        <item name="colorSecondary">@color/light_purple</item>
+        <item name="colorSecondaryVariant">@color/icon_colour</item>
+        <item name="colorOnSecondary">@color/black</item>
+
+        <!-- Background colors -->
+        <item name="android:colorBackground">@color/background</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnBackground">@color/black</item>
+        <item name="colorOnSurface">@color/black</item>
+
+        <!-- Status bar color -->
+        <item name="android:statusBarColor">?attr/colorPrimaryVariant</item>
+
+        <!-- Error colors -->
+        <item name="colorError">@color/warning_red</item>
+        <item name="colorOnError">@color/white</item>
+    </style>
+
+    <style name="Theme.Rocketplan_android.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.Rocketplan_android.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.Rocketplan_android.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+</resources>

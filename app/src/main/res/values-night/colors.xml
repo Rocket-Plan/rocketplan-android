@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        Dark mode color variants
+        Currently all colors are identical to light mode as the iOS assets
+        define the same values for both light and dark appearances.
+        This file is included for future dark mode customization.
+    -->
+</resources>
