@@ -17,15 +17,69 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // Product Flavors for different environments
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+
+            // Dev environment BuildConfig fields
+            buildConfigField("String", "API_BASE_URL", "\"https://dev-api.rocketplan.com\"")
+            buildConfigField("String", "ENVIRONMENT", "\"DEV\"")
+            buildConfigField("Boolean", "ENABLE_LOGGING", "true")
+
+            // Custom resources for dev
+            resValue("string", "app_name", "RocketPlan Dev")
+        }
+
+        create("staging") {
+            dimension = "environment"
+            applicationIdSuffix = ".staging"
+            versionNameSuffix = "-staging"
+
+            // Staging/Test environment BuildConfig fields
+            buildConfigField("String", "API_BASE_URL", "\"https://staging-api.rocketplan.com\"")
+            buildConfigField("String", "ENVIRONMENT", "\"STAGING\"")
+            buildConfigField("Boolean", "ENABLE_LOGGING", "true")
+
+            // Custom resources for staging
+            resValue("string", "app_name", "RocketPlan Staging")
+        }
+
+        create("prod") {
+            dimension = "environment"
+
+            // Production environment BuildConfig fields
+            buildConfigField("String", "API_BASE_URL", "\"https://api.rocketplan.com\"")
+            buildConfigField("String", "ENVIRONMENT", "\"PROD\"")
+            buildConfigField("Boolean", "ENABLE_LOGGING", "false")
+
+            // Custom resources for production
+            resValue("string", "app_name", "RocketPlan")
+        }
+    }
+
     buildTypes {
-        release {
+        debug {
             isMinifyEnabled = false
+            isDebuggable = true
+        }
+
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+
+            // Signing config for release builds
+            // signingConfig = signingConfigs.getByName("release")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -35,6 +89,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true  // Enable BuildConfig generation
     }
 }
 
