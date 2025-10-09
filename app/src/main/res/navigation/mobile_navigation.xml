@@ -3,7 +3,38 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/nav_home">
+    app:startDestination="@+id/loginFragment">
+
+    <!-- Login Fragment (Entry Point) -->
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="com.example.rocketplan_android.ui.login.LoginFragment"
+        android:label="Login"
+        tools:layout="@layout/fragment_login">
+
+        <action
+            android:id="@+id/action_loginFragment_to_nav_home"
+            app:destination="@id/nav_home"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_loginFragment_to_forgotPasswordFragment"
+            app:destination="@id/forgotPasswordFragment" />
+    </fragment>
+
+    <!-- Forgot Password Fragment -->
+    <fragment
+        android:id="@+id/forgotPasswordFragment"
+        android:name="com.example.rocketplan_android.ui.forgotpassword.ForgotPasswordFragment"
+        android:label="Reset Password"
+        tools:layout="@layout/fragment_forgot_password">
+
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_home"

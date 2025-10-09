@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -26,7 +27,7 @@ android {
             versionNameSuffix = "-dev"
 
             // Dev environment BuildConfig fields
-            buildConfigField("String", "API_BASE_URL", "\"https://dev-api.rocketplan.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api-qa-mongoose-br2wu78v1.rocketplantech.com\"")
             buildConfigField("String", "ENVIRONMENT", "\"DEV\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "true")
 
@@ -40,7 +41,7 @@ android {
             versionNameSuffix = "-staging"
 
             // Staging/Test environment BuildConfig fields
-            buildConfigField("String", "API_BASE_URL", "\"https://staging-api.rocketplan.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api-staging-mongoose-n5tr2spgf.rocketplantech.com\"")
             buildConfigField("String", "ENVIRONMENT", "\"STAGING\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "true")
 
@@ -52,7 +53,7 @@ android {
             dimension = "environment"
 
             // Production environment BuildConfig fields
-            buildConfigField("String", "API_BASE_URL", "\"https://api.rocketplan.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api-public.rocketplantech.com\"")
             buildConfigField("String", "ENVIRONMENT", "\"PROD\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "false")
 
@@ -103,6 +104,22 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.gson)
+    implementation(libs.gson)
+    implementation(libs.okhttp.logging)
+
+    // DataStore for secure storage
+    implementation(libs.androidx.datastore.preferences)
+
+    // Biometric authentication
+    implementation(libs.androidx.biometric)
+
+    // Security/Encryption
+    implementation(libs.androidx.security.crypto)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

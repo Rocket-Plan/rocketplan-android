@@ -10,9 +10,9 @@ object AppConfig {
 
     /**
      * Base URL for API endpoints
-     * - DEV: https://dev-api.rocketplan.com
-     * - TEST: https://test-api.rocketplan.com
-     * - PROD: https://api.rocketplan.com
+     * - DEV: https://api-qa-mongoose-br2wu78v1.rocketplantech.com
+     * - STAGING: https://api-staging-mongoose-n5tr2spgf.rocketplantech.com
+     * - PROD: https://api-public.rocketplantech.com
      */
     val apiBaseUrl: String = BuildConfig.API_BASE_URL
 

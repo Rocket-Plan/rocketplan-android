@@ -20,7 +20,7 @@ Each flavor can be combined with build types (`debug` or `release`), creating va
 
 | Setting | Dev | Staging | Prod |
 |---------|-----|------|------|
-| **API Base URL** | `https://dev-api.rocketplan.com` | `https://staging-api.rocketplan.com` | `https://api.rocketplan.com` |
+| **API Base URL** | `https://api-qa-mongoose-br2wu78v1.rocketplantech.com` | `https://api-staging-mongoose-n5tr2spgf.rocketplantech.com` | `https://api-public.rocketplantech.com` |
 | **Application ID** | `com.example.rocketplan_android.dev` | `com.example.rocketplan_android.staging` | `com.example.rocketplan_android` |
 | **App Name** | RocketPlan Dev | RocketPlan Staging | RocketPlan |
 | **Logging Enabled** | ✅ Yes | ✅ Yes | ❌ No |
