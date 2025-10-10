@@ -1,6 +1,7 @@
 package com.example.rocketplan_android
 
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.View
 import androidx.lifecycle.lifecycleScope
@@ -20,6 +21,10 @@ import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        private const val TAG = "MainActivity"
+    }
+
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
     private lateinit var authRepository: AuthRepository
@@ -27,9 +32,22 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Debug logging for app launch (only when ENABLE_LOGGING is true)
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "MainActivity onCreate started")
+            Log.d(TAG, "Environment: ${BuildConfig.ENVIRONMENT}")
+            Log.d(TAG, "API Base URL: ${BuildConfig.API_BASE_URL}")
+            Log.d(TAG, "Build Type: ${BuildConfig.BUILD_TYPE}")
+            Log.d(TAG, "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        }
+
         // Initialize auth repository
         val secureStorage = SecureStorage.getInstance(applicationContext)
         authRepository = AuthRepository(secureStorage)
+
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "AuthRepository initialized")
+        }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -82,13 +100,25 @@ class MainActivity : AppCompatActivity() {
      */
     private fun checkAuthenticationStatus(navController: androidx.navigation.NavController) {
         lifecycleScope.launch {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Checking authentication status...")
+            }
             val isLoggedIn = authRepository.isLoggedIn()
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "User logged in: $isLoggedIn")
+            }
 
             // Wait for navigation graph to be ready
             navController.addOnDestinationChangedListener { controller, destination, _ ->
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "Navigation destination changed: ${destination.label}")
+                }
                 // Only navigate once, on first destination
                 if (destination.id == R.id.loginFragment && isLoggedIn) {
                     // User is logged in, navigate to home
+                    if (BuildConfig.ENABLE_LOGGING) {
+                        Log.d(TAG, "User authenticated, navigating to home")
+                    }
                     controller.navigate(R.id.action_loginFragment_to_nav_home)
                 }
                 // If user is not logged in, loginFragment is already the start destination

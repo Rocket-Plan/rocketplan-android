@@ -10,10 +10,10 @@
     <!-- Scrollable Content -->
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_height="match_parent"
         android:fillViewport="true"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/signInButton"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -21,17 +21,33 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:paddingHorizontal="25dp"
+            android:paddingTop="40dp"
+            android:paddingBottom="32dp">
 
-            <!-- Logo -->
+            <!-- RocketPlan Logo -->
             <ImageView
                 android:id="@+id/logoImage"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="32dp"
                 android:src="@drawable/logo_horizontal"
-                android:contentDescription="@string/app_name" />
+                android:contentDescription="RocketPlan Logo"
+                android:adjustViewBounds="true"
+                android:maxHeight="60dp" />
+
+            <!-- Telescope Illustration -->
+            <ImageView
+                android:id="@+id/telescopeImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="32dp"
+                android:src="@drawable/telescope"
+                android:contentDescription="Telescope Illustration"
+                android:adjustViewBounds="true"
+                android:maxWidth="200dp"
+                android:maxHeight="200dp" />
 
             <!-- Title -->
             <TextView
@@ -39,54 +55,86 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:layout_marginTop="16dp"
-                android:text="Log In"
+                android:layout_marginTop="24dp"
+                android:text="Sign Up Or Sign In"
                 android:textColor="@color/black"
                 android:textSize="24sp"
+                android:textStyle="bold"
+                android:textAlignment="center" />
+
+            <!-- Subtitle -->
+            <TextView
+                android:id="@+id/subtitleText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Please enter your email. We'll use it to either create your account or sign you in."
+                android:textColor="@android:color/darker_gray"
+                android:textSize="14sp"
+                android:textAlignment="center"
+                android:lineSpacingMultiplier="1.2" />
+
+            <!-- Email Input Label -->
+            <TextView
+                android:id="@+id/emailLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="32dp"
+                android:text="Email Address"
+                android:textColor="@color/black"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <!-- Email Input -->
-            <com.example.rocketplan_android.ui.components.TextInputField
+            <EditText
                 android:id="@+id/emailInput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="48dp"
-                app:title="Email"
-                app:hint="Enter your email" />
-
-            <!-- Password Input -->
-            <com.example.rocketplan_android.ui.components.TextInputField
-                android:id="@+id/passwordInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                app:title="Password"
-                app:hint="Enter your password" />
-
-            <!-- Remember Me Checkbox -->
-            <CheckBox
-                android:id="@+id/rememberMeCheckbox"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Remember Me"
+                android:layout_marginTop="8dp"
+                android:hint="email@example.com"
+                android:inputType="textEmailAddress"
+                android:padding="12dp"
+                android:textSize="16sp"
+                android:background="@android:color/transparent"
                 android:textColor="@color/black"
-                android:textSize="14sp"
-                android:buttonTint="@color/main_purple" />
+                android:textColorHint="@android:color/darker_gray" />
 
-            <!-- Forgot Password Button -->
+            <!-- Email Input Underline -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@android:color/darker_gray" />
+
+            <!-- OR Divider -->
             <TextView
-                android:id="@+id/forgotPasswordButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="Forgot Password?"
-                android:textColor="@color/main_purple"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                android:text="OR"
+                android:textColor="@android:color/darker_gray"
                 android:textSize="14sp"
-                android:clickable="true"
-                android:focusable="true"
-                android:background="?attr/selectableItemBackground"
-                android:padding="8dp" />
+                android:textStyle="bold" />
+
+            <!-- Google Sign-In Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/googleSignInButton"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="16dp"
+                app:icon="@drawable/logo_google"
+                app:iconGravity="textStart"
+                app:iconPadding="0dp"
+                app:iconSize="40dp"
+                app:cornerRadius="12dp"
+                app:strokeWidth="2dp"
+                app:strokeColor="@color/main_purple"
+                app:backgroundTint="@color/white"
+                style="@style/Widget.Material3.Button.OutlinedButton" />
 
             <!-- Error Message -->
             <TextView
@@ -97,6 +145,7 @@
                 android:textColor="@color/warning_red"
                 android:textSize="14sp"
                 android:visibility="gone"
+                android:textAlignment="center"
                 tools:text="Sign in failed"
                 tools:visibility="visible" />
 
@@ -112,21 +161,5 @@
 
         </LinearLayout>
     </ScrollView>
-
-    <!-- Sign In Button (Fixed at Bottom) -->
-    <Button
-        android:id="@+id/signInButton"
-        android:layout_width="0dp"
-        android:layout_height="56dp"
-        android:layout_margin="24dp"
-        android:text="Sign In"
-        android:textColor="@color/white"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:backgroundTint="@color/main_purple"
-        app:cornerRadius="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
