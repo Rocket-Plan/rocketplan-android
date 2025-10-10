@@ -76,19 +76,10 @@ data class ResetPasswordResponse(
 )
 
 /**
- * Request model for Google Sign-In
- * Sends Google ID token to backend for verification
+ * OAuth callback data parsed from deep link
+ * Format: rocketplan://oauth2/redirect?token={JWT_TOKEN}&status=200
  */
-data class GoogleSignInRequest(
-    @SerializedName("id_token")
-    val idToken: String
-)
-
-/**
- * Response model for Google Sign-In
- * Returns authentication token (same as regular login)
- */
-data class GoogleSignInResponse(
+data class OAuthCallbackData(
     val token: String,
-    val user: User? = null
+    val status: Int
 )

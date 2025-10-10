@@ -18,11 +18,38 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.Rocketplan_android.NoActionBar">
+            android:theme="@style/Theme.Rocketplan_android.NoActionBar"
+            android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- OAuth deep link callback for all environments -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Dev environment -->
+                <data
+                    android:scheme="rocketplan-dev"
+                    android:host="oauth2"
+                    android:path="/redirect" />
+
+                <!-- Staging environment -->
+                <data
+                    android:scheme="rocketplan-staging"
+                    android:host="oauth2"
+                    android:path="/redirect" />
+
+                <!-- Production environment -->
+                <data
+                    android:scheme="rocketplan"
+                    android:host="oauth2"
+                    android:path="/redirect" />
             </intent-filter>
         </activity>
     </application>

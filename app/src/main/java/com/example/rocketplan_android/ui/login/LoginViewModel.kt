@@ -239,40 +239,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         _biometricPromptVisible.value = false
     }
 
-    /**
-     * Sign in with Google
-     * Receives Google ID token and sends to backend for verification
-     */
-    fun signInWithGoogle(idToken: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-
-            try {
-                val result = authRepository.signInWithGoogle(idToken)
-
-                if (result.isSuccess) {
-                    if (AppConfig.isLoggingEnabled) {
-                        println("Google sign-in successful")
-                        println("Token: ${result.getOrNull()?.token?.take(20)}...")
-                    }
-                    _signInSuccess.value = true
-                } else {
-                    val error = result.exceptionOrNull()
-                    _errorMessage.value = error?.message ?: "Google sign-in failed"
-
-                    if (AppConfig.isLoggingEnabled) {
-                        error?.printStackTrace()
-                    }
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = "Network error: ${e.message}"
-                if (AppConfig.isLoggingEnabled) {
-                    e.printStackTrace()
-                }
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
+    // Note: Google OAuth Sign-In is now handled via Chrome Custom Tabs + deep link callback
+    // The OAuth flow is managed by MainActivity's handleOAuthCallback() method
+    // No ViewModel method needed for OAuth as it's a browser-based flow
 }

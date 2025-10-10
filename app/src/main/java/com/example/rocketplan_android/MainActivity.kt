@@ -1,9 +1,12 @@
 package com.example.rocketplan_android
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.View
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.navigation.NavigationView
@@ -62,6 +65,9 @@ class MainActivity : AppCompatActivity() {
         val drawerLayout: DrawerLayout = binding.drawerLayout
         val navView: NavigationView = binding.navView
         val navController = findNavController(R.id.nav_host_fragment_content_main)
+
+        // Check if this was launched from OAuth callback deep link
+        handleOAuthCallback(intent)
 
         // Check authentication status and navigate accordingly
         checkAuthenticationStatus(navController)
@@ -130,6 +136,76 @@ class MainActivity : AppCompatActivity() {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.main, menu)
         return true
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "onNewIntent called")
+        }
+        // Handle OAuth callback when app is already running
+        handleOAuthCallback(intent)
+    }
+
+    /**
+     * Handle OAuth callback from deep link
+     * Expected format: rocketplan://oauth2/redirect?token={JWT_TOKEN}&status=200
+     */
+    private fun handleOAuthCallback(intent: Intent?) {
+        intent?.data?.let { uri ->
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Deep link received: $uri")
+            }
+
+            // Check if this is an OAuth callback
+            if (uri.scheme?.startsWith("rocketplan") == true &&
+                uri.host == "oauth2" &&
+                uri.path == "/redirect") {
+
+                val token = uri.getQueryParameter("token")
+                val status = uri.getQueryParameter("status")?.toIntOrNull()
+
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "OAuth callback - Status: $status, Token present: ${token != null}")
+                }
+
+                if (status == 200 && !token.isNullOrEmpty()) {
+                    // Save token and navigate to home
+                    lifecycleScope.launch {
+                        try {
+                            authRepository.saveAuthToken(token)
+                            if (BuildConfig.ENABLE_LOGGING) {
+                                Log.d(TAG, "OAuth token saved successfully")
+                            }
+
+                            // Navigate to home screen
+                            val navController = findNavController(R.id.nav_host_fragment_content_main)
+                            navController.navigate(R.id.nav_home)
+
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Sign in successful!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error saving OAuth token", e)
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Sign in failed: ${e.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                } else {
+                    Log.e(TAG, "OAuth callback failed - Status: $status")
+                    Toast.makeText(
+                        this,
+                        "Sign in failed",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        }
     }
 
     override fun onSupportNavigateUp(): Boolean {

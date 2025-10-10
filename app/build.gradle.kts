@@ -120,11 +120,8 @@ dependencies {
     // Security/Encryption
     implementation(libs.androidx.security.crypto)
 
-    // Google Sign-In
-    implementation(libs.google.play.services.auth)
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services)
-    implementation(libs.google.googleid)
+    // Chrome Custom Tabs for OAuth flow
+    implementation(libs.androidx.browser)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
