@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository
 
 import com.example.rocketplan_android.data.api.AuthService
 import com.example.rocketplan_android.data.api.RetrofitClient
+import com.example.rocketplan_android.data.model.ApiError
 import com.example.rocketplan_android.data.model.CheckEmailRequest
 import com.example.rocketplan_android.data.model.CheckEmailResponse
 import com.example.rocketplan_android.data.model.ResetPasswordRequest
@@ -11,7 +12,6 @@ import com.example.rocketplan_android.data.model.LoginResponse
 import com.example.rocketplan_android.data.model.RegisterRequest
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
-import org.json.JSONObject
 
 /**
  * Repository for authentication operations
@@ -34,11 +34,15 @@ class AuthRepository(
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                val errorMessage = response.errorBody()?.string() ?: "Unknown error"
-                Result.failure(Exception(errorMessage))
+                val apiError = ApiError.fromHttpResponse(
+                    response.code(),
+                    response.errorBody()?.string()
+                )
+                Result.failure(Exception(apiError.displayMessage))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
         }
     }
 
@@ -66,16 +70,25 @@ class AuthRepository(
 
                 Result.success(loginResponse)
             } else {
-                // Laravel returns 422 with validation errors or auth failure
-                val errorMessage = when (response.code()) {
-                    422 -> "These credentials do not match our records."
-                    429 -> "Too many login attempts. Please try again later."
-                    else -> response.errorBody()?.string() ?: "Login failed"
+                val errorBody = response.errorBody()?.string()
+                val apiError = when (response.code()) {
+                    422 -> {
+                        // Check if it's an authentication failure vs validation error
+                        if (errorBody?.contains("credentials", ignoreCase = true) == true ||
+                            errorBody?.contains("password", ignoreCase = true) == true) {
+                            ApiError.forAuthScenario("invalid_credentials")
+                        } else {
+                            ApiError.fromHttpResponse(422, errorBody)
+                        }
+                    }
+                    429 -> ApiError.RateLimitError()
+                    else -> ApiError.fromHttpResponse(response.code(), errorBody)
                 }
-                Result.failure(Exception(errorMessage))
+                Result.failure(Exception(apiError.displayMessage))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
         }
     }
 
@@ -101,16 +114,17 @@ class AuthRepository(
 
                 Result.success(registerResponse)
             } else {
-                val rawError = response.errorBody()?.string()
-                val errorMessage = when (response.code()) {
-                    422 -> parseValidationError(rawError) ?: "Unable to sign up. Please check your details and try again."
-                    409 -> "An account with this email already exists."
-                    else -> rawError ?: "Sign up failed"
+                val errorBody = response.errorBody()?.string()
+                val apiError = when (response.code()) {
+                    422 -> ApiError.fromHttpResponse(422, errorBody)
+                    409 -> ApiError.forAuthScenario("email_exists")
+                    else -> ApiError.fromHttpResponse(response.code(), errorBody)
                 }
-                Result.failure(Exception(errorMessage))
+                Result.failure(Exception(apiError.displayMessage))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
         }
     }
 
@@ -124,11 +138,15 @@ class AuthRepository(
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                val errorMessage = response.errorBody()?.string() ?: "Failed to reset password"
-                Result.failure(Exception(errorMessage))
+                val apiError = ApiError.fromHttpResponse(
+                    response.code(),
+                    response.errorBody()?.string()
+                )
+                Result.failure(Exception(apiError.displayMessage))
             }
         } catch (e: Exception) {
-            Result.failure(e)
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
         }
     }
 
@@ -238,57 +256,5 @@ class AuthRepository(
     suspend fun logout() {
         secureStorage.clearAll()
         RetrofitClient.setAuthToken(null)
-    }
-
-    /**
-     * Attempt to parse validation error messages from Laravel-style responses
-     */
-    private fun parseValidationError(rawError: String?): String? {
-        if (rawError.isNullOrBlank()) {
-            return null
-        }
-
-        return try {
-            val json = JSONObject(rawError)
-
-            if (json.has("errors")) {
-                val errors = json.getJSONObject("errors")
-                val preferredKeys = listOf("email", "password", "auth")
-
-                preferredKeys.forEach { key ->
-                    if (errors.has(key)) {
-                        val messages = errors.optJSONArray(key)
-                        if (messages != null && messages.length() > 0) {
-                            return messages.getString(0)
-                        }
-                        val message = errors.optString(key)
-                        if (message.isNotBlank()) {
-                            return message
-                        }
-                    }
-                }
-
-                val keys = errors.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val messages = errors.optJSONArray(key)
-                    if (messages != null && messages.length() > 0) {
-                        return messages.getString(0)
-                    }
-                    val message = errors.optString(key)
-                    if (message.isNotBlank()) {
-                        return message
-                    }
-                }
-            }
-
-            if (json.has("message")) {
-                json.getString("message")
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        }
     }
 }

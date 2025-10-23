@@ -150,19 +150,15 @@ class SignUpViewModel(
             _isLoading.value = true
             _errorMessage.value = null
 
-            try {
-                val result = authRepository.signUp(emailValue, passwordValue, confirmValue)
-                if (result.isSuccess) {
-                    _signUpSuccess.value = true
-                } else {
-                    val error = result.exceptionOrNull()
-                    _errorMessage.value = error?.message ?: "Sign up failed"
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = "Network error: ${e.message}"
-            } finally {
-                _isLoading.value = false
+            val result = authRepository.signUp(emailValue, passwordValue, confirmValue)
+            if (result.isSuccess) {
+                _signUpSuccess.value = true
+            } else {
+                // Error message is already user-friendly from ApiError
+                val error = result.exceptionOrNull()
+                _errorMessage.value = error?.message ?: "Sign up failed. Please try again."
             }
+            _isLoading.value = false
         }
     }
 

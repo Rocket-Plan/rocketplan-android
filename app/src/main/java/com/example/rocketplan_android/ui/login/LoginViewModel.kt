@@ -161,31 +161,24 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             _isLoading.value = true
             _errorMessage.value = null
 
-            try {
-                val result = authRepository.signIn(emailValue, passwordValue, rememberMeValue)
+            val result = authRepository.signIn(emailValue, passwordValue, rememberMeValue)
 
-                if (result.isSuccess) {
-                    if (AppConfig.isLoggingEnabled) {
-                        println("Sign in successful")
-                        println("Token: ${result.getOrNull()?.token?.take(20)}...")
-                    }
-                    _signInSuccess.value = true
-                } else {
-                    val error = result.exceptionOrNull()
-                    _errorMessage.value = error?.message ?: "Sign in failed"
-
-                    if (AppConfig.isLoggingEnabled) {
-                        error?.printStackTrace()
-                    }
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = "Network error: ${e.message}"
+            if (result.isSuccess) {
                 if (AppConfig.isLoggingEnabled) {
-                    e.printStackTrace()
+                    println("Sign in successful")
+                    println("Token: ${result.getOrNull()?.token?.take(20)}...")
                 }
-            } finally {
-                _isLoading.value = false
+                _signInSuccess.value = true
+            } else {
+                // Error message is already user-friendly from ApiError
+                val error = result.exceptionOrNull()
+                _errorMessage.value = error?.message ?: "Sign in failed. Please try again."
+
+                if (AppConfig.isLoggingEnabled) {
+                    error?.printStackTrace()
+                }
             }
+            _isLoading.value = false
         }
     }
 
@@ -197,26 +190,24 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
             _isLoading.value = true
             _errorMessage.value = null
 
-            try {
-                val (savedEmail, savedPassword) = authRepository.getSavedCredentials()
+            val (savedEmail, savedPassword) = authRepository.getSavedCredentials()
 
-                if (savedEmail != null && savedPassword != null) {
-                    val result = authRepository.signIn(savedEmail, savedPassword, true)
+            if (savedEmail != null && savedPassword != null) {
+                val result = authRepository.signIn(savedEmail, savedPassword, true)
 
-                    if (result.isSuccess) {
-                        _signInSuccess.value = true
-                    } else {
-                        _errorMessage.value = "Biometric authentication failed"
-                    }
+                if (result.isSuccess) {
+                    _signInSuccess.value = true
                 } else {
-                    _errorMessage.value = "No saved credentials found"
+                    // Error message is already user-friendly from ApiError
+                    val error = result.exceptionOrNull()
+                    _errorMessage.value = error?.message ?: "Biometric authentication failed. Please try again."
                 }
-            } catch (e: Exception) {
-                _errorMessage.value = "Biometric sign-in failed: ${e.message}"
-            } finally {
-                _isLoading.value = false
-                _biometricPromptVisible.value = false
+            } else {
+                _errorMessage.value = "No saved credentials found. Please sign in with your password."
             }
+
+            _isLoading.value = false
+            _biometricPromptVisible.value = false
         }
     }
 

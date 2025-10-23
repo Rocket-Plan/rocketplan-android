@@ -71,24 +71,20 @@ class EmailCheckViewModel(application: Application) : AndroidViewModel(applicati
             _isLoading.value = true
             _errorMessage.value = null
 
-            try {
-                val result = authRepository.checkEmail(emailValue)
-                if (result.isSuccess) {
-                    val registered = result.getOrNull()?.registered ?: false
-                    if (registered) {
-                        _navigateToSignIn.value = emailValue
-                    } else {
-                        _navigateToSignUp.value = emailValue
-                    }
+            val result = authRepository.checkEmail(emailValue)
+            if (result.isSuccess) {
+                val registered = result.getOrNull()?.registered ?: false
+                if (registered) {
+                    _navigateToSignIn.value = emailValue
                 } else {
-                    val error = result.exceptionOrNull()
-                    _errorMessage.value = error?.message ?: "Unable to verify email. Please try again."
+                    _navigateToSignUp.value = emailValue
                 }
-            } catch (e: Exception) {
-                _errorMessage.value = "Network error: ${e.message}"
-            } finally {
-                _isLoading.value = false
+            } else {
+                // Error message is already user-friendly from ApiError
+                val error = result.exceptionOrNull()
+                _errorMessage.value = error?.message ?: "Unable to verify email. Please try again."
             }
+            _isLoading.value = false
         }
     }
 

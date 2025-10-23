@@ -87,32 +87,26 @@ class ForgotPasswordViewModel(application: Application) : AndroidViewModel(appli
             _errorMessage.value = null
             _successMessage.value = null
 
-            try {
-                val result = authRepository.resetPassword(emailValue)
+            val result = authRepository.resetPassword(emailValue)
 
-                if (result.isSuccess) {
-                    val response = result.getOrNull()
-                    _successMessage.value = response?.message ?: "Password reset email sent successfully!"
+            if (result.isSuccess) {
+                val response = result.getOrNull()
+                _successMessage.value = response?.message
+                    ?: "Password reset instructions have been sent to your email."
 
-                    if (AppConfig.isLoggingEnabled) {
-                        println("Password reset requested for: $emailValue")
-                    }
-                } else {
-                    val error = result.exceptionOrNull()
-                    _errorMessage.value = error?.message ?: "Failed to send reset email"
-
-                    if (AppConfig.isLoggingEnabled) {
-                        error?.printStackTrace()
-                    }
-                }
-            } catch (e: Exception) {
-                _errorMessage.value = "Network error: ${e.message}"
                 if (AppConfig.isLoggingEnabled) {
-                    e.printStackTrace()
+                    println("Password reset requested for: $emailValue")
                 }
-            } finally {
-                _isLoading.value = false
+            } else {
+                // Error message is already user-friendly from ApiError
+                val error = result.exceptionOrNull()
+                _errorMessage.value = error?.message ?: "Failed to send reset email. Please try again."
+
+                if (AppConfig.isLoggingEnabled) {
+                    error?.printStackTrace()
+                }
             }
+            _isLoading.value = false
         }
     }
 
