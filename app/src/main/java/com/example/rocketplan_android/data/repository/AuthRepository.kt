@@ -8,8 +8,10 @@ import com.example.rocketplan_android.data.model.ResetPasswordRequest
 import com.example.rocketplan_android.data.model.ResetPasswordResponse
 import com.example.rocketplan_android.data.model.LoginRequest
 import com.example.rocketplan_android.data.model.LoginResponse
+import com.example.rocketplan_android.data.model.RegisterRequest
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
+import org.json.JSONObject
 
 /**
  * Repository for authentication operations
@@ -69,6 +71,41 @@ class AuthRepository(
                     422 -> "These credentials do not match our records."
                     429 -> "Too many login attempts. Please try again later."
                     else -> response.errorBody()?.string() ?: "Login failed"
+                }
+                Result.failure(Exception(errorMessage))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Register a new user account
+     * Calls Laravel /auth/register endpoint
+     * Returns Sanctum token on success
+     */
+    suspend fun signUp(email: String, password: String, passwordConfirmation: String): Result<LoginResponse> {
+        return try {
+            val response = authService.register(RegisterRequest(email, password, passwordConfirmation))
+
+            if (response.isSuccessful && response.body() != null) {
+                val registerResponse = response.body()!!
+
+                // Save token for newly registered user
+                saveAuthToken(registerResponse.token)
+                secureStorage.saveUserEmail(email)
+
+                // Reset Remember Me related preferences on fresh sign up
+                secureStorage.setRememberMe(false)
+                secureStorage.clearEncryptedPassword()
+
+                Result.success(registerResponse)
+            } else {
+                val rawError = response.errorBody()?.string()
+                val errorMessage = when (response.code()) {
+                    422 -> parseValidationError(rawError) ?: "Unable to sign up. Please check your details and try again."
+                    409 -> "An account with this email already exists."
+                    else -> rawError ?: "Sign up failed"
                 }
                 Result.failure(Exception(errorMessage))
             }
@@ -201,5 +238,57 @@ class AuthRepository(
     suspend fun logout() {
         secureStorage.clearAll()
         RetrofitClient.setAuthToken(null)
+    }
+
+    /**
+     * Attempt to parse validation error messages from Laravel-style responses
+     */
+    private fun parseValidationError(rawError: String?): String? {
+        if (rawError.isNullOrBlank()) {
+            return null
+        }
+
+        return try {
+            val json = JSONObject(rawError)
+
+            if (json.has("errors")) {
+                val errors = json.getJSONObject("errors")
+                val preferredKeys = listOf("email", "password", "auth")
+
+                preferredKeys.forEach { key ->
+                    if (errors.has(key)) {
+                        val messages = errors.optJSONArray(key)
+                        if (messages != null && messages.length() > 0) {
+                            return messages.getString(0)
+                        }
+                        val message = errors.optString(key)
+                        if (message.isNotBlank()) {
+                            return message
+                        }
+                    }
+                }
+
+                val keys = errors.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    val messages = errors.optJSONArray(key)
+                    if (messages != null && messages.length() > 0) {
+                        return messages.getString(0)
+                    }
+                    val message = errors.optString(key)
+                    if (message.isNotBlank()) {
+                        return message
+                    }
+                }
+            }
+
+            if (json.has("message")) {
+                json.getString("message")
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 }

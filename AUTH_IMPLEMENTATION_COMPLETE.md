@@ -308,26 +308,19 @@ export JAVA_HOME=/usr/local/opt/openjdk@17
 - [ ] "Use password" fallback works
 - [ ] Disabled on devices without biometric
 
-## 📋 TODO: Email Check Flow (Step 5 - Remaining)
+## 📋 Email Check Flow (Step 5)
 
-The iOS app has a two-step flow:
-1. User enters email
-2. App checks if email is registered (`/auth/check-email`)
-3. If registered → show password field (sign in)
-4. If not registered → navigate to sign up
+Mirrors the iOS two-step flow:
+1. User enters email.
+2. App checks if email is registered (`/auth/check-email`).
+3. If registered → navigate to password screen (sign in).
+4. If not registered → navigate to sign up.
 
-**To implement:**
-1. Create initial email entry screen
-2. Add `checkEmail()` call after email entry
-3. Show password field dynamically based on response
-4. Add sign-up flow for unregistered emails
-
-**Files to create:**
-- `ui/auth/EmailCheckFragment.kt`
-- `ui/auth/EmailCheckViewModel.kt`
-- `res/layout/fragment_email_check.xml`
-
-**Estimated effort:** 2-3 hours
+**Completed:**
+- [x] Created initial email entry screen (`EmailCheckFragment` / `fragment_email_check.xml`).
+- [x] Added `checkEmail()` call after email entry with loading/error states.
+- [x] Updated login experience to request password for registered emails (`LoginFragment` / `LoginViewModel`).
+- [x] Added sign-up flow for unregistered emails (`SignUpFragment`, `SignUpViewModel`, `fragment_sign_up.xml`).
 
 ## 📱 API Endpoints Used
 

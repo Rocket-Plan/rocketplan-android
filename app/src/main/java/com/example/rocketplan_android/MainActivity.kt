@@ -85,7 +85,7 @@ class MainActivity : AppCompatActivity() {
         // Hide/show drawer and toolbar based on current destination
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.loginFragment, R.id.forgotPasswordFragment -> {
+                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment -> {
                     // Hide toolbar, drawer, and FAB on auth screens
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
@@ -120,14 +120,21 @@ class MainActivity : AppCompatActivity() {
                     Log.d(TAG, "Navigation destination changed: ${destination.label}")
                 }
                 // Only navigate once, on first destination
-                if (destination.id == R.id.loginFragment && isLoggedIn) {
-                    // User is logged in, navigate to home
+                if (isLoggedIn && when (destination.id) {
+                        R.id.emailCheckFragment,
+                        R.id.loginFragment,
+                        R.id.signUpFragment -> true
+                        else -> false
+                    }
+                ) {
                     if (BuildConfig.ENABLE_LOGGING) {
                         Log.d(TAG, "User authenticated, navigating to home")
                     }
-                    controller.navigate(R.id.action_loginFragment_to_nav_home)
+                    val navOptions = androidx.navigation.NavOptions.Builder()
+                        .setPopUpTo(R.id.emailCheckFragment, true)
+                        .build()
+                    controller.navigate(R.id.nav_home, null, navOptions)
                 }
-                // If user is not logged in, loginFragment is already the start destination
             }
         }
     }
@@ -149,7 +156,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Handle OAuth callback from deep link
-     * Expected format: rocketplan://oauth2/redirect?token={JWT_TOKEN}&status=200
+     * Expected format: rocketplan-dev://?token={JWT_TOKEN}&status=200
      */
     private fun handleOAuthCallback(intent: Intent?) {
         intent?.data?.let { uri ->
@@ -157,10 +164,8 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "Deep link received: $uri")
             }
 
-            // Check if this is an OAuth callback
-            if (uri.scheme?.startsWith("rocketplan") == true &&
-                uri.host == "oauth2" &&
-                uri.path == "/redirect") {
+            // Check if this is an OAuth callback (scheme starts with "rocketplan")
+            if (uri.scheme?.startsWith("rocketplan") == true) {
 
                 val token = uri.getQueryParameter("token")
                 val status = uri.getQueryParameter("status")?.toIntOrNull()

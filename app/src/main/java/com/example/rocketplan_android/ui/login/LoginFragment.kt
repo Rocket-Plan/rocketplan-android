@@ -6,18 +6,23 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.getSystemService
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.databinding.FragmentLoginBinding
 
 /**
  * Login screen Fragment
- * Allows users to sign in with email or Google Sign-In via OAuth
+ * Allows users to sign in with email/password or Google Sign-In via OAuth
  */
 class LoginFragment : Fragment() {
 
@@ -27,6 +32,8 @@ class LoginFragment : Fragment() {
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
+
+    private val args: LoginFragmentArgs by navArgs()
 
     private val viewModel: LoginViewModel by viewModels()
 
@@ -41,28 +48,120 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
         setupInputFields()
         setupButtons()
         observeViewModel()
+
+        val emailArg = args.email
+        if (!emailArg.isNullOrBlank()) {
+            viewModel.setEmail(emailArg)
+        }
     }
 
     private fun setupInputFields() {
-        // Configure email input with Enter key handling
-        binding.emailInput.setOnEditorActionListener { _, _, _ ->
-            hideKeyboard()
-            // When user presses Enter on email field, just validate it
-            // (actual sign-in happens via button)
-            true
+        binding.emailInput.doAfterTextChanged { text ->
+            viewModel.setEmail(text?.toString()?.trim() ?: "")
+        }
+
+        binding.passwordInput.doAfterTextChanged { text ->
+            viewModel.setPassword(text?.toString() ?: "")
+        }
+
+        binding.passwordInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                hideKeyboard()
+                viewModel.signIn()
+                true
+            } else {
+                false
+            }
+        }
+
+        binding.rememberMeCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setRememberMe(isChecked)
         }
     }
 
     private fun setupButtons() {
-        // Google Sign-In button
+        binding.signInButton.setOnClickListener {
+            hideKeyboard()
+            viewModel.signIn()
+        }
+
+        binding.forgotPasswordButton.setOnClickListener {
+            hideKeyboard()
+            viewModel.forgotPassword()
+        }
+
         binding.googleSignInButton.setOnClickListener {
             hideKeyboard()
             signInWithGoogle()
         }
+    }
+
+    private fun observeViewModel() {
+        viewModel.email.observe(viewLifecycleOwner) { email ->
+            if (binding.emailInput.text?.toString() != email) {
+                binding.emailInput.setText(email)
+                binding.emailInput.setSelection(email.length)
+            }
+        }
+
+        viewModel.password.observe(viewLifecycleOwner) { password ->
+            if (binding.passwordInput.text?.toString() != password) {
+                binding.passwordInput.setText(password)
+                binding.passwordInput.setSelection(password.length)
+            }
+        }
+
+        viewModel.rememberMe.observe(viewLifecycleOwner) { remember ->
+            if (binding.rememberMeCheckbox.isChecked != remember) {
+                binding.rememberMeCheckbox.setOnCheckedChangeListener(null)
+                binding.rememberMeCheckbox.isChecked = remember
+                binding.rememberMeCheckbox.setOnCheckedChangeListener { _, isChecked ->
+                    viewModel.setRememberMe(isChecked)
+                }
+            }
+        }
+
+        viewModel.emailError.observe(viewLifecycleOwner) { error ->
+            binding.emailInputLayout.error = error
+        }
+
+        viewModel.passwordError.observe(viewLifecycleOwner) { error ->
+            binding.passwordInputLayout.error = error
+        }
+
+        viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
+            binding.errorText.text = error
+            binding.errorText.visibility = if (error.isNullOrBlank()) View.GONE else View.VISIBLE
+        }
+
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.signInButton.isEnabled = !isLoading && (viewModel.emailError.value == null && viewModel.passwordError.value == null)
+            binding.emailInputLayout.isEnabled = !isLoading
+            binding.passwordInputLayout.isEnabled = !isLoading
+            binding.googleSignInButton.isEnabled = !isLoading
+        }
+
+        viewModel.navigateToForgotPassword.observe(viewLifecycleOwner) { email ->
+            if (email != null) {
+                val action = LoginFragmentDirections.actionLoginFragmentToForgotPasswordFragment(email)
+                findNavController().navigate(action)
+                viewModel.onForgotPasswordNavigated()
+            }
+        }
+
+        viewModel.signInSuccess.observe(viewLifecycleOwner) { success ->
+            if (success == true) {
+                val action = LoginFragmentDirections.actionLoginFragmentToNavHome()
+                findNavController().navigate(action)
+                viewModel.onSignInSuccessHandled()
+            }
+        }
+
+        // Biometric prompt visibility is managed by activity for now
     }
 
     /**
@@ -74,7 +173,6 @@ class LoginFragment : Fragment() {
             Log.d(TAG, "Starting Google OAuth flow...")
         }
 
-        // Construct OAuth URL based on environment
         val schema = when (BuildConfig.ENVIRONMENT) {
             "DEV" -> "rocketplan-dev"
             "STAGING" -> "rocketplan-staging"
@@ -90,7 +188,6 @@ class LoginFragment : Fragment() {
         }
 
         try {
-            // Launch Chrome Custom Tab for OAuth flow
             val customTabsIntent = CustomTabsIntent.Builder()
                 .setShowTitle(true)
                 .build()
@@ -110,31 +207,9 @@ class LoginFragment : Fragment() {
         }
     }
 
-    private fun observeViewModel() {
-        // Observe loading state
-        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
-            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.emailInput.isEnabled = !isLoading
-            binding.googleSignInButton.isEnabled = !isLoading
-        }
-
-        // Observe error messages
-        viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
-            if (error != null) {
-                binding.errorText.text = error
-                binding.errorText.visibility = View.VISIBLE
-            } else {
-                binding.errorText.visibility = View.GONE
-            }
-        }
-
-        // Note: OAuth sign-in success is handled by MainActivity via deep link callback
-        // No need to observe signInSuccess for Google OAuth flow
-    }
-
     private fun hideKeyboard() {
-        val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-        imm.hideSoftInputFromWindow(binding.root.windowToken, 0)
+        val imm = requireContext().getSystemService<InputMethodManager>()
+        imm?.hideSoftInputFromWindow(binding.root.windowToken, 0)
     }
 
     override fun onDestroyView() {

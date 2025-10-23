@@ -26,6 +26,17 @@ data class LoginRequest(
 )
 
 /**
+ * Request model for registration
+ * Matches Laravel RegisterRequest validation
+ */
+data class RegisterRequest(
+    val email: String,
+    val password: String,
+    @SerializedName("password_confirmation")
+    val passwordConfirmation: String
+)
+
+/**
  * Response model for login
  * Laravel returns: { "token": "1|plainTextTokenString..." }
  */

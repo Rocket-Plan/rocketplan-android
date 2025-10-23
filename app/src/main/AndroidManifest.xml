@@ -34,22 +34,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
 
                 <!-- Dev environment -->
-                <data
-                    android:scheme="rocketplan-dev"
-                    android:host="oauth2"
-                    android:path="/redirect" />
+                <data android:scheme="rocketplan-dev" />
 
                 <!-- Staging environment -->
-                <data
-                    android:scheme="rocketplan-staging"
-                    android:host="oauth2"
-                    android:path="/redirect" />
+                <data android:scheme="rocketplan-staging" />
 
                 <!-- Production environment -->
-                <data
-                    android:scheme="rocketplan"
-                    android:host="oauth2"
-                    android:path="/redirect" />
+                <data android:scheme="rocketplan" />
             </intent-filter>
         </activity>
     </application>

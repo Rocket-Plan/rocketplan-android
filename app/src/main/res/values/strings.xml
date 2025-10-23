@@ -10,4 +10,21 @@
     <string name="menu_home">Home</string>
     <string name="menu_gallery">Gallery</string>
     <string name="menu_slideshow">Slideshow</string>
+
+    <string name="title_sign_up_or_sign_in">Sign Up Or Sign In</string>
+    <string name="message_sign_up_intro">Please enter your email so we know whether to sign you in or create a new account.</string>
+    <string name="label_email_address">Email Address</string>
+    <string name="action_continue">Continue</string>
+    <string name="title_sign_in">Sign In</string>
+    <string name="action_sign_in">Sign In</string>
+    <string name="label_password">Password</string>
+    <string name="message_password_requirement">Password must be at least 6 characters</string>
+    <string name="action_forgot_password">Forgot Password?</string>
+    <string name="checkbox_remember_me">Remember Me</string>
+    <string name="title_sign_up">Sign Up</string>
+    <string name="label_confirm_password">Confirm Password</string>
+    <string name="message_passwords_do_not_match">Passwords do not match</string>
+    <string name="message_passwords_match">Passwords match</string>
+    <string name="action_create_account">Create Account</string>
+    <string name="message_sign_up_agreement">By signing up, you agree to receive updates and special offers about RocketPlan products. You may unsubscribe at any time.</string>
 </resources>

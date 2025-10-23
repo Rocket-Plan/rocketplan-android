@@ -3,24 +3,64 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/mobile_navigation"
-    app:startDestination="@+id/loginFragment">
+    app:startDestination="@id/emailCheckFragment">
 
-    <!-- Login Fragment (Entry Point) -->
+    <!-- Email Check Fragment (Entry Point) -->
+    <fragment
+        android:id="@+id/emailCheckFragment"
+        android:name="com.example.rocketplan_android.ui.auth.EmailCheckFragment"
+        android:label="Check Email"
+        tools:layout="@layout/fragment_email_check">
+
+        <action
+            android:id="@+id/action_emailCheckFragment_to_loginFragment"
+            app:destination="@id/loginFragment" />
+
+        <action
+            android:id="@+id/action_emailCheckFragment_to_signUpFragment"
+            app:destination="@id/signUpFragment" />
+    </fragment>
+
+    <!-- Login Fragment -->
     <fragment
         android:id="@+id/loginFragment"
         android:name="com.example.rocketplan_android.ui.login.LoginFragment"
         android:label="Login"
         tools:layout="@layout/fragment_login">
 
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+
         <action
             android:id="@+id/action_loginFragment_to_nav_home"
             app:destination="@id/nav_home"
-            app:popUpTo="@id/loginFragment"
+            app:popUpTo="@id/emailCheckFragment"
             app:popUpToInclusive="true" />
 
         <action
             android:id="@+id/action_loginFragment_to_forgotPasswordFragment"
             app:destination="@id/forgotPasswordFragment" />
+    </fragment>
+
+    <!-- Sign Up Fragment -->
+    <fragment
+        android:id="@+id/signUpFragment"
+        android:name="com.example.rocketplan_android.ui.auth.SignUpFragment"
+        android:label="Sign Up"
+        tools:layout="@layout/fragment_sign_up">
+
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_signUpFragment_to_nav_home"
+            app:destination="@id/nav_home"
+            app:popUpTo="@id/emailCheckFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <!-- Forgot Password Fragment -->
