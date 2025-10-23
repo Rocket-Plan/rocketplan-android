@@ -76,7 +76,7 @@ class MainActivity : AppCompatActivity() {
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow
+                R.id.nav_projects, R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow
             ), drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
@@ -85,8 +85,8 @@ class MainActivity : AppCompatActivity() {
         // Hide/show drawer and toolbar based on current destination
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when (destination.id) {
-                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment -> {
-                    // Hide toolbar, drawer, and FAB on auth screens
+                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment, R.id.nav_projects -> {
+                    // Hide toolbar, drawer, and FAB on auth screens and projects screen
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                     binding.appBarMain.fab.visibility = View.GONE
@@ -128,12 +128,12 @@ class MainActivity : AppCompatActivity() {
                     }
                 ) {
                     if (BuildConfig.ENABLE_LOGGING) {
-                        Log.d(TAG, "User authenticated, navigating to home")
+                        Log.d(TAG, "User authenticated, navigating to projects")
                     }
                     val navOptions = androidx.navigation.NavOptions.Builder()
                         .setPopUpTo(R.id.emailCheckFragment, true)
                         .build()
-                    controller.navigate(R.id.nav_home, null, navOptions)
+                    controller.navigate(R.id.nav_projects, null, navOptions)
                 }
             }
         }
@@ -183,9 +183,9 @@ class MainActivity : AppCompatActivity() {
                                 Log.d(TAG, "OAuth token saved successfully")
                             }
 
-                            // Navigate to home screen
+                            // Navigate to projects screen
                             val navController = findNavController(R.id.nav_host_fragment_content_main)
-                            navController.navigate(R.id.nav_home)
+                            navController.navigate(R.id.nav_projects)
 
                             Toast.makeText(
                                 this@MainActivity,

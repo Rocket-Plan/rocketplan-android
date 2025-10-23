@@ -35,7 +35,7 @@
 
         <action
             android:id="@+id/action_loginFragment_to_nav_home"
-            app:destination="@id/nav_home"
+            app:destination="@id/nav_projects"
             app:popUpTo="@id/emailCheckFragment"
             app:popUpToInclusive="true" />
 
@@ -58,7 +58,7 @@
 
         <action
             android:id="@+id/action_signUpFragment_to_nav_home"
-            app:destination="@id/nav_home"
+            app:destination="@id/nav_projects"
             app:popUpTo="@id/emailCheckFragment"
             app:popUpToInclusive="true" />
     </fragment>
@@ -81,6 +81,12 @@
         android:name="com.example.rocketplan_android.ui.home.HomeFragment"
         android:label="@string/menu_home"
         tools:layout="@layout/fragment_home" />
+
+    <fragment
+        android:id="@+id/nav_projects"
+        android:name="com.example.rocketplan_android.ui.projects.ProjectsFragment"
+        android:label="Projects"
+        tools:layout="@layout/fragment_projects" />
 
     <fragment
         android:id="@+id/nav_gallery"
