@@ -3,6 +3,7 @@ package com.example.rocketplan_android.data.local.dao
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
@@ -21,6 +22,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import kotlinx.coroutines.flow.Flow
+import java.util.Date
 
 @Dao
 interface OfflineDao {
@@ -37,6 +39,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_projects WHERE projectId = :projectId LIMIT 1")
     suspend fun getProject(projectId: Long): OfflineProjectEntity?
+
+    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0 ORDER BY updatedAt DESC")
+    suspend fun getProjectsOnce(): List<OfflineProjectEntity>
 
     @Query("SELECT COUNT(*) FROM offline_projects")
     suspend fun countProjects(): Int
@@ -81,6 +86,50 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_photos WHERE roomId = :roomId AND isDeleted = 0 ORDER BY capturedAt DESC")
     fun observePhotosForRoom(roomId: Long): Flow<List<OfflinePhotoEntity>>
+
+    @Query(
+        """
+        SELECT * FROM offline_photos 
+        WHERE isDeleted = 0
+          AND remoteUrl IS NOT NULL
+          AND (cacheStatus = :pending OR cacheStatus = :failed)
+        ORDER BY updatedAt DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getPhotosNeedingCache(
+        pending: PhotoCacheStatus = PhotoCacheStatus.PENDING,
+        failed: PhotoCacheStatus = PhotoCacheStatus.FAILED,
+        limit: Int = 25
+    ): List<OfflinePhotoEntity>
+
+    @Query("UPDATE offline_photos SET cacheStatus = :status, lastAccessedAt = :timestamp WHERE photoId = :photoId")
+    suspend fun updatePhotoCacheStatus(
+        photoId: Long,
+        status: PhotoCacheStatus,
+        timestamp: Date
+    )
+
+    @Query(
+        """
+        UPDATE offline_photos 
+        SET cacheStatus = :status, 
+            cachedOriginalPath = :originalPath, 
+            cachedThumbnailPath = :thumbnailPath,
+            lastAccessedAt = :timestamp 
+        WHERE photoId = :photoId
+        """
+    )
+    suspend fun updatePhotoCachePaths(
+        photoId: Long,
+        status: PhotoCacheStatus,
+        originalPath: String?,
+        thumbnailPath: String?,
+        timestamp: Date
+    )
+
+    @Query("SELECT COUNT(*) FROM offline_photos WHERE cacheStatus = :status AND isDeleted = 0")
+    fun observePhotoCountByCacheStatus(status: PhotoCacheStatus): Flow<Int>
     // endregion
 
     // region Equipment

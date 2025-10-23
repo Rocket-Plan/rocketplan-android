@@ -11,9 +11,13 @@
     <string name="menu_gallery">Gallery</string>
     <string name="menu_slideshow">Slideshow</string>
 
+    <string name="brand_rocketplan">RocketPlan</string>
+    <string name="content_desc_onboarding_illustration">Onboarding illustration</string>
     <string name="title_sign_up_or_sign_in">Sign Up Or Sign In</string>
-    <string name="message_sign_up_intro">Please enter your email so we know whether to sign you in or create a new account.</string>
+    <string name="message_sign_up_intro">Please enter your email. We\'ll use it to either create your account or sign you in.</string>
     <string name="label_email_address">Email Address</string>
+    <string name="placeholder_email_address">email@example.com</string>
+    <string name="label_or">OR</string>
     <string name="action_continue">Continue</string>
     <string name="title_sign_in">Sign In</string>
     <string name="action_sign_in">Sign In</string>

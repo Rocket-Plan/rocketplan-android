@@ -1,23 +1,35 @@
 package com.example.rocketplan_android.ui.auth
 
+import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.getSystemService
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.databinding.FragmentEmailCheckBinding
 
 /**
- * Initial authentication screen that collects the user's email,
- * matching the iOS flow where we determine whether to sign in or sign up next.
+ * Initial authentication screen that collects the user's email
+ * and offers social sign-in options, mirroring the iOS onboarding flow.
  */
 class EmailCheckFragment : Fragment() {
+
+    companion object {
+        private const val TAG = "EmailCheckFragment"
+        private const val PROVIDER_FACEBOOK = "facebook"
+        private const val PROVIDER_GOOGLE = "google"
+        private const val PROVIDER_APPLE = "apple"
+    }
 
     private var _binding: FragmentEmailCheckBinding? = null
     private val binding get() = _binding!!
@@ -36,6 +48,7 @@ class EmailCheckFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupInputListeners()
+        setupSocialButtons()
         setupObservers()
     }
 
@@ -60,6 +73,21 @@ class EmailCheckFragment : Fragment() {
         }
     }
 
+    private fun setupSocialButtons() {
+        binding.facebookButton.setOnClickListener {
+            hideKeyboard()
+            launchOAuth(PROVIDER_FACEBOOK)
+        }
+        binding.googleButton.setOnClickListener {
+            hideKeyboard()
+            launchOAuth(PROVIDER_GOOGLE)
+        }
+        binding.appleButton.setOnClickListener {
+            hideKeyboard()
+            launchOAuth(PROVIDER_APPLE)
+        }
+    }
+
     private fun setupObservers() {
         viewModel.email.observe(viewLifecycleOwner) { email ->
             if (binding.emailInput.text?.toString() != email) {
@@ -81,6 +109,9 @@ class EmailCheckFragment : Fragment() {
             binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
             binding.continueButton.isEnabled = !isLoading
             binding.emailInput.isEnabled = !isLoading
+            binding.facebookButton.isEnabled = !isLoading
+            binding.googleButton.isEnabled = !isLoading
+            binding.appleButton.isEnabled = !isLoading
         }
 
         viewModel.navigateToSignIn.observe(viewLifecycleOwner) { email ->
@@ -99,6 +130,35 @@ class EmailCheckFragment : Fragment() {
                 findNavController().navigate(action)
                 viewModel.onNavigateToSignUpHandled()
             }
+        }
+    }
+
+    private fun launchOAuth(provider: String) {
+        val schema = when (BuildConfig.ENVIRONMENT) {
+            "DEV" -> "rocketplan-dev"
+            "STAGING" -> "rocketplan-staging"
+            "PROD" -> "rocketplan"
+            else -> "rocketplan-dev"
+        }
+
+        val oauthUrl = "${BuildConfig.API_BASE_URL}/oauth2/redirect/$provider?schema=$schema"
+
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "Starting $provider OAuth flow: $oauthUrl")
+        }
+
+        runCatching {
+            val customTabsIntent = CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .build()
+            customTabsIntent.launchUrl(requireContext(), Uri.parse(oauthUrl))
+        }.onFailure { throwable ->
+            Log.e(TAG, "Failed to launch $provider OAuth flow", throwable)
+            Toast.makeText(
+                requireContext(),
+                "Unable to start $provider sign-in. Please try again.",
+                Toast.LENGTH_LONG
+            ).show()
         }
     }
 

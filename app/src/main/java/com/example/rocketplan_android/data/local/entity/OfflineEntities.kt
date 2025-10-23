@@ -3,6 +3,7 @@ package com.example.rocketplan_android.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncPriority
 import com.example.rocketplan_android.data.local.SyncStatus
@@ -219,7 +220,8 @@ data class OfflineAtmosphericLogEntity(
         Index(value = ["assemblyId"]),
         Index(value = ["uploadStatus"]),
         Index(value = ["syncStatus"]),
-        Index(value = ["isDirty"])
+        Index(value = ["isDirty"]),
+        Index(value = ["cacheStatus"])
     ]
 )
 data class OfflinePhotoEntity(
@@ -250,7 +252,11 @@ data class OfflinePhotoEntity(
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
     val isDirty: Boolean = false,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val cacheStatus: PhotoCacheStatus = PhotoCacheStatus.NONE,
+    val cachedOriginalPath: String? = null,
+    val cachedThumbnailPath: String? = null,
+    val lastAccessedAt: Date? = null
 )
 
 @Entity(

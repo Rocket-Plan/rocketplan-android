@@ -31,4 +31,11 @@ class OfflineTypeConverters {
 
     @TypeConverter
     fun fromOperationType(type: SyncOperationType?): String? = type?.name
+
+    @TypeConverter
+    fun toPhotoCacheStatus(value: String?): PhotoCacheStatus? =
+        value?.let { runCatching { PhotoCacheStatus.valueOf(it) }.getOrNull() }
+
+    @TypeConverter
+    fun fromPhotoCacheStatus(status: PhotoCacheStatus?): String? = status?.name
 }

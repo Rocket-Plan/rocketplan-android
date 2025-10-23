@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository
 
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
@@ -28,6 +29,7 @@ import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
+import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +40,7 @@ import java.util.UUID
 class OfflineSyncRepository(
     private val api: OfflineSyncApi,
     private val localDataService: LocalDataService,
+    private val photoCacheScheduler: PhotoCacheScheduler,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
@@ -53,6 +56,7 @@ class OfflineSyncRepository(
 
     suspend fun syncProjectGraph(projectId: Long) = withContext(ioDispatcher) {
         val detail = runCatching { api.getProjectDetail(projectId) }.getOrNull()
+        var didFetchPhotos = false
         detail?.let { dto ->
             val projectEntity = dto.toEntity()
             localDataService.saveProjects(listOf(projectEntity))
@@ -61,7 +65,12 @@ class OfflineSyncRepository(
             dto.users?.let { localDataService.saveUsers(it.map { user -> user.toEntity() }) }
             dto.locations?.let { localDataService.saveLocations(it.map { loc -> loc.toEntity() }) }
             dto.rooms?.let { localDataService.saveRooms(it.map { room -> room.toEntity() }) }
-            dto.photos?.let { localDataService.savePhotos(it.map { photo -> photo.toEntity() }) }
+            dto.photos?.let {
+                localDataService.savePhotos(it.map { photo -> photo.toEntity() })
+                if (it.isNotEmpty()) {
+                    didFetchPhotos = true
+                }
+            }
             dto.atmosphericLogs?.let { localDataService.saveAtmosphericLogs(it.map { log -> log.toEntity() }) }
             dto.moistureLogs?.let {
                 val materials = it.extractMaterials()
@@ -126,6 +135,9 @@ class OfflineSyncRepository(
             // Room scoped photos/logs/damages/equipment/work scope
             runCatching { api.getRoomPhotos(roomId) }.onSuccess { photos ->
                 localDataService.savePhotos(photos.map { it.toEntity() })
+                if (photos.isNotEmpty()) {
+                    didFetchPhotos = true
+                }
             }
 
             runCatching { api.getRoomAtmosphericLogs(roomId) }.onSuccess { logs ->
@@ -174,14 +186,23 @@ class OfflineSyncRepository(
 
         runCatching { api.getProjectPhotos(projectId) }.onSuccess { photos ->
             localDataService.savePhotos(photos.map { it.toEntity() })
+            if (photos.isNotEmpty()) {
+                didFetchPhotos = true
+            }
         }
 
         runCatching { api.getProjectPhotoShares(projectId) }.onSuccess { photos ->
             localDataService.savePhotos(photos.map { it.toEntity() })
+            if (photos.isNotEmpty()) {
+                didFetchPhotos = true
+            }
         }
 
         runCatching { api.getProjectResourcePhotos(projectId) }.onSuccess { photos ->
             localDataService.savePhotos(photos.map { it.toEntity() })
+            if (photos.isNotEmpty()) {
+                didFetchPhotos = true
+            }
         }
 
         runCatching { api.getProjectEquipment(projectId) }.onSuccess { equipment ->
@@ -202,6 +223,10 @@ class OfflineSyncRepository(
 
         runCatching { api.getProjectUsers(projectId) }.onSuccess { users ->
             localDataService.saveUsers(users.map { it.toEntity() })
+        }
+
+        if (didFetchPhotos) {
+            photoCacheScheduler.schedulePrefetch()
         }
     }
 
@@ -343,6 +368,8 @@ private fun RoomDto.toEntity(locationId: Long? = this.locationId): OfflineRoomEn
 
 private fun PhotoDto.toEntity(): OfflinePhotoEntity {
     val timestamp = now()
+    val hasRemote = !remoteUrl.isNullOrBlank()
+    val localCachePath = localPath?.takeIf { it.isNotBlank() }
     return OfflinePhotoEntity(
         photoId = id,
         serverId = id,
@@ -370,7 +397,15 @@ private fun PhotoDto.toEntity(): OfflinePhotoEntity {
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = false,
+        cacheStatus = when {
+            localCachePath != null -> PhotoCacheStatus.READY
+            hasRemote -> PhotoCacheStatus.PENDING
+            else -> PhotoCacheStatus.NONE
+        },
+        cachedOriginalPath = localCachePath,
+        cachedThumbnailPath = null,
+        lastAccessedAt = timestamp.takeIf { localCachePath != null }
     )
 }
 

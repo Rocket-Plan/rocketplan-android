@@ -128,6 +128,7 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.androidx.work.runtime)
 
     // ViewPager2 and SwipeRefreshLayout for projects list
     implementation(libs.androidx.viewpager2)

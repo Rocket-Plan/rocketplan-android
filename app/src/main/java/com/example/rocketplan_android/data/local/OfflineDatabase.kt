@@ -42,7 +42,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
         OfflineSyncQueueEntity::class,
         OfflineConflictResolutionEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)

@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.local
 
 import android.content.Context
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
@@ -40,6 +41,10 @@ class LocalDataService private constructor(
     // region Project accessors
     fun observeProjects(): Flow<List<OfflineProjectEntity>> = dao.observeProjects()
 
+    suspend fun getAllProjects(): List<OfflineProjectEntity> = withContext(ioDispatcher) {
+        dao.getProjectsOnce()
+    }
+
     fun observeLocations(projectId: Long): Flow<List<OfflineLocationEntity>> =
         dao.observeLocationsForProject(projectId)
 
@@ -57,6 +62,12 @@ class LocalDataService private constructor(
 
     fun observePhotosForRoom(roomId: Long): Flow<List<OfflinePhotoEntity>> =
         dao.observePhotosForRoom(roomId)
+
+    suspend fun getPhotosNeedingCache(limit: Int = 25): List<OfflinePhotoEntity> =
+        withContext(ioDispatcher) { dao.getPhotosNeedingCache(limit = limit) }
+
+    fun observeCachedPhotoCount(): Flow<Int> =
+        dao.observePhotoCountByCacheStatus(PhotoCacheStatus.READY)
 
     fun observeEquipmentForProject(projectId: Long): Flow<List<OfflineEquipmentEntity>> =
         dao.observeEquipmentForProject(projectId)
@@ -152,6 +163,32 @@ class LocalDataService private constructor(
         dao.deleteConflict(conflictId)
     }
     // endregion
+
+    suspend fun markPhotoCacheInProgress(photoId: Long) = withContext(ioDispatcher) {
+        dao.updatePhotoCacheStatus(photoId, PhotoCacheStatus.DOWNLOADING, Date())
+    }
+
+    suspend fun markPhotoCacheSuccess(
+        photoId: Long,
+        originalPath: String,
+        thumbnailPath: String?
+    ) = withContext(ioDispatcher) {
+        dao.updatePhotoCachePaths(
+            photoId = photoId,
+            status = PhotoCacheStatus.READY,
+            originalPath = originalPath,
+            thumbnailPath = thumbnailPath,
+            timestamp = Date()
+        )
+    }
+
+    suspend fun markPhotoCacheFailed(photoId: Long) = withContext(ioDispatcher) {
+        dao.updatePhotoCacheStatus(photoId, PhotoCacheStatus.FAILED, Date())
+    }
+
+    suspend fun touchPhotoAccess(photoId: Long) = withContext(ioDispatcher) {
+        dao.updatePhotoCacheStatus(photoId, PhotoCacheStatus.READY, Date())
+    }
 
     suspend fun seedDemoDataIfEmpty() = withContext(ioDispatcher) {
         if (dao.countProjects() > 0) return@withContext
