@@ -117,7 +117,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/facebookButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="68dp"
                     android:layout_height="68dp"
                     android:layout_marginEnd="12dp"
@@ -135,7 +135,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/googleButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="68dp"
                     android:layout_height="68dp"
                     android:layout_marginEnd="12dp"
@@ -153,7 +153,7 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/appleButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="68dp"
                     android:layout_height="68dp"
                     android:insetBottom="0dp"
@@ -185,7 +185,7 @@
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/continueButton"
-        style="@style/Widget.Material3.Button"
+        style="@style/Widget.MaterialComponents.Button"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
@@ -193,6 +193,7 @@
         android:layout_marginBottom="32dp"
         android:text="@string/action_continue"
         android:textSize="16sp"
+        app:backgroundTint="@color/main_purple"
         app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
