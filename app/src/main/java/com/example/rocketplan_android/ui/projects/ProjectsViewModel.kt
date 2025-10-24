@@ -7,9 +7,14 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
+import com.example.rocketplan_android.logging.LogLevel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class ProjectListItem(
     val projectId: Long,
@@ -27,8 +32,11 @@ sealed class ProjectsUiState {
 
 class ProjectsViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val localDataService = (application as RocketPlanApplication).localDataService
-    private val syncRepository = (application as RocketPlanApplication).offlineSyncRepository
+    private val rocketPlanApp = application as RocketPlanApplication
+    private val localDataService = rocketPlanApp.localDataService
+    private val syncRepository = rocketPlanApp.offlineSyncRepository
+    private val authRepository = AuthRepository(SecureStorage.getInstance(application))
+    private val remoteLogger = rocketPlanApp.remoteLogger
 
     private val _uiState = MutableStateFlow<ProjectsUiState>(ProjectsUiState.Loading)
     val uiState: StateFlow<ProjectsUiState> = _uiState
@@ -37,30 +45,37 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     val isRefreshing: LiveData<Boolean> = _isRefreshing
 
     init {
-        loadProjects()
+        refreshProjects()
+    }
+
+    private suspend fun loadProjectsInternal() {
+        val allProjects = localDataService.getAllProjects()
+
+        val myProjects = allProjects.filter {
+            it.status.equals("active", ignoreCase = true) ||
+                it.status.equals("in_progress", ignoreCase = true)
+        }.map { it.toListItem() }
+
+        val wipProjects = allProjects.filter {
+            it.status.equals("wip", ignoreCase = true) ||
+                it.status.equals("draft", ignoreCase = true)
+        }.map { it.toListItem() }
+
+        _uiState.value = ProjectsUiState.Success(myProjects, wipProjects)
     }
 
     fun loadProjects() {
         viewModelScope.launch {
             try {
                 _uiState.value = ProjectsUiState.Loading
-
-                // Get all projects from local database
-                val allProjects = localDataService.getAllProjects()
-
-                // Split projects by status - WIP vs completed/archived
-                val myProjects = allProjects.filter {
-                    it.status.equals("active", ignoreCase = true) ||
-                    it.status.equals("in_progress", ignoreCase = true)
-                }.map { it.toListItem() }
-
-                val wipProjects = allProjects.filter {
-                    it.status.equals("wip", ignoreCase = true) ||
-                    it.status.equals("draft", ignoreCase = true)
-                }.map { it.toListItem() }
-
-                _uiState.value = ProjectsUiState.Success(myProjects, wipProjects)
+                loadProjectsInternal()
             } catch (e: Exception) {
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "Failed to load projects: ${e.message}",
+                    metadata = mapOf("phase" to "loadProjects")
+                )
                 _uiState.value = ProjectsUiState.Error(e.message ?: "Failed to load projects")
             }
         }
@@ -70,15 +85,104 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             try {
                 _isRefreshing.value = true
+                _uiState.value = ProjectsUiState.Loading
 
-                // TODO: Sync projects from server
-                // This requires user/company ID which we'll get from auth context
-                // syncRepository.syncUserProjects(userId)
-                // syncRepository.syncCompanyProjects(companyId)
+                // Ensure we have user context
+                authRepository.ensureUserContext()
+                val userId = authRepository.getStoredUserId()
+                val companyId = authRepository.getStoredCompanyId()
 
-                // For now, just reload from local database
-                loadProjects()
+                remoteLogger.log(
+                    level = LogLevel.DEBUG,
+                    tag = TAG,
+                    message = "Refreshing projects - userId: $userId, companyId: $companyId",
+                    metadata = mapOf("phase" to "refreshProjects")
+                )
+
+                if (userId == null && companyId == null) {
+                    remoteLogger.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "No user or company ID available for sync",
+                        metadata = mapOf("phase" to "refreshProjects")
+                    )
+                    throw IllegalStateException("Unable to determine user or company for project sync. Please log in again.")
+                }
+
+                // Sync projects from server
+                withContext(Dispatchers.IO) {
+                    var syncErrors = mutableListOf<String>()
+
+                    userId?.let {
+                        runCatching {
+                            syncRepository.syncUserProjects(it)
+                        }.onFailure { error ->
+                            syncErrors.add("User projects sync failed: ${error.message}")
+                            remoteLogger.log(
+                                level = LogLevel.ERROR,
+                                tag = TAG,
+                                message = "Failed to sync user projects: ${error.message}",
+                                metadata = mapOf("userId" to it.toString())
+                            )
+                        }
+                    }
+
+                    companyId?.let {
+                        runCatching {
+                            syncRepository.syncCompanyProjects(it)
+                        }.onFailure { error ->
+                            syncErrors.add("Company projects sync failed: ${error.message}")
+                            remoteLogger.log(
+                                level = LogLevel.ERROR,
+                                tag = TAG,
+                                message = "Failed to sync company projects: ${error.message}",
+                                metadata = mapOf("companyId" to it.toString())
+                            )
+                        }
+                    }
+
+                    // Sync project details for each project
+                    val projects = localDataService.getAllProjects()
+                    remoteLogger.log(
+                        level = LogLevel.DEBUG,
+                        tag = TAG,
+                        message = "Found ${projects.size} projects in local database",
+                        metadata = mapOf("phase" to "refreshProjects")
+                    )
+
+                    projects.forEach { project ->
+                        runCatching {
+                            syncRepository.syncProjectGraph(project.projectId)
+                        }.onFailure { error ->
+                            remoteLogger.log(
+                                level = LogLevel.ERROR,
+                                tag = TAG,
+                                message = "Failed to sync project graph: ${error.message}",
+                                metadata = mapOf("projectId" to project.projectId.toString())
+                            )
+                        }
+                    }
+
+                    // Log sync errors if any occurred
+                    if (syncErrors.isNotEmpty()) {
+                        remoteLogger.log(
+                            level = LogLevel.WARN,
+                            tag = TAG,
+                            message = "Sync completed with errors: ${syncErrors.joinToString("; ")}",
+                            metadata = mapOf("errorCount" to syncErrors.size.toString())
+                        )
+                    }
+                }
+
+                // Load projects from local database
+                loadProjectsInternal()
             } catch (e: Exception) {
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "Failed to refresh projects: ${e.message}",
+                    metadata = mapOf("phase" to "refreshProjects", "exception" to e.toString())
+                )
                 _uiState.value = ProjectsUiState.Error(e.message ?: "Failed to refresh projects")
             } finally {
                 _isRefreshing.value = false
@@ -94,5 +198,9 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
             subtitle = propertyType,
             status = status
         )
+    }
+
+    companion object {
+        private const val TAG = "ProjectsViewModel"
     }
 }
