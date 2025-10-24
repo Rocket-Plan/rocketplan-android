@@ -1,24 +1,38 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.os.Bundle
+import android.util.Log
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import kotlinx.coroutines.launch
 
 class ProjectsFragment : Fragment() {
 
+    companion object {
+        private const val TAG = "ProjectsFragment"
+    }
+
     private val viewModel: ProjectsViewModel by activityViewModels()
+    private lateinit var authRepository: AuthRepository
 
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
@@ -36,6 +50,9 @@ class ProjectsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Initialize auth repository
+        authRepository = AuthRepository(SecureStorage.getInstance(requireContext()))
 
         tabLayout = view.findViewById(R.id.tabLayout)
         viewPager = view.findViewById(R.id.viewPager)
@@ -76,8 +93,47 @@ class ProjectsFragment : Fragment() {
         }
 
         userInitials.setOnClickListener {
-            // TODO: Navigate to profile/settings
-            Toast.makeText(context, "User Profile", Toast.LENGTH_SHORT).show()
+            showProfileMenu(it)
+        }
+    }
+
+    private fun showProfileMenu(anchor: View) {
+        PopupMenu(requireContext(), anchor, Gravity.END).apply {
+            menuInflater.inflate(R.menu.profile_menu, menu)
+            setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.action_sign_out -> {
+                        performSignOut()
+                        true
+                    }
+                    else -> false
+                }
+            }
+            show()
+        }
+    }
+
+    private fun performSignOut() {
+        lifecycleScope.launch {
+            try {
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "User signing out...")
+                }
+
+                authRepository.logout()
+
+                // Navigate back to email check fragment
+                findNavController().navigate(R.id.emailCheckFragment)
+
+                Toast.makeText(context, R.string.action_sign_out, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during logout", e)
+                Toast.makeText(
+                    context,
+                    "Failed to sign out: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 
