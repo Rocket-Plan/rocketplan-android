@@ -7,138 +7,228 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
-import com.google.android.material.card.MaterialCardView
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 
 class ProjectDetailFragment : Fragment() {
 
-    companion object {
-        private const val TAG = "ProjectDetailFragment"
-    }
-
-    private val viewModel: ProjectsViewModel by activityViewModels()
     private val args: ProjectDetailFragmentArgs by navArgs()
+
+    private val viewModel: ProjectDetailViewModel by viewModels {
+        ProjectDetailViewModel.provideFactory(requireActivity().application, args.projectId)
+    }
 
     private lateinit var backButton: ImageButton
     private lateinit var menuButton: ImageButton
-    private lateinit var projectAddress: TextView
-    private lateinit var wipBadge: TextView
-    private lateinit var addAliasButton: TextView
-    private lateinit var projectNumber: TextView
-    private lateinit var addProjectInfoCard: MaterialCardView
-    private lateinit var rocketScanCard: MaterialCardView
-    private lateinit var rocketDryCard: MaterialCardView
-    private lateinit var projectNotesCard: MaterialCardView
-    private lateinit var crewCard: MaterialCardView
+    private lateinit var editButton: ImageButton
+    private lateinit var headerTitle: TextView
+    private lateinit var projectTitle: TextView
+    private lateinit var projectCode: TextView
+    private lateinit var noteSummary: TextView
+    private lateinit var addRoomCard: View
+    private lateinit var addExteriorCard: View
+    private lateinit var roomsRecyclerView: RecyclerView
+    private lateinit var roomsPlaceholder: TextView
+    private lateinit var tabPlaceholder: TextView
+    private lateinit var toggleGroup: MaterialButtonToggleGroup
+    private lateinit var photosButton: MaterialButton
+    private lateinit var damagesButton: MaterialButton
+    private lateinit var sketchButton: MaterialButton
+    private lateinit var captureFab: FloatingActionButton
+    private lateinit var albumCategoriesContainer: View
+    private lateinit var albumChipGroup: com.google.android.material.chip.ChipGroup
+
+    private val roomsAdapter by lazy {
+        ProjectRoomsAdapter(
+            onRoomClick = { room ->
+                val action = ProjectDetailFragmentDirections
+                    .actionProjectDetailFragmentToRoomDetailFragment(args.projectId, room.roomId)
+                findNavController().navigate(action)
+            }
+        )
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View? {
-        return inflater.inflate(R.layout.fragment_project_detail, container, false)
-    }
+    ): View = inflater.inflate(R.layout.fragment_project_detail, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        initializeViews(view)
-        setupClickListeners()
+        bindViews(view)
+        configureRecycler()
+        configureToggleGroup()
+        bindListeners()
         observeViewModel()
     }
 
-    private fun initializeViews(view: View) {
-        backButton = view.findViewById(R.id.backButton)
-        menuButton = view.findViewById(R.id.menuButton)
-        projectAddress = view.findViewById(R.id.projectAddress)
-        wipBadge = view.findViewById(R.id.wipBadge)
-        addAliasButton = view.findViewById(R.id.addAliasButton)
-        projectNumber = view.findViewById(R.id.projectNumber)
-        addProjectInfoCard = view.findViewById(R.id.addProjectInfoCard)
-        rocketScanCard = view.findViewById(R.id.rocketScanCard)
-        rocketDryCard = view.findViewById(R.id.rocketDryCard)
-        projectNotesCard = view.findViewById(R.id.projectNotesCard)
-        crewCard = view.findViewById(R.id.crewCard)
+    private fun bindViews(root: View) {
+        backButton = root.findViewById(R.id.backButton)
+        menuButton = root.findViewById(R.id.menuButton)
+        editButton = root.findViewById(R.id.editProjectButton)
+        headerTitle = root.findViewById(R.id.headerTitle)
+        projectTitle = root.findViewById(R.id.projectTitle)
+        projectCode = root.findViewById(R.id.projectCode)
+        noteSummary = root.findViewById(R.id.noteSummary)
+        addRoomCard = root.findViewById(R.id.addRoomCard)
+        addExteriorCard = root.findViewById(R.id.addExteriorCard)
+        roomsRecyclerView = root.findViewById(R.id.roomsRecyclerView)
+        roomsPlaceholder = root.findViewById(R.id.roomsPlaceholder)
+        tabPlaceholder = root.findViewById(R.id.tabPlaceholder)
+        toggleGroup = root.findViewById(R.id.tabToggleGroup)
+        photosButton = root.findViewById(R.id.photosTabButton)
+        damagesButton = root.findViewById(R.id.damagesTabButton)
+        sketchButton = root.findViewById(R.id.sketchTabButton)
+        captureFab = root.findViewById(R.id.captureFab)
+        albumCategoriesContainer = root.findViewById(R.id.albumCategoriesContainer)
+        albumChipGroup = root.findViewById(R.id.albumChipGroup)
+
+        headerTitle.text = getString(R.string.project_home)
     }
 
-    private fun setupClickListeners() {
-        backButton.setOnClickListener {
-            findNavController().navigateUp()
-        }
+    private fun configureRecycler() {
+        roomsRecyclerView.configureForProjectRooms(roomsAdapter)
+    }
 
+    private fun configureToggleGroup() {
+        toggleGroup.check(R.id.photosTabButton)
+        updateToggleStyles(ProjectDetailTab.PHOTOS)
+        toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val tab = when (checkedId) {
+                R.id.photosTabButton -> ProjectDetailTab.PHOTOS
+                R.id.damagesTabButton -> ProjectDetailTab.DAMAGES
+                else -> ProjectDetailTab.SKETCH
+            }
+            viewModel.selectTab(tab)
+            updateToggleStyles(tab)
+        }
+    }
+
+    private fun updateToggleStyles(activeTab: ProjectDetailTab) {
+        val selectedBackground =
+            ContextCompat.getColorStateList(requireContext(), R.color.main_purple)
+        val unselectedBackground =
+            ContextCompat.getColorStateList(requireContext(), android.R.color.white)
+        val selectedText = ContextCompat.getColor(requireContext(), android.R.color.white)
+        val unselectedText = ContextCompat.getColor(requireContext(), R.color.main_purple)
+
+        listOf(
+            photosButton to ProjectDetailTab.PHOTOS,
+            damagesButton to ProjectDetailTab.DAMAGES,
+            sketchButton to ProjectDetailTab.SKETCH
+        ).forEach { (button, tab) ->
+            val isSelected = tab == activeTab
+            button.backgroundTintList = if (isSelected) selectedBackground else unselectedBackground
+            button.strokeColor =
+                ContextCompat.getColorStateList(requireContext(), R.color.main_purple)
+            button.setTextColor(if (isSelected) selectedText else unselectedText)
+        }
+    }
+
+    private fun bindListeners() {
+        backButton.setOnClickListener { findNavController().navigateUp() }
         menuButton.setOnClickListener {
-            // TODO: Show project menu
-            Toast.makeText(context, "Project Menu", Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.menu), Toast.LENGTH_SHORT).show()
         }
-
-        addAliasButton.setOnClickListener {
-            // TODO: Navigate to add alias screen
-            Toast.makeText(context, "Add Alias", Toast.LENGTH_SHORT).show()
+        editButton.setOnClickListener {
+            Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
         }
-
-        addProjectInfoCard.setOnClickListener {
-            // TODO: Navigate to project/loss info screen
-            Toast.makeText(context, "Add Project/Loss Info", Toast.LENGTH_SHORT).show()
+        addRoomCard.setOnClickListener {
+            Toast.makeText(requireContext(), getString(R.string.add_room), Toast.LENGTH_SHORT).show()
         }
-
-        rocketScanCard.setOnClickListener {
+        addExteriorCard.setOnClickListener {
+            Toast.makeText(requireContext(), getString(R.string.add_exterior_space), Toast.LENGTH_SHORT).show()
+        }
+        captureFab.setOnClickListener {
             val action = ProjectDetailFragmentDirections
                 .actionProjectDetailFragmentToRocketScanFragment(args.projectId)
             findNavController().navigate(action)
-        }
-
-        rocketDryCard.setOnClickListener {
-            val action = ProjectDetailFragmentDirections
-                .actionProjectDetailFragmentToRocketDryFragment(args.projectId)
-            findNavController().navigate(action)
-        }
-
-        projectNotesCard.setOnClickListener {
-            // TODO: Navigate to project notes screen
-            Toast.makeText(context, "All Project Notes", Toast.LENGTH_SHORT).show()
-        }
-
-        crewCard.setOnClickListener {
-            // TODO: Navigate to crew management screen
-            Toast.makeText(context, "Crew", Toast.LENGTH_SHORT).show()
         }
     }
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is ProjectsUiState.Success -> {
-                        // Find the project in the combined list
-                        val project = (state.myProjects + state.wipProjects)
-                            .find { it.projectId == args.projectId }
-
-                        project?.let {
-                            updateProjectDetails(it)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.uiState.collect { state ->
+                        when (state) {
+                            ProjectDetailUiState.Loading -> showLoadingState()
+                            is ProjectDetailUiState.Ready -> renderState(state)
                         }
                     }
-                    else -> {
-                        // Handle loading or error states if needed
+                }
+                launch {
+                    viewModel.selectedTab.collect { tab ->
+                        applyTabVisibility(tab)
+                        updateToggleStyles(tab)
                     }
                 }
             }
         }
     }
 
-    private fun updateProjectDetails(project: ProjectListItem) {
-        projectAddress.text = project.title
-        projectNumber.text = project.projectCode
+    private fun showLoadingState() {
+        roomsPlaceholder.isVisible = false
+        tabPlaceholder.isVisible = false
+        roomsRecyclerView.isVisible = false
+    }
 
-        // Show WIP badge if project status is WIP or draft
-        val isWip = project.status.equals("wip", ignoreCase = true) ||
-                project.status.equals("draft", ignoreCase = true)
-        wipBadge.isVisible = isWip
+    private fun renderState(state: ProjectDetailUiState.Ready) {
+        projectTitle.text = state.header.projectTitle
+        projectCode.isVisible = state.header.projectCode.isNotBlank()
+        projectCode.text = state.header.projectCode
+        noteSummary.text = state.header.noteSummary
+
+        val flattenedItems = state.levelSections.flatMap { section ->
+            if (section.rooms.isEmpty()) {
+                emptyList()
+            } else {
+                listOf(RoomListItem.Header(section.levelName)) +
+                    section.rooms.map { RoomListItem.Room(it) }
+            }
+        }
+        roomsAdapter.submitList(flattenedItems)
+        roomsPlaceholder.isVisible = flattenedItems.isEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
+        roomsRecyclerView.isVisible = flattenedItems.isNotEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
+    }
+
+    private fun applyTabVisibility(tab: ProjectDetailTab) {
+        when (tab) {
+            ProjectDetailTab.PHOTOS -> {
+                tabPlaceholder.isVisible = false
+                roomsRecyclerView.isVisible = roomsAdapter.currentList.isNotEmpty()
+                roomsPlaceholder.isVisible = roomsAdapter.currentList.isEmpty()
+                albumCategoriesContainer.isVisible = true
+            }
+            ProjectDetailTab.DAMAGES -> {
+                roomsRecyclerView.isVisible = false
+                roomsPlaceholder.isVisible = false
+                tabPlaceholder.isVisible = true
+                tabPlaceholder.text = getString(R.string.damages) + " coming soon"
+                albumCategoriesContainer.isVisible = false
+            }
+            ProjectDetailTab.SKETCH -> {
+                roomsRecyclerView.isVisible = false
+                roomsPlaceholder.isVisible = false
+                tabPlaceholder.isVisible = true
+                tabPlaceholder.text = getString(R.string.sketch) + " coming soon"
+                albumCategoriesContainer.isVisible = false
+            }
+        }
     }
 }

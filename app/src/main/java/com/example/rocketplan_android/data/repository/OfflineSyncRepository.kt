@@ -26,6 +26,7 @@ import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectDto
+import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.UserDto
@@ -62,20 +63,32 @@ class OfflineSyncRepository(
     suspend fun syncProjectGraph(projectId: Long) = withContext(ioDispatcher) {
         val detail = runCatching { api.getProjectDetail(projectId) }.getOrNull()
         var didFetchPhotos = false
+        val collectedLocationIds = mutableSetOf<Long>()
+        val collectedRoomIds = mutableSetOf<Long>()
+
+        suspend fun persistPhotos(photos: List<PhotoDto>) {
+            if (photos.isNotEmpty()) {
+                localDataService.savePhotos(photos.map { it.toEntity() })
+                didFetchPhotos = true
+            }
+        }
+
         detail?.let { dto ->
             val projectEntity = dto.toEntity()
             localDataService.saveProjects(listOf(projectEntity))
 
             dto.notes?.let { localDataService.saveNotes(it.mapNotNull { note -> note.toEntity() }) }
             dto.users?.let { localDataService.saveUsers(it.map { user -> user.toEntity() }) }
-            dto.locations?.let { localDataService.saveLocations(it.map { loc -> loc.toEntity() }) }
-            dto.rooms?.let { localDataService.saveRooms(it.map { room -> room.toEntity() }) }
-            dto.photos?.let {
-                localDataService.savePhotos(it.map { photo -> photo.toEntity() })
-                if (it.isNotEmpty()) {
-                    didFetchPhotos = true
-                }
+            dto.locations?.let {
+                localDataService.saveLocations(it.map { loc -> loc.toEntity() })
+                collectedLocationIds += it.map { loc -> loc.id }
             }
+            dto.rooms?.let {
+                localDataService.saveRooms(it.map { room -> room.toEntity() })
+                collectedRoomIds += it.map { room -> room.id }
+                collectedLocationIds += it.mapNotNull { room -> room.locationId }
+            }
+            dto.photos?.let { persistPhotos(it) }
             dto.atmosphericLogs?.let { localDataService.saveAtmosphericLogs(it.map { log -> log.toEntity() }) }
             dto.moistureLogs?.let {
                 val materials = it.extractMaterials()
@@ -104,32 +117,21 @@ class OfflineSyncRepository(
 
         if (propertyLocations.isNotEmpty()) {
             localDataService.saveLocations(propertyLocations.map { it.toEntity() })
-        } else {
-            val fallbackLocations = runCatching { api.getProjectLocations(projectId) }.getOrDefault(emptyList())
-            if (fallbackLocations.isNotEmpty()) {
-                localDataService.saveLocations(fallbackLocations.map { it.toEntity() })
-            }
+            collectedLocationIds += propertyLocations.map { it.id }
         }
 
         // Rooms
-        val projectRooms = runCatching { api.getProjectRooms(projectId) }.getOrDefault(emptyList())
-        if (projectRooms.isNotEmpty()) {
-            localDataService.saveRooms(projectRooms.map { it.toEntity() })
-        }
-
-        // Additional per-location rooms
-        val locationIds = (detail?.locations ?: emptyList()).map { it.id } +
-            propertyLocations.map { it.id }
+        val locationIds = collectedLocationIds.toList()
         locationIds.distinct().forEach { locationId ->
             val rooms = runCatching { api.getRoomsForLocation(locationId) }.getOrNull()
             rooms?.let {
                 localDataService.saveRooms(it.map { room -> room.toEntity(locationId = room.locationId ?: locationId) })
+                collectedRoomIds += it.map { room -> room.id }
             }
         }
 
         // Room detail enrichment
-        val roomIds = (detail?.rooms ?: emptyList()).map { it.id } +
-            projectRooms.map { it.id }
+        val roomIds = collectedRoomIds.toList()
         roomIds.distinct().forEach { roomId ->
 
             // Room detail
@@ -139,10 +141,7 @@ class OfflineSyncRepository(
 
             // Room scoped photos/logs/damages/equipment/work scope
             runCatching { api.getRoomPhotos(roomId) }.onSuccess { photos ->
-                localDataService.savePhotos(photos.map { it.toEntity() })
-                if (photos.isNotEmpty()) {
-                    didFetchPhotos = true
-                }
+                persistPhotos(photos)
             }
 
             runCatching { api.getRoomAtmosphericLogs(roomId) }.onSuccess { logs ->
@@ -178,37 +177,23 @@ class OfflineSyncRepository(
             localDataService.saveAtmosphericLogs(logs.map { it.toEntity(defaultRoomId = null) })
         }
 
-        runCatching { api.getProjectMoistureLogs(projectId) }.onSuccess { logs ->
-            val materials = logs.extractMaterials()
-            if (materials.isNotEmpty()) {
-                localDataService.saveMaterials(materials)
-            }
-            val mappedLogs = logs.mapNotNull { it.toEntity() }
-            if (mappedLogs.isNotEmpty()) {
-                localDataService.saveMoistureLogs(mappedLogs)
-            }
-        }
+        val floorPhotos = runCatching {
+            fetchAllPages { page -> api.getProjectFloorPhotos(projectId, page) }
+                .map { it.toPhotoDto(projectId) }
+        }.getOrDefault(emptyList())
+        persistPhotos(floorPhotos)
 
-        runCatching { api.getProjectPhotos(projectId) }.onSuccess { photos ->
-            localDataService.savePhotos(photos.map { it.toEntity() })
-            if (photos.isNotEmpty()) {
-                didFetchPhotos = true
-            }
-        }
+        val locationPhotos = runCatching {
+            fetchAllPages { page -> api.getProjectLocationPhotos(projectId, page) }
+                .map { it.toPhotoDto(projectId) }
+        }.getOrDefault(emptyList())
+        persistPhotos(locationPhotos)
 
-        runCatching { api.getProjectPhotoShares(projectId) }.onSuccess { photos ->
-            localDataService.savePhotos(photos.map { it.toEntity() })
-            if (photos.isNotEmpty()) {
-                didFetchPhotos = true
-            }
-        }
-
-        runCatching { api.getProjectResourcePhotos(projectId) }.onSuccess { photos ->
-            localDataService.savePhotos(photos.map { it.toEntity() })
-            if (photos.isNotEmpty()) {
-                didFetchPhotos = true
-            }
-        }
+        val unitPhotos = runCatching {
+            fetchAllPages { page -> api.getProjectUnitPhotos(projectId, page) }
+                .map { it.toPhotoDto(projectId) }
+        }.getOrDefault(emptyList())
+        persistPhotos(unitPhotos)
 
         runCatching { api.getProjectEquipment(projectId) }.onSuccess { equipment ->
             localDataService.saveEquipment(equipment.map { it.toEntity() })
@@ -216,10 +201,6 @@ class OfflineSyncRepository(
 
         runCatching { api.getProjectDamageMaterials(projectId) }.onSuccess { damages ->
             localDataService.saveDamages(damages.mapNotNull { it.toEntity(defaultProjectId = projectId) })
-        }
-
-        runCatching { api.getProjectWorkScope(projectId) }.onSuccess { scopes ->
-            localDataService.saveWorkScopes(scopes.mapNotNull { it.toEntity() })
         }
 
         runCatching { api.getProjectNotes(projectId) }.onSuccess { notes ->
@@ -466,6 +447,36 @@ private fun PhotoDto.toEntity(): OfflinePhotoEntity {
         cachedOriginalPath = localCachePath,
         cachedThumbnailPath = null,
         lastAccessedAt = timestamp.takeIf { localCachePath != null }
+    )
+}
+
+private fun ProjectPhotoListingDto.toPhotoDto(defaultProjectId: Long): PhotoDto {
+    val resolvedSizes = sizes
+    val resolvedRemoteUrl = resolvedSizes?.gallery
+        ?: resolvedSizes?.large
+        ?: resolvedSizes?.medium
+        ?: resolvedSizes?.raw
+    val resolvedThumbnail = resolvedSizes?.small ?: resolvedSizes?.medium
+    return PhotoDto(
+        id = id,
+        uuid = uuid,
+        projectId = projectId ?: defaultProjectId,
+        roomId = roomId,
+        logId = null,
+        moistureLogId = null,
+        fileName = fileName,
+        localPath = null,
+        remoteUrl = resolvedRemoteUrl,
+        thumbnailUrl = resolvedThumbnail,
+        assemblyId = null,
+        tusUploadId = null,
+        fileSize = null,
+        width = null,
+        height = null,
+        mimeType = contentType,
+        capturedAt = createdAt,
+        createdAt = createdAt,
+        updatedAt = updatedAt
     )
 }
 

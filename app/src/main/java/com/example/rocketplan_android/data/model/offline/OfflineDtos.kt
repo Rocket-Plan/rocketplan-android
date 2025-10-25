@@ -232,6 +232,36 @@ data class PhotoDto(
     val updatedAt: String?
 )
 
+data class PhotoSizeDto(
+    val small: String? = null,
+    val medium: String? = null,
+    val large: String? = null,
+    val gallery: String? = null,
+    val raw: String? = null
+)
+
+data class ProjectPhotoListingDto(
+    val id: Long,
+    val uuid: String? = null,
+    @SerializedName("project_id")
+    val projectId: Long? = null,
+    @SerializedName("room_id")
+    val roomId: Long? = null,
+    @SerializedName("location_id")
+    val locationId: Long? = null,
+    @SerializedName("unit_id")
+    val unitId: Long? = null,
+    @SerializedName("file_name")
+    val fileName: String? = null,
+    @SerializedName("content_type")
+    val contentType: String? = null,
+    val sizes: PhotoSizeDto? = null,
+    @SerializedName("created_at")
+    val createdAt: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
+)
+
 data class AtmosphericLogDto(
     val id: Long,
     val uuid: String?,

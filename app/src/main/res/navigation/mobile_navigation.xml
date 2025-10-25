@@ -116,6 +116,10 @@
         <action
             android:id="@+id/action_projectDetailFragment_to_rocketDryFragment"
             app:destination="@id/rocketDryFragment" />
+
+        <action
+            android:id="@+id/action_projectDetailFragment_to_roomDetailFragment"
+            app:destination="@id/roomDetailFragment" />
     </fragment>
 
     <fragment
@@ -126,6 +130,21 @@
 
         <argument
             android:name="projectId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/roomDetailFragment"
+        android:name="com.example.rocketplan_android.ui.projects.RoomDetailFragment"
+        android:label="Room Detail"
+        tools:layout="@layout/fragment_room_detail">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
             app:argType="long" />
     </fragment>
 

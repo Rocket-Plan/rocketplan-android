@@ -126,6 +126,9 @@ class ProjectListFragment : Fragment() {
         viewModel.prioritizeProject(project.projectId)
         // Navigate to project detail
         val action = ProjectsFragmentDirections.actionNavProjectsToProjectDetail(project.projectId)
-        requireParentFragment().findNavController().navigate(action)
+        val navController = requireParentFragment().findNavController()
+        if (navController.currentDestination?.id == R.id.nav_projects) {
+            navController.navigate(action)
+        }
     }
 }

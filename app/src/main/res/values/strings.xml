@@ -38,41 +38,49 @@
     <string name="back">Back</string>
     <string name="map">Map</string>
     <string name="menu">Menu</string>
-    <string name="wip">WIP</string>
-    <string name="add_alias">Add Alias</string>
-    <string name="project_info">Project Info</string>
-    <string name="add_project_loss_info">Add Project/Loss Info</string>
-    <string name="add_project_loss_info_desc">Collect claims details here, such as property information &amp; loss data!</string>
-    <string name="rocket_scan">RocketScan</string>
-    <string name="rocket_scan_desc">View all project photos and documents by folders</string>
-    <string name="rocket_dry">RocketDry</string>
-    <string name="rocket_dry_desc">Log and manage your drying progress.</string>
-    <string name="all_project_notes">All Project Notes</string>
-    <string name="all_project_notes_desc">View all notes that have been added to the project</string>
-    <string name="crew">Crew</string>
-    <string name="crew_desc">Add and dispatch crew members</string>
-    <string name="rocket_scan_empty_state">No project photos yet. Capture images with RocketScan to populate this album.</string>
-    <string name="rocket_scan_photo_preview_placeholder">Photo preview coming soon.</string>
-
-    <!-- RocketDry Screen -->
+    <string name="edit_project">Edit Project</string>
+    <string name="photos">Photos</string>
+    <string name="damages">Damages</string>
+    <string name="sketch">Sketch</string>
+    <string name="add_note">Add a note</string>
+    <string name="add_room">Room</string>
+    <string name="add_exterior_space">Exterior Space</string>
+    <string name="exterior_space">Exterior Space</string>
+    <string name="no_rooms_placeholder">Start building your project by adding rooms.</string>
+    <string name="capture_photos">Capture Photos</string>
     <string name="project_home">Project Home</string>
+    <string name="all_locations">All Locations</string>
+    <string name="rocket_scan">RocketScan</string>
+    <string name="damage_assessment">Damage Assessment</string>
+    <string name="all_photos">All Photos</string>
+    <string name="add_photo">Add a photo+</string>
     <string name="edit_address">Edit Address</string>
     <string name="equipment">Equipment</string>
     <string name="moisture">Moisture</string>
     <string name="room">Room</string>
-    <string name="exterior_space">Exterior Space</string>
     <string name="external_atmospheric_log">External Atmospheric Log</string>
     <string name="add_log">Add Log</string>
     <string name="r_humidity_short">R. Humidi…</string>
-    <string name="temperature_short">Temperat…</string>
-    <string name="pressure">Pressure</string>
-    <string name="wind_speed_short">Wind Spe…</string>
     <string name="percent">%</string>
+    <string name="temperature_short">Temperat…</string>
     <string name="fahrenheit">°F</string>
+    <string name="pressure">Pressure</string>
     <string name="kpa">kPa</string>
+    <string name="wind_speed_short">Wind Spe…</string>
     <string name="mph">mph</string>
-    <string name="main_level">Main Level</string>
+    <string name="rocket_scan_empty_state">No project photos yet. Capture images with RocketScan to populate this album.</string>
     <string name="location_icon">Location Icon</string>
+    <string name="main_level">Main Level</string>
+    <string name="rocket_scan_photo_preview_placeholder">Photo preview coming soon.</string>
     <string name="material_count">%d Material</string>
     <string name="materials_count">%d Materials</string>
+
+    <plurals name="photo_count">
+        <item quantity="one">%d Photo</item>
+        <item quantity="other">%d Photos</item>
+    </plurals>
+
+    <!-- Album Categories -->
+    <string name="daily_progress">Daily Progress</string>
+    <string name="pre_existing_damages">Pre-Existing Damages</string>
 </resources>
