@@ -79,12 +79,14 @@ interface OfflineSyncApi {
     // Rooms
     @GET("/api/projects/{projectId}/rooms")
     suspend fun getProjectRooms(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("include") include: String? = "roomType,photosCount,thumbnail,level,photoAssemblies,damage_materials_count,damageMaterials.damageType,noteCategoryCounts,equipment,equipmentCount,workScopeActions"
     ): List<RoomDto>
 
     @GET("/api/locations/{locationId}/rooms")
     suspend fun getRoomsForLocation(
-        @Path("locationId") locationId: Long
+        @Path("locationId") locationId: Long,
+        @Query("include") include: String? = "roomType,photosCount,thumbnail,level,photoAssemblies,damage_materials_count,damageMaterials.damageType,noteCategoryCounts,equipment,equipmentCount,workScopeActions"
     ): List<RoomDto>
 
     @GET("/api/rooms/{roomId}")
@@ -100,12 +102,16 @@ interface OfflineSyncApi {
 
     @GET("/api/projects/{projectId}/photos")
     suspend fun getProjectPhotos(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("limit") limit: String? = null,
+        @Query("include") include: String? = null
     ): List<PhotoDto>
 
     @GET("/api/rooms/{roomId}/photos")
     suspend fun getRoomPhotos(
-        @Path("roomId") roomId: Long
+        @Path("roomId") roomId: Long,
+        @Query("limit") limit: String? = "30",
+        @Query("include") include: String? = "photo,albums,notesCount,creator"
     ): List<PhotoDto>
 
     @GET("/api/projects/{projectId}/photo-shares")

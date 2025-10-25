@@ -89,13 +89,15 @@ class ProjectDetailFragment : Fragment() {
         }
 
         rocketScanCard.setOnClickListener {
-            // TODO: Navigate to RocketScan screen
-            Toast.makeText(context, "RocketScan", Toast.LENGTH_SHORT).show()
+            val action = ProjectDetailFragmentDirections
+                .actionProjectDetailFragmentToRocketScanFragment(args.projectId)
+            findNavController().navigate(action)
         }
 
         rocketDryCard.setOnClickListener {
-            // TODO: Navigate to RocketDry screen
-            Toast.makeText(context, "RocketDry", Toast.LENGTH_SHORT).show()
+            val action = ProjectDetailFragmentDirections
+                .actionProjectDetailFragmentToRocketDryFragment(args.projectId)
+            findNavController().navigate(action)
         }
 
         projectNotesCard.setOnClickListener {

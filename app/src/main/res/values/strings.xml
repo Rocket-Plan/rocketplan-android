@@ -51,4 +51,28 @@
     <string name="all_project_notes_desc">View all notes that have been added to the project</string>
     <string name="crew">Crew</string>
     <string name="crew_desc">Add and dispatch crew members</string>
+    <string name="rocket_scan_empty_state">No project photos yet. Capture images with RocketScan to populate this album.</string>
+    <string name="rocket_scan_photo_preview_placeholder">Photo preview coming soon.</string>
+
+    <!-- RocketDry Screen -->
+    <string name="project_home">Project Home</string>
+    <string name="edit_address">Edit Address</string>
+    <string name="equipment">Equipment</string>
+    <string name="moisture">Moisture</string>
+    <string name="room">Room</string>
+    <string name="exterior_space">Exterior Space</string>
+    <string name="external_atmospheric_log">External Atmospheric Log</string>
+    <string name="add_log">Add Log</string>
+    <string name="r_humidity_short">R. Humidi…</string>
+    <string name="temperature_short">Temperat…</string>
+    <string name="pressure">Pressure</string>
+    <string name="wind_speed_short">Wind Spe…</string>
+    <string name="percent">%</string>
+    <string name="fahrenheit">°F</string>
+    <string name="kpa">kPa</string>
+    <string name="mph">mph</string>
+    <string name="main_level">Main Level</string>
+    <string name="location_icon">Location Icon</string>
+    <string name="material_count">%d Material</string>
+    <string name="materials_count">%d Materials</string>
 </resources>

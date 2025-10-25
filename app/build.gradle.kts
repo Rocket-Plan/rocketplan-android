@@ -133,6 +133,7 @@ dependencies {
     // ViewPager2 and SwipeRefreshLayout for projects list
     implementation(libs.androidx.viewpager2)
     implementation(libs.androidx.swiperefreshlayout)
+    implementation(libs.coil)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

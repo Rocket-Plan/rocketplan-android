@@ -108,6 +108,25 @@
         <argument
             android:name="projectId"
             app:argType="long" />
+
+        <action
+            android:id="@+id/action_projectDetailFragment_to_rocketScanFragment"
+            app:destination="@id/rocketScanFragment" />
+
+        <action
+            android:id="@+id/action_projectDetailFragment_to_rocketDryFragment"
+            app:destination="@id/rocketDryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/rocketDryFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.RocketDryFragment"
+        android:label="RocketDry"
+        tools:layout="@layout/fragment_rocket_dry">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
     </fragment>
 
     <fragment
@@ -121,4 +140,15 @@
         android:name="com.example.rocketplan_android.ui.slideshow.SlideshowFragment"
         android:label="@string/menu_slideshow"
         tools:layout="@layout/fragment_slideshow" />
+
+    <fragment
+        android:id="@+id/rocketScanFragment"
+        android:name="com.example.rocketplan_android.ui.rocketscan.RocketScanFragment"
+        android:label="@string/rocket_scan"
+        tools:layout="@layout/fragment_rocket_scan">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+    </fragment>
 </navigation>
