@@ -19,6 +19,10 @@
         <item name="checkedIconVisible">false</item>
         <item name="chipCornerRadius">20dp</item>
         <item name="chipMinHeight">40dp</item>
+        <item name="android:textAppearance">@style/TextAppearance.RocketPlan.Chip</item>
+    </style>
+
+    <style name="TextAppearance.RocketPlan.Chip" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
     </style>
