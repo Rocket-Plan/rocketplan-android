@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.repository
 
+import android.util.Log
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
@@ -61,7 +62,13 @@ class OfflineSyncRepository(
     }
 
     suspend fun syncProjectGraph(projectId: Long) = withContext(ioDispatcher) {
-        val detail = runCatching { api.getProjectDetail(projectId) }.getOrNull()
+        Log.d("API", "🔄 [syncProjectGraph] Starting sync for project $projectId")
+
+        val detail = runCatching { api.getProjectDetail(projectId) }
+            .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched project detail for $projectId") }
+            .onFailure { Log.e("API", "❌ [syncProjectGraph] Failed to fetch project detail for $projectId", it) }
+            .getOrNull()
+
         var didFetchPhotos = false
         val collectedLocationIds = mutableSetOf<Long>()
         val collectedRoomIds = mutableSetOf<Long>()
@@ -76,20 +83,35 @@ class OfflineSyncRepository(
         detail?.let { dto ->
             val projectEntity = dto.toEntity()
             localDataService.saveProjects(listOf(projectEntity))
+            Log.d("API", "📦 [syncProjectGraph] Saved project $projectId")
 
-            dto.notes?.let { localDataService.saveNotes(it.mapNotNull { note -> note.toEntity() }) }
-            dto.users?.let { localDataService.saveUsers(it.map { user -> user.toEntity() }) }
+            dto.notes?.let {
+                localDataService.saveNotes(it.mapNotNull { note -> note.toEntity() })
+                Log.d("API", "📝 [syncProjectGraph] Saved ${it.size} notes")
+            }
+            dto.users?.let {
+                localDataService.saveUsers(it.map { user -> user.toEntity() })
+                Log.d("API", "👥 [syncProjectGraph] Saved ${it.size} users")
+            }
             dto.locations?.let {
                 localDataService.saveLocations(it.map { loc -> loc.toEntity() })
                 collectedLocationIds += it.map { loc -> loc.id }
+                Log.d("API", "📍 [syncProjectGraph] Saved ${it.size} locations from project detail")
             }
             dto.rooms?.let {
                 localDataService.saveRooms(it.map { room -> room.toEntity() })
                 collectedRoomIds += it.map { room -> room.id }
                 collectedLocationIds += it.mapNotNull { room -> room.locationId }
+                Log.d("API", "🏠 [syncProjectGraph] Saved ${it.size} rooms from project detail")
             }
-            dto.photos?.let { persistPhotos(it) }
-            dto.atmosphericLogs?.let { localDataService.saveAtmosphericLogs(it.map { log -> log.toEntity() }) }
+            dto.photos?.let {
+                persistPhotos(it)
+                Log.d("API", "📸 [syncProjectGraph] Saved ${it.size} photos from project detail")
+            }
+            dto.atmosphericLogs?.let {
+                localDataService.saveAtmosphericLogs(it.map { log -> log.toEntity() })
+                Log.d("API", "🌡️ [syncProjectGraph] Saved ${it.size} atmospheric logs")
+            }
             dto.moistureLogs?.let {
                 val materials = it.extractMaterials()
                 if (materials.isNotEmpty()) {
@@ -98,37 +120,66 @@ class OfflineSyncRepository(
                 val moistureLogs = it.mapNotNull { log -> log.toEntity() }
                 if (moistureLogs.isNotEmpty()) {
                     localDataService.saveMoistureLogs(moistureLogs)
+                    Log.d("API", "💧 [syncProjectGraph] Saved ${moistureLogs.size} moisture logs")
                 }
             }
-            dto.equipment?.let { localDataService.saveEquipment(it.map { eq -> eq.toEntity() }) }
-            dto.damages?.let { localDataService.saveDamages(it.mapNotNull { dmg -> dmg.toEntity() }) }
-            dto.workScopes?.let { localDataService.saveWorkScopes(it.mapNotNull { scope -> scope.toEntity() }) }
+            dto.equipment?.let {
+                localDataService.saveEquipment(it.map { eq -> eq.toEntity() })
+                Log.d("API", "🔧 [syncProjectGraph] Saved ${it.size} equipment")
+            }
+            dto.damages?.let {
+                localDataService.saveDamages(it.mapNotNull { dmg -> dmg.toEntity() })
+                Log.d("API", "⚠️ [syncProjectGraph] Saved ${it.size} damages")
+            }
+            dto.workScopes?.let {
+                localDataService.saveWorkScopes(it.mapNotNull { scope -> scope.toEntity() })
+                Log.d("API", "📋 [syncProjectGraph] Saved ${it.size} work scopes")
+            }
         }
 
         // Property metadata
+        Log.d("API", "🏢 [syncProjectGraph] Fetching property for project $projectId")
         val property = fetchProjectProperty(projectId)
-        property?.let { localDataService.saveProperty(it.toEntity()) }
+        if (property != null) {
+            localDataService.saveProperty(property.toEntity())
+            Log.d("API", "✅ [syncProjectGraph] Fetched and saved property ${property.id}")
+        } else {
+            Log.w("API", "⚠️ [syncProjectGraph] No property found for project $projectId")
+        }
 
         val propertyLocations = property?.id?.let { propertyId ->
-            val levels = runCatching { api.getPropertyLevels(propertyId) }.getOrDefault(emptyList())
-            val nestedLocations = runCatching { api.getPropertyLocations(propertyId) }.getOrDefault(emptyList())
+            Log.d("API", "📍 [syncProjectGraph] Fetching locations for property $propertyId")
+            val levels = runCatching { api.getPropertyLevels(propertyId) }
+                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.size} levels") }
+                .onFailure { Log.e("API", "❌ [syncProjectGraph] Failed to fetch levels", it) }
+                .getOrDefault(emptyList())
+            val nestedLocations = runCatching { api.getPropertyLocations(propertyId) }
+                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.size} nested locations") }
+                .onFailure { Log.e("API", "❌ [syncProjectGraph] Failed to fetch nested locations", it) }
+                .getOrDefault(emptyList())
             levels + nestedLocations
         } ?: emptyList()
 
         if (propertyLocations.isNotEmpty()) {
             localDataService.saveLocations(propertyLocations.map { it.toEntity() })
             collectedLocationIds += propertyLocations.map { it.id }
+            Log.d("API", "📍 [syncProjectGraph] Saved ${propertyLocations.size} property locations, total collected: ${collectedLocationIds.size}")
         }
 
         // Rooms
         val locationIds = collectedLocationIds.toList()
+        Log.d("API", "🏠 [syncProjectGraph] Fetching rooms for ${locationIds.size} locations")
         locationIds.distinct().forEach { locationId ->
-            val rooms = runCatching { api.getRoomsForLocation(locationId) }.getOrNull()
+            val rooms = runCatching { api.getRoomsForLocation(locationId) }
+                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.size} rooms for location $locationId") }
+                .onFailure { Log.e("API", "❌ [syncProjectGraph] Failed to fetch rooms for location $locationId", it) }
+                .getOrNull()
             rooms?.let {
                 localDataService.saveRooms(it.map { room -> room.toEntity(locationId = room.locationId ?: locationId) })
                 collectedRoomIds += it.map { room -> room.id }
             }
         }
+        Log.d("API", "🏠 [syncProjectGraph] Total rooms collected: ${collectedRoomIds.size}")
 
         // Room detail enrichment
         val roomIds = collectedRoomIds.toList()
@@ -214,6 +265,8 @@ class OfflineSyncRepository(
         if (didFetchPhotos) {
             photoCacheScheduler.schedulePrefetch()
         }
+
+        Log.d("API", "✅ [syncProjectGraph] Sync completed for project $projectId - Locations: ${collectedLocationIds.size}, Rooms: ${collectedRoomIds.size}")
     }
 
     private suspend fun <T> fetchAllPages(
