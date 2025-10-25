@@ -21,6 +21,7 @@ class ProjectDetailViewModel(
 
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
+    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
 
     private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
     val uiState: StateFlow<ProjectDetailUiState> = _uiState
@@ -29,6 +30,13 @@ class ProjectDetailViewModel(
     val selectedTab: StateFlow<ProjectDetailTab> = _selectedTab
 
     init {
+        // Trigger sync for this project
+        viewModelScope.launch {
+            runCatching {
+                offlineSyncRepository.syncProjectGraph(projectId)
+            }
+        }
+
         viewModelScope.launch {
             combine(
                 localDataService.observeProjects(),
