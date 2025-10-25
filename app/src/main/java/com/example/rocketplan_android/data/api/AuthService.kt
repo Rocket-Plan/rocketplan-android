@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.api
 
 import com.example.rocketplan_android.data.model.CheckEmailRequest
 import com.example.rocketplan_android.data.model.CheckEmailResponse
+import com.example.rocketplan_android.data.model.CurrentUserEnvelope
 import com.example.rocketplan_android.data.model.ResetPasswordRequest
 import com.example.rocketplan_android.data.model.ResetPasswordResponse
 import com.example.rocketplan_android.data.model.LoginRequest
@@ -9,6 +10,7 @@ import com.example.rocketplan_android.data.model.LoginResponse
 import com.example.rocketplan_android.data.model.RegisterRequest
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
 
 /**
@@ -44,4 +46,10 @@ interface AuthService {
      */
     @POST("api/auth/forgot-password")
     suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<ResetPasswordResponse>
+
+    /**
+     * Fetch the currently authenticated user's profile.
+     */
+    @GET("api/auth/user")
+    suspend fun getCurrentUser(): Response<CurrentUserEnvelope>
 }

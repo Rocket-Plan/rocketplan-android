@@ -29,18 +29,18 @@ class ProjectsAdapter(
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val projectTitle: TextView = itemView.findViewById(R.id.projectTitle)
-        private val projectNumber: TextView = itemView.findViewById(R.id.projectNumber)
-        private val projectSubtitle: TextView = itemView.findViewById(R.id.projectSubtitle)
+        private val projectCode: TextView = itemView.findViewById(R.id.projectNumber)
+        private val projectAlias: TextView = itemView.findViewById(R.id.projectSubtitle)
 
         fun bind(project: ProjectListItem) {
             projectTitle.text = project.title
-            projectNumber.text = project.projectNumber
+            projectCode.text = project.projectCode
 
-            if (project.subtitle.isNullOrBlank()) {
-                projectSubtitle.visibility = View.GONE
+            if (project.alias.isNullOrBlank()) {
+                projectAlias.visibility = View.GONE
             } else {
-                projectSubtitle.visibility = View.VISIBLE
-                projectSubtitle.text = project.subtitle
+                projectAlias.visibility = View.VISIBLE
+                projectAlias.text = project.alias
             }
 
             itemView.setOnClickListener {

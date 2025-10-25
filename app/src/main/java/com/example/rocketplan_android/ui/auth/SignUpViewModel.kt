@@ -5,10 +5,11 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.model.AuthSession
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.launch
-import com.example.rocketplan_android.R
 
 /**
  * ViewModel for the email + password sign-up flow.
@@ -53,6 +54,9 @@ class SignUpViewModel(
 
     private val _signUpSuccess = MutableLiveData<Boolean>()
     val signUpSuccess: LiveData<Boolean> = _signUpSuccess
+
+    private val _authSession = MutableLiveData<AuthSession?>()
+    val authSession: LiveData<AuthSession?> = _authSession
 
     fun setPassword(value: String) {
         _password.value = value
@@ -149,9 +153,11 @@ class SignUpViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
+            _authSession.value = null
 
             val result = authRepository.signUp(emailValue, passwordValue, confirmValue)
             if (result.isSuccess) {
+                _authSession.value = result.getOrNull()
                 _signUpSuccess.value = true
             } else {
                 // Error message is already user-friendly from ApiError

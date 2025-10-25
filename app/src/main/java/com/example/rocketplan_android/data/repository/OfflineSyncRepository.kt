@@ -24,6 +24,7 @@ import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.PhotoDto
+import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
@@ -45,12 +46,16 @@ class OfflineSyncRepository(
 ) {
 
     suspend fun syncCompanyProjects(companyId: Long) = withContext(ioDispatcher) {
-        val projects = api.getCompanyProjects(companyId)
+        val projects = fetchAllPages { page ->
+            api.getCompanyProjects(companyId = companyId, page = page)
+        }
         localDataService.saveProjects(projects.map { it.toEntity() })
     }
 
     suspend fun syncUserProjects(userId: Long) = withContext(ioDispatcher) {
-        val projects = api.getUserProjects(userId)
+        val projects = fetchAllPages { page ->
+            api.getUserProjects(userId = userId, page = page)
+        }
         localDataService.saveProjects(projects.map { it.toEntity() })
     }
 
@@ -230,6 +235,25 @@ class OfflineSyncRepository(
         }
     }
 
+    private suspend fun <T> fetchAllPages(
+        fetch: suspend (page: Int) -> PaginatedResponse<T>
+    ): List<T> {
+        val results = mutableListOf<T>()
+        var page = 1
+        while (true) {
+            val response = fetch(page)
+            results += response.data
+            val current = response.meta?.currentPage ?: page
+            val last = response.meta?.lastPage ?: current
+            val hasMore = current < last && response.data.isNotEmpty()
+            if (!hasMore) {
+                break
+            }
+            page = current + 1
+        }
+        return results
+    }
+
     private suspend fun fetchProjectProperty(projectId: Long): PropertyDto? {
         val properties = runCatching { api.getProjectProperties(projectId) }.getOrDefault(emptyList())
         return properties.firstOrNull()
@@ -241,16 +265,34 @@ private fun now(): Date = Date()
 
 private fun ProjectDto.toEntity(): OfflineProjectEntity {
     val timestamp = now()
+    val addressLine1 = address?.address?.takeIf { it.isNotBlank() }
+    val addressLine2 = address?.address2?.takeIf { it.isNotBlank() }
+    val resolvedTitle = listOfNotNull(
+        addressLine1,
+        title?.takeIf { it.isNotBlank() },
+        alias?.takeIf { it.isNotBlank() },
+        projectNumber?.takeIf { it.isNotBlank() },
+        uid?.takeIf { it.isNotBlank() }
+    ).firstOrNull() ?: "Project $id"
+    val resolvedUuid = uuid ?: uid ?: "project-$id"
+    val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
+    val resolvedPropertyId = propertyId ?: address?.id
+    val normalizedAlias = alias?.takeIf { it.isNotBlank() }
+    val normalizedUid = uid?.takeIf { it.isNotBlank() }
     return OfflineProjectEntity(
         projectId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
-        title = title,
+        uuid = resolvedUuid,
+        title = resolvedTitle,
         projectNumber = projectNumber,
-        status = status,
+        uid = normalizedUid,
+        alias = normalizedAlias,
+        addressLine1 = addressLine1,
+        addressLine2 = addressLine2,
+        status = resolvedStatus,
         propertyType = propertyType,
         companyId = companyId,
-        propertyId = propertyId,
+        propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         isDirty = false,
@@ -263,16 +305,34 @@ private fun ProjectDto.toEntity(): OfflineProjectEntity {
 
 private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.toEntity(): OfflineProjectEntity {
     val timestamp = now()
+    val addressLine1 = address?.address?.takeIf { it.isNotBlank() }
+    val addressLine2 = address?.address2?.takeIf { it.isNotBlank() }
+    val resolvedTitle = listOfNotNull(
+        addressLine1,
+        title?.takeIf { it.isNotBlank() },
+        alias?.takeIf { it.isNotBlank() },
+        projectNumber?.takeIf { it.isNotBlank() },
+        uid?.takeIf { it.isNotBlank() }
+    ).firstOrNull() ?: "Project $id"
+    val resolvedUuid = uuid ?: uid ?: "project-$id"
+    val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
+    val resolvedPropertyId = propertyId ?: address?.id
+    val normalizedAlias = alias?.takeIf { it.isNotBlank() }
+    val normalizedUid = uid?.takeIf { it.isNotBlank() }
     return OfflineProjectEntity(
         projectId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
-        title = title,
+        uuid = resolvedUuid,
+        title = resolvedTitle,
         projectNumber = projectNumber,
-        status = status,
+        uid = normalizedUid,
+        alias = normalizedAlias,
+        addressLine1 = addressLine1,
+        addressLine2 = addressLine2,
+        status = resolvedStatus,
         propertyType = propertyType,
         companyId = companyId,
-        propertyId = propertyId,
+        propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         isDirty = false,

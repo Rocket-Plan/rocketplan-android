@@ -18,8 +18,8 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.repository.AuthRepository
-import com.example.rocketplan_android.data.storage.SecureStorage
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
@@ -32,6 +32,7 @@ class ProjectsFragment : Fragment() {
     }
 
     private val viewModel: ProjectsViewModel by activityViewModels()
+    private lateinit var rocketPlanApp: RocketPlanApplication
     private lateinit var authRepository: AuthRepository
 
     private lateinit var tabLayout: TabLayout
@@ -51,8 +52,8 @@ class ProjectsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Initialize auth repository
-        authRepository = AuthRepository(SecureStorage.getInstance(requireContext()))
+        rocketPlanApp = requireActivity().application as RocketPlanApplication
+        authRepository = rocketPlanApp.authRepository
 
         tabLayout = view.findViewById(R.id.tabLayout)
         viewPager = view.findViewById(R.id.viewPager)
@@ -121,9 +122,10 @@ class ProjectsFragment : Fragment() {
                 }
 
                 authRepository.logout()
+                rocketPlanApp.syncQueueManager.clear()
 
                 // Navigate back to email check fragment
-                findNavController().navigate(R.id.emailCheckFragment)
+                findNavController().navigate(R.id.action_nav_projects_to_emailCheckFragment)
 
                 Toast.makeText(context, R.string.action_sign_out, Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {

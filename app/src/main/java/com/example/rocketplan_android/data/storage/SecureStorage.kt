@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
@@ -25,6 +26,8 @@ class SecureStorage(private val context: Context) {
         private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
         private val REMEMBER_ME_KEY = booleanPreferencesKey("remember_me")
         private val BIOMETRIC_ENABLED_KEY = booleanPreferencesKey("biometric_enabled")
+        private val USER_ID_KEY = longPreferencesKey("user_id")
+        private val COMPANY_ID_KEY = longPreferencesKey("company_id")
 
         // EncryptedSharedPreferences name
         private const val ENCRYPTED_PREFS_NAME = "rocketplan_encrypted_prefs"
@@ -171,6 +174,46 @@ class SecureStorage(private val context: Context) {
         encryptedPrefs.edit().remove(SAVED_PASSWORD_KEY).apply()
     }
 
+    // ==================== User Context ====================
+
+    suspend fun saveUserId(userId: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[USER_ID_KEY] = userId
+        }
+    }
+
+    suspend fun getUserIdSync(): Long? {
+        return context.dataStore.data.map { it[USER_ID_KEY] }.first()
+    }
+
+    fun getUserId(): Flow<Long?> =
+        context.dataStore.data.map { preferences -> preferences[USER_ID_KEY] }
+
+    suspend fun clearUserId() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(USER_ID_KEY)
+        }
+    }
+
+    suspend fun saveCompanyId(companyId: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[COMPANY_ID_KEY] = companyId
+        }
+    }
+
+    suspend fun getCompanyIdSync(): Long? {
+        return context.dataStore.data.map { it[COMPANY_ID_KEY] }.first()
+    }
+
+    fun getCompanyId(): Flow<Long?> =
+        context.dataStore.data.map { preferences -> preferences[COMPANY_ID_KEY] }
+
+    suspend fun clearCompanyId() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(COMPANY_ID_KEY)
+        }
+    }
+
     // ==================== Biometric Authentication ====================
 
     /**
@@ -210,6 +253,8 @@ class SecureStorage(private val context: Context) {
             preferences.remove(USER_EMAIL_KEY)
             preferences.remove(REMEMBER_ME_KEY)
             preferences.remove(BIOMETRIC_ENABLED_KEY)
+            preferences.remove(USER_ID_KEY)
+            preferences.remove(COMPANY_ID_KEY)
         }
 
         // Clear EncryptedSharedPreferences

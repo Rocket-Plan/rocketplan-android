@@ -14,10 +14,13 @@ import androidx.core.content.getSystemService
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import kotlinx.coroutines.launch
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.databinding.FragmentLoginBinding
 
 /**
@@ -97,6 +100,9 @@ class LoginFragment : Fragment() {
             hideKeyboard()
             signInWithGoogle()
         }
+
+        binding.googleSignInButton.visibility = View.GONE
+        binding.orDivider.visibility = View.GONE
     }
 
     private fun observeViewModel() {
@@ -155,6 +161,11 @@ class LoginFragment : Fragment() {
 
         viewModel.signInSuccess.observe(viewLifecycleOwner) { success ->
             if (success == true) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    (requireActivity().application as RocketPlanApplication)
+                        .syncQueueManager
+                        .ensureInitialSync()
+                }
                 val action = LoginFragmentDirections.actionLoginFragmentToNavHome()
                 findNavController().navigate(action)
                 viewModel.onSignInSuccessHandled()

@@ -45,17 +45,29 @@ data class LoginResponse(
 )
 
 /**
+ * Aggregated authentication session details returned to the app after login/sign-up.
+ * Combines the Sanctum token with the freshly fetched user context so callers can
+ * immediately access identifiers like userId/companyId without another lookup.
+ */
+data class AuthSession(
+    val token: String,
+    val user: CurrentUserResponse
+)
+
+/**
  * User data model
  */
 data class User(
     @SerializedName("id")
-    val id: String,
+    val id: Long,
     @SerializedName("email")
     val email: String,
-    @SerializedName("firstName")
+    @SerializedName("first_name")
     val firstName: String? = null,
-    @SerializedName("lastName")
+    @SerializedName("last_name")
     val lastName: String? = null,
+    @SerializedName("company_id")
+    val companyId: Long? = null,
     @SerializedName("company")
     val company: Company? = null
 )
@@ -65,11 +77,34 @@ data class User(
  */
 data class Company(
     @SerializedName("id")
-    val id: String,
+    val id: Long,
     @SerializedName("name")
     val name: String?,
     @SerializedName("logoUrl")
     val logoUrl: String? = null
+)
+
+data class CurrentUserResponse(
+    @SerializedName("id")
+    val id: Long,
+    @SerializedName("email")
+    val email: String,
+    @SerializedName("first_name")
+    val firstName: String? = null,
+    @SerializedName("last_name")
+    val lastName: String? = null,
+    @SerializedName("company_id")
+    val companyId: Long? = null,
+    @SerializedName("company")
+    val company: Company? = null
+)
+
+/**
+ * Wrapper for current user endpoint responses.
+ */
+data class CurrentUserEnvelope(
+    @SerializedName("data")
+    val data: CurrentUserResponse
 )
 
 /**

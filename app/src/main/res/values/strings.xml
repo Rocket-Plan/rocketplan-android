@@ -6,6 +6,8 @@
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
+    <string name="action_profile">Profile</string>
+    <string name="action_sign_out">Sign Out</string>
 
     <string name="menu_home">Home</string>
     <string name="menu_gallery">Gallery</string>
@@ -31,4 +33,22 @@
     <string name="message_passwords_match">Passwords match</string>
     <string name="action_create_account">Create Account</string>
     <string name="message_sign_up_agreement">By signing up, you agree to receive updates and special offers about RocketPlan products. You may unsubscribe at any time.</string>
+
+    <!-- Project Detail Screen -->
+    <string name="back">Back</string>
+    <string name="map">Map</string>
+    <string name="menu">Menu</string>
+    <string name="wip">WIP</string>
+    <string name="add_alias">Add Alias</string>
+    <string name="project_info">Project Info</string>
+    <string name="add_project_loss_info">Add Project/Loss Info</string>
+    <string name="add_project_loss_info_desc">Collect claims details here, such as property information &amp; loss data!</string>
+    <string name="rocket_scan">RocketScan</string>
+    <string name="rocket_scan_desc">View all project photos and documents by folders</string>
+    <string name="rocket_dry">RocketDry</string>
+    <string name="rocket_dry_desc">Log and manage your drying progress.</string>
+    <string name="all_project_notes">All Project Notes</string>
+    <string name="all_project_notes_desc">View all notes that have been added to the project</string>
+    <string name="crew">Crew</string>
+    <string name="crew_desc">Add and dispatch crew members</string>
 </resources>

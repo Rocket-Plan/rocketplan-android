@@ -48,7 +48,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textSize="14sp"
-            android:textColor="@color/light_text_rp"
+            android:textColor="@color/purple_500"
             android:maxLines="2"
             android:ellipsize="end"
             android:visibility="gone"

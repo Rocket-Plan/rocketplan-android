@@ -4,7 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
+import android.view.Gravity
 import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
@@ -17,9 +19,11 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.PopupMenu
+import androidx.navigation.NavOptions
 import com.example.rocketplan_android.databinding.ActivityMainBinding
 import com.example.rocketplan_android.data.repository.AuthRepository
-import com.example.rocketplan_android.data.storage.SecureStorage
+import com.example.rocketplan_android.data.sync.SyncQueueManager
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -31,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
     private lateinit var authRepository: AuthRepository
+    private lateinit var syncQueueManager: SyncQueueManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,9 +49,9 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "Version: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
         }
 
-        // Initialize auth repository
-        val secureStorage = SecureStorage.getInstance(applicationContext)
-        authRepository = AuthRepository(secureStorage)
+        val rocketPlanApp = application as RocketPlanApplication
+        authRepository = rocketPlanApp.authRepository
+        syncQueueManager = rocketPlanApp.syncQueueManager
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
@@ -134,6 +139,9 @@ class MainActivity : AppCompatActivity() {
                         .setPopUpTo(R.id.emailCheckFragment, true)
                         .build()
                     controller.navigate(R.id.nav_projects, null, navOptions)
+                    lifecycleScope.launch {
+                        syncQueueManager.ensureInitialSync()
+                    }
                 }
             }
         }
@@ -143,6 +151,16 @@ class MainActivity : AppCompatActivity() {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.main, menu)
         return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_profile -> {
+                showProfileMenu()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -182,6 +200,11 @@ class MainActivity : AppCompatActivity() {
                             if (BuildConfig.ENABLE_LOGGING) {
                                 Log.d(TAG, "OAuth token saved successfully")
                             }
+                            authRepository.refreshUserContext().onFailure { error ->
+                                Log.w(TAG, "Failed to refresh user context after OAuth", error)
+                            }
+                            syncQueueManager.clear()
+                            syncQueueManager.ensureInitialSync()
 
                             // Navigate to projects screen
                             val navController = findNavController(R.id.nav_host_fragment_content_main)
@@ -216,5 +239,48 @@ class MainActivity : AppCompatActivity() {
     override fun onSupportNavigateUp(): Boolean {
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         return navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+    }
+
+    private fun showProfileMenu() {
+        val toolbar = binding.appBarMain.toolbar
+        val anchor = toolbar.findViewById<View>(R.id.action_profile) ?: toolbar
+        PopupMenu(this, anchor, Gravity.END).apply {
+            menuInflater.inflate(R.menu.profile_menu, menu)
+            setOnMenuItemClickListener { menuItem ->
+                when (menuItem.itemId) {
+                    R.id.action_sign_out -> {
+                        performSignOut()
+                        true
+                    }
+                    else -> false
+                }
+            }
+            show()
+        }
+    }
+
+    private fun performSignOut() {
+        lifecycleScope.launch {
+            try {
+                authRepository.logout()
+                syncQueueManager.clear()
+                val navController = findNavController(R.id.nav_host_fragment_content_main)
+                navController.navigate(
+                    R.id.emailCheckFragment,
+                    null,
+                    NavOptions.Builder()
+                        .setPopUpTo(navController.graph.startDestinationId, inclusive = true)
+                        .build()
+                )
+                Toast.makeText(this@MainActivity, R.string.action_sign_out, Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during logout", e)
+                Toast.makeText(
+                    this@MainActivity,
+                    "Failed to sign out: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 }

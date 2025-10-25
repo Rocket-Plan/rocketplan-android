@@ -10,6 +10,7 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.R
@@ -122,11 +123,9 @@ class ProjectListFragment : Fragment() {
     }
 
     private fun onProjectClick(project: ProjectListItem) {
-        // TODO: Navigate to project detail
-        Toast.makeText(
-            context,
-            "Clicked: ${project.title}",
-            Toast.LENGTH_SHORT
-        ).show()
+        viewModel.prioritizeProject(project.projectId)
+        // Navigate to project detail
+        val action = ProjectsFragmentDirections.actionNavProjectsToProjectDetail(project.projectId)
+        requireParentFragment().findNavController().navigate(action)
     }
 }

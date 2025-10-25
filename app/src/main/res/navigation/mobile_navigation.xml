@@ -86,7 +86,29 @@
         android:id="@+id/nav_projects"
         android:name="com.example.rocketplan_android.ui.projects.ProjectsFragment"
         android:label="Projects"
-        tools:layout="@layout/fragment_projects" />
+        tools:layout="@layout/fragment_projects">
+
+        <action
+            android:id="@+id/action_nav_projects_to_emailCheckFragment"
+            app:destination="@id/emailCheckFragment"
+            app:popUpTo="@id/emailCheckFragment"
+            app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_nav_projects_to_projectDetail"
+            app:destination="@id/projectDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/projectDetailFragment"
+        android:name="com.example.rocketplan_android.ui.projects.ProjectDetailFragment"
+        android:label="Project Detail"
+        tools:layout="@layout/fragment_project_detail">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+    </fragment>
 
     <fragment
         android:id="@+id/nav_gallery"

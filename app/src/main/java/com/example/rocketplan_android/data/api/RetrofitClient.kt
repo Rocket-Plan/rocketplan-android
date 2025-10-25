@@ -116,4 +116,8 @@ object RetrofitClient {
     val authService: AuthService by lazy {
         createService<AuthService>()
     }
+
+    val loggingService: LoggingService by lazy {
+        createService<LoggingService>()
+    }
 }

@@ -14,9 +14,12 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.databinding.FragmentSignUpBinding
 
 /**
@@ -124,6 +127,11 @@ class SignUpFragment : Fragment() {
 
         viewModel.signUpSuccess.observe(viewLifecycleOwner) { success ->
             if (success == true) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    (requireActivity().application as RocketPlanApplication)
+                        .syncQueueManager
+                        .ensureInitialSync()
+                }
                 val action = SignUpFragmentDirections.actionSignUpFragmentToNavHome()
                 findNavController().navigate(action)
                 viewModel.onSignUpSuccessHandled()

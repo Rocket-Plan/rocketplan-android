@@ -127,7 +127,9 @@
                 android:text="OR"
                 android:textColor="@android:color/darker_gray"
                 android:textSize="14sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/googleSignInButton"
@@ -138,6 +140,7 @@
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:padding="16dp"
+                android:visibility="gone"
                 app:icon="@drawable/logo_google"
                 app:iconGravity="textStart"
                 app:iconPadding="0dp"
@@ -146,7 +149,8 @@
                 app:strokeColor="@color/main_purple"
                 app:strokeWidth="2dp"
                 app:backgroundTint="@color/white"
-                style="@style/Widget.Material3.Button.OutlinedButton" />
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                tools:visibility="visible" />
         </LinearLayout>
     </ScrollView>
 

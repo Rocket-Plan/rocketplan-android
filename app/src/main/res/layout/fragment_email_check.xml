@@ -29,11 +29,11 @@
 
             <ImageView
                 android:id="@+id/brandIcon"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/app_name"
-                android:src="@drawable/mailship_icon" />
+                android:src="@drawable/logo_rocket_launching" />
 
             <TextView
                 android:id="@+id/brandName"
@@ -47,12 +47,12 @@
 
             <ImageView
                 android:id="@+id/heroIllustration"
-                android:layout_width="220dp"
-                android:layout_height="220dp"
+                android:layout_width="200dp"
+                android:layout_height="200dp"
                 android:layout_marginTop="36dp"
                 android:adjustViewBounds="true"
                 android:contentDescription="@string/content_desc_onboarding_illustration"
-                android:src="@drawable/frame_4008" />
+                android:src="@drawable/telescope" />
 
             <TextView
                 android:id="@+id/titleText"
@@ -85,13 +85,14 @@
                 android:hint="@string/label_email_address"
                 app:boxBackgroundColor="@color/light_background"
                 app:boxStrokeColor="@color/main_purple"
-                app:boxStrokeWidthFocused="2dp">
+                app:boxStrokeWidthFocused="2dp"
+                app:hintEnabled="true"
+                app:expandedHintEnabled="false">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/emailInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/placeholder_email_address"
                     android:imeOptions="actionDone"
                     android:inputType="textEmailAddress"
                     android:maxLines="1" />
@@ -112,7 +113,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-               android:gravity="center"
+                android:gravity="center"
                 android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
@@ -126,6 +127,7 @@
                     android:padding="12dp"
                     app:backgroundTint="@color/white"
                     app:cornerRadius="16dp"
+                    app:iconTint="@null"
                     app:icon="@drawable/icon_facebook"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
@@ -144,6 +146,7 @@
                     android:padding="12dp"
                     app:backgroundTint="@color/white"
                     app:cornerRadius="16dp"
+                    app:iconTint="@null"
                     app:icon="@drawable/logo_google"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"
@@ -161,6 +164,7 @@
                     android:padding="12dp"
                     app:backgroundTint="@color/white"
                     app:cornerRadius="16dp"
+                    app:iconTint="@null"
                     app:icon="@drawable/ic_logo_apple"
                     app:iconGravity="textStart"
                     app:iconPadding="0dp"

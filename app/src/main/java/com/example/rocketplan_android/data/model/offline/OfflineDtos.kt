@@ -2,52 +2,98 @@ package com.example.rocketplan_android.data.model.offline
 
 import com.google.gson.annotations.SerializedName
 
+data class PaginatedResponse<T>(
+    val data: List<T>,
+    val links: PaginationLinks? = null,
+    val meta: PaginationMeta? = null
+)
+
+data class PaginationLinks(
+    val first: String?,
+    val last: String?,
+    val prev: String?,
+    val next: String?
+)
+
+data class PaginationMeta(
+    @SerializedName("current_page")
+    val currentPage: Int?,
+    @SerializedName("last_page")
+    val lastPage: Int?,
+    @SerializedName("per_page")
+    val perPage: Int?,
+    val total: Int?
+)
+
 data class ProjectDto(
     val id: Long,
-    val uuid: String?,
-    val title: String,
+    val uuid: String? = null,
+    @SerializedName("uid")
+    val uid: String? = null,
+    @SerializedName("alias")
+    val alias: String? = null,
+    val title: String? = null,
     @SerializedName("project_number")
-    val projectNumber: String?,
-    val status: String,
+    val projectNumber: String? = null,
+    val status: String? = null,
     @SerializedName("property_type")
-    val propertyType: String?,
+    val propertyType: String? = null,
     @SerializedName("company_id")
-    val companyId: Long?,
+    val companyId: Long? = null,
     @SerializedName("property_id")
-    val propertyId: Long?,
+    val propertyId: Long? = null,
+    val address: ProjectAddressDto? = null,
     @SerializedName("created_at")
-    val createdAt: String?,
+    val createdAt: String? = null,
     @SerializedName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String? = null
 )
 
 data class ProjectDetailDto(
     val id: Long,
-    val uuid: String?,
-    val title: String,
+    val uuid: String? = null,
+    @SerializedName("uid")
+    val uid: String? = null,
+    @SerializedName("alias")
+    val alias: String? = null,
+    val title: String? = null,
     @SerializedName("project_number")
-    val projectNumber: String?,
-    val status: String,
+    val projectNumber: String? = null,
+    val status: String? = null,
     @SerializedName("property_type")
-    val propertyType: String?,
+    val propertyType: String? = null,
     @SerializedName("company_id")
-    val companyId: Long?,
+    val companyId: Long? = null,
     @SerializedName("property_id")
-    val propertyId: Long?,
-    val notes: List<NoteDto>?,
-    val users: List<UserDto>?,
-    val locations: List<LocationDto>?,
-    val rooms: List<RoomDto>?,
-    val photos: List<PhotoDto>?,
-    val atmosphericLogs: List<AtmosphericLogDto>?,
-    val moistureLogs: List<MoistureLogDto>?,
-    val equipment: List<EquipmentDto>?,
-    val damages: List<DamageMaterialDto>?,
-    val workScopes: List<WorkScopeDto>?,
+    val propertyId: Long? = null,
+    val address: ProjectAddressDto? = null,
+    val notes: List<NoteDto>? = null,
+    val users: List<UserDto>? = null,
+    val locations: List<LocationDto>? = null,
+    val rooms: List<RoomDto>? = null,
+    val photos: List<PhotoDto>? = null,
+    val atmosphericLogs: List<AtmosphericLogDto>? = null,
+    val moistureLogs: List<MoistureLogDto>? = null,
+    val equipment: List<EquipmentDto>? = null,
+    val damages: List<DamageMaterialDto>? = null,
+    val workScopes: List<WorkScopeDto>? = null,
     @SerializedName("created_at")
-    val createdAt: String?,
+    val createdAt: String? = null,
     @SerializedName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String? = null
+)
+
+data class ProjectAddressDto(
+    val id: Long? = null,
+    val address: String? = null,
+    @SerializedName("address_2")
+    val address2: String? = null,
+    val city: String? = null,
+    val state: String? = null,
+    val zip: String? = null,
+    val country: String? = null,
+    val latitude: String? = null,
+    val longitude: String? = null
 )
 
 data class UserDto(

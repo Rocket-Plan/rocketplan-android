@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.config.AppConfig
+import com.example.rocketplan_android.data.model.AuthSession
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.launch
@@ -49,6 +50,9 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _biometricPromptVisible = MutableLiveData<Boolean>(false)
     val biometricPromptVisible: LiveData<Boolean> = _biometricPromptVisible
+
+    private val _authSession = MutableLiveData<AuthSession?>()
+    val authSession: LiveData<AuthSession?> = _authSession
 
     init {
         _email.value = ""
@@ -160,13 +164,17 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
+            _authSession.value = null
 
             val result = authRepository.signIn(emailValue, passwordValue, rememberMeValue)
 
             if (result.isSuccess) {
+                val session = result.getOrNull()
+                _authSession.value = session
                 if (AppConfig.isLoggingEnabled) {
                     println("Sign in successful")
-                    println("Token: ${result.getOrNull()?.token?.take(20)}...")
+                    println("Token: ${session?.token?.take(20)}...")
+                    println("User ID: ${session?.user?.id}")
                 }
                 _signInSuccess.value = true
             } else {
@@ -189,6 +197,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
+            _authSession.value = null
 
             val (savedEmail, savedPassword) = authRepository.getSavedCredentials()
 
@@ -196,6 +205,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 val result = authRepository.signIn(savedEmail, savedPassword, true)
 
                 if (result.isSuccess) {
+                    _authSession.value = result.getOrNull()
                     _signInSuccess.value = true
                 } else {
                     // Error message is already user-friendly from ApiError

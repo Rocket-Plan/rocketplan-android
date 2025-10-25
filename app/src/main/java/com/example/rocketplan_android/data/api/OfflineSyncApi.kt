@@ -8,6 +8,7 @@ import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.NoteableDto
 import com.example.rocketplan_android.data.model.offline.PhotoDto
+import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
@@ -17,19 +18,22 @@ import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import retrofit2.http.GET
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 interface OfflineSyncApi {
 
     // Projects
     @GET("/api/companies/{companyId}/projects")
     suspend fun getCompanyProjects(
-        @Path("companyId") companyId: Long
-    ): List<ProjectDto>
+        @Path("companyId") companyId: Long,
+        @Query("page") page: Int? = null
+    ): PaginatedResponse<ProjectDto>
 
     @GET("/api/users/{userId}/projects")
     suspend fun getUserProjects(
-        @Path("userId") userId: Long
-    ): List<ProjectDto>
+        @Path("userId") userId: Long,
+        @Query("page") page: Int? = null
+    ): PaginatedResponse<ProjectDto>
 
     @GET("/api/projects/{projectId}")
     suspend fun getProjectDetail(

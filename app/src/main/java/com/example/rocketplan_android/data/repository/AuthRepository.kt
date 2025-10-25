@@ -10,6 +10,8 @@ import com.example.rocketplan_android.data.model.ResetPasswordResponse
 import com.example.rocketplan_android.data.model.LoginRequest
 import com.example.rocketplan_android.data.model.LoginResponse
 import com.example.rocketplan_android.data.model.RegisterRequest
+import com.example.rocketplan_android.data.model.AuthSession
+import com.example.rocketplan_android.data.model.CurrentUserResponse
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
 
@@ -51,7 +53,7 @@ class AuthRepository(
      * Calls Laravel /auth/login endpoint
      * Returns Sanctum token on success
      */
-    suspend fun signIn(email: String, password: String, rememberMe: Boolean = false): Result<LoginResponse> {
+    suspend fun signIn(email: String, password: String, rememberMe: Boolean = false): Result<AuthSession> {
         return try {
             val response = authService.login(LoginRequest(email, password))
 
@@ -68,7 +70,18 @@ class AuthRepository(
                     secureStorage.saveEncryptedPassword(password)
                 }
 
-                Result.success(loginResponse)
+                val userContextResult = refreshUserContext()
+                if (userContextResult.isFailure) {
+                    return Result.failure(userContextResult.exceptionOrNull()!!)
+                }
+                val currentUser = userContextResult.getOrNull()!!
+
+                Result.success(
+                    AuthSession(
+                        token = loginResponse.token,
+                        user = currentUser
+                    )
+                )
             } else {
                 val errorBody = response.errorBody()?.string()
                 val apiError = when (response.code()) {
@@ -97,7 +110,7 @@ class AuthRepository(
      * Calls Laravel /auth/register endpoint
      * Returns Sanctum token on success
      */
-    suspend fun signUp(email: String, password: String, passwordConfirmation: String): Result<LoginResponse> {
+    suspend fun signUp(email: String, password: String, passwordConfirmation: String): Result<AuthSession> {
         return try {
             val response = authService.register(RegisterRequest(email, password, passwordConfirmation))
 
@@ -112,7 +125,18 @@ class AuthRepository(
                 secureStorage.setRememberMe(false)
                 secureStorage.clearEncryptedPassword()
 
-                Result.success(registerResponse)
+                val userContextResult = refreshUserContext()
+                if (userContextResult.isFailure) {
+                    return Result.failure(userContextResult.exceptionOrNull()!!)
+                }
+                val currentUser = userContextResult.getOrNull()!!
+
+                Result.success(
+                    AuthSession(
+                        token = registerResponse.token,
+                        user = currentUser
+                    )
+                )
             } else {
                 val errorBody = response.errorBody()?.string()
                 val apiError = when (response.code()) {
@@ -185,7 +209,12 @@ class AuthRepository(
         val token = getAuthTokenSync()
         if (token != null) {
             RetrofitClient.setAuthToken(token)
-            return true
+            return try {
+                ensureUserContext()
+                true
+            } catch (t: Throwable) {
+                false
+            }
         }
         return false
     }
@@ -213,6 +242,41 @@ class AuthRepository(
     fun getSavedEmailFlow(): Flow<String?> {
         return secureStorage.getUserEmail()
     }
+
+    suspend fun refreshUserContext(): Result<CurrentUserResponse> {
+        return try {
+            val response = authService.getCurrentUser()
+            val envelope = response.body()
+            val currentUser = envelope?.data
+
+            if (response.isSuccessful && currentUser != null) {
+                if (currentUser.id > 0L) {
+                    secureStorage.saveUserId(currentUser.id)
+                } else {
+                    secureStorage.clearUserId()
+                }
+                currentUser.companyId?.let { secureStorage.saveCompanyId(it) } ?: secureStorage.clearCompanyId()
+                Result.success(currentUser)
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    suspend fun ensureUserContext() {
+        val userId = secureStorage.getUserIdSync()
+        if (userId == null || userId <= 0L) {
+            refreshUserContext().getOrElse { error -> throw error }
+        }
+    }
+
+    suspend fun getStoredUserId(): Long? = secureStorage.getUserIdSync()?.takeIf { it > 0L }
+
+    suspend fun getStoredCompanyId(): Long? = secureStorage.getCompanyIdSync()
 
     // ==================== Remember Me ====================
 
