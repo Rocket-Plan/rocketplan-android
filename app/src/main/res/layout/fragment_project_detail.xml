@@ -277,67 +277,7 @@
                 android:visibility="gone"
                 tools:text="Damages coming soon" />
 
-            <!-- Album Categories -->
-            <androidx.core.widget.NestedScrollView
-                android:id="@+id/albumCategoriesContainer"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:scrollbars="none"
-                android:visibility="gone">
-
-                <com.google.android.material.chip.ChipGroup
-                    android:id="@+id/albumChipGroup"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    app:singleLine="true"
-                    app:singleSelection="true">
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipAllPhotos"
-                        style="@style/Widget.RocketPlan.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="@string/all_photos" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipDamageAssessment"
-                        style="@style/Widget.RocketPlan.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/damage_assessment" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipDailyProgress"
-                        style="@style/Widget.RocketPlan.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/daily_progress" />
-
-                    <com.google.android.material.chip.Chip
-                        android:id="@+id/chipPreExistingDamages"
-                        style="@style/Widget.RocketPlan.Chip.Filter"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/pre_existing_damages" />
-
-                </com.google.android.material.chip.ChipGroup>
-            </androidx.core.widget.NestedScrollView>
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/captureFab"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="24dp"
-        android:contentDescription="@string/capture_photos"
-        android:src="@drawable/ic_menu_camera"
-        android:tint="@android:color/white"
-        app:backgroundTint="@color/main_purple"
-        app:layout_anchorGravity="bottom|end"
-        tools:ignore="ImageContrastCheck" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

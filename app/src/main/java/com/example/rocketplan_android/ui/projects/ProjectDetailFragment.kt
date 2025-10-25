@@ -20,7 +20,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 
 class ProjectDetailFragment : Fragment() {
@@ -47,9 +46,6 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var photosButton: MaterialButton
     private lateinit var damagesButton: MaterialButton
     private lateinit var sketchButton: MaterialButton
-    private lateinit var captureFab: FloatingActionButton
-    private lateinit var albumCategoriesContainer: View
-    private lateinit var albumChipGroup: com.google.android.material.chip.ChipGroup
 
     private val roomsAdapter by lazy {
         ProjectRoomsAdapter(
@@ -93,9 +89,6 @@ class ProjectDetailFragment : Fragment() {
         photosButton = root.findViewById(R.id.photosTabButton)
         damagesButton = root.findViewById(R.id.damagesTabButton)
         sketchButton = root.findViewById(R.id.sketchTabButton)
-        captureFab = root.findViewById(R.id.captureFab)
-        albumCategoriesContainer = root.findViewById(R.id.albumCategoriesContainer)
-        albumChipGroup = root.findViewById(R.id.albumChipGroup)
 
         headerTitle.text = getString(R.string.project_home)
     }
@@ -154,11 +147,6 @@ class ProjectDetailFragment : Fragment() {
         addExteriorCard.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.add_exterior_space), Toast.LENGTH_SHORT).show()
         }
-        captureFab.setOnClickListener {
-            val action = ProjectDetailFragmentDirections
-                .actionProjectDetailFragmentToRocketScanFragment(args.projectId)
-            findNavController().navigate(action)
-        }
     }
 
     private fun observeViewModel() {
@@ -213,21 +201,18 @@ class ProjectDetailFragment : Fragment() {
                 tabPlaceholder.isVisible = false
                 roomsRecyclerView.isVisible = roomsAdapter.currentList.isNotEmpty()
                 roomsPlaceholder.isVisible = roomsAdapter.currentList.isEmpty()
-                albumCategoriesContainer.isVisible = true
             }
             ProjectDetailTab.DAMAGES -> {
                 roomsRecyclerView.isVisible = false
                 roomsPlaceholder.isVisible = false
                 tabPlaceholder.isVisible = true
                 tabPlaceholder.text = getString(R.string.damages) + " coming soon"
-                albumCategoriesContainer.isVisible = false
             }
             ProjectDetailTab.SKETCH -> {
                 roomsRecyclerView.isVisible = false
                 roomsPlaceholder.isVisible = false
                 tabPlaceholder.isVisible = true
                 tabPlaceholder.text = getString(R.string.sketch) + " coming soon"
-                albumCategoriesContainer.isVisible = false
             }
         }
     }
