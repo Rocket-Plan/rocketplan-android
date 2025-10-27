@@ -156,9 +156,15 @@ data class LocationDto(
     val id: Long,
     val uuid: String?,
     @SerializedName("project_id")
-    val projectId: Long,
-    val title: String,
-    val type: String,
+    val projectId: Long? = null,
+    @SerializedName("title")
+    val title: String? = null,
+    @SerializedName("name")
+    val name: String? = null,
+    @SerializedName("type")
+    val type: String? = null,
+    @SerializedName("location_type")
+    val locationType: String? = null,
     @SerializedName("parent_location_id")
     val parentLocationId: Long?,
     @SerializedName("is_accessible")
@@ -176,10 +182,11 @@ data class RoomDto(
     val projectId: Long,
     @SerializedName("location_id")
     val locationId: Long?,
-    val title: String,
+    val name: String?,  // Human-friendly room name from API
+    val title: String?,  // Made nullable - API doesn't always return title
     @SerializedName("room_type")
-    val roomType: String?,
-    val level: String?,
+    val roomType: RoomTypeDto?,  // Changed from String? to RoomTypeDto? to handle eager-loaded relationship
+    val level: LocationDto?,  // Changed from String? to LocationDto? to handle eager-loaded relationship
     @SerializedName("square_footage")
     val squareFootage: Double?,
     @SerializedName("is_accessible")
@@ -190,9 +197,26 @@ data class RoomDto(
     val updatedAt: String?
 )
 
+data class RoomTypeDto(
+    val id: Long,
+    val name: String?,
+    val type: String?,
+    @SerializedName("is_standard")
+    val isStandard: Boolean?
+)
+
 data class AlbumDto(
     val id: Long,
-    val name: String?
+    val name: String?,
+    @SerializedName("albumable_type")
+    val albumableType: String?,
+    @SerializedName("albumable_id")
+    val albumableId: Long?,
+    val photos: List<PhotoDto>?,
+    @SerializedName("created_at")
+    val createdAt: String?,
+    @SerializedName("updated_at")
+    val updatedAt: String?
 )
 
 data class PhotoDto(

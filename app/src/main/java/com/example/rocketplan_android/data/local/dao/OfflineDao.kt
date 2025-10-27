@@ -5,6 +5,8 @@ import androidx.room.Query
 import androidx.room.Upsert
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
@@ -34,13 +36,13 @@ interface OfflineDao {
     @Upsert
     suspend fun upsertProjects(projects: List<OfflineProjectEntity>)
 
-    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0 ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
     fun observeProjects(): Flow<List<OfflineProjectEntity>>
 
     @Query("SELECT * FROM offline_projects WHERE projectId = :projectId LIMIT 1")
     suspend fun getProject(projectId: Long): OfflineProjectEntity?
 
-    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0 ORDER BY updatedAt DESC")
+    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
     suspend fun getProjectsOnce(): List<OfflineProjectEntity>
 
     @Query("SELECT COUNT(*) FROM offline_projects")
@@ -130,6 +132,30 @@ interface OfflineDao {
 
     @Query("SELECT COUNT(*) FROM offline_photos WHERE cacheStatus = :status AND isDeleted = 0")
     fun observePhotoCountByCacheStatus(status: PhotoCacheStatus): Flow<Int>
+    // endregion
+
+    // region Albums
+    @Upsert
+    suspend fun upsertAlbums(albums: List<OfflineAlbumEntity>)
+
+    @Upsert
+    suspend fun upsertAlbumPhotos(albumPhotos: List<OfflineAlbumPhotoEntity>)
+
+    @Query("SELECT * FROM offline_albums WHERE projectId = :projectId ORDER BY name")
+    fun observeAlbumsForProject(projectId: Long): Flow<List<OfflineAlbumEntity>>
+
+    @Query("SELECT * FROM offline_albums WHERE roomId = :roomId ORDER BY name")
+    fun observeAlbumsForRoom(roomId: Long): Flow<List<OfflineAlbumEntity>>
+
+    @Query(
+        """
+        SELECT p.* FROM offline_photos p
+        INNER JOIN offline_album_photos ap ON p.serverId = ap.photoServerId
+        WHERE ap.albumId = :albumId AND p.isDeleted = 0
+        ORDER BY p.capturedAt DESC
+        """
+    )
+    fun observePhotosForAlbum(albumId: Long): Flow<List<OfflinePhotoEntity>>
     // endregion
 
     // region Equipment

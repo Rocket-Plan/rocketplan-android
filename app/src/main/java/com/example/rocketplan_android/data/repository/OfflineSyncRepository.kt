@@ -5,6 +5,8 @@ import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
@@ -18,6 +20,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
@@ -94,12 +97,12 @@ class OfflineSyncRepository(
                 Log.d("API", "👥 [syncProjectGraph] Saved ${it.size} users")
             }
             dto.locations?.let {
-                localDataService.saveLocations(it.map { loc -> loc.toEntity() })
+                localDataService.saveLocations(it.map { loc -> loc.toEntity(defaultProjectId = dto.id) })
                 collectedLocationIds += it.map { loc -> loc.id }
                 Log.d("API", "📍 [syncProjectGraph] Saved ${it.size} locations from project detail")
             }
             dto.rooms?.let {
-                localDataService.saveRooms(it.map { room -> room.toEntity() })
+                localDataService.saveRooms(it.map { room -> room.toEntity(projectId = dto.id) })
                 collectedRoomIds += it.map { room -> room.id }
                 collectedLocationIds += it.mapNotNull { room -> room.locationId }
                 Log.d("API", "🏠 [syncProjectGraph] Saved ${it.size} rooms from project detail")
@@ -150,18 +153,18 @@ class OfflineSyncRepository(
         val propertyLocations = property?.id?.let { propertyId ->
             Log.d("API", "📍 [syncProjectGraph] Fetching locations for property $propertyId")
             val levels = runCatching { api.getPropertyLevels(propertyId) }
-                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.size} levels") }
+                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.data.size} levels") }
                 .onFailure { Log.e("API", "❌ [syncProjectGraph] Failed to fetch levels", it) }
-                .getOrDefault(emptyList())
+                .getOrNull()?.data ?: emptyList()
             val nestedLocations = runCatching { api.getPropertyLocations(propertyId) }
-                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.size} nested locations") }
+                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.data.size} nested locations") }
                 .onFailure { Log.e("API", "❌ [syncProjectGraph] Failed to fetch nested locations", it) }
-                .getOrDefault(emptyList())
+                .getOrNull()?.data ?: emptyList()
             levels + nestedLocations
         } ?: emptyList()
 
         if (propertyLocations.isNotEmpty()) {
-            localDataService.saveLocations(propertyLocations.map { it.toEntity() })
+            localDataService.saveLocations(propertyLocations.map { it.toEntity(defaultProjectId = projectId) })
             collectedLocationIds += propertyLocations.map { it.id }
             Log.d("API", "📍 [syncProjectGraph] Saved ${propertyLocations.size} property locations, total collected: ${collectedLocationIds.size}")
         }
@@ -170,58 +173,20 @@ class OfflineSyncRepository(
         val locationIds = collectedLocationIds.toList()
         Log.d("API", "🏠 [syncProjectGraph] Fetching rooms for ${locationIds.size} locations")
         locationIds.distinct().forEach { locationId ->
-            val rooms = runCatching { api.getRoomsForLocation(locationId) }
-                .onSuccess { Log.d("API", "✅ [syncProjectGraph] Fetched ${it.size} rooms for location $locationId") }
-                .onFailure { Log.e("API", "❌ [syncProjectGraph] Failed to fetch rooms for location $locationId", it) }
-                .getOrNull()
-            rooms?.let {
-                localDataService.saveRooms(it.map { room -> room.toEntity(locationId = room.locationId ?: locationId) })
-                collectedRoomIds += it.map { room -> room.id }
+            val rooms = fetchRoomsForLocation(locationId)
+            Log.d("API", "🔍 [syncProjectGraph] fetchRoomsForLocation($locationId) returned ${rooms.size} rooms")
+
+            if (rooms.isNotEmpty()) {
+                localDataService.saveRooms(
+                    rooms.map { room -> room.toEntity(projectId = projectId, locationId = room.locationId ?: locationId) }
+                )
+                Log.d("API", "💾 [syncProjectGraph] Saved ${rooms.size} rooms for location $locationId to database")
+                collectedRoomIds += rooms.map { room -> room.id }
+            } else {
+                Log.d("API", "⚠️ [syncProjectGraph] No rooms to save for location $locationId (empty list)")
             }
         }
         Log.d("API", "🏠 [syncProjectGraph] Total rooms collected: ${collectedRoomIds.size}")
-
-        // Room detail enrichment
-        val roomIds = collectedRoomIds.toList()
-        roomIds.distinct().forEach { roomId ->
-
-            // Room detail
-            runCatching { api.getRoomDetail(roomId) }.onSuccess { dto ->
-                localDataService.saveRooms(listOf(dto.toEntity()))
-            }
-
-            // Room scoped photos/logs/damages/equipment/work scope
-            runCatching { api.getRoomPhotos(roomId) }.onSuccess { photos ->
-                persistPhotos(photos)
-            }
-
-            runCatching { api.getRoomAtmosphericLogs(roomId) }.onSuccess { logs ->
-                localDataService.saveAtmosphericLogs(logs.map { it.toEntity() })
-            }
-
-            runCatching { api.getRoomMoistureLogs(roomId) }.onSuccess { logs ->
-                val materials = logs.extractMaterials()
-                if (materials.isNotEmpty()) {
-                    localDataService.saveMaterials(materials)
-                }
-                val mappedLogs = logs.mapNotNull { it.toEntity() }
-                if (mappedLogs.isNotEmpty()) {
-                    localDataService.saveMoistureLogs(mappedLogs)
-                }
-            }
-
-            runCatching { api.getRoomDamageMaterials(roomId) }.onSuccess { damages ->
-                localDataService.saveDamages(damages.mapNotNull { it.toEntity(defaultProjectId = projectId) })
-            }
-
-            runCatching { api.getRoomWorkScope(roomId) }.onSuccess { scopes ->
-                localDataService.saveWorkScopes(scopes.mapNotNull { it.toEntity() })
-            }
-
-            runCatching { api.getRoomEquipment(roomId) }.onSuccess { equipment ->
-                localDataService.saveEquipment(equipment.map { it.toEntity() })
-            }
-        }
 
         // Project scoped logs/photos/equipment/damages/work scope to ensure coverage
         runCatching { api.getProjectAtmosphericLogs(projectId) }.onSuccess { logs ->
@@ -262,6 +227,34 @@ class OfflineSyncRepository(
             localDataService.saveUsers(users.map { it.toEntity() })
         }
 
+        // Albums and album-photo relationships
+        runCatching {
+            fetchAllPages { page -> api.getProjectAlbums(projectId, page) }
+        }.onSuccess { albums ->
+            val albumEntities = albums.map { it.toEntity(defaultProjectId = projectId) }
+            localDataService.saveAlbums(albumEntities)
+            Log.d("API", "📚 [syncProjectGraph] Saved ${albums.size} albums")
+
+            val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {
+                albums.forEach { album ->
+                    album.photos?.forEach { photo ->
+                        add(
+                            OfflineAlbumPhotoEntity(
+                                albumId = album.id,
+                                photoServerId = photo.id
+                            )
+                        )
+                    }
+                }
+            }
+            if (albumPhotoRelationships.isNotEmpty()) {
+                localDataService.saveAlbumPhotos(albumPhotoRelationships)
+                Log.d("API", "📸 [syncProjectGraph] Saved ${albumPhotoRelationships.size} album-photo links")
+            }
+        }.onFailure {
+            Log.e("API", "❌ [syncProjectGraph] Failed to fetch albums", it)
+        }
+
         if (didFetchPhotos) {
             photoCacheScheduler.schedulePrefetch()
         }
@@ -289,8 +282,60 @@ class OfflineSyncRepository(
     }
 
     private suspend fun fetchProjectProperty(projectId: Long): PropertyDto? {
-        val properties = runCatching { api.getProjectProperties(projectId) }.getOrDefault(emptyList())
-        return properties.firstOrNull()
+        val response = runCatching { api.getProjectProperties(projectId) }.getOrNull()
+        return response?.data?.firstOrNull()
+    }
+
+    private suspend fun fetchRoomsForLocation(locationId: Long): List<RoomDto> {
+        val collected = mutableListOf<RoomDto>()
+        var page = 1
+        while (true) {
+            val response = runCatching { api.getRoomsForLocation(locationId, page = page) }
+                .onSuccess { result ->
+                    val size = result.data.size
+                    if (size == 0 && page == 1) {
+                        Log.d("API", "INFO [syncProjectGraph] No rooms returned for location $locationId")
+                    } else if (size > 0) {
+                        Log.d("API", "✅ [syncProjectGraph] Fetched $size rooms for location $locationId (page $page)")
+                    }
+                }
+                .onFailure { error ->
+                    if (error is retrofit2.HttpException && error.code() == 404) {
+                        Log.d("API", "INFO [syncProjectGraph] Location $locationId has no rooms (404)")
+                    } else {
+                        Log.e("API", "❌ [syncProjectGraph] Failed to fetch rooms for location $locationId", error)
+                    }
+                }
+                .getOrNull()
+
+            // If request failed, return what we've collected so far
+            if (response == null) {
+                if (collected.isNotEmpty()) {
+                    Log.d("API", "⚠️ [syncProjectGraph] Returning ${collected.size} rooms collected before error for location $locationId")
+                }
+                return collected
+            }
+
+            val data = response.data
+
+            // Debug: Log first room's fields to inspect payload
+            if (data.isNotEmpty() && page == 1) {
+                val firstRoom = data.first()
+                Log.d("API", "🔍 [DEBUG] Room payload - id: ${firstRoom.id}, name: ${firstRoom.name}, title: ${firstRoom.title}, roomType.name: ${firstRoom.roomType?.name}, level.name: ${firstRoom.level?.name}")
+            }
+
+            collected += data
+
+            val meta = response.meta
+            val current = meta?.currentPage ?: page
+            val last = meta?.lastPage ?: current
+            val hasMore = current < last && data.isNotEmpty()
+            if (!hasMore) {
+                break
+            }
+            page = current + 1
+        }
+        return collected
     }
 }
 
@@ -416,15 +461,24 @@ private fun PropertyDto.toEntity(): OfflinePropertyEntity {
     )
 }
 
-private fun LocationDto.toEntity(): OfflineLocationEntity {
+private fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocationEntity {
     val timestamp = now()
+    val resolvedTitle = listOfNotNull(
+        title?.takeIf { it.isNotBlank() },
+        name?.takeIf { it.isNotBlank() }
+    ).firstOrNull() ?: "Location $id"
+    val resolvedType = listOfNotNull(
+        type?.takeIf { it.isNotBlank() },
+        locationType?.takeIf { it.isNotBlank() }
+    ).firstOrNull() ?: "location"
+    val resolvedProjectId = projectId ?: defaultProjectId ?: 0L
     return OfflineLocationEntity(
         locationId = id,
         serverId = id,
         uuid = uuid ?: UUID.randomUUID().toString(),
-        projectId = projectId,
-        title = title,
-        type = type,
+        projectId = resolvedProjectId,
+        title = resolvedTitle,
+        type = resolvedType,
         parentLocationId = parentLocationId,
         isAccessible = isAccessible ?: true,
         syncStatus = SyncStatus.SYNCED,
@@ -437,17 +491,17 @@ private fun LocationDto.toEntity(): OfflineLocationEntity {
     )
 }
 
-private fun RoomDto.toEntity(locationId: Long? = this.locationId): OfflineRoomEntity {
+private fun RoomDto.toEntity(projectId: Long, locationId: Long? = this.locationId): OfflineRoomEntity {
     val timestamp = now()
     return OfflineRoomEntity(
         roomId = id,
         serverId = id,
         uuid = uuid ?: UUID.randomUUID().toString(),
-        projectId = projectId,
+        projectId = projectId,  // Use passed projectId instead of DTO projectId
         locationId = locationId,
-        title = title,
-        roomType = roomType,
-        level = level,
+        title = title ?: name ?: roomType?.name ?: "Room $id",  // Match iOS: title -> name -> roomType.name
+        roomType = roomType?.name,  // Extract name from RoomTypeDto object for category
+        level = level?.name ?: level?.title,  // Extract name from LocationDto object
         squareFootage = squareFootage,
         isAccessible = isAccessible ?: true,
         syncStatus = SyncStatus.SYNCED,
@@ -701,4 +755,42 @@ private fun MoistureLogDto.toMaterialEntity(): OfflineMaterialEntity? {
 
 private fun List<MoistureLogDto>.extractMaterials(): List<OfflineMaterialEntity> =
     mapNotNull { it.toMaterialEntity() }
+
+private fun AlbumDto.toEntity(defaultProjectId: Long): OfflineAlbumEntity {
+    val timestamp = now()
+    val photos = this.photos.orEmpty()
+    val projectId: Long
+    val roomId: Long?
+    when (albumableType) {
+        "App\\Models\\Project" -> {
+            projectId = albumableId ?: defaultProjectId
+            roomId = null
+        }
+        "App\\Models\\Room" -> {
+            projectId = defaultProjectId
+            roomId = albumableId
+        }
+        else -> {
+            projectId = defaultProjectId
+            roomId = null
+        }
+    }
+    return OfflineAlbumEntity(
+        albumId = id,
+        projectId = projectId,
+        roomId = roomId,
+        name = name ?: "Album $id",
+        albumableType = albumableType,
+        albumableId = albumableId,
+        photoCount = photos.size,
+        thumbnailUrl = photos.firstOrNull()?.let { photo ->
+            photo.thumbnailUrl?.takeIf { it.isNotBlank() } ?: photo.remoteUrl
+        },
+        syncStatus = SyncStatus.SYNCED,
+        syncVersion = 1,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        lastSyncedAt = timestamp
+    )
+}
 // endregion
