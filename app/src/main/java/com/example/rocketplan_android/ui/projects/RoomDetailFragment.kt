@@ -52,6 +52,7 @@ class RoomDetailFragment : Fragment() {
     private lateinit var damageAssessmentChip: Chip
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var placeholderText: TextView
+    private lateinit var loadingOverlay: View
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -105,6 +106,7 @@ class RoomDetailFragment : Fragment() {
         damageAssessmentChip = root.findViewById(R.id.damageAssessmentChip)
         photosRecyclerView = root.findViewById(R.id.roomPhotosRecyclerView)
         placeholderText = root.findViewById(R.id.photosPlaceholder)
+        loadingOverlay = root.findViewById(R.id.loadingOverlay)
 
         tabToggleGroup.check(R.id.roomPhotosTabButton)
         addPhotoChip.isChecked = true
@@ -194,14 +196,15 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun showLoading() {
+        loadingOverlay.isVisible = true
         roomTitle.text = ""
         noteSummary.text = ""
         photosRecyclerView.isVisible = false
-        placeholderText.isVisible = true
-        placeholderText.text = getString(R.string.photos)
+        placeholderText.isVisible = false
     }
 
     private fun renderState(state: RoomDetailUiState.Ready) {
+        loadingOverlay.isVisible = false
         roomTitle.text = state.header.title
         noteSummary.text = state.header.noteSummary
         noteCardSummary.text = state.header.noteSummary

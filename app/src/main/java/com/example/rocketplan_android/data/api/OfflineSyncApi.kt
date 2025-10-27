@@ -98,7 +98,7 @@ interface OfflineSyncApi {
     suspend fun getRoomPhotos(
         @Path("roomId") roomId: Long,
         @Query("page") page: Int? = null,
-        @Query("limit") limit: Int? = 50,
+        @Query("limit") limit: Int? = 30,
         @Query("include") include: String? = "albums,notes_count"
     ): PaginatedResponse<PhotoDto>
 
