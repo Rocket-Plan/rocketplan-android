@@ -1,11 +1,13 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
@@ -42,17 +44,22 @@ class ProjectDetailViewModel(
                 localDataService.observeProjects(),
                 localDataService.observeRooms(projectId),
                 localDataService.observePhotosForProject(projectId),
-                localDataService.observeNotes(projectId)
-            ) { projects, rooms, photos, notes ->
+                localDataService.observeNotes(projectId),
+                localDataService.observeAlbumsForProject(projectId)
+            ) { projects, rooms, photos, notes, albums ->
+                Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
                 val project = projects.firstOrNull { it.projectId == projectId }
                 if (project == null) {
+                    Log.d("ProjectDetailVM", "⚠️ Project $projectId not found in database")
                     ProjectDetailUiState.Loading
                 } else {
+                    Log.d("ProjectDetailVM", "✅ Project found: ${project.title}")
                     val header = project.toHeader(notes.size)
                     val sections = rooms.toSections(photos)
                     ProjectDetailUiState.Ready(
                         header = header,
-                        levelSections = sections
+                        levelSections = sections,
+                        albums = albums.toAlbumSections(photos)
                     )
                 }
             }.collect { state ->
@@ -92,8 +99,10 @@ class ProjectDetailViewModel(
         photos: List<OfflinePhotoEntity>
     ): List<RoomLevelSection> {
         if (isEmpty()) {
+            Log.d("ProjectDetailVM", "⚠️ No rooms found for project")
             return emptyList()
         }
+        Log.d("ProjectDetailVM", "🏠 Loading ${this.size} rooms: ${this.map { "[${it.serverId}] ${it.title}" }}")
         val photosByRoom = photos.groupBy { it.roomId }
         return this
             .groupBy { room ->
@@ -120,6 +129,33 @@ class ProjectDetailViewModel(
             .sortedBy { it.levelName }
     }
 
+    private fun List<OfflineAlbumEntity>.toAlbumSections(
+        photos: List<OfflinePhotoEntity>
+    ): List<AlbumSection> {
+        Log.d(
+            "ProjectDetailVM",
+            "📚 Loading ${this.size} albums: ${this.map { "[${it.albumId}] ${it.name} (${it.albumableType ?: "null"})" }}"
+        )
+
+        val roomScopedAlbums = this.filterRoomScopedAlbums()
+        val filteredOut = this - roomScopedAlbums
+        filteredOut.forEach { album ->
+            Log.d("ProjectDetailVM", "🚫 Filtering project-scoped album ${album.name} (${album.albumId})")
+        }
+        roomScopedAlbums.forEach { album ->
+            Log.d("ProjectDetailVM", "✅ Keeping album ${album.name} (${album.albumId})")
+        }
+
+        return roomScopedAlbums.map { album ->
+            AlbumSection(
+                albumId = album.albumId,
+                name = album.name,
+                photoCount = album.photoCount,
+                thumbnailUrl = album.thumbnailUrl
+            )
+        }.sortedBy { it.name }
+    }
+
     companion object {
         fun provideFactory(
             application: Application,
@@ -140,7 +176,8 @@ sealed class ProjectDetailUiState {
     object Loading : ProjectDetailUiState()
     data class Ready(
         val header: ProjectDetailHeader,
-        val levelSections: List<RoomLevelSection>
+        val levelSections: List<RoomLevelSection>,
+        val albums: List<AlbumSection> = emptyList()
     ) : ProjectDetailUiState()
 }
 
@@ -164,6 +201,18 @@ data class RoomCard(
     val thumbnailUrl: String?
 )
 
+data class AlbumSection(
+    val albumId: Long,
+    val name: String,
+    val photoCount: Int,
+    val thumbnailUrl: String?
+)
+
 enum class ProjectDetailTab {
     PHOTOS, DAMAGES, SKETCH
 }
+
+internal fun List<OfflineAlbumEntity>.filterRoomScopedAlbums(): List<OfflineAlbumEntity> =
+    filter { album ->
+        album.roomId != null || album.albumableType?.endsWith("Room", ignoreCase = true) == true
+    }

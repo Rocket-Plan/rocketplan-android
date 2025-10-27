@@ -162,6 +162,26 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
+                android:id="@+id/roomAlbumsHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/albums"
+                android:textColor="@color/black"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/roomAlbumsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:nestedScrollingEnabled="false"
+                android:visibility="gone"
+                tools:listitem="@layout/item_album_card" />
+
+            <TextView
                 android:id="@+id/gridSectionTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -180,12 +200,16 @@
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/addPhotoChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:text="@string/all_photos"
                     android:textAlignment="center" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/damageAssessmentChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
                     style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:text="@string/damage_assessment"
                     android:textAlignment="center" />

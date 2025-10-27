@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -39,6 +40,8 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var noteSummary: TextView
     private lateinit var addRoomCard: View
     private lateinit var addExteriorCard: View
+    private lateinit var albumsHeader: TextView
+    private lateinit var albumsRecyclerView: RecyclerView
     private lateinit var roomsRecyclerView: RecyclerView
     private lateinit var roomsPlaceholder: TextView
     private lateinit var tabPlaceholder: TextView
@@ -46,6 +49,14 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var photosButton: MaterialButton
     private lateinit var damagesButton: MaterialButton
     private lateinit var sketchButton: MaterialButton
+
+    private val albumsAdapter by lazy {
+        AlbumsAdapter(
+            onAlbumClick = { album ->
+                Toast.makeText(requireContext(), "Album: ${album.name}", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 
     private val roomsAdapter by lazy {
         ProjectRoomsAdapter(
@@ -82,6 +93,8 @@ class ProjectDetailFragment : Fragment() {
         noteSummary = root.findViewById(R.id.noteSummary)
         addRoomCard = root.findViewById(R.id.addRoomCard)
         addExteriorCard = root.findViewById(R.id.addExteriorCard)
+        albumsHeader = root.findViewById(R.id.albumsHeader)
+        albumsRecyclerView = root.findViewById(R.id.albumsRecyclerView)
         roomsRecyclerView = root.findViewById(R.id.roomsRecyclerView)
         roomsPlaceholder = root.findViewById(R.id.roomsPlaceholder)
         tabPlaceholder = root.findViewById(R.id.tabPlaceholder)
@@ -94,6 +107,7 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private fun configureRecycler() {
+        albumsRecyclerView.configureForAlbums(albumsAdapter)
         roomsRecyclerView.configureForProjectRooms(roomsAdapter)
     }
 
@@ -182,6 +196,13 @@ class ProjectDetailFragment : Fragment() {
         projectCode.text = state.header.projectCode
         noteSummary.text = state.header.noteSummary
 
+        // Albums
+        Log.d("ProjectDetailFrag", "📚 Submitting ${state.albums.size} albums to albumsAdapter")
+        albumsAdapter.submitList(state.albums)
+        albumsHeader.isVisible = state.albums.isNotEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
+        albumsRecyclerView.isVisible = state.albums.isNotEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
+
+        // Rooms
         val flattenedItems = state.levelSections.flatMap { section ->
             if (section.rooms.isEmpty()) {
                 emptyList()
@@ -190,6 +211,7 @@ class ProjectDetailFragment : Fragment() {
                     section.rooms.map { RoomListItem.Room(it) }
             }
         }
+        Log.d("ProjectDetailFrag", "🏠 Submitting ${flattenedItems.size} room items to roomsAdapter (${state.levelSections.size} sections)")
         roomsAdapter.submitList(flattenedItems)
         roomsPlaceholder.isVisible = flattenedItems.isEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
         roomsRecyclerView.isVisible = flattenedItems.isNotEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
@@ -199,16 +221,22 @@ class ProjectDetailFragment : Fragment() {
         when (tab) {
             ProjectDetailTab.PHOTOS -> {
                 tabPlaceholder.isVisible = false
+                albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
+                albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
                 roomsRecyclerView.isVisible = roomsAdapter.currentList.isNotEmpty()
                 roomsPlaceholder.isVisible = roomsAdapter.currentList.isEmpty()
             }
             ProjectDetailTab.DAMAGES -> {
+                albumsHeader.isVisible = false
+                albumsRecyclerView.isVisible = false
                 roomsRecyclerView.isVisible = false
                 roomsPlaceholder.isVisible = false
                 tabPlaceholder.isVisible = true
                 tabPlaceholder.text = getString(R.string.damages) + " coming soon"
             }
             ProjectDetailTab.SKETCH -> {
+                albumsHeader.isVisible = false
+                albumsRecyclerView.isVisible = false
                 roomsRecyclerView.isVisible = false
                 roomsPlaceholder.isVisible = false
                 tabPlaceholder.isVisible = true

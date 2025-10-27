@@ -38,7 +38,8 @@ interface OfflineSyncApi {
 
     @GET("/api/projects/{projectId}")
     suspend fun getProjectDetail(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("include") include: String? = "projectStatus,address,projectType,property,locations,rooms.roomType,rooms.level,notes,atmosphericLogs,moistureLogs,equipment,damages,workScopes,users"
     ): ProjectDetailDto
 
     @GET("/api/projects/{projectId}/users")
@@ -60,24 +61,25 @@ interface OfflineSyncApi {
     @GET("/api/projects/{projectId}/properties")
     suspend fun getProjectProperties(
         @Path("projectId") projectId: Long
-    ): List<PropertyDto>
+    ): PaginatedResponse<PropertyDto>
 
     @GET("/api/properties/{propertyId}/levels")
     suspend fun getPropertyLevels(
         @Path("propertyId") propertyId: Long
-    ): List<LocationDto>
+    ): PaginatedResponse<LocationDto>
 
     @GET("/api/properties/{propertyId}/locations")
     suspend fun getPropertyLocations(
         @Path("propertyId") propertyId: Long
-    ): List<LocationDto>
+    ): PaginatedResponse<LocationDto>
 
     // Rooms
     @GET("/api/locations/{locationId}/rooms")
     suspend fun getRoomsForLocation(
         @Path("locationId") locationId: Long,
-        @Query("include") include: String? = "roomType,photosCount,thumbnail,level,photoAssemblies,damage_materials_count,damageMaterials.damageType,noteCategoryCounts,equipment,equipmentCount,workScopeActions"
-    ): List<RoomDto>
+        @Query("page") page: Int? = null,
+        @Query("include") include: String? = "roomType,level,thumbnail,photos_count,notes_count,bookmarked_notes_count,flagged_notes_count,damage_materials_count,equipment_count"
+    ): PaginatedResponse<RoomDto>
 
     @GET("/api/rooms/{roomId}")
     suspend fun getRoomDetail(
@@ -87,8 +89,10 @@ interface OfflineSyncApi {
     // Photos & albums
     @GET("/api/projects/{projectId}/albums")
     suspend fun getProjectAlbums(
-        @Path("projectId") projectId: Long
-    ): List<AlbumDto>
+        @Path("projectId") projectId: Long,
+        @Query("page") page: Int? = null,
+        @Query("include") include: String? = "photos"
+    ): PaginatedResponse<AlbumDto>
 
     @GET("/api/rooms/{roomId}/photos")
     suspend fun getRoomPhotos(

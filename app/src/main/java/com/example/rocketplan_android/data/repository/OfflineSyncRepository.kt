@@ -76,9 +76,14 @@ class OfflineSyncRepository(
         val collectedLocationIds = mutableSetOf<Long>()
         val collectedRoomIds = mutableSetOf<Long>()
 
-        suspend fun persistPhotos(photos: List<PhotoDto>) {
+        suspend fun persistPhotos(photos: List<PhotoDto>, defaultRoomId: Long? = null) {
             if (photos.isNotEmpty()) {
-                localDataService.savePhotos(photos.map { it.toEntity() })
+                localDataService.savePhotos(
+                    photos.map { photo ->
+                        val resolvedRoomId = defaultRoomId ?: photo.roomId
+                        photo.toEntity(defaultRoomId = resolvedRoomId)
+                    }
+                )
                 didFetchPhotos = true
             }
         }
@@ -188,6 +193,37 @@ class OfflineSyncRepository(
         }
         Log.d("API", "🏠 [syncProjectGraph] Total rooms collected: ${collectedRoomIds.size}")
 
+        // Room photos
+        val roomIds = collectedRoomIds.distinct()
+        if (roomIds.isNotEmpty()) {
+            Log.d("API", "📸 [syncProjectGraph] Fetching photos for ${roomIds.size} rooms")
+            roomIds.forEach { roomId ->
+                val photos = runCatching { api.getRoomPhotos(roomId) }
+                    .onSuccess { response ->
+                        val size = response.size
+                        if (size == 0) {
+                            Log.d("API", "INFO [syncProjectGraph] No photos returned for room $roomId")
+                        } else {
+                            Log.d("API", "✅ [syncProjectGraph] Fetched $size photos for room $roomId")
+                        }
+                    }
+                    .getOrElse { error ->
+                        if (error is retrofit2.HttpException && error.code() == 404) {
+                            Log.d("API", "INFO [syncProjectGraph] Room $roomId has no photos (404)")
+                            return@forEach
+                        } else {
+                            Log.e("API", "❌ [syncProjectGraph] Failed to fetch photos for room $roomId", error)
+                            return@forEach
+                        }
+                    }
+
+                if (photos.isNotEmpty()) {
+                    persistPhotos(photos, defaultRoomId = roomId)
+                    Log.d("API", "💾 [syncProjectGraph] Saved ${photos.size} photos for room $roomId")
+                }
+            }
+        }
+
         // Project scoped logs/photos/equipment/damages/work scope to ensure coverage
         runCatching { api.getProjectAtmosphericLogs(projectId) }.onSuccess { logs ->
             localDataService.saveAtmosphericLogs(logs.map { it.toEntity(defaultRoomId = null) })
@@ -231,6 +267,10 @@ class OfflineSyncRepository(
         runCatching {
             fetchAllPages { page -> api.getProjectAlbums(projectId, page) }
         }.onSuccess { albums ->
+            Log.d("API", "📚 [syncProjectGraph] Fetched ${albums.size} albums from API")
+            albums.forEach { album ->
+                Log.d("API", "   Album[${album.id}] '${album.name}' type=${album.albumableType} photos=${album.photos?.size ?: 0}")
+            }
             val albumEntities = albums.map { it.toEntity(defaultProjectId = projectId) }
             localDataService.saveAlbums(albumEntities)
             Log.d("API", "📚 [syncProjectGraph] Saved ${albums.size} albums")
@@ -514,7 +554,7 @@ private fun RoomDto.toEntity(projectId: Long, locationId: Long? = this.locationI
     )
 }
 
-private fun PhotoDto.toEntity(): OfflinePhotoEntity {
+private fun PhotoDto.toEntity(defaultRoomId: Long? = this.roomId): OfflinePhotoEntity {
     val timestamp = now()
     val hasRemote = !remoteUrl.isNullOrBlank()
     val localCachePath = localPath?.takeIf { it.isNotBlank() }
@@ -523,7 +563,7 @@ private fun PhotoDto.toEntity(): OfflinePhotoEntity {
         serverId = id,
         uuid = uuid ?: UUID.randomUUID().toString(),
         projectId = projectId,
-        roomId = roomId,
+        roomId = defaultRoomId,
         logId = logId,
         moistureLogId = moistureLogId,
         albumId = null,
