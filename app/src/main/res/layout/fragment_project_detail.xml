@@ -197,7 +197,7 @@
                             android:layout_width="40dp"
                             android:layout_height="40dp"
                             android:contentDescription="@string/add_room"
-                            android:src="@drawable/ic_door" />
+                            android:src="@drawable/img_add_room" />
 
                         <TextView
                             android:layout_width="wrap_content"
@@ -246,6 +246,26 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
+
+            <TextView
+                android:id="@+id/albumsHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/albums"
+                android:textColor="@color/black"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/albumsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:nestedScrollingEnabled="false"
+                android:visibility="gone"
+                tools:listitem="@layout/item_album_card" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/roomsRecyclerView"

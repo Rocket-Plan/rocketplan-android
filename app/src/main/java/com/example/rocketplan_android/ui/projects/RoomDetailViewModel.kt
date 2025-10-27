@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -37,8 +38,9 @@ class RoomDetailViewModel(
             combine(
                 localDataService.observeRooms(projectId),
                 localDataService.observePhotosForRoom(roomId),
-                localDataService.observeNotes(projectId)
-            ) { rooms, photos, notes ->
+                localDataService.observeNotes(projectId),
+                localDataService.observeAlbumsForRoom(roomId)
+            ) { rooms, photos, notes, albums ->
                 val room = rooms.firstOrNull { it.roomId == roomId }
                 if (room == null) {
                     RoomDetailUiState.Loading
@@ -46,7 +48,8 @@ class RoomDetailViewModel(
                     val roomNotes = notes.filter { it.roomId == roomId }
                     RoomDetailUiState.Ready(
                         header = room.toHeader(roomNotes),
-                        photos = photos.toPhotoItems()
+                        photos = photos.toPhotoItems(),
+                        albums = albums.toAlbumItems()
                     )
                 }
             }.collect { state ->
@@ -89,6 +92,17 @@ class RoomDetailViewModel(
             .filter { it.imageUrl.isNotBlank() }
     }
 
+    private fun List<OfflineAlbumEntity>.toAlbumItems(): List<RoomAlbumItem> {
+        return this.map { album ->
+            RoomAlbumItem(
+                id = album.albumId,
+                name = album.name,
+                photoCount = album.photoCount,
+                thumbnailUrl = album.thumbnailUrl
+            )
+        }
+    }
+
     companion object {
         fun provideFactory(
             application: Application,
@@ -110,7 +124,8 @@ sealed class RoomDetailUiState {
     object Loading : RoomDetailUiState()
     data class Ready(
         val header: RoomDetailHeader,
-        val photos: List<RoomPhotoItem>
+        val photos: List<RoomPhotoItem>,
+        val albums: List<RoomAlbumItem> = emptyList()
     ) : RoomDetailUiState()
 }
 
@@ -124,6 +139,13 @@ data class RoomPhotoItem(
     val imageUrl: String,
     val thumbnailUrl: String,
     val capturedOn: String?
+)
+
+data class RoomAlbumItem(
+    val id: Long,
+    val name: String,
+    val photoCount: Int,
+    val thumbnailUrl: String?
 )
 
 enum class RoomDetailTab {

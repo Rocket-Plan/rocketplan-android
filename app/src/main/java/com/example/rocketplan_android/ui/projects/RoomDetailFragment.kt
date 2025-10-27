@@ -45,11 +45,21 @@ class RoomDetailFragment : Fragment() {
     private lateinit var noteCardLabel: TextView
     private lateinit var noteCardSummary: TextView
     private lateinit var gridSectionTitle: TextView
+    private lateinit var albumsHeader: TextView
+    private lateinit var albumsRecyclerView: RecyclerView
     private lateinit var filterChipGroup: ChipGroup
     private lateinit var addPhotoChip: Chip
     private lateinit var damageAssessmentChip: Chip
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var placeholderText: TextView
+
+    private val albumsAdapter by lazy {
+        AlbumsAdapter(
+            onAlbumClick = { album ->
+                Toast.makeText(requireContext(), "Album: ${album.name}", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
 
     private val photoAdapter by lazy {
         RoomPhotoAdapter(
@@ -87,6 +97,8 @@ class RoomDetailFragment : Fragment() {
         noteCard = root.findViewById(R.id.roomNoteCard)
         noteCardLabel = root.findViewById(R.id.roomNoteLabel)
         noteCardSummary = root.findViewById(R.id.roomNoteSummary)
+        albumsHeader = root.findViewById(R.id.roomAlbumsHeader)
+        albumsRecyclerView = root.findViewById(R.id.roomAlbumsRecyclerView)
         gridSectionTitle = root.findViewById(R.id.gridSectionTitle)
         filterChipGroup = root.findViewById(R.id.photoFilterChips)
         addPhotoChip = root.findViewById(R.id.addPhotoChip)
@@ -102,6 +114,7 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun configureRecycler() {
+        albumsRecyclerView.configureForAlbums(albumsAdapter)
         photosRecyclerView.adapter = photoAdapter
         photosRecyclerView.addItemDecoration(
             SimpleGridSpacingDecoration(
@@ -193,6 +206,20 @@ class RoomDetailFragment : Fragment() {
         noteSummary.text = state.header.noteSummary
         noteCardSummary.text = state.header.noteSummary
 
+        // Albums - convert RoomAlbumItem to AlbumSection
+        val albumSections = state.albums.map { albumItem ->
+            AlbumSection(
+                albumId = albumItem.id,
+                name = albumItem.name,
+                photoCount = albumItem.photoCount,
+                thumbnailUrl = albumItem.thumbnailUrl
+            )
+        }
+        albumsAdapter.submitList(albumSections)
+        albumsHeader.isVisible = albumSections.isNotEmpty() && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
+        albumsRecyclerView.isVisible = albumSections.isNotEmpty() && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
+
+        // Photos
         val items = listOf(RoomPhotoListItem.AddPhoto) + state.photos.map { RoomPhotoListItem.Photo(it) }
         photoAdapter.submitList(items)
 
@@ -205,6 +232,8 @@ class RoomDetailFragment : Fragment() {
     private fun applyTabState(tab: RoomDetailTab) {
         when (tab) {
             RoomDetailTab.PHOTOS -> {
+                albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
+                albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
                 photosRecyclerView.isVisible = photoAdapter.currentList.size > 1
                 placeholderText.isVisible = photoAdapter.currentList.size <= 1
                 placeholderText.text = getString(R.string.rocket_scan_empty_state)
@@ -212,6 +241,8 @@ class RoomDetailFragment : Fragment() {
                 gridSectionTitle.isVisible = true
             }
             RoomDetailTab.DAMAGES -> {
+                albumsHeader.isVisible = false
+                albumsRecyclerView.isVisible = false
                 photosRecyclerView.isVisible = false
                 placeholderText.isVisible = true
                 placeholderText.text = getString(R.string.damages) + " coming soon"

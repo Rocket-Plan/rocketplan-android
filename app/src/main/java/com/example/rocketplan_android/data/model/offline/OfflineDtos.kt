@@ -253,7 +253,8 @@ data class PhotoDto(
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String?,
+    val albums: List<AlbumDto>?
 )
 
 data class PhotoSizeDto(

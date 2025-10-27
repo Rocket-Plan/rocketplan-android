@@ -84,6 +84,25 @@ class OfflineSyncRepository(
                         photo.toEntity(defaultRoomId = resolvedRoomId)
                     }
                 )
+
+                // Save album-photo relationships
+                val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {
+                    photos.forEach { photo ->
+                        photo.albums?.forEach { album ->
+                            add(
+                                OfflineAlbumPhotoEntity(
+                                    albumId = album.id,
+                                    photoServerId = photo.id
+                                )
+                            )
+                        }
+                    }
+                }
+                if (albumPhotoRelationships.isNotEmpty()) {
+                    localDataService.saveAlbumPhotos(albumPhotoRelationships)
+                    Log.d("API", "📸 [persistPhotos] Saved ${albumPhotoRelationships.size} album-photo relationships")
+                }
+
                 didFetchPhotos = true
             }
         }
@@ -193,18 +212,20 @@ class OfflineSyncRepository(
         }
         Log.d("API", "🏠 [syncProjectGraph] Total rooms collected: ${collectedRoomIds.size}")
 
-        // Room photos
+        // Room photos (paginated)
         val roomIds = collectedRoomIds.distinct()
         if (roomIds.isNotEmpty()) {
             Log.d("API", "📸 [syncProjectGraph] Fetching photos for ${roomIds.size} rooms")
             roomIds.forEach { roomId ->
-                val photos = runCatching { api.getRoomPhotos(roomId) }
-                    .onSuccess { response ->
-                        val size = response.size
+                val photos = runCatching {
+                    fetchAllPages { page -> api.getRoomPhotos(roomId, page) }
+                }
+                    .onSuccess { allPhotos ->
+                        val size = allPhotos.size
                         if (size == 0) {
                             Log.d("API", "INFO [syncProjectGraph] No photos returned for room $roomId")
                         } else {
-                            Log.d("API", "✅ [syncProjectGraph] Fetched $size photos for room $roomId")
+                            Log.d("API", "✅ [syncProjectGraph] Fetched $size photos for room $roomId (paginated)")
                         }
                     }
                     .getOrElse { error ->
@@ -215,6 +236,7 @@ class OfflineSyncRepository(
                             Log.e("API", "❌ [syncProjectGraph] Failed to fetch photos for room $roomId", error)
                             return@forEach
                         }
+                        emptyList()
                     }
 
                 if (photos.isNotEmpty()) {
@@ -263,34 +285,17 @@ class OfflineSyncRepository(
             localDataService.saveUsers(users.map { it.toEntity() })
         }
 
-        // Albums and album-photo relationships
+        // Albums (album-photo relationships are synced via photo.albums when fetching room photos)
         runCatching {
             fetchAllPages { page -> api.getProjectAlbums(projectId, page) }
         }.onSuccess { albums ->
             Log.d("API", "📚 [syncProjectGraph] Fetched ${albums.size} albums from API")
             albums.forEach { album ->
-                Log.d("API", "   Album[${album.id}] '${album.name}' type=${album.albumableType} photos=${album.photos?.size ?: 0}")
+                Log.d("API", "   Album[${album.id}] '${album.name}' type=${album.albumableType}")
             }
             val albumEntities = albums.map { it.toEntity(defaultProjectId = projectId) }
             localDataService.saveAlbums(albumEntities)
-            Log.d("API", "📚 [syncProjectGraph] Saved ${albums.size} albums")
-
-            val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {
-                albums.forEach { album ->
-                    album.photos?.forEach { photo ->
-                        add(
-                            OfflineAlbumPhotoEntity(
-                                albumId = album.id,
-                                photoServerId = photo.id
-                            )
-                        )
-                    }
-                }
-            }
-            if (albumPhotoRelationships.isNotEmpty()) {
-                localDataService.saveAlbumPhotos(albumPhotoRelationships)
-                Log.d("API", "📸 [syncProjectGraph] Saved ${albumPhotoRelationships.size} album-photo links")
-            }
+            Log.d("API", "📚 [syncProjectGraph] Saved ${albums.size} albums (photo counts will be calculated from database)")
         }.onFailure {
             Log.e("API", "❌ [syncProjectGraph] Failed to fetch albums", it)
         }
@@ -623,7 +628,8 @@ private fun ProjectPhotoListingDto.toPhotoDto(defaultProjectId: Long): PhotoDto 
         mimeType = contentType,
         capturedAt = createdAt,
         createdAt = createdAt,
-        updatedAt = updatedAt
+        updatedAt = updatedAt,
+        albums = null // ProjectPhotoListingDto doesn't include album info
     )
 }
 
@@ -798,7 +804,6 @@ private fun List<MoistureLogDto>.extractMaterials(): List<OfflineMaterialEntity>
 
 private fun AlbumDto.toEntity(defaultProjectId: Long): OfflineAlbumEntity {
     val timestamp = now()
-    val photos = this.photos.orEmpty()
     val projectId: Long
     val roomId: Long?
     when (albumableType) {
@@ -822,10 +827,8 @@ private fun AlbumDto.toEntity(defaultProjectId: Long): OfflineAlbumEntity {
         name = name ?: "Album $id",
         albumableType = albumableType,
         albumableId = albumableId,
-        photoCount = photos.size,
-        thumbnailUrl = photos.firstOrNull()?.let { photo ->
-            photo.thumbnailUrl?.takeIf { it.isNotBlank() } ?: photo.remoteUrl
-        },
+        photoCount = 0, // Will be calculated from database via LEFT JOIN with offline_album_photos
+        thumbnailUrl = null, // Could be calculated from first photo in database
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,

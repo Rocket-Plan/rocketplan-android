@@ -6,6 +6,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.example.rocketplan_android.data.local.dao.OfflineDao
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
@@ -32,6 +34,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
         OfflineLocationEntity::class,
         OfflineRoomEntity::class,
         OfflineAtmosphericLogEntity::class,
+        OfflineAlbumEntity::class,
+        OfflineAlbumPhotoEntity::class,
         OfflinePhotoEntity::class,
         OfflineEquipmentEntity::class,
         OfflineMaterialEntity::class,
@@ -42,7 +46,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
         OfflineSyncQueueEntity::class,
         OfflineConflictResolutionEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)

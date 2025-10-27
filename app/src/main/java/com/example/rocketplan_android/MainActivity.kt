@@ -1,5 +1,6 @@
 package com.example.rocketplan_android
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -8,9 +9,10 @@ import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
+import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
@@ -62,11 +64,6 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.appBarMain.toolbar)
 
-        binding.appBarMain.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null)
-                .setAnchorView(R.id.fab).show()
-        }
         val drawerLayout: DrawerLayout = binding.drawerLayout
         val navView: NavigationView = binding.navView
         val navController = findNavController(R.id.nav_host_fragment_content_main)
@@ -87,20 +84,49 @@ class MainActivity : AppCompatActivity() {
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
 
+        // Get IMM for keyboard management
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+
+        // Store the default window soft input mode so it can be restored after custom overrides
+        val defaultSoftInputMode = window.attributes.softInputMode
+        val defaultAdjustMode =
+            defaultSoftInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST
+        val hiddenSoftInputMode =
+            (if (defaultAdjustMode == 0) 0 else defaultAdjustMode) or
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
+
+        // Ensure keyboard stays hidden on initial launch until the user requests it
+        window.setSoftInputMode(hiddenSoftInputMode)
+
         // Hide/show drawer and toolbar based on current destination
         navController.addOnDestinationChangedListener { _, destination, _ ->
+            // Clear focus and hide keyboard on every navigation change
+            currentFocus?.let { focused ->
+                focused.clearFocus()
+                imm.hideSoftInputFromWindow(focused.windowToken, 0)
+            }
+
             when (destination.id) {
                 R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment, R.id.nav_projects -> {
-                    // Hide toolbar, drawer, and FAB on auth screens and projects screen
+                    // Hide toolbar and drawer on auth screens and projects screen
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                    binding.appBarMain.fab.visibility = View.GONE
+                    window.setSoftInputMode(hiddenSoftInputMode)
                 }
-                else -> {
-                    // Show toolbar, drawer, and FAB on other screens
+                R.id.roomDetailFragment -> {
+                    // Show toolbar and drawer, but force keyboard hidden
                     supportActionBar?.show()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-                    binding.appBarMain.fab.visibility = View.VISIBLE
+                    window.setSoftInputMode(
+                        WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
+                        WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                    )
+                }
+                else -> {
+                    // Show toolbar and drawer on other screens
+                    supportActionBar?.show()
+                    drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                    window.setSoftInputMode(hiddenSoftInputMode)
                 }
             }
         }

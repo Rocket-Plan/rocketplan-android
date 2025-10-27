@@ -1,0 +1,502 @@
+--------- beginning of main
+10-26 10:43:02.543  5734  5760 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 10:43:03.440  5734  5756 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 10:43:03.541  5734  5755 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 10:43:03.541  5734  5755 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 10:43:04.389  5734  5760 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-26 10:43:04.392  5734  5760 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979
+10-26 10:43:05.129  5734  5760 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 10:43:05.638  5734  5760 D API     : ✅ [syncProjectGraph] Fetched 5 nested locations
+10-26 10:43:05.665  5734  5760 D API     : 📍 [syncProjectGraph] Saved 10 property locations, total collected: 10
+10-26 10:43:05.665  5734  5760 D API     : 🏠 [syncProjectGraph] Fetching rooms for 10 locations
+10-26 10:43:06.809  5734  5760 D API     : INFO [syncProjectGraph] Location 37381 has no rooms (404)
+10-26 10:43:07.488  5734  5760 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 10:43:08.237  5734  5760 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 10:43:08.308  5734  5760 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 10:43:08.309  5734  5760 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 10:43:08.314  5734  5755 D API     : INFO [syncProjectGraph] Location 37382 has no rooms (404)
+10-26 10:43:08.945  5734  5755 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-26 10:43:08.945  5734  5755 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979
+10-26 10:43:09.466  5734  5755 D API     : INFO [syncProjectGraph] Location 37383 has no rooms (404)
+10-26 10:43:09.713  5734  5755 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 10:43:10.209  5734  5755 D API     : ✅ [syncProjectGraph] Fetched 5 nested locations
+10-26 10:43:10.216  5734  5755 D API     : INFO [syncProjectGraph] Location 37384 has no rooms (404)
+10-26 10:43:10.361  5734  5755 D API     : 📍 [syncProjectGraph] Saved 10 property locations, total collected: 10
+10-26 10:43:10.365  5734  5755 D API     : 🏠 [syncProjectGraph] Fetching rooms for 10 locations
+10-26 10:43:11.218  5734  5755 D API     : INFO [syncProjectGraph] Location 37385 has no rooms (404)
+10-26 10:43:11.383  5734  5755 D API     : INFO [syncProjectGraph] Location 37381 has no rooms (404)
+10-26 10:43:11.857  5734  5755 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3927
+10-26 10:43:11.857  5734  5755 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:11.857  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:11.857  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:11.857  5734  5755 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:11.857  5734  5755 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:11.857  5734  5755 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:11.857  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:11.857  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:11.857  5734  5755 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:11.857  5734  5755 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:11.857  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:11.857  5734  5755 E API     : 	... 14 more
+10-26 10:43:12.001  5734  5755 D API     : INFO [syncProjectGraph] Location 37382 has no rooms (404)
+10-26 10:43:12.389  5734  5755 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3928
+10-26 10:43:12.389  5734  5755 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:12.389  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:12.389  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:12.389  5734  5755 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:12.389  5734  5755 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:12.389  5734  5755 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:12.389  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:12.389  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:12.389  5734  5755 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:12.389  5734  5755 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:12.389  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:12.389  5734  5755 E API     : 	... 14 more
+10-26 10:43:12.720  5734  5755 D API     : INFO [syncProjectGraph] Location 37383 has no rooms (404)
+10-26 10:43:12.896  5734  5755 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3930
+10-26 10:43:12.896  5734  5755 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:12.896  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:12.896  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:12.896  5734  5755 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:12.896  5734  5755 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:12.896  5734  5755 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:12.896  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:12.896  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:12.896  5734  5755 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:12.896  5734  5755 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:12.896  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:12.896  5734  5755 E API     : 	... 14 more
+10-26 10:43:13.604  5734  5755 D API     : INFO [syncProjectGraph] Location 37384 has no rooms (404)
+10-26 10:43:14.000  5734  5755 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3931
+10-26 10:43:14.000  5734  5755 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:14.000  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:14.000  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:14.000  5734  5755 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:14.000  5734  5755 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:14.000  5734  5755 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:14.000  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:14.000  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:14.000  5734  5755 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:14.000  5734  5755 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:14.000  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:14.000  5734  5755 E API     : 	... 14 more
+10-26 10:43:14.475  5734  5755 D API     : INFO [syncProjectGraph] Location 37385 has no rooms (404)
+10-26 10:43:14.625  5734  5755 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3935
+10-26 10:43:14.625  5734  5755 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:14.625  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:14.625  5734  5755 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:14.625  5734  5755 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:14.625  5734  5755 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:14.625  5734  5755 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:14.625  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:14.625  5734  5755 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:14.625  5734  5755 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:14.625  5734  5755 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:14.625  5734  5755 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:14.625  5734  5755 E API     : 	... 14 more
+10-26 10:43:14.627  5734  5755 D API     : 🏠 [syncProjectGraph] Total rooms collected: 0
+10-26 10:43:15.161  5734  5760 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3927
+10-26 10:43:15.161  5734  5760 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:15.161  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:15.161  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:15.161  5734  5760 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:15.161  5734  5760 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:15.161  5734  5760 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:15.161  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:15.161  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:15.161  5734  5760 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:15.161  5734  5760 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:15.161  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:15.161  5734  5760 E API     : 	... 14 more
+10-26 10:43:15.668  5734  5760 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3928
+10-26 10:43:15.668  5734  5760 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:15.668  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:15.668  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:15.668  5734  5760 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:15.668  5734  5760 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:15.668  5734  5760 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:15.668  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:15.668  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:15.668  5734  5760 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:15.668  5734  5760 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:15.668  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:15.668  5734  5760 E API     : 	... 14 more
+10-26 10:43:16.349  5734  5760 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3930
+10-26 10:43:16.349  5734  5760 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:16.349  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:16.349  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:16.349  5734  5760 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:16.349  5734  5760 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:16.349  5734  5760 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:16.349  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:16.349  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:16.349  5734  5760 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:16.349  5734  5760 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:16.349  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:16.349  5734  5760 E API     : 	... 14 more
+10-26 10:43:17.129  5734  5760 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3931
+10-26 10:43:17.129  5734  5760 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:17.129  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:17.129  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:17.129  5734  5760 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:17.129  5734  5760 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:17.129  5734  5760 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:17.129  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:17.129  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:17.129  5734  5760 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:17.129  5734  5760 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:17.129  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:17.129  5734  5760 E API     : 	... 14 more
+10-26 10:43:18.019  5734  5760 E API     : ❌ [syncProjectGraph] Failed to fetch rooms for location 3935
+10-26 10:43:18.019  5734  5760 E API     : com.google.gson.JsonSyntaxException: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:397)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapterRuntimeTypeWrapper.read(TypeAdapterRuntimeTypeWrapper.java:40)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:82)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:18.019  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-26 10:43:18.019  5734  5760 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-26 10:43:18.019  5734  5760 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-26 10:43:18.019  5734  5760 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-26 10:43:18.019  5734  5760 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-26 10:43:18.019  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-26 10:43:18.019  5734  5760 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-26 10:43:18.019  5734  5760 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-26 10:43:18.019  5734  5760 E API     : Caused by: java.lang.IllegalStateException: Expected a string but was BEGIN_OBJECT at line 1 column 204 path $.data[0].room_type
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.stream.JsonReader.nextString(JsonReader.java:836)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:421)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.TypeAdapters$15.read(TypeAdapters.java:409)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$1.readIntoField(ReflectiveTypeAdapterFactory.java:212)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$FieldReflectionAdapter.readField(ReflectiveTypeAdapterFactory.java:433)
+10-26 10:43:18.019  5734  5760 E API     : 	at com.google.gson.internal.bind.ReflectiveTypeAdapterFactory$Adapter.read(ReflectiveTypeAdapterFactory.java:393)
+10-26 10:43:18.019  5734  5760 E API     : 	... 14 more
+10-26 10:43:18.020  5734  5760 D API     : 🏠 [syncProjectGraph] Total rooms collected: 0
+10-26 10:55:00.065  6147  6169 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 10:55:00.630  6147  6169 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 10:55:00.652  6147  6170 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 10:55:00.653  6147  6170 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 10:55:01.190  6147  6169 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-26 10:55:01.191  6147  6169 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979
+10-26 10:55:01.690  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 10:55:02.101  6147  6169 D API     : ✅ [syncProjectGraph] Fetched 5 nested locations
+10-26 10:55:02.135  6147  6169 D API     : 📍 [syncProjectGraph] Saved 10 property locations, total collected: 10
+10-26 10:55:02.136  6147  6169 D API     : 🏠 [syncProjectGraph] Fetching rooms for 10 locations
+10-26 10:55:02.934  6147  6169 D API     : INFO [syncProjectGraph] Location 37381 has no rooms (404)
+10-26 10:55:04.271  6147  6169 D API     : INFO [syncProjectGraph] Location 37382 has no rooms (404)
+10-26 10:55:05.549  6147  6170 D API     : INFO [syncProjectGraph] Location 37383 has no rooms (404)
+10-26 10:55:06.344  6147  6170 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 10:55:06.997  6147  6170 D API     : INFO [syncProjectGraph] Location 37384 has no rooms (404)
+10-26 10:55:07.080  6147  6170 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 10:55:07.132  6147  6170 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 10:55:07.132  6147  6170 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 10:55:07.599  6147  6170 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-26 10:55:07.600  6147  6170 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979
+10-26 10:55:07.627  6147  6170 D API     : INFO [syncProjectGraph] Location 37385 has no rooms (404)
+10-26 10:55:07.950  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 10:55:08.119  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 7 rooms for location 3927
+10-26 10:55:08.131  6147  6170 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 10:55:08.300  6147  6169 D API     : ✅ [syncProjectGraph] Fetched 5 nested locations
+10-26 10:55:08.332  6147  6169 D API     : 📍 [syncProjectGraph] Saved 10 property locations, total collected: 10
+10-26 10:55:08.332  6147  6169 D API     : 🏠 [syncProjectGraph] Fetching rooms for 10 locations
+10-26 10:55:08.501  6147  6169 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 10:55:08.527  6147  6170 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 10:55:08.528  6147  6170 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 10:55:08.972  6147  6170 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-26 10:55:08.972  6147  6170 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979
+10-26 10:55:08.982  6147  6170 D API     : INFO [syncProjectGraph] Location 37381 has no rooms (404)
+10-26 10:55:09.391  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 10:55:09.577  6147  6170 D API     : INFO [syncProjectGraph] Location 37382 has no rooms (404)
+10-26 10:55:09.777  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 5 nested locations
+10-26 10:55:09.803  6147  6170 D API     : 📍 [syncProjectGraph] Saved 10 property locations, total collected: 10
+10-26 10:55:09.803  6147  6170 D API     : 🏠 [syncProjectGraph] Fetching rooms for 10 locations
+10-26 10:55:10.104  6147  6170 D API     : INFO [syncProjectGraph] Location 37383 has no rooms (404)
+10-26 10:55:10.525  6147  6170 D API     : INFO [syncProjectGraph] Location 37381 has no rooms (404)
+10-26 10:55:10.745  6147  6170 D API     : INFO [syncProjectGraph] Location 37384 has no rooms (404)
+10-26 10:55:11.077  6147  6170 D API     : INFO [syncProjectGraph] Location 37382 has no rooms (404)
+10-26 10:55:11.551  6147  6170 D API     : INFO [syncProjectGraph] Location 37383 has no rooms (404)
+10-26 10:55:12.020  6147  6170 D API     : INFO [syncProjectGraph] Location 37384 has no rooms (404)
+10-26 10:55:12.291  6147  6170 D API     : INFO [syncProjectGraph] Location 37385 has no rooms (404)
+10-26 10:55:12.513  6147  6170 D API     : INFO [syncProjectGraph] Location 37385 has no rooms (404)
+10-26 10:55:12.794  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 7 rooms for location 3927
+10-26 10:55:13.035  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 7 rooms for location 3927
+10-26 10:55:13.039  6147  6170 D API     : 🔄 [syncProjectGraph] Starting sync for project 4926
+10-26 10:55:13.420  6147  6208 D API     : ✅ [syncProjectGraph] Fetched project detail for 4926
+10-26 10:55:13.428  6147  6208 D API     : 📦 [syncProjectGraph] Saved project 4926
+10-26 10:55:13.428  6147  6208 D API     : 🏢 [syncProjectGraph] Fetching property for project 4926
+10-26 10:55:13.768  6147  6208 D API     : ✅ [syncProjectGraph] Fetched and saved property 2986
+10-26 10:55:13.768  6147  6208 D API     : 📍 [syncProjectGraph] Fetching locations for property 2986
+10-26 10:55:14.098  6147  6208 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 10:55:14.428  6147  6208 D API     : ✅ [syncProjectGraph] Fetched 2 nested locations
+10-26 10:55:14.433  6147  6208 D API     : 📍 [syncProjectGraph] Saved 7 property locations, total collected: 7
+10-26 10:55:14.433  6147  6208 D API     : 🏠 [syncProjectGraph] Fetching rooms for 7 locations
+10-26 10:55:15.002  6147  6208 D API     : INFO [syncProjectGraph] Location 37458 has no rooms (404)
+10-26 10:55:15.697  6147  6208 D API     : INFO [syncProjectGraph] Location 37459 has no rooms (404)
+10-26 10:55:16.188  6147  6208 D API     : INFO [syncProjectGraph] Location 37460 has no rooms (404)
+10-26 10:55:16.695  6147  6208 D API     : INFO [syncProjectGraph] Location 37461 has no rooms (404)
+10-26 10:55:17.177  6147  6208 D API     : INFO [syncProjectGraph] Location 37462 has no rooms (404)
+10-26 10:55:17.591  6147  6208 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3919
+10-26 10:55:17.597  6147  6208 D API     : 🔄 [syncProjectGraph] Starting sync for project 4929
+10-26 10:55:17.945  6147  6170 D API     : ✅ [syncProjectGraph] Fetched project detail for 4929
+10-26 10:55:17.957  6147  6208 D API     : 📦 [syncProjectGraph] Saved project 4929
+10-26 10:55:17.958  6147  6208 D API     : 🏢 [syncProjectGraph] Fetching property for project 4929
+10-26 10:55:18.290  6147  6208 D API     : ✅ [syncProjectGraph] Fetched and saved property 2990
+10-26 10:55:18.290  6147  6208 D API     : 📍 [syncProjectGraph] Fetching locations for property 2990
+10-26 10:55:18.639  6147  6208 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 10:55:19.111  6147  6208 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-26 10:55:19.124  6147  6208 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-26 10:55:19.125  6147  6208 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-26 10:55:19.585  6147  6208 D API     : INFO [syncProjectGraph] Location 37502 has no rooms (404)
+10-26 10:55:20.067  6147  6208 D API     : INFO [syncProjectGraph] Location 37503 has no rooms (404)
+10-26 10:55:20.533  6147  6208 D API     : INFO [syncProjectGraph] Location 37504 has no rooms (404)
+10-26 10:55:21.065  6147  6170 D API     : INFO [syncProjectGraph] Location 37505 has no rooms (404)
+10-26 10:55:21.576  6147  6170 D API     : INFO [syncProjectGraph] Location 37506 has no rooms (404)
+10-26 10:55:22.280  6147  6170 D API     : ✅ [syncProjectGraph] Fetched 22 rooms for location 3929
+10-26 10:55:22.289  6147  6170 D API     : 🔄 [syncProjectGraph] Starting sync for project 4941
+10-26 10:55:22.818  6147  6170 D API     : ✅ [syncProjectGraph] Fetched project detail for 4941
+10-26 10:55:22.826  6147  6170 D API     : 📦 [syncProjectGraph] Saved project 4941
+10-26 10:55:22.826  6147  6170 D API     : 🏢 [syncProjectGraph] Fetching property for project 4941
+10-26 10:55:23.225  6147  6170 D API     : ✅ [syncProjectGraph] Fetched and saved property 3005
+10-26 10:55:23.227  6147  6170 D API     : 📍 [syncProjectGraph] Fetching locations for property 3005
+10-26 11:45:10.732  6350  6393 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 11:45:11.338  6350  6390 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 11:45:11.353  6350  6390 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 11:45:11.356  6350  6390 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 11:45:11.741  6350  6390 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-26 11:45:11.741  6350  6390 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979
+10-26 11:45:12.091  6350  6390 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 11:45:12.497  6350  6390 D API     : ✅ [syncProjectGraph] Fetched 5 nested locations
+10-26 11:45:12.505  6350  6390 D API     : 📍 [syncProjectGraph] Saved 10 property locations, total collected: 10
+10-26 11:45:12.505  6350  6390 D API     : 🏠 [syncProjectGraph] Fetching rooms for 10 locations
+10-26 11:45:13.131  6350  6390 D API     : INFO [syncProjectGraph] Location 37381 has no rooms (404)
+10-26 11:45:13.558  6350  6390 D API     : INFO [syncProjectGraph] Location 37382 has no rooms (404)
+10-26 11:45:13.976  6350  6390 D API     : INFO [syncProjectGraph] Location 37383 has no rooms (404)
+10-26 11:45:14.432  6350  6390 D API     : INFO [syncProjectGraph] Location 37384 has no rooms (404)
+10-26 11:45:14.892  6350  6390 D API     : INFO [syncProjectGraph] Location 37385 has no rooms (404)
+10-26 11:45:15.401  6350  6390 D API     : ✅ [syncProjectGraph] Fetched 7 rooms for location 3927
+10-26 11:45:15.406  6350  6390 D API     : 🔄 [syncProjectGraph] Starting sync for project 4926
+10-26 11:45:15.786  6350  6393 D API     : ✅ [syncProjectGraph] Fetched project detail for 4926
+10-26 11:45:15.791  6350  6393 D API     : 📦 [syncProjectGraph] Saved project 4926
+10-26 11:45:15.791  6350  6393 D API     : 🏢 [syncProjectGraph] Fetching property for project 4926
+10-26 11:45:16.118  6350  6393 D API     : ✅ [syncProjectGraph] Fetched and saved property 2986
+10-26 11:45:16.118  6350  6393 D API     : 📍 [syncProjectGraph] Fetching locations for property 2986
+10-26 11:45:16.527  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 11:45:16.872  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 2 nested locations
+10-26 11:45:16.877  6350  6393 D API     : 📍 [syncProjectGraph] Saved 7 property locations, total collected: 7
+10-26 11:45:16.877  6350  6393 D API     : 🏠 [syncProjectGraph] Fetching rooms for 7 locations
+10-26 11:45:17.266  6350  6393 D API     : INFO [syncProjectGraph] Location 37458 has no rooms (404)
+10-26 11:45:17.702  6350  6393 D API     : INFO [syncProjectGraph] Location 37459 has no rooms (404)
+10-26 11:45:18.109  6350  6393 D API     : INFO [syncProjectGraph] Location 37460 has no rooms (404)
+10-26 11:45:18.547  6350  6393 D API     : INFO [syncProjectGraph] Location 37461 has no rooms (404)
+10-26 11:45:18.958  6350  6393 D API     : INFO [syncProjectGraph] Location 37462 has no rooms (404)
+10-26 11:45:19.420  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3919
+10-26 11:45:19.422  6350  6393 D API     : 🔄 [syncProjectGraph] Starting sync for project 4929
+10-26 11:45:19.817  6350  6390 D API     : ✅ [syncProjectGraph] Fetched project detail for 4929
+10-26 11:45:19.819  6350  6390 D API     : 📦 [syncProjectGraph] Saved project 4929
+10-26 11:45:19.819  6350  6390 D API     : 🏢 [syncProjectGraph] Fetching property for project 4929
+10-26 11:45:20.163  6350  6390 D API     : ✅ [syncProjectGraph] Fetched and saved property 2990
+10-26 11:45:20.163  6350  6390 D API     : 📍 [syncProjectGraph] Fetching locations for property 2990
+10-26 11:45:20.544  6350  6390 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 11:45:20.895  6350  6390 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-26 11:45:20.900  6350  6390 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-26 11:45:20.900  6350  6390 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-26 11:45:21.304  6350  6390 D API     : INFO [syncProjectGraph] Location 37502 has no rooms (404)
+10-26 11:45:21.856  6350  6390 D API     : INFO [syncProjectGraph] Location 37503 has no rooms (404)
+10-26 11:45:22.340  6350  6390 D API     : INFO [syncProjectGraph] Location 37504 has no rooms (404)
+10-26 11:45:22.751  6350  6390 D API     : INFO [syncProjectGraph] Location 37505 has no rooms (404)
+10-26 11:45:23.397  6350  6390 D API     : INFO [syncProjectGraph] Location 37506 has no rooms (404)
+10-26 11:45:24.077  6350  6390 D API     : ✅ [syncProjectGraph] Fetched 22 rooms for location 3929
+10-26 11:45:24.079  6350  6390 D API     : 🔄 [syncProjectGraph] Starting sync for project 4941
+10-26 11:45:24.422  6350  6393 D API     : ✅ [syncProjectGraph] Fetched project detail for 4941
+10-26 11:45:24.425  6350  6393 D API     : 📦 [syncProjectGraph] Saved project 4941
+10-26 11:45:24.426  6350  6393 D API     : 🏢 [syncProjectGraph] Fetching property for project 4941
+10-26 11:45:24.765  6350  6393 D API     : ✅ [syncProjectGraph] Fetched and saved property 3005
+10-26 11:45:24.765  6350  6393 D API     : 📍 [syncProjectGraph] Fetching locations for property 3005
+10-26 11:45:25.138  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 11:45:25.466  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-26 11:45:25.469  6350  6393 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-26 11:45:25.469  6350  6393 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-26 11:45:26.002  6350  6393 D API     : INFO [syncProjectGraph] Location 37669 has no rooms (404)
+10-26 11:45:26.429  6350  6393 D API     : INFO [syncProjectGraph] Location 37670 has no rooms (404)
+10-26 11:45:26.881  6350  6393 D API     : INFO [syncProjectGraph] Location 37671 has no rooms (404)
+10-26 11:45:27.317  6350  6393 D API     : INFO [syncProjectGraph] Location 37672 has no rooms (404)
+10-26 11:45:27.898  6350  6393 D API     : INFO [syncProjectGraph] Location 37673 has no rooms (404)
+10-26 11:45:28.313  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3954
+10-26 11:45:28.316  6350  6393 D API     : 🔄 [syncProjectGraph] Starting sync for project 4958
+10-26 11:45:28.682  6350  6390 D API     : ✅ [syncProjectGraph] Fetched project detail for 4958
+10-26 11:45:28.687  6350  6393 D API     : 📦 [syncProjectGraph] Saved project 4958
+10-26 11:45:28.688  6350  6393 D API     : 🏢 [syncProjectGraph] Fetching property for project 4958
+10-26 11:45:29.007  6350  6393 W API     : ⚠️ [syncProjectGraph] No property found for project 4958
+10-26 11:45:29.007  6350  6393 D API     : 🏠 [syncProjectGraph] Fetching rooms for 0 locations
+10-26 11:45:29.007  6350  6393 D API     : 🏠 [syncProjectGraph] Total rooms collected: 0
+10-26 11:45:32.072  6350  6393 D API     : 📚 [syncProjectGraph] Saved 5 albums
+10-26 11:45:32.073  6350  6393 D API     : ✅ [syncProjectGraph] Sync completed for project 4958 - Locations: 0, Rooms: 0
+10-26 11:45:32.084  6350  6393 D API     : 🔄 [syncProjectGraph] Starting sync for project 4962
+10-26 11:45:32.459  6350  6392 D API     : ✅ [syncProjectGraph] Fetched project detail for 4962
+10-26 11:45:32.463  6350  6392 D API     : 📦 [syncProjectGraph] Saved project 4962
+10-26 11:45:32.463  6350  6392 D API     : 🏢 [syncProjectGraph] Fetching property for project 4962
+10-26 11:45:32.788  6350  6392 W API     : ⚠️ [syncProjectGraph] No property found for project 4962
+10-26 11:45:32.788  6350  6392 D API     : 🏠 [syncProjectGraph] Fetching rooms for 0 locations
+10-26 11:45:32.788  6350  6392 D API     : 🏠 [syncProjectGraph] Total rooms collected: 0
+10-26 11:45:36.253  6350  6392 D API     : 📚 [syncProjectGraph] Saved 5 albums
+10-26 11:45:36.253  6350  6392 D API     : ✅ [syncProjectGraph] Sync completed for project 4962 - Locations: 0, Rooms: 0
+10-26 11:45:36.254  6350  6392 D API     : 🔄 [syncProjectGraph] Starting sync for project 4964
+10-26 11:45:36.663  6350  6392 D API     : ✅ [syncProjectGraph] Fetched project detail for 4964
+10-26 11:45:36.666  6350  6392 D API     : 📦 [syncProjectGraph] Saved project 4964
+10-26 11:45:36.666  6350  6392 D API     : 🏢 [syncProjectGraph] Fetching property for project 4964
+10-26 11:45:37.089  6350  6392 W API     : ⚠️ [syncProjectGraph] No property found for project 4964
+10-26 11:45:37.089  6350  6392 D API     : 🏠 [syncProjectGraph] Fetching rooms for 0 locations
+10-26 11:45:37.089  6350  6392 D API     : 🏠 [syncProjectGraph] Total rooms collected: 0
+10-26 11:45:40.225  6350  6392 D API     : 📚 [syncProjectGraph] Saved 5 albums
+10-26 11:45:40.225  6350  6392 D API     : ✅ [syncProjectGraph] Sync completed for project 4964 - Locations: 0, Rooms: 0
+10-26 11:45:40.227  6350  6392 D API     : 🔄 [syncProjectGraph] Starting sync for project 4968
+10-26 11:45:40.602  6350  6393 D API     : ✅ [syncProjectGraph] Fetched project detail for 4968
+10-26 11:45:40.604  6350  6393 D API     : 📦 [syncProjectGraph] Saved project 4968
+10-26 11:45:40.604  6350  6393 D API     : 🏢 [syncProjectGraph] Fetching property for project 4968
+10-26 11:45:40.936  6350  6393 D API     : ✅ [syncProjectGraph] Fetched and saved property 3020
+10-26 11:45:40.936  6350  6393 D API     : 📍 [syncProjectGraph] Fetching locations for property 3020
+10-26 11:45:41.350  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 11:45:41.809  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-26 11:45:41.814  6350  6393 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-26 11:45:41.814  6350  6393 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-26 11:45:42.277  6350  6393 D API     : INFO [syncProjectGraph] Location 37834 has no rooms (404)
+10-26 11:45:42.724  6350  6393 D API     : INFO [syncProjectGraph] Location 37835 has no rooms (404)
+10-26 11:45:43.114  6350  6393 D API     : INFO [syncProjectGraph] Location 37836 has no rooms (404)
+10-26 11:45:43.545  6350  6393 D API     : INFO [syncProjectGraph] Location 37837 has no rooms (404)
+10-26 11:45:43.942  6350  6393 D API     : INFO [syncProjectGraph] Location 37838 has no rooms (404)
+10-26 11:45:44.363  6350  6393 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3970
+10-26 11:45:44.365  6350  6393 D API     : 🔄 [syncProjectGraph] Starting sync for project 4970
+10-26 11:45:44.796  6350  6392 D API     : ✅ [syncProjectGraph] Fetched project detail for 4970
+10-26 11:45:44.801  6350  6392 D API     : 📦 [syncProjectGraph] Saved project 4970
+10-26 11:45:44.801  6350  6392 D API     : 🏢 [syncProjectGraph] Fetching property for project 4970
+10-26 11:45:45.105  6350  6392 D API     : ✅ [syncProjectGraph] Fetched and saved property 3021
+10-26 11:45:45.105  6350  6392 D API     : 📍 [syncProjectGraph] Fetching locations for property 3021
+10-26 11:45:45.474  6350  6392 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-26 11:45:45.795  6350  6392 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-26 11:45:45.799  6350  6392 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-26 11:45:45.799  6350  6392 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-26 11:45:46.154  6350  6392 D API     : INFO [syncProjectGraph] Location 37845 has no rooms (404)
+10-26 11:45:46.611  6350  6392 D API     : INFO [syncProjectGraph] Location 37846 has no rooms (404)
+10-26 11:45:47.006  6350  6392 D API     : INFO [syncProjectGraph] Location 37847 has no rooms (404)
+10-26 11:45:47.427  6350  6392 D API     : INFO [syncProjectGraph] Location 37848 has no rooms (404)
+10-26 11:45:47.816  6350  6392 D API     : INFO [syncProjectGraph] Location 37849 has no rooms (404)
+10-26 11:45:48.234  6350  6392 D API     : ✅ [syncProjectGraph] Fetched 6 rooms for location 3971
+10-26 11:51:13.505  6350  6390 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 11:51:14.480  6350  6390 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-26 11:51:14.666  6350  6390 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 11:51:14.773  6350  6390 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 11:51:14.774  6350  6390 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 11:51:15.005  6350  6390 D API     : ✅ [syncProjectGraph] Fetched project detail for 4909
+10-26 11:51:15.028  6350  6390 D API     : 📦 [syncProjectGraph] Saved project 4909
+10-26 11:51:15.030  6350  6390 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-26 11:51:15.436  6350  6390 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-26 11:51:15.436  6350  6390 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979

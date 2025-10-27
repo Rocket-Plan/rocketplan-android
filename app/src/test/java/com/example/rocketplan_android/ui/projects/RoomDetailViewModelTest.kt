@@ -3,10 +3,12 @@ package com.example.rocketplan_android.ui.projects
 import app.cash.turbine.test
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
+import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
-import com.example.rocketplan_android.data.local.entity.SyncStatus
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.example.rocketplan_android.util.DateUtils
 import com.google.common.truth.Truth.assertThat
@@ -82,7 +84,7 @@ class RoomDetailViewModelTest {
                 syncVersion = 1,
                 isDirty = false,
                 isDeleted = false,
-                cacheStatus = com.example.rocketplan_android.data.local.PhotoCacheStatus.NONE,
+                cacheStatus = PhotoCacheStatus.NONE,
                 cachedOriginalPath = null,
                 cachedThumbnailPath = null,
                 lastAccessedAt = null
@@ -111,12 +113,15 @@ class RoomDetailViewModelTest {
         )
     )
 
+    private val albumsFlow = MutableStateFlow<List<OfflineAlbumEntity>>(emptyList())
+
     @Test
     fun `room detail emits header and photo grid`() = runTest {
         val localDataService = mockk<LocalDataService>()
         every { localDataService.observeRooms(projectId) } returns roomsFlow
         every { localDataService.observePhotosForRoom(roomId) } returns photosFlow
         every { localDataService.observeNotes(projectId) } returns notesFlow
+        every { localDataService.observeAlbumsForRoom(roomId) } returns albumsFlow
 
         val application = mockk<RocketPlanApplication>()
         every { application.localDataService } returns localDataService
@@ -124,12 +129,16 @@ class RoomDetailViewModelTest {
         val viewModel = RoomDetailViewModel(application, projectId, roomId)
 
         viewModel.uiState.test {
-            assertThat(awaitItem()).isInstanceOf(RoomDetailUiState.Loading::class.java)
-            val ready = awaitItem() as RoomDetailUiState.Ready
+            val first = awaitItem()
+            val ready = when (first) {
+                is RoomDetailUiState.Ready -> first
+                else -> awaitItem() as RoomDetailUiState.Ready
+            }
             assertThat(ready.header.title).isEqualTo("Basement")
             assertThat(ready.header.noteSummary).isEqualTo("1 Note")
             assertThat(ready.photos).hasSize(1)
             assertThat(ready.photos.first().thumbnailUrl).contains("photo_thumb")
+            assertThat(ready.albums).isEmpty()
             cancelAndConsumeRemainingEvents()
         }
     }

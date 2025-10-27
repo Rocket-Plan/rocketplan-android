@@ -3,6 +3,8 @@ package com.example.rocketplan_android.data.local
 import android.content.Context
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.dao.OfflineDao
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
@@ -62,6 +64,15 @@ class LocalDataService private constructor(
     fun observePhotosForRoom(roomId: Long): Flow<List<OfflinePhotoEntity>> =
         dao.observePhotosForRoom(roomId)
 
+    fun observeAlbumsForProject(projectId: Long): Flow<List<OfflineAlbumEntity>> =
+        dao.observeAlbumsForProject(projectId)
+
+    fun observeAlbumsForRoom(roomId: Long): Flow<List<OfflineAlbumEntity>> =
+        dao.observeAlbumsForRoom(roomId)
+
+    fun observePhotosForAlbum(albumId: Long): Flow<List<OfflinePhotoEntity>> =
+        dao.observePhotosForAlbum(albumId)
+
     suspend fun getPhotosNeedingCache(limit: Int = 25): List<OfflinePhotoEntity> =
         withContext(ioDispatcher) { dao.getPhotosNeedingCache(limit = limit) }
 
@@ -107,6 +118,14 @@ class LocalDataService private constructor(
 
     suspend fun savePhotos(photos: List<OfflinePhotoEntity>) = withContext(ioDispatcher) {
         dao.upsertPhotos(photos)
+    }
+
+    suspend fun saveAlbums(albums: List<OfflineAlbumEntity>) = withContext(ioDispatcher) {
+        dao.upsertAlbums(albums)
+    }
+
+    suspend fun saveAlbumPhotos(albumPhotos: List<OfflineAlbumPhotoEntity>) = withContext(ioDispatcher) {
+        dao.upsertAlbumPhotos(albumPhotos)
     }
 
     suspend fun saveEquipment(items: List<OfflineEquipmentEntity>) = withContext(ioDispatcher) {

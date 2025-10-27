@@ -1,0 +1,1147 @@
+--------- beginning of main
+--------- beginning of system
+10-27 03:43:19.127 17799 17839 D API     : 🔄 [syncProjectGraph] Starting sync for project 4970
+10-27 03:43:19.434 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:19.434 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:19.435 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:19.435 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:19.435 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:19.436 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:19.436 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:19.436 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:19.436 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:20.650 17799 17837 E API     : ❌ [syncProjectGraph] Failed to fetch project detail for 4970
+10-27 03:43:20.650 17799 17837 E API     : retrofit2.HttpException: HTTP 400 
+10-27 03:43:20.650 17799 17837 E API     : 	at retrofit2.KotlinExtensions$await$2$2.onResponse(KotlinExtensions.kt:53)
+10-27 03:43:20.650 17799 17837 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:161)
+10-27 03:43:20.650 17799 17837 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:20.650 17799 17837 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:20.650 17799 17837 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:20.650 17799 17837 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:20.651 17799 17837 D API     : 🏢 [syncProjectGraph] Fetching property for project 4970
+10-27 03:43:21.154 17799 17837 D API     : ✅ [syncProjectGraph] Fetched and saved property 3021
+10-27 03:43:21.154 17799 17837 D API     : 📍 [syncProjectGraph] Fetching locations for property 3021
+10-27 03:43:21.483 17799 17837 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-27 03:43:21.957 17799 17837 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-27 03:43:21.998 17799 17839 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-27 03:43:21.998 17799 17839 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-27 03:43:22.335 17799 17839 D API     : INFO [syncProjectGraph] Location 37845 has no rooms (404)
+10-27 03:43:22.335 17799 17839 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37845) returned 0 rooms
+10-27 03:43:22.335 17799 17839 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37845 (empty list)
+10-27 03:43:22.678 17799 17840 D API     : INFO [syncProjectGraph] Location 37846 has no rooms (404)
+10-27 03:43:22.678 17799 17840 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37846) returned 0 rooms
+10-27 03:43:22.678 17799 17840 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37846 (empty list)
+10-27 03:43:23.105 17799 17840 D API     : INFO [syncProjectGraph] Location 37847 has no rooms (404)
+10-27 03:43:23.105 17799 17840 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37847) returned 0 rooms
+10-27 03:43:23.105 17799 17840 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37847 (empty list)
+10-27 03:43:23.448 17799 17840 D API     : INFO [syncProjectGraph] Location 37848 has no rooms (404)
+10-27 03:43:23.448 17799 17840 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37848) returned 0 rooms
+10-27 03:43:23.448 17799 17840 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37848 (empty list)
+10-27 03:43:23.928 17799 17840 D API     : INFO [syncProjectGraph] Location 37849 has no rooms (404)
+10-27 03:43:23.928 17799 17840 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37849) returned 0 rooms
+10-27 03:43:23.928 17799 17840 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37849 (empty list)
+10-27 03:43:24.420 17799 17840 D API     : ✅ [syncProjectGraph] Fetched 7 rooms for location 3971 (page 1)
+10-27 03:43:24.420 17799 17840 D API     : 🔍 [DEBUG] Room payload - id: 5999, name: null, title: null, roomType.name: Kitchen, level.name: Main Level
+10-27 03:43:24.420 17799 17840 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3971) returned 7 rooms
+10-27 03:43:28.512 17799 17840 D API     : 💾 [syncProjectGraph] Saved 7 rooms for location 3971 to database
+10-27 03:43:28.513 17799 17840 D API     : 🏠 [syncProjectGraph] Total rooms collected: 7
+10-27 03:43:28.513 17799 17840 D API     : 📸 [syncProjectGraph] Fetching photos for 7 rooms
+10-27 03:43:28.532 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:28.532 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:28.532 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:28.533 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:28.533 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:28.533 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:28.533 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:28.533 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:28.533 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:28.547 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:28.547 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:28.547 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:28.548 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:28.548 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:28.548 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:28.548 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:28.548 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:28.548 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:28.892 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5999
+10-27 03:43:28.892 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:28.892 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:28.892 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:28.892 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:28.892 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:28.892 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:28.892 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:28.892 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:28.892 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:28.892 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:28.892 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:28.892 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:29.237 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5994
+10-27 03:43:29.237 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:29.237 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:29.237 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:29.237 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:29.237 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:29.237 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:29.237 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:29.237 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:29.237 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:29.237 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:29.237 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:29.237 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:29.638 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5979
+10-27 03:43:29.638 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:29.638 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:29.638 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:29.638 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:29.638 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:29.638 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:29.638 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:29.638 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:29.638 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:29.638 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:29.638 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:29.638 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:30.007 17799 17839 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5978
+10-27 03:43:30.007 17799 17839 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:30.007 17799 17839 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:30.007 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:30.007 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:30.007 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:30.007 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:30.007 17799 17839 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:30.007 17799 17839 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:30.007 17799 17839 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:30.007 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:30.007 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:30.007 17799 17839 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:30.322 17799 17839 D API     : 📚 [syncProjectGraph] Fetched 5 albums from API
+10-27 03:43:30.322 17799 17839 D API     :    Album[26405] 'Damage Assessment' type=null photos=0
+10-27 03:43:30.322 17799 17839 D API     :    Album[26406] 'Daily Progress' type=null photos=0
+10-27 03:43:30.322 17799 17839 D API     :    Album[26407] 'Pre-existing Damages' type=null photos=0
+10-27 03:43:30.323 17799 17839 D API     :    Album[26408] 'Contents' type=null photos=0
+10-27 03:43:30.323 17799 17839 D API     :    Album[26409] 'Betterments' type=null photos=0
+10-27 03:43:30.342 17799 17839 D API     : 📚 [syncProjectGraph] Saved 5 albums
+10-27 03:43:30.345 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:30.345 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:30.345 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:30.346 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:30.346 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:30.346 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:30.346 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:30.346 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:30.346 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:30.356 17799 17839 D API     : ✅ [syncProjectGraph] Sync completed for project 4909 - Locations: 10, Rooms: 29
+10-27 03:43:30.359 17799 17839 D API     : 🔄 [syncProjectGraph] Starting sync for project 4970
+10-27 03:43:30.453 17799 17839 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5961
+10-27 03:43:30.453 17799 17839 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:30.453 17799 17839 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:30.453 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:30.453 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:30.453 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:30.453 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:30.453 17799 17839 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:30.453 17799 17839 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:30.453 17799 17839 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:30.453 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:30.453 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:30.453 17799 17839 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:30.680 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:30.680 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:30.681 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:30.681 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:30.681 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:30.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:30.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:30.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:30.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:30.728 17799 17835 E API     : ❌ [syncProjectGraph] Failed to fetch project detail for 4970
+10-27 03:43:30.728 17799 17835 E API     : retrofit2.HttpException: HTTP 400 
+10-27 03:43:30.728 17799 17835 E API     : 	at retrofit2.KotlinExtensions$await$2$2.onResponse(KotlinExtensions.kt:53)
+10-27 03:43:30.728 17799 17835 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:161)
+10-27 03:43:30.728 17799 17835 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:30.728 17799 17835 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:30.728 17799 17835 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:30.728 17799 17835 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:30.728 17799 17835 D API     : 🏢 [syncProjectGraph] Fetching property for project 4970
+10-27 03:43:30.791 17799 17835 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5952
+10-27 03:43:30.791 17799 17835 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:30.791 17799 17835 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:30.791 17799 17835 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:30.791 17799 17835 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:30.791 17799 17835 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:30.791 17799 17835 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:30.791 17799 17835 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:30.791 17799 17835 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:30.791 17799 17835 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:30.791 17799 17835 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:30.791 17799 17835 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:30.791 17799 17835 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:30.989 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:30.989 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:30.989 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:30.990 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:30.990 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:30.990 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:30.990 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:30.990 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:30.990 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.048 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.048 17799 17835 D API     : ✅ [syncProjectGraph] Fetched and saved property 3021
+10-27 03:43:31.048 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.048 17799 17835 D API     : 📍 [syncProjectGraph] Fetching locations for property 3021
+10-27 03:43:31.048 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.049 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.049 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.049 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.049 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.049 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.049 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.152 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.152 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.153 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.153 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.153 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.153 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.153 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.154 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.154 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.184 17799 17837 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5949
+10-27 03:43:31.184 17799 17837 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:31.184 17799 17837 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:31.184 17799 17837 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:31.184 17799 17837 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:31.184 17799 17837 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:31.184 17799 17837 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:31.184 17799 17837 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:31.184 17799 17837 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:31.184 17799 17837 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:31.184 17799 17837 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:31.184 17799 17837 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:31.184 17799 17837 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:31.214 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.214 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.214 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.214 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.215 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.215 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.215 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.215 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.215 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.310 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.310 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.310 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.311 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.311 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.311 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.311 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.311 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.311 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.364 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.365 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.365 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.365 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.365 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.365 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.366 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.366 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.366 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.381 17799 17835 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-27 03:43:31.476 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.476 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.476 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.477 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.477 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.477 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.477 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.477 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.477 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.532 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.532 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.532 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.533 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.533 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.534 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.534 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.534 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.534 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.701 17799 17837 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-27 03:43:31.723 17799 17837 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-27 03:43:31.724 17799 17837 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-27 03:43:31.726 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.726 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.727 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.727 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.727 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.727 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.727 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.727 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.727 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.782 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.782 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.782 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.782 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.783 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.783 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.783 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.783 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.783 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.901 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.901 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.901 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.902 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.902 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.902 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.902 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.902 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.902 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:31.956 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:31.956 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:31.956 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:31.957 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:31.957 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:31.957 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:31.957 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:31.957 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:31.957 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.073 17799 18015 D API     : INFO [syncProjectGraph] Location 37845 has no rooms (404)
+10-27 03:43:32.073 17799 18015 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37845) returned 0 rooms
+10-27 03:43:32.073 17799 18015 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37845 (empty list)
+10-27 03:43:32.084 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.085 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.085 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.085 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.085 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.138 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.138 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.139 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.139 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.139 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.139 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.139 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.139 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.139 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.238 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.238 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.239 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.239 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.240 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.240 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.240 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.240 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.240 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.298 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.298 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.298 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.298 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.299 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.299 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.299 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.299 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.299 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.414 17799 17839 D API     : INFO [syncProjectGraph] Location 37846 has no rooms (404)
+10-27 03:43:32.414 17799 17839 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37846) returned 0 rooms
+10-27 03:43:32.414 17799 17839 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37846 (empty list)
+10-27 03:43:32.451 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.451 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.451 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.451 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.452 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.452 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.452 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.452 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.452 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.576 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.576 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.576 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.577 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.577 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.577 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.577 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.577 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.577 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.629 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.629 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.630 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.630 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.630 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.630 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.631 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.631 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.631 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.727 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.727 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.728 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.728 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.728 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.728 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.728 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.728 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.728 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.740 17799 17839 D API     : INFO [syncProjectGraph] Location 37847 has no rooms (404)
+10-27 03:43:32.740 17799 17839 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37847) returned 0 rooms
+10-27 03:43:32.740 17799 17839 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37847 (empty list)
+10-27 03:43:32.781 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.781 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.781 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.782 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.782 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.782 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.782 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.782 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.782 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:32.936 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:32.936 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:32.936 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:32.937 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:32.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:32.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:32.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:32.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:32.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.008 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.008 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.008 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.009 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.009 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.009 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.009 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.009 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.009 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.086 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.086 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.087 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.087 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.087 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.087 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.087 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.087 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.087 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.139 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.139 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.139 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.140 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.249 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.249 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.249 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.249 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.250 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.250 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.250 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.250 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.250 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.304 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.304 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.304 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.304 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.305 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.305 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.305 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.305 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.305 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.399 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.399 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.399 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.400 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.400 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.400 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.400 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.400 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.400 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.459 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.459 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.459 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.459 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.459 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.460 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.460 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.460 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.460 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.560 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.560 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.560 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.561 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.561 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.561 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.561 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.561 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.561 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.614 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.614 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.614 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.615 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.615 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.615 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.615 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.615 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.615 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.718 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.718 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.718 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.719 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.719 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.719 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.719 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.719 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.719 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.772 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.772 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.772 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.773 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.773 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.773 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.773 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.773 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.774 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.891 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.892 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.892 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.892 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.892 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.892 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.892 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.892 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.893 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:33.945 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:33.945 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:33.945 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:33.946 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:33.946 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:33.946 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:33.946 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:33.946 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:33.946 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:34.037 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:34.037 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:34.037 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:34.038 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:34.038 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:34.038 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:34.038 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:34.038 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:34.038 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:34.092 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:34.092 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:34.092 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:34.093 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:34.093 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:34.093 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:34.093 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:34.093 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:34.093 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:34.126 17799 17837 D API     : INFO [syncProjectGraph] Location 37848 has no rooms (404)
+10-27 03:43:34.126 17799 17837 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37848) returned 0 rooms
+10-27 03:43:34.126 17799 17837 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37848 (empty list)
+10-27 03:43:34.212 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:34.213 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:34.213 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:34.213 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:34.213 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:34.213 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:34.213 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:34.214 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:34.214 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:34.266 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:34.266 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:34.266 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:34.267 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:34.267 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:34.267 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:34.267 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:34.267 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:34.267 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:34.586 17799 17839 D API     : INFO [syncProjectGraph] Location 37849 has no rooms (404)
+10-27 03:43:34.586 17799 17839 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37849) returned 0 rooms
+10-27 03:43:34.586 17799 17839 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37849 (empty list)
+10-27 03:43:34.940 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:34.940 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:34.940 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:34.941 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:34.941 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:34.941 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:34.941 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:34.941 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:34.941 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:34.996 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:34.996 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:34.996 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:34.997 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:34.997 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:34.997 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:34.997 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:34.997 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:34.997 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.120 17799 17840 D API     : ✅ [syncProjectGraph] Fetched 7 rooms for location 3971 (page 1)
+10-27 03:43:35.120 17799 17840 D API     : 🔍 [DEBUG] Room payload - id: 5999, name: null, title: null, roomType.name: Kitchen, level.name: Main Level
+10-27 03:43:35.121 17799 17840 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3971) returned 7 rooms
+10-27 03:43:35.127 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.127 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.128 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.128 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.128 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.128 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.128 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.128 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.128 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.157 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.157 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.157 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.158 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.158 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.158 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.158 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.158 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.158 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.160 17799 17840 D API     : 💾 [syncProjectGraph] Saved 7 rooms for location 3971 to database
+10-27 03:43:35.160 17799 17840 D API     : 🏠 [syncProjectGraph] Total rooms collected: 7
+10-27 03:43:35.160 17799 17840 D API     : 📸 [syncProjectGraph] Fetching photos for 7 rooms
+10-27 03:43:35.187 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.187 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.187 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.188 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.188 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.188 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.188 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.188 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.188 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.278 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.278 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.278 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.279 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.279 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.279 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.279 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.279 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.279 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.329 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.330 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.330 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.330 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.331 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.331 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.437 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.437 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.437 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.438 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.438 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.438 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.438 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.438 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.438 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.491 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.491 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.491 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.492 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.492 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.492 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.492 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.492 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.492 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:35.568 17799 17839 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5999
+10-27 03:43:35.568 17799 17839 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:35.568 17799 17839 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:35.568 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:35.568 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:35.568 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:35.568 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:35.568 17799 17839 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:35.568 17799 17839 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:35.568 17799 17839 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:35.568 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:35.568 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:35.568 17799 17839 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:35.581 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:35.581 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:35.581 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:35.582 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:35.582 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:35.582 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:35.582 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:35.582 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:35.582 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:36.403 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5994
+10-27 03:43:36.403 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:36.403 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:36.403 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:36.403 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:36.403 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:36.403 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:36.403 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:36.403 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:36.403 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:36.403 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:36.403 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:36.403 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:36.797 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5979
+10-27 03:43:36.797 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:36.797 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:36.797 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:36.797 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:36.797 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:36.797 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:36.797 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:36.797 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:36.797 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:36.797 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:36.797 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:36.797 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:37.122 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5978
+10-27 03:43:37.122 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:37.122 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:37.122 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:37.122 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:37.122 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:37.122 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:37.122 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:37.122 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:37.122 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:37.122 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:37.122 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:37.122 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:37.450 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5961
+10-27 03:43:37.450 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:37.450 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:37.450 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:37.450 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:37.450 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:37.450 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:37.450 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:37.450 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:37.450 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:37.450 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:37.450 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:37.450 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:37.879 17799 17839 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5952
+10-27 03:43:37.879 17799 17839 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:37.879 17799 17839 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:37.879 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:37.879 17799 17839 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:37.879 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:37.879 17799 17839 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:37.879 17799 17839 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:37.879 17799 17839 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:37.879 17799 17839 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:37.879 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:37.879 17799 17839 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:37.879 17799 17839 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:38.348 17799 17840 E API     : ❌ [syncProjectGraph] Failed to fetch photos for room 5949
+10-27 03:43:38.348 17799 17840 E API     : java.lang.IllegalStateException: Expected BEGIN_ARRAY but was BEGIN_OBJECT at line 1 column 2 path $
+10-27 03:43:38.348 17799 17840 E API     : 	at com.google.gson.stream.JsonReader.beginArray(JsonReader.java:358)
+10-27 03:43:38.348 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:80)
+10-27 03:43:38.348 17799 17840 E API     : 	at com.google.gson.internal.bind.CollectionTypeAdapterFactory$Adapter.read(CollectionTypeAdapterFactory.java:61)
+10-27 03:43:38.348 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:40)
+10-27 03:43:38.348 17799 17840 E API     : 	at retrofit2.converter.gson.GsonResponseBodyConverter.convert(GsonResponseBodyConverter.java:27)
+10-27 03:43:38.348 17799 17840 E API     : 	at retrofit2.OkHttpCall.parseResponse(OkHttpCall.java:243)
+10-27 03:43:38.348 17799 17840 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:153)
+10-27 03:43:38.348 17799 17840 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-27 03:43:38.348 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-27 03:43:38.348 17799 17840 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-27 03:43:38.348 17799 17840 E API     : 	at java.lang.Thread.run(Thread.java:761)
+10-27 03:43:38.918 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:38.918 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:38.918 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:38.918 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:38.919 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:38.919 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:38.919 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:38.919 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:38.919 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:40.688 17799 17839 D API     : 📚 [syncProjectGraph] Fetched 5 albums from API
+10-27 03:43:40.688 17799 17839 D API     :    Album[26740] 'Damage Assessment' type=null photos=0
+10-27 03:43:40.688 17799 17839 D API     :    Album[26741] 'Daily Progress' type=null photos=0
+10-27 03:43:40.688 17799 17839 D API     :    Album[26742] 'Pre-existing Damages' type=null photos=0
+10-27 03:43:40.688 17799 17839 D API     :    Album[26743] 'Betterments' type=null photos=0
+10-27 03:43:40.688 17799 17839 D API     :    Album[26744] 'Contents' type=null photos=0
+10-27 03:43:40.709 17799 17839 D API     : 📚 [syncProjectGraph] Saved 5 albums
+10-27 03:43:40.722 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:40.722 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:40.723 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:40.723 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:40.723 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:40.723 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:40.723 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:40.723 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:40.723 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:40.726 17799 17839 D API     : ✅ [syncProjectGraph] Sync completed for project 4970 - Locations: 6, Rooms: 7
+10-27 03:43:41.060 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.060 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.060 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.061 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.061 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.061 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.061 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.061 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.061 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.206 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.207 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.207 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.207 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.207 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.207 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.208 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.208 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.208 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.267 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.267 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.267 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.268 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.268 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.268 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.268 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.268 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.268 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.396 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.396 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.396 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.396 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.397 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.397 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.397 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.397 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.397 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.452 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.452 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.452 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.453 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.453 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.453 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.453 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.453 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.453 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.552 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.552 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.552 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.552 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.553 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.553 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.553 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.553 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.553 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.606 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.606 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.606 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.607 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.607 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.607 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.607 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.607 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.607 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.771 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.771 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.771 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.772 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.772 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.772 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.772 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.772 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.772 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:41.853 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:41.853 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:41.853 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:41.854 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:41.854 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:41.854 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:41.854 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:41.854 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:41.854 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.460 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.461 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.461 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.461 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.462 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.462 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.462 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.462 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.462 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.521 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.521 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.522 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.522 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.522 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.522 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.522 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.522 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.522 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.618 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.618 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.618 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.618 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.619 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.619 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.619 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.619 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.619 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.671 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.671 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.671 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.672 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.672 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.672 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.672 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.672 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.672 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.778 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.778 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.778 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.779 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.779 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.780 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.780 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.780 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.780 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.839 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.839 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.840 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.840 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.840 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.840 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.840 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.840 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.840 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.936 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.936 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.937 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.937 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.937 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:42.990 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:42.990 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:42.990 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:42.991 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:42.991 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:42.991 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:42.991 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:42.991 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:42.991 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.084 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.084 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.085 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.085 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.086 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.139 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.139 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.139 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.139 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.139 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.140 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.232 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.232 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.233 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.233 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.233 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.233 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.233 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.233 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.233 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.285 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.285 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.285 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.286 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.286 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.286 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.286 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.286 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.286 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.389 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.389 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.389 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.389 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.389 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.390 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.390 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.390 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.390 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.440 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.441 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.441 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.442 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.442 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.442 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.442 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.442 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.442 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.543 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.543 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.544 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.544 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.544 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.544 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.545 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.545 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.545 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.598 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.598 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.598 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.598 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.598 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.598 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.599 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.599 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.599 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.686 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.687 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.739 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.739 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.739 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.740 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.740 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.740 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.740 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.740 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.740 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.827 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.827 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.827 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.828 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.828 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.828 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.828 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.828 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.828 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:43.884 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:43.885 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.002 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.003 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.056 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.056 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.056 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.056 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.056 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.057 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.057 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.057 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.057 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.161 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.162 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.162 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.162 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.162 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.163 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.163 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.163 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.163 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.218 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.218 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.219 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.219 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.219 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.219 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.219 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.219 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.220 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.329 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.329 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.329 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.329 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.330 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.381 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.381 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.382 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.382 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.382 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.382 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.382 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.382 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.382 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.478 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.478 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.478 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.479 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.479 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.479 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.479 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.479 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.479 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.531 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.531 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.532 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.532 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.532 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.532 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.532 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.532 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.532 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.627 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.627 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.628 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.628 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.628 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.628 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.629 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.629 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.629 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.681 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.681 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.681 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.682 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.682 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.792 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.792 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.792 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.793 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.793 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.793 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.793 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.793 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.793 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-27 03:43:44.845 17799 17799 D ProjectDetailVM: 📊 Data update for project 4970: 7 rooms, 5 albums, 192 photos
+10-27 03:43:44.846 17799 17799 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-27 03:43:44.846 17799 17799 D ProjectDetailVM: 🏠 Loading 7 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [5999] Kitchen]
+10-27 03:43:44.846 17799 17799 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-27 03:43:44.846 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-27 03:43:44.846 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-27 03:43:44.846 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-27 03:43:44.846 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-27 03:43:44.847 17799 17799 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)

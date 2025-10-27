@@ -97,9 +97,10 @@ interface OfflineSyncApi {
     @GET("/api/rooms/{roomId}/photos")
     suspend fun getRoomPhotos(
         @Path("roomId") roomId: Long,
-        @Query("limit") limit: String? = "30",
-        @Query("include") include: String? = "photo,albums,notesCount,creator"
-    ): List<PhotoDto>
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = 50,
+        @Query("include") include: String? = "albums,notes_count"
+    ): PaginatedResponse<PhotoDto>
 
     @GET("/api/projects/{projectId}/floor-photos")
     suspend fun getProjectFloorPhotos(

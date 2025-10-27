@@ -216,6 +216,47 @@ data class OfflineAtmosphericLogEntity(
 )
 
 @Entity(
+    tableName = "offline_albums",
+    indices = [
+        Index(value = ["projectId"]),
+        Index(value = ["roomId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
+data class OfflineAlbumEntity(
+    @PrimaryKey
+    val albumId: Long,
+    val projectId: Long,
+    val roomId: Long? = null,
+    val name: String,
+    val albumableType: String? = null,
+    val albumableId: Long? = null,
+    val photoCount: Int = 0,
+    val thumbnailUrl: String? = null,
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
+    val syncVersion: Int = 0,
+    val createdAt: Date = Date(),
+    val updatedAt: Date = Date(),
+    val lastSyncedAt: Date? = null
+)
+
+@Entity(
+    tableName = "offline_album_photos",
+    indices = [
+        Index(value = ["albumId"]),
+        Index(value = ["photoServerId"]),
+        Index(value = ["albumId", "photoServerId"], unique = true)
+    ]
+)
+data class OfflineAlbumPhotoEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val albumId: Long,
+    val photoServerId: Long,
+    val createdAt: Date = Date()
+)
+
+@Entity(
     tableName = "offline_photos",
     indices = [
         Index(value = ["uuid"], unique = true),

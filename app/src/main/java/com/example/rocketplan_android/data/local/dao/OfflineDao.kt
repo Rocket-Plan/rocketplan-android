@@ -141,10 +141,54 @@ interface OfflineDao {
     @Upsert
     suspend fun upsertAlbumPhotos(albumPhotos: List<OfflineAlbumPhotoEntity>)
 
-    @Query("SELECT * FROM offline_albums WHERE projectId = :projectId ORDER BY name")
+    @Query(
+        """
+        SELECT
+            a.albumId,
+            a.projectId,
+            a.roomId,
+            a.name,
+            a.albumableType,
+            a.albumableId,
+            CAST(COALESCE(COUNT(DISTINCT ap.photoServerId), 0) AS INTEGER) AS photoCount,
+            a.thumbnailUrl,
+            a.syncStatus,
+            a.syncVersion,
+            a.createdAt,
+            a.updatedAt,
+            a.lastSyncedAt
+        FROM offline_albums a
+        LEFT JOIN offline_album_photos ap ON a.albumId = ap.albumId
+        WHERE a.projectId = :projectId
+        GROUP BY a.albumId
+        ORDER BY a.name
+        """
+    )
     fun observeAlbumsForProject(projectId: Long): Flow<List<OfflineAlbumEntity>>
 
-    @Query("SELECT * FROM offline_albums WHERE roomId = :roomId ORDER BY name")
+    @Query(
+        """
+        SELECT
+            a.albumId,
+            a.projectId,
+            a.roomId,
+            a.name,
+            a.albumableType,
+            a.albumableId,
+            CAST(COALESCE(COUNT(DISTINCT ap.photoServerId), 0) AS INTEGER) AS photoCount,
+            a.thumbnailUrl,
+            a.syncStatus,
+            a.syncVersion,
+            a.createdAt,
+            a.updatedAt,
+            a.lastSyncedAt
+        FROM offline_albums a
+        LEFT JOIN offline_album_photos ap ON a.albumId = ap.albumId
+        WHERE a.roomId = :roomId
+        GROUP BY a.albumId
+        ORDER BY a.name
+        """
+    )
     fun observeAlbumsForRoom(roomId: Long): Flow<List<OfflineAlbumEntity>>
 
     @Query(

@@ -40,6 +40,11 @@ class RocketPlanApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        if (BuildConfig.DEBUG) {
+            // Temporary dev helper so we always start with a clean offline store.
+            deleteDatabase("rocketplan_offline.db")
+        }
         localDataService = LocalDataService.initialize(this)
         photoCacheManager = PhotoCacheManager(this, localDataService)
         photoCacheScheduler = PhotoCacheScheduler(this)

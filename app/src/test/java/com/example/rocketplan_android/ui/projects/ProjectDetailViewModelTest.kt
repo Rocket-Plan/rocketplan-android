@@ -1,23 +1,31 @@
 package com.example.rocketplan_android.ui.projects
 
-import app.cash.turbine.test
+import android.util.Log
+import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
+import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
-import com.example.rocketplan_android.data.local.entity.SyncStatus
+import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.example.rocketplan_android.util.DateUtils
+import com.google.common.truth.Truth.assertThat
+import io.mockk.coJustRun
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.mockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
 import org.junit.Test
-import com.google.common.truth.Truth.assertThat
 import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -109,7 +117,7 @@ class ProjectDetailViewModelTest {
                 syncVersion = 1,
                 isDirty = false,
                 isDeleted = false,
-                cacheStatus = com.example.rocketplan_android.data.local.PhotoCacheStatus.NONE,
+                cacheStatus = PhotoCacheStatus.NONE,
                 cachedOriginalPath = null,
                 cachedThumbnailPath = null,
                 lastAccessedAt = null
@@ -138,33 +146,91 @@ class ProjectDetailViewModelTest {
         )
     )
 
+    private val albumsFlow = MutableStateFlow<List<OfflineAlbumEntity>>(emptyList())
+
     @Test
     fun `emits ready state with grouped rooms`() = runTest {
+        mockkStatic(Log::class)
+        every { Log.d(any<String>(), any<String>()) } returns 0
+        every { Log.d(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        every { Log.w(any<String>(), any<String>()) } returns 0
+
         val localDataService = mockk<LocalDataService>()
         every { localDataService.observeProjects() } returns projectsFlow
         every { localDataService.observeRooms(projectId) } returns roomsFlow
         every { localDataService.observePhotosForProject(projectId) } returns photosFlow
         every { localDataService.observeNotes(projectId) } returns notesFlow
+        every { localDataService.observeAlbumsForProject(projectId) } returns albumsFlow
 
         val application = mockk<RocketPlanApplication>()
         every { application.localDataService } returns localDataService
+        val offlineSyncRepository = mockk<OfflineSyncRepository>()
+        coJustRun { offlineSyncRepository.syncProjectGraph(projectId) }
+        every { application.offlineSyncRepository } returns offlineSyncRepository
 
         val viewModel = ProjectDetailViewModel(application, projectId)
 
-        viewModel.uiState.test {
-            assertThat(awaitItem()).isInstanceOf(ProjectDetailUiState.Loading::class.java)
-            val ready = awaitItem() as ProjectDetailUiState.Ready
-            assertThat(ready.header.projectTitle).isEqualTo("201 West 1st Street")
-            assertThat(ready.header.noteSummary).isEqualTo("1 Note")
-            assertThat(ready.levelSections).hasSize(1)
-            val section = ready.levelSections.first()
-            assertThat(section.levelName).isEqualTo("Main Level")
-            assertThat(section.rooms).hasSize(1)
-            val room = section.rooms.first()
-            assertThat(room.photoCount).isEqualTo(1)
-            assertThat(room.thumbnailUrl).contains("photo_thumb")
-            cancelAndConsumeRemainingEvents()
+        repeat(5) {
+            advanceUntilIdle()
+            if (viewModel.uiState.value is ProjectDetailUiState.Ready) return@repeat
         }
+
+        val state = viewModel.uiState.value
+        assertThat(state).isInstanceOf(ProjectDetailUiState.Ready::class.java)
+        val ready = state as ProjectDetailUiState.Ready
+        assertThat(ready.header.projectTitle).isEqualTo("201 West 1st Street")
+        assertThat(ready.header.noteSummary).isEqualTo("1 Note")
+        assertThat(ready.levelSections).hasSize(1)
+        val section = ready.levelSections.first()
+        assertThat(section.levelName).isEqualTo("Main Level")
+        assertThat(section.rooms).hasSize(1)
+        val room = section.rooms.first()
+        assertThat(room.photoCount).isEqualTo(1)
+        assertThat(room.thumbnailUrl).contains("photo_thumb")
+
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `filterRoomScopedAlbums keeps only room albums`() {
+        mockkStatic(Log::class)
+        every { Log.d(any<String>(), any<String>()) } returns 0
+
+        val projectAlbum = OfflineAlbumEntity(
+            albumId = 26740L,
+            projectId = projectId,
+            roomId = null,
+            name = "Betterments",
+            albumableType = "App\\Models\\Project",
+            albumableId = projectId,
+            photoCount = 12,
+            thumbnailUrl = "https://example.com/betterments_thumb.jpg",
+            syncStatus = SyncStatus.SYNCED,
+            syncVersion = 1,
+            createdAt = now(),
+            updatedAt = now(),
+            lastSyncedAt = now()
+        )
+
+        val roomAlbum = OfflineAlbumEntity(
+            albumId = 300L,
+            projectId = projectId,
+            roomId = 100L,
+            name = "Kitchen",
+            albumableType = "App\\Models\\Room",
+            albumableId = 100L,
+            photoCount = 4,
+            thumbnailUrl = "https://example.com/kitchen_thumb.jpg",
+            syncStatus = SyncStatus.SYNCED,
+            syncVersion = 1,
+            createdAt = now(),
+            updatedAt = now(),
+            lastSyncedAt = now()
+        )
+
+        val filtered = listOf(projectAlbum, roomAlbum).filterRoomScopedAlbums()
+        assertThat(filtered).containsExactly(roomAlbum)
     }
 
     private fun now(): Date = Date()

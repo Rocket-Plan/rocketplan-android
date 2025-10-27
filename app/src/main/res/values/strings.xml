@@ -81,6 +81,7 @@
     </plurals>
 
     <!-- Album Categories -->
+    <string name="albums">Albums</string>
     <string name="daily_progress">Daily Progress</string>
     <string name="pre_existing_damages">Pre-Existing Damages</string>
 </resources>
