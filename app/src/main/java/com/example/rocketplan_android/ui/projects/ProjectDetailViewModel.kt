@@ -14,6 +14,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class ProjectDetailViewModel(
@@ -32,10 +34,10 @@ class ProjectDetailViewModel(
     val selectedTab: StateFlow<ProjectDetailTab> = _selectedTab
 
     init {
-        // Trigger sync for this project
-        viewModelScope.launch {
-            runCatching {
-                offlineSyncRepository.syncProjectGraph(projectId)
+        // Trigger sync once per app session for this project (avoid repeated refresh on recreation)
+        if (syncOnce(projectId)) {
+            viewModelScope.launch {
+                runCatching { offlineSyncRepository.syncProjectGraph(projectId) }
             }
         }
 
@@ -62,7 +64,23 @@ class ProjectDetailViewModel(
                         albums = albums.toAlbumSections(photos)
                     )
                 }
-            }.collect { state ->
+            }
+            // Smooth out bursts while batched photos land
+            .debounce(200)
+            // Only emit when visible content meaningfully changes
+            .distinctUntilChanged { old, new ->
+                when {
+                    old is ProjectDetailUiState.Ready && new is ProjectDetailUiState.Ready ->
+                        old.levelSections.size == new.levelSections.size &&
+                            old.albums.size == new.albums.size &&
+                            // Compare total photo counts across rooms to avoid noisy rebinds
+                            old.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } } ==
+                                new.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
+                    old is ProjectDetailUiState.Loading && new is ProjectDetailUiState.Loading -> true
+                    else -> false
+                }
+            }
+            .collect { state ->
                 _uiState.value = state
             }
         }
@@ -137,7 +155,12 @@ class ProjectDetailViewModel(
             "📚 Loading ${this.size} albums: ${this.map { "[${it.albumId}] ${it.name} (${it.albumableType ?: "null"})" }}"
         )
 
-        return this.map { album ->
+        // Only show room-scoped albums at the project level
+        val roomScoped = this.filter { album ->
+            album.roomId != null || album.albumableType?.endsWith("Room", ignoreCase = true) == true
+        }
+
+        return roomScoped.map { album ->
             AlbumSection(
                 albumId = album.albumId,
                 name = album.name,
@@ -148,6 +171,13 @@ class ProjectDetailViewModel(
     }
 
     companion object {
+        // Track which projects have already been synced this app session
+        private val syncedProjects: MutableSet<Long> = java.util.Collections.synchronizedSet(mutableSetOf())
+
+        private fun syncOnce(projectId: Long): Boolean {
+            return if (syncedProjects.add(projectId)) true else false
+        }
+
         fun provideFactory(
             application: Application,
             projectId: Long

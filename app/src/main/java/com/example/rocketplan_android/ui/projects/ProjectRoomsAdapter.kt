@@ -86,11 +86,8 @@ class ProjectRoomsAdapter(
                 room.photoCount,
                 room.photoCount
             )
-            val hasThumb = !room.thumbnailUrl.isNullOrBlank()
-            val hasPhotos = room.photoCount > 0
-
-            // Show spinner if we have no photos/thumb yet (likely still syncing)
-            spinner.isVisible = !(hasThumb || hasPhotos)
+            // If there are 0 photos, show the placeholder (no spinner)
+            spinner.isVisible = false
 
             thumbnail.load(room.thumbnailUrl) {
                 placeholder(R.drawable.bg_room_placeholder)

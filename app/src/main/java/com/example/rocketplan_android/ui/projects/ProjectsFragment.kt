@@ -38,7 +38,7 @@ class ProjectsFragment : Fragment() {
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
     private lateinit var userInitials: TextView
-    private lateinit var helpButton: ImageView
+    private lateinit var refreshButton: ImageView
     private lateinit var fabNewProject: FloatingActionButton
 
     override fun onCreateView(
@@ -58,7 +58,7 @@ class ProjectsFragment : Fragment() {
         tabLayout = view.findViewById(R.id.tabLayout)
         viewPager = view.findViewById(R.id.viewPager)
         userInitials = view.findViewById(R.id.userInitials)
-        helpButton = view.findViewById(R.id.helpButton)
+        refreshButton = view.findViewById(R.id.refreshButton)
         fabNewProject = view.findViewById(R.id.fabNewProject)
 
         setupViewPager()
@@ -83,9 +83,9 @@ class ProjectsFragment : Fragment() {
         // TODO: Get user initials from auth/user data
         userInitials.text = "JB"
 
-        helpButton.setOnClickListener {
-            // TODO: Navigate to help screen
-            Toast.makeText(context, "Help", Toast.LENGTH_SHORT).show()
+        refreshButton.setOnClickListener {
+            viewModel.refreshProjects()
+            Toast.makeText(context, R.string.refreshing, Toast.LENGTH_SHORT).show()
         }
 
         fabNewProject.setOnClickListener {
