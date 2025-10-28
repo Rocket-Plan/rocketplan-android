@@ -265,6 +265,85 @@ data class PhotoSizeDto(
     val raw: String? = null
 )
 
+data class RoomPhotoDto(
+    val id: Long,
+    val uuid: String?,
+    @SerializedName("relation_uuid")
+    val relationUuid: String? = null,
+    @SerializedName("is_ir")
+    val isIr: Boolean? = null,
+    @SerializedName("is_flagged")
+    val isFlagged: Boolean? = null,
+    @SerializedName("is_bookmarked")
+    val isBookmarked: Boolean? = null,
+    @SerializedName("s3_key")
+    val s3Key: String? = null,
+    val bucket: String? = null,
+    @SerializedName("file_name")
+    val fileName: String? = null,
+    @SerializedName("file_extension")
+    val fileExtension: String? = null,
+    @SerializedName("content_type")
+    val contentType: String? = null,
+    val sizes: RoomPhotoSizeDto? = null,
+    @SerializedName("photoable_type")
+    val photoableType: String? = null,
+    @SerializedName("photoable_id")
+    val photoableId: Long? = null,
+    @SerializedName("created_at")
+    val createdAt: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null,
+    val albums: List<AlbumDto>? = null,
+    val photo: RoomPhotoFileDto? = null
+)
+
+data class RoomPhotoSizeDto(
+    val small: String? = null,
+    val medium: String? = null,
+    val large: String? = null,
+    val gallery: String? = null,
+    val raw: String? = null
+)
+
+data class RoomPhotoFileDto(
+    val id: Long?,
+    val uuid: String?,
+    @SerializedName("project_id")
+    val projectId: Long?,
+    @SerializedName("room_id")
+    val roomId: Long?,
+    @SerializedName("log_id")
+    val logId: Long? = null,
+    @SerializedName("moisture_log_id")
+    val moistureLogId: Long? = null,
+    @SerializedName("file_name")
+    val fileName: String?,
+    @SerializedName("local_path")
+    val localPath: String? = null,
+    @SerializedName("remote_url")
+    val remoteUrl: String?,
+    @SerializedName("thumbnail_url")
+    val thumbnailUrl: String?,
+    @SerializedName("assembly_id")
+    val assemblyId: String?,
+    @SerializedName("tus_upload_id")
+    val tusUploadId: String?,
+    @SerializedName("file_size")
+    val fileSize: Long?,
+    val width: Int?,
+    val height: Int?,
+    @SerializedName("mime_type")
+    val mimeType: String?,
+    @SerializedName("captured_at")
+    val capturedAt: String?,
+    @SerializedName("created_at")
+    val createdAt: String?,
+    @SerializedName("updated_at")
+    val updatedAt: String?,
+    val albums: List<AlbumDto>? = null
+)
+
 data class ProjectPhotoListingDto(
     val id: Long,
     val uuid: String? = null,

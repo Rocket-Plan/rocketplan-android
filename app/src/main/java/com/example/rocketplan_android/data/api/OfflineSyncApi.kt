@@ -15,6 +15,7 @@ import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
+import com.google.gson.JsonObject
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import retrofit2.http.GET
@@ -99,8 +100,8 @@ interface OfflineSyncApi {
         @Path("roomId") roomId: Long,
         @Query("page") page: Int? = null,
         @Query("limit") limit: Int? = 30,
-        @Query("include") include: String? = "albums,notes_count"
-    ): PaginatedResponse<PhotoDto>
+        @Query("include") include: String? = "photo,albums,notes_count,creator"
+    ): JsonObject
 
     @GET("/api/projects/{projectId}/floor-photos")
     suspend fun getProjectFloorPhotos(

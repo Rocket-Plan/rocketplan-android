@@ -32,16 +32,26 @@ import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
+import com.example.rocketplan_android.data.model.offline.PaginationMeta
 import com.example.rocketplan_android.data.model.offline.RoomDto
+import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
+
+private const val ROOM_PHOTO_INCLUDE = "photo,albums,notes_count,creator"
+private const val ROOM_PHOTO_PAGE_LIMIT = 30
 
 class OfflineSyncRepository(
     private val api: OfflineSyncApi,
@@ -49,6 +59,9 @@ class OfflineSyncRepository(
     private val photoCacheScheduler: PhotoCacheScheduler,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+
+    private val gson = Gson()
+    private val roomPhotoListType = object : TypeToken<List<RoomPhotoDto>>() {}.type
 
     suspend fun syncCompanyProjects(companyId: Long) = withContext(ioDispatcher) {
         val projects = fetchAllPages { page ->
@@ -218,26 +231,22 @@ class OfflineSyncRepository(
             Log.d("API", "📸 [syncProjectGraph] Fetching photos for ${roomIds.size} rooms")
             roomIds.forEach { roomId ->
                 val photos = runCatching {
-                    fetchAllPages { page -> api.getRoomPhotos(roomId, page) }
+                    fetchRoomPhotoPages(roomId = roomId, projectId = projectId)
+                }.onSuccess { converted ->
+                    if (converted.isEmpty()) {
+                        Log.d("API", "INFO [syncProjectGraph] No photos returned for room $roomId")
+                    } else {
+                        Log.d("API", "✅ [syncProjectGraph] Fetched ${converted.size} photos for room $roomId (paginated)")
+                    }
+                }.getOrElse { error ->
+                    if (error is retrofit2.HttpException && error.code() == 404) {
+                        Log.d("API", "INFO [syncProjectGraph] Room $roomId has no photos (404)")
+                        return@forEach
+                    } else {
+                        Log.e("API", "❌ [syncProjectGraph] Failed to fetch photos for room $roomId", error)
+                        return@forEach
+                    }
                 }
-                    .onSuccess { allPhotos ->
-                        val size = allPhotos.size
-                        if (size == 0) {
-                            Log.d("API", "INFO [syncProjectGraph] No photos returned for room $roomId")
-                        } else {
-                            Log.d("API", "✅ [syncProjectGraph] Fetched $size photos for room $roomId (paginated)")
-                        }
-                    }
-                    .getOrElse { error ->
-                        if (error is retrofit2.HttpException && error.code() == 404) {
-                            Log.d("API", "INFO [syncProjectGraph] Room $roomId has no photos (404)")
-                            return@forEach
-                        } else {
-                            Log.e("API", "❌ [syncProjectGraph] Failed to fetch photos for room $roomId", error)
-                            return@forEach
-                        }
-                        emptyList()
-                    }
 
                 if (photos.isNotEmpty()) {
                     persistPhotos(photos, defaultRoomId = roomId)
@@ -325,6 +334,89 @@ class OfflineSyncRepository(
         }
         return results
     }
+
+    private suspend fun fetchRoomPhotoPages(roomId: Long, projectId: Long): List<PhotoDto> {
+        val collected = mutableListOf<PhotoDto>()
+        var page = 1
+
+        while (true) {
+            val json = api.getRoomPhotos(
+                roomId = roomId,
+                page = page,
+                limit = ROOM_PHOTO_PAGE_LIMIT,
+                include = ROOM_PHOTO_INCLUDE
+            )
+
+            val parsed = parseRoomPhotoResponse(json, projectId, roomId)
+            collected += parsed.photos
+
+            if (!parsed.hasMore || parsed.nextPage == null || parsed.photos.isEmpty()) {
+                break
+            }
+            if (parsed.nextPage == page) {
+                break
+            }
+            page = parsed.nextPage
+        }
+
+        return collected
+    }
+
+    private fun parseRoomPhotoResponse(
+        json: JsonObject,
+        projectId: Long,
+        roomId: Long
+    ): RoomPhotoPageResult {
+        val photos = mutableListOf<PhotoDto>()
+
+        fun collect(element: JsonElement?) {
+            if (element == null || element.isJsonNull) return
+            when {
+                element is JsonArray -> {
+                    val list: List<RoomPhotoDto> = gson.fromJson(element, roomPhotoListType)
+                    photos += list.mapNotNull { it.toPhotoDto(defaultProjectId = projectId, defaultRoomId = roomId) }
+                }
+                element.isJsonObject -> {
+                    val obj = element.asJsonObject
+                    collect(obj.get("data"))
+                    collect(obj.get("photos"))
+                }
+            }
+        }
+
+        collect(json.get("data"))
+        collect(json.get("photos"))
+
+        val dataObject = json.get("data")?.takeIf { it.isJsonObject }?.asJsonObject
+        val metaElement = when {
+            json.get("meta")?.isJsonObject == true -> json.getAsJsonObject("meta")
+            dataObject?.get("meta")?.isJsonObject == true -> dataObject.getAsJsonObject("meta")
+            else -> null
+        }
+
+        val meta = metaElement?.let { gson.fromJson(it, PaginationMeta::class.java) }
+        val currentFromMeta = meta?.currentPage
+        val lastFromMeta = meta?.lastPage
+        val currentFromData = dataObject?.get("current_page")?.takeIf { it.isJsonPrimitive }?.asInt
+        val lastFromData = dataObject?.get("last_page")?.takeIf { it.isJsonPrimitive }?.asInt
+
+        val current = currentFromMeta ?: currentFromData ?: -1
+        val last = lastFromMeta ?: lastFromData ?: current
+        val hasMore = current > 0 && last > current
+        val nextPage = if (hasMore) current + 1 else null
+
+        return RoomPhotoPageResult(
+            photos = photos,
+            hasMore = hasMore,
+            nextPage = nextPage
+        )
+    }
+
+    private data class RoomPhotoPageResult(
+        val photos: List<PhotoDto>,
+        val hasMore: Boolean,
+        val nextPage: Int?
+    )
 
     private suspend fun fetchProjectProperty(projectId: Long): PropertyDto? {
         val response = runCatching { api.getProjectProperties(projectId) }.getOrNull()
@@ -556,6 +648,47 @@ private fun RoomDto.toEntity(projectId: Long, locationId: Long? = this.locationI
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
+    )
+}
+
+private fun RoomPhotoDto.toPhotoDto(defaultProjectId: Long, defaultRoomId: Long): PhotoDto {
+    val nested = photo
+    val resolvedProjectId = nested?.projectId ?: defaultProjectId
+    val resolvedRoomId = nested?.roomId ?: photoableId ?: defaultRoomId
+    val resolvedRemoteUrl = nested?.remoteUrl
+        ?: sizes?.raw
+        ?: sizes?.gallery
+        ?: sizes?.large
+        ?: sizes?.medium
+        ?: sizes?.small
+    val resolvedThumbnail = nested?.thumbnailUrl ?: sizes?.medium ?: sizes?.small
+    val combinedAlbums = when {
+        nested?.albums != null && albums != null -> (nested.albums + albums).distinctBy { it.id }
+        nested?.albums != null -> nested.albums
+        else -> albums
+    }
+
+    return PhotoDto(
+        id = nested?.id ?: id,
+        uuid = nested?.uuid ?: uuid,
+        projectId = resolvedProjectId,
+        roomId = resolvedRoomId,
+        logId = nested?.logId,
+        moistureLogId = nested?.moistureLogId,
+        fileName = nested?.fileName ?: fileName,
+        localPath = nested?.localPath,
+        remoteUrl = resolvedRemoteUrl,
+        thumbnailUrl = resolvedThumbnail,
+        assemblyId = nested?.assemblyId,
+        tusUploadId = nested?.tusUploadId,
+        fileSize = nested?.fileSize,
+        width = nested?.width,
+        height = nested?.height,
+        mimeType = nested?.mimeType ?: contentType,
+        capturedAt = nested?.capturedAt ?: createdAt,
+        createdAt = nested?.createdAt ?: createdAt,
+        updatedAt = nested?.updatedAt ?: updatedAt,
+        albums = combinedAlbums
     )
 }
 
