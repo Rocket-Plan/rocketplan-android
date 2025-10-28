@@ -137,16 +137,7 @@ class ProjectDetailViewModel(
             "📚 Loading ${this.size} albums: ${this.map { "[${it.albumId}] ${it.name} (${it.albumableType ?: "null"})" }}"
         )
 
-        val roomScopedAlbums = this.filterRoomScopedAlbums()
-        val filteredOut = this - roomScopedAlbums
-        filteredOut.forEach { album ->
-            Log.d("ProjectDetailVM", "🚫 Filtering project-scoped album ${album.name} (${album.albumId})")
-        }
-        roomScopedAlbums.forEach { album ->
-            Log.d("ProjectDetailVM", "✅ Keeping album ${album.name} (${album.albumId})")
-        }
-
-        return roomScopedAlbums.map { album ->
+        return this.map { album ->
             AlbumSection(
                 albumId = album.albumId,
                 name = album.name,
@@ -211,8 +202,3 @@ data class AlbumSection(
 enum class ProjectDetailTab {
     PHOTOS, DAMAGES, SKETCH
 }
-
-internal fun List<OfflineAlbumEntity>.filterRoomScopedAlbums(): List<OfflineAlbumEntity> =
-    filter { album ->
-        album.roomId != null || album.albumableType?.endsWith("Room", ignoreCase = true) == true
-    }

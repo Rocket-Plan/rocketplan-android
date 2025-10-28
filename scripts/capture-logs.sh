@@ -11,9 +11,68 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DEBUG_DIR="$PROJECT_DIR/debug"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
-# Default values
-OUTPUT_FILE="${1:-$DEBUG_DIR/current_sync.logcat}"
-MODE="${2:-dump}"
+# Supported modes
+MODES=("dump" "live" "sync-only" "errors-only" "full")
+
+# Resolve arguments
+RAW_OUTPUT="${1:-}"
+RAW_MODE="${2:-}"
+
+# Helper to test mode membership
+is_mode() {
+  local candidate="$1"
+  for mode in "${MODES[@]}"; do
+    if [[ "$candidate" == "$mode" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# Defaults
+OUTPUT_FILE="$DEBUG_DIR/current_sync.logcat"
+MODE="dump"
+
+# Interpret first argument
+if [[ -n "$RAW_OUTPUT" && "$RAW_OUTPUT" != "-" ]]; then
+  if is_mode "$RAW_OUTPUT"; then
+    MODE="$RAW_OUTPUT"
+  else
+    OUTPUT_FILE="$RAW_OUTPUT"
+  fi
+fi
+
+# Interpret second argument (or explicit mode argument)
+if [[ -n "$RAW_MODE" && "$RAW_MODE" != "-" ]]; then
+  if is_mode "$RAW_MODE"; then
+    MODE="$RAW_MODE"
+  else
+    OUTPUT_FILE="$RAW_MODE"
+  fi
+fi
+
+# Final sanity: ensure MODE is valid
+if ! is_mode "$MODE"; then
+  MODE="dump"
+fi
+
+ensure_device() {
+  if ! command -v adb >/dev/null 2>&1; then
+    echo "❌ adb not found in PATH. Install Android Platform Tools or add adb to PATH."
+    exit 1
+  fi
+
+  # Make sure the daemon is running
+  adb start-server >/dev/null 2>&1 || true
+
+  local connected_devices
+  connected_devices=$(adb devices | awk 'NR>1 && $2=="device" {print $1}')
+  if [[ -z "$connected_devices" ]]; then
+    echo "❌ No connected Android device or emulator detected."
+    echo "   Tip: run 'adb devices' to verify connectivity."
+    exit 1
+  fi
+}
 
 # Logging tags used in the app
 SYNC_TAGS=(
@@ -82,6 +141,9 @@ build_filter() {
 # Ensure debug directory exists
 mkdir -p "$DEBUG_DIR"
 
+# Verify adb/device availability
+ensure_device
+
 # Main execution
 case "$MODE" in
   live)
@@ -108,7 +170,7 @@ case "$MODE" in
 
   errors-only)
     echo "🔴 Capturing ERRORS and WARNINGS only..."
-    if [ "$1" = "errors-only" ]; then
+    if [[ "$OUTPUT_FILE" == "$DEBUG_DIR/current_sync.logcat" ]]; then
       OUTPUT_FILE="$DEBUG_DIR/errors_${TIMESTAMP}.logcat"
     fi
     adb logcat -d $(build_filter) > "$OUTPUT_FILE"
