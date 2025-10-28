@@ -92,6 +92,12 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_photos WHERE serverId = :serverId LIMIT 1")
     suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity?
 
+    @Query("SELECT * FROM offline_photos WHERE photoId = :photoId LIMIT 1")
+    fun observePhoto(photoId: Long): Flow<OfflinePhotoEntity?>
+
+    @Query("SELECT * FROM offline_photos WHERE photoId = :photoId LIMIT 1")
+    suspend fun getPhotoById(photoId: Long): OfflinePhotoEntity?
+
     @Query(
         """
         SELECT * FROM offline_photos 
