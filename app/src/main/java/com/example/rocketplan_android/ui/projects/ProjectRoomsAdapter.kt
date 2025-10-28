@@ -77,6 +77,7 @@ class ProjectRoomsAdapter(
         private val thumbnail: ImageView = view.findViewById(R.id.roomThumbnail)
         private val title: TextView = view.findViewById(R.id.roomTitle)
         private val photoCount: TextView = view.findViewById(R.id.photoCount)
+        private val spinner: View = view.findViewById(R.id.loadingSpinner)
 
         fun bind(room: RoomCard) {
             title.text = room.title
@@ -85,6 +86,12 @@ class ProjectRoomsAdapter(
                 room.photoCount,
                 room.photoCount
             )
+            val hasThumb = !room.thumbnailUrl.isNullOrBlank()
+            val hasPhotos = room.photoCount > 0
+
+            // Show spinner if we have no photos/thumb yet (likely still syncing)
+            spinner.isVisible = !(hasThumb || hasPhotos)
+
             thumbnail.load(room.thumbnailUrl) {
                 placeholder(R.drawable.bg_room_placeholder)
                 error(R.drawable.bg_room_placeholder)

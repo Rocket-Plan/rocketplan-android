@@ -89,6 +89,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_photos WHERE roomId = :roomId AND isDeleted = 0 ORDER BY capturedAt DESC")
     fun observePhotosForRoom(roomId: Long): Flow<List<OfflinePhotoEntity>>
 
+    @Query("SELECT * FROM offline_photos WHERE serverId = :serverId LIMIT 1")
+    suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity?
+
     @Query(
         """
         SELECT * FROM offline_photos 

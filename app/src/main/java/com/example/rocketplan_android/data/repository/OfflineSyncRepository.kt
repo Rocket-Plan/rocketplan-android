@@ -91,12 +91,15 @@ class OfflineSyncRepository(
 
         suspend fun persistPhotos(photos: List<PhotoDto>, defaultRoomId: Long? = null) {
             if (photos.isNotEmpty()) {
-                localDataService.savePhotos(
-                    photos.map { photo ->
-                        val resolvedRoomId = defaultRoomId ?: photo.roomId
-                        photo.toEntity(defaultRoomId = resolvedRoomId)
-                    }
-                )
+                // Preserve existing room assignment if incoming payload doesn't include one
+                val entities = mutableListOf<OfflinePhotoEntity>()
+                for (photo in photos) {
+                    val existing = localDataService.getPhotoByServerId(photo.id)
+                    val preservedRoom = existing?.roomId
+                    val resolvedRoomId = defaultRoomId ?: photo.roomId ?: preservedRoom
+                    entities += photo.toEntity(defaultRoomId = resolvedRoomId)
+                }
+                localDataService.savePhotos(entities)
 
                 // Save album-photo relationships
                 val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {

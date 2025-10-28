@@ -64,6 +64,9 @@ class LocalDataService private constructor(
     fun observePhotosForRoom(roomId: Long): Flow<List<OfflinePhotoEntity>> =
         dao.observePhotosForRoom(roomId)
 
+    suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity? =
+        withContext(ioDispatcher) { dao.getPhotoByServerId(serverId) }
+
     fun observeAlbumsForProject(projectId: Long): Flow<List<OfflineAlbumEntity>> =
         dao.observeAlbumsForProject(projectId)
 

@@ -26,6 +26,15 @@
             android:layout_height="match_parent"
             android:background="@drawable/room_card_gradient" />
 
+        <ProgressBar
+            android:id="@+id/loadingSpinner"
+            style="@android:style/Widget.DeviceDefault.Light.ProgressBar.Large"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
