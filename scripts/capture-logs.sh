@@ -1,7 +1,13 @@
 #!/bin/bash
 # RocketPlan Android Log Capture Script
-# Usage: ./scripts/capture-logs.sh [output-file] [mode]
-# Modes: dump (default), live, sync-only, errors-only
+# Usage: ./scripts/capture-logs.sh [output-file|mode] [mode|output-file]
+# Modes: dump (default), live, sync-only, errors-only, full
+#
+# Optional env/config:
+#  - APP_ID:   Android applicationId to scope logs (default: com.example.rocketplan_android)
+#  - USE_PID:  If set to "true", resolve app PID and add "--pid <pid>" to adb logcat
+#  - ADB_SERIAL: If set, passes "-s <serial>" to adb commands
+#  - LOG_LINES: Number of lines for dump mode (default: 5000)
 
 set -e
 
@@ -10,6 +16,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 DEBUG_DIR="$PROJECT_DIR/debug"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+# Defaults / env
+APP_ID="${APP_ID:-com.example.rocketplan_android}"
+USE_PID="${USE_PID:-false}"
+ADB_SERIAL="${ADB_SERIAL:-}"
+LOG_LINES="${LOG_LINES:-5000}"
 
 # Supported modes
 MODES=("dump" "live" "sync-only" "errors-only" "full")
@@ -56,6 +68,14 @@ if ! is_mode "$MODE"; then
   MODE="dump"
 fi
 
+adb_prefix() {
+  if [[ -n "$ADB_SERIAL" ]]; then
+    echo "adb -s $ADB_SERIAL"
+  else
+    echo "adb"
+  fi
+}
+
 ensure_device() {
   if ! command -v adb >/dev/null 2>&1; then
     echo "❌ adb not found in PATH. Install Android Platform Tools or add adb to PATH."
@@ -63,14 +83,29 @@ ensure_device() {
   fi
 
   # Make sure the daemon is running
-  adb start-server >/dev/null 2>&1 || true
+  $(adb_prefix) start-server >/dev/null 2>&1 || true
 
   local connected_devices
-  connected_devices=$(adb devices | awk 'NR>1 && $2=="device" {print $1}')
+  connected_devices=$($(adb_prefix) devices | awk 'NR>1 && $2=="device" {print $1}')
   if [[ -z "$connected_devices" ]]; then
     echo "❌ No connected Android device or emulator detected."
     echo "   Tip: run 'adb devices' to verify connectivity."
     exit 1
+  fi
+}
+
+# Optionally resolve PID for app-only logs
+resolve_pid_filter() {
+  if [[ "$USE_PID" != "true" ]]; then
+    echo ""
+    return 0
+  fi
+  local pid
+  pid=$($(adb_prefix) shell pidof "$APP_ID" 2>/dev/null | tr -d '\r') || true
+  if [[ -n "$pid" ]]; then
+    echo "--pid $pid"
+  else
+    echo ""
   fi
 }
 
@@ -87,6 +122,7 @@ UI_TAGS=(
   "ProjectsViewModel:*"
   "ProjectsFragment:*"
   "RoomDetailVM:*"
+  "RoomDetailFrag:*"
   "MainActivity:*"
 )
 
@@ -154,18 +190,26 @@ case "$MODE" in
     echo ""
 
     # Clear old logs
-    adb logcat -c
+    $(adb_prefix) logcat -c
 
     # Start live capture with tee (shows on screen and saves to file)
-    adb logcat $(build_filter) | tee "$OUTPUT_FILE"
+    PIDF="$(resolve_pid_filter)"
+    if [[ -n "$PIDF" ]]; then
+      echo "   Using PID filter for $APP_ID: $PIDF"
+    fi
+    $(adb_prefix) logcat $PIDF $(build_filter) | tee "$OUTPUT_FILE"
     ;;
 
   sync-only)
     echo "📱 Capturing SYNC logs only..."
-    adb logcat -c
+    $(adb_prefix) logcat -c
     echo "   Output: $OUTPUT_FILE"
     echo "   Capturing... Press Ctrl+C to stop"
-    adb logcat $(build_filter) | tee "$OUTPUT_FILE"
+    PIDF="$(resolve_pid_filter)"
+    if [[ -n "$PIDF" ]]; then
+      echo "   Using PID filter for $APP_ID: $PIDF"
+    fi
+    $(adb_prefix) logcat $PIDF $(build_filter) | tee "$OUTPUT_FILE"
     ;;
 
   errors-only)
@@ -173,7 +217,8 @@ case "$MODE" in
     if [[ "$OUTPUT_FILE" == "$DEBUG_DIR/current_sync.logcat" ]]; then
       OUTPUT_FILE="$DEBUG_DIR/errors_${TIMESTAMP}.logcat"
     fi
-    adb logcat -d $(build_filter) > "$OUTPUT_FILE"
+    PIDF="$(resolve_pid_filter)"
+    $(adb_prefix) logcat -d $PIDF $(build_filter) > "$OUTPUT_FILE"
 
     LINE_COUNT=$(wc -l < "$OUTPUT_FILE" | tr -d ' ')
     echo "   Saved $LINE_COUNT lines to: $OUTPUT_FILE"
@@ -195,8 +240,12 @@ case "$MODE" in
     echo "📱 Dumping existing logs..."
     echo "   Output: $OUTPUT_FILE"
 
-    # Dump last 5000 lines with filters
-    adb logcat -d -t 5000 $(build_filter) > "$OUTPUT_FILE"
+    # Dump last N lines with filters
+    PIDF="$(resolve_pid_filter)"
+    if [[ -n "$PIDF" ]]; then
+      echo "   Using PID filter for $APP_ID: $PIDF"
+    fi
+    $(adb_prefix) logcat -d -t "$LOG_LINES" $PIDF $(build_filter) > "$OUTPUT_FILE"
 
     LINE_COUNT=$(wc -l < "$OUTPUT_FILE" | tr -d ' ')
     echo "   ✅ Saved $LINE_COUNT lines"

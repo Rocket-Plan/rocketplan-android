@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Debug logs
+debug/archive_*.logcat
+debug/*.log
+.auto-log.pid

@@ -26,6 +26,24 @@
 ./scripts/capture-logs.sh debug/full.logcat full
 ```
 
+### Fastest Invocation Tips
+
+- Run the script directly or with `bash -c`, not a login shell. Avoid `bash -lc` because it loads your full shell profile and slows startup.
+- Prefer PID scoping to capture only this app’s logs (see options below).
+
+Examples:
+
+```bash
+# Fast one-shot dump, scoped to app PID
+USE_PID=true LOG_LINES=2000 ./scripts/capture-logs.sh dump
+
+# Live capture while reproducing an issue
+USE_PID=true ./scripts/capture-logs.sh debug/room_click.logcat live
+
+# If multiple devices are connected
+ADB_SERIAL=emulator-5554 USE_PID=true ./scripts/capture-logs.sh debug/current_sync.logcat sync-only
+```
+
 ### Modes
 
 - **dump** (default) - Dumps last 5000 lines with sync, UI, and error logs
@@ -33,6 +51,23 @@
 - **sync-only** - Only API and sync-related logs
 - **errors-only** - Only errors and warnings
 - **full** - All tags including auth and system logs
+
+### Options (Environment Variables)
+
+- `APP_ID` — Android applicationId to scope by process name. Default: `com.example.rocketplan_android`
+- `USE_PID` — If `true`, auto-resolves the app PID and adds `--pid <pid>` to `adb logcat` to capture only this app’s logs.
+- `ADB_SERIAL` — If set, uses a specific device/emulator: passed as `adb -s <serial>`.
+- `LOG_LINES` — Number of lines to dump in `dump` mode. Default: `5000`.
+
+Examples:
+
+```bash
+# Staging build variant
+APP_ID=com.example.rocketplan_android.staging USE_PID=true ./scripts/capture-logs.sh dump
+
+# Limit log size when sharing
+LOG_LINES=1200 USE_PID=true ./scripts/capture-logs.sh debug/shareable.logcat dump
+```
 
 ### Filtered Tags
 
@@ -99,3 +134,26 @@ alias rp-logs='/Users/kilka/GitHub/Rocketplan_android/scripts/capture-logs.sh'
 Then reload: `source ~/.zshrc`
 
 Usage becomes: `rp-logs` or `rp-logs debug/test.logcat live`
+
+### Troubleshooting
+
+- “No connected device”: Run `adb devices` and ensure your device appears as `device`. If more than one device is listed, set `ADB_SERIAL`.
+- “No logs captured for app”: Ensure the app is running. With `USE_PID=true`, the script needs a live PID.
+- Very slow start: Ensure you’re not invoking from a login shell; run directly or `bash -c './scripts/capture-logs.sh …'`.
+
+### Quick Recipe: Room Photos Flicker/Disappear
+
+1) Start live capture filtered to your app PID:
+
+```bash
+USE_PID=true ./scripts/capture-logs.sh debug/room_click.logcat live
+```
+
+2) Reproduce: open a project → open a room → wait 3–5s → tap into the room.
+
+3) Stop capture (Ctrl+C). Share `debug/room_click.logcat`.
+
+What to look for:
+- API: `syncProjectGraph` messages, “Fetching photos for room”, “Saved N photos for room <id>”, “INFO … no photos (404)”.
+- UI: `RoomDetailVM`, `ProjectDetailVM/Frag` events that might trigger a refresh.
+- Errors: any `❌` around photos/albums or database writes.

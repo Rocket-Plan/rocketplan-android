@@ -152,3 +152,29 @@ dependencies {
     androidTestImplementation(libs.truth)
     androidTestImplementation(libs.androidx.test.core)
 }
+
+// Auto-start log capture after installing dev build
+tasks.register<Exec>("autoLogDev") {
+    group = "logging"
+    description = "Auto-start live log capture after dev build installs"
+
+    workingDir(rootProject.projectDir)
+    commandLine("bash", "-c", """
+        # Kill any existing log captures first
+        pkill -f 'capture-logs.sh' 2>/dev/null || true
+        sleep 1
+
+        # Start new capture in background
+        ./scripts/auto-log.sh live > /dev/null 2>&1 &
+        echo "🎬 Log capture started in background"
+    """.trimIndent())
+
+    isIgnoreExitValue = true
+}
+
+// Hook into dev install tasks
+tasks.whenTaskAdded {
+    if (name == "installDevDebug" || name == "installDevRelease") {
+        finalizedBy("autoLogDev")
+    }
+}
