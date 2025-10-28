@@ -1,0 +1,1012 @@
+--------- beginning of main
+10-28 02:22:44.880 24734 24778 D API     : INFO [syncProjectGraph] Location 37836 has no rooms (404)
+10-28 02:22:44.880 24734 24778 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37836) returned 0 rooms
+10-28 02:22:44.881 24734 24778 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37836 (empty list)
+10-28 02:22:45.008 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:45.008 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:45.008 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:45.009 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:45.009 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:45.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:45.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:45.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:45.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:45.167 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:45.167 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:45.167 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:45.168 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:45.169 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:45.169 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:45.169 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:45.169 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:45.169 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:45.300 24734 25172 D API     : INFO [syncProjectGraph] Location 37837 has no rooms (404)
+10-28 02:22:45.301 24734 25172 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37837) returned 0 rooms
+10-28 02:22:45.301 24734 25172 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37837 (empty list)
+10-28 02:22:45.332 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:45.332 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:45.332 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:45.333 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:45.333 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:45.333 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:45.333 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:45.333 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:45.333 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:45.507 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:45.507 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:45.508 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:45.508 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:45.509 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:45.509 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:45.509 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:45.509 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:45.509 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:45.649 24734 25172 D API     : INFO [syncProjectGraph] Location 37838 has no rooms (404)
+10-28 02:22:45.649 24734 25172 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37838) returned 0 rooms
+10-28 02:22:45.649 24734 25172 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37838 (empty list)
+10-28 02:22:45.665 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:45.665 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:45.666 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:45.667 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:45.667 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:45.667 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:45.667 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:45.667 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:45.667 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:45.828 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:45.828 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:45.828 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:45.829 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:45.829 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:45.829 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:45.829 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:45.829 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:45.829 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:45.989 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:45.989 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:45.989 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:45.990 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:45.990 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:45.991 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:45.991 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:45.991 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:45.991 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:46.035 24734 24776 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3970 (page 1)
+10-28 02:22:46.035 24734 24776 D API     : 🔍 [DEBUG] Room payload - id: 5948, name: null, title: null, roomType.name: Basement, level.name: Main Level
+10-28 02:22:46.035 24734 24776 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3970) returned 1 rooms
+10-28 02:22:46.046 24734 24778 D API     : 💾 [syncProjectGraph] Saved 1 rooms for location 3970 to database
+10-28 02:22:46.046 24734 24778 D API     : 🏠 [syncProjectGraph] Total rooms collected: 1
+10-28 02:22:46.046 24734 24778 D API     : 📸 [syncProjectGraph] Fetching photos for 1 rooms
+10-28 02:22:46.050 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:46.050 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:46.051 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:46.052 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:46.052 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:46.052 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:46.052 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:46.052 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:46.052 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:46.173 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:46.173 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:46.173 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:46.174 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:46.174 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:46.174 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:46.174 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:46.174 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:46.174 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:46.337 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:46.337 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:46.337 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:46.338 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:46.339 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:46.339 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:46.339 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:46.339 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:46.339 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:46.368 24734 24778 D API     : INFO [syncProjectGraph] No photos returned for room 5948
+--------- beginning of system
+10-28 02:22:46.472  2874  5959 E NetdConnector: yingjie i: 33 ,start: 0
+10-28 02:22:46.495  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
+10-28 02:22:46.514 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:46.514 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:46.514 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:46.515 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:46.515 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:46.515 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:46.515 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:46.515 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:46.515 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:46.563  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
+10-28 02:22:46.684 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:46.684 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:46.684 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:46.685 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:46.685 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:46.685 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:46.685 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:46.685 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:46.685 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:46.847 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:46.847 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:46.847 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:46.848 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:46.848 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:46.848 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:46.848 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:46.848 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:46.848 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:46.900  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:22:47.009 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:47.009 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:47.009 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:47.010 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:47.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:47.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:47.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:47.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:47.010 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:47.161 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:47.162 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:47.162 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:47.163 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:47.163 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:47.163 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:47.163 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:47.163 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:47.163 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:51.375 24734 25172 D API     : 📚 [syncProjectGraph] Fetched 5 albums from API
+10-28 02:22:51.376 24734 25172 D API     :    Album[26730] 'Damage Assessment' type=null
+10-28 02:22:51.376 24734 25172 D API     :    Album[26731] 'Daily Progress' type=null
+10-28 02:22:51.376 24734 25172 D API     :    Album[26732] 'Pre-existing Damages' type=null
+10-28 02:22:51.376 24734 25172 D API     :    Album[26733] 'Contents' type=null
+10-28 02:22:51.376 24734 25172 D API     :    Album[26734] 'Betterments' type=null
+10-28 02:22:51.402 24734 25172 D API     : 📚 [syncProjectGraph] Saved 5 albums (photo counts will be calculated from database)
+10-28 02:22:51.402 24734 25172 D API     : ✅ [syncProjectGraph] Sync completed for project 4968 - Locations: 6, Rooms: 1
+10-28 02:22:51.403 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:51.403 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:51.403 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:51.404 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:51.405 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:51.405 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:51.405 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:51.405 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:51.405 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:51.469  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:22:51.854 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:51.854 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:51.854 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:51.855 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:51.855 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:51.855 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:51.855 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:51.856 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:51.856 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:52.211 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:52.211 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:52.211 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:52.212 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:52.213 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:52.213 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:52.213 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:52.213 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:52.213 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:52.372 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:52.372 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:52.373 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:52.374 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:52.374 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:52.374 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:52.374 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:52.374 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:52.374 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:52.590  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
+10-28 02:22:52.601 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:52.601 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:52.602 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:52.602 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:52.603 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:52.603 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:52.603 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:52.603 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:52.603 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:52.616 12348 12373 W time    : icon time = 0
+10-28 02:22:52.770 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:52.770 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:52.771 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:52.772 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:52.772 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:52.772 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:52.772 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:52.772 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:52.772 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:52.936 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:52.936 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:52.937 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:52.938 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:52.938 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:52.938 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:52.938 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:52.938 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:52.938 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:53.103 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:53.104 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:53.104 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:53.105 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:53.105 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:53.105 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:53.105 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:53.105 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:53.105 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:53.353 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:53.353 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:53.353 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:53.354 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:53.354 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:53.354 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:53.354 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:53.354 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:53.354 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:53.523 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:53.523 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:53.523 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:53.524 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:53.524 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:53.524 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:53.524 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:53.524 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:53.524 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:53.678 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:53.679 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:53.679 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:53.680 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:53.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:53.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:53.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:53.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:53.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:54.175 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:54.175 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:54.175 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:54.176 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:54.176 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:54.176 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:54.176 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:54.176 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:54.176 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:54.333 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:54.333 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:54.334 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:54.335 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:54.335 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:54.336 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:54.336 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:54.336 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:54.336 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:54.498 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:54.498 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:54.498 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:54.499 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:54.499 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:54.499 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:54.499 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:54.499 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:54.499 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:54.657 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:54.657 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:54.657 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:54.658 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:54.658 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:54.658 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:54.658 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:54.658 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:54.658 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:54.728  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:22:54.731  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:22:54.731  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:22:54.816 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:54.816 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:54.816 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:54.817 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:54.818 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:54.818 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:54.818 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:54.818 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:54.818 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:54.974 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:54.974 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:54.974 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:54.975 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:54.976 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:54.976 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:54.976 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:54.976 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:54.976 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:55.132 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:55.132 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:55.132 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:55.133 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:55.133 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:55.133 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:55.133 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:55.133 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:55.133 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:55.284 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:55.285 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:55.285 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:55.286 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:55.286 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:55.286 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:55.286 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:55.286 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:55.286 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:55.445 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:55.445 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:55.445 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:55.446 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:55.446 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:55.446 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:55.446 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:55.446 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:55.446 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:55.680 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:55.681 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:55.681 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:55.682 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:55.682 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:55.682 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:55.682 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:55.682 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:55.682 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:55.849 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:55.849 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:55.849 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:55.850 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:55.850 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:55.850 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:55.850 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:55.850 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:55.850 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:56.030 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:56.030 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:56.031 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:56.032 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:56.032 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:56.032 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:56.032 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:56.032 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:56.032 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:56.206 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:56.206 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:56.206 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:56.207 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:56.207 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:56.207 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:56.207 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:56.207 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:56.207 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:56.366 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:56.367 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:56.367 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:56.368 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:56.368 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:56.368 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:56.368 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:56.368 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:56.368 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:56.678 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:56.678 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:56.678 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:56.680 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:56.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:56.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:56.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:56.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:56.680 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:56.840 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:56.840 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:56.840 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:56.841 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:56.841 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:56.842 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:56.842 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:56.842 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:56.843 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:56.994 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:56.994 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:56.994 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:56.995 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:56.995 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:56.995 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:56.995 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:56.995 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:56.995 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:57.355 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:57.355 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:57.355 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:57.356 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:57.356 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:57.356 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:57.356 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:57.356 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:57.356 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:57.461  2874  5959 E NetdConnector: yingjie i: 33 ,start: 0
+10-28 02:22:57.485  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
+10-28 02:22:57.541  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
+10-28 02:22:57.738 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:57.739 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:57.739 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:57.740 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:57.740 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:57.740 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:57.740 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:57.740 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:57.740 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:57.907 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:57.907 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:57.907 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:57.908 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:57.908 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:57.908 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:57.908 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:57.908 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:57.908 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:58.074 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:58.074 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:58.074 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:58.075 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:58.075 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:58.075 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:58.075 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:58.075 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:58.075 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:58.237 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:58.237 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:58.238 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:58.239 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:58.239 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:58.239 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:58.239 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:58.239 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:58.239 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:58.440 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:58.440 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:58.440 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:58.442 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:58.442 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:58.442 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:58.442 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:58.442 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:58.442 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:58.599 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:58.600 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:58.600 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:58.601 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:58.601 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:58.601 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:58.601 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:58.601 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:58.601 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:58.775 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:58.775 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:58.775 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:58.776 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:58.776 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:58.776 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:58.777 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:58.777 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:58.777 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:58.937 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:58.937 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:58.937 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:58.938 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:58.939 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:58.939 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:58.939 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:58.939 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:58.939 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:59.147 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:59.147 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:59.147 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:59.148 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:59.148 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:59.148 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:59.148 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:59.149 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:59.149 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:59.324 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:59.324 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:59.324 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:59.325 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:59.325 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:59.325 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:59.325 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:59.325 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:59.325 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:59.503 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:59.503 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:59.503 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:59.504 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:59.505 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:59.505 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:59.505 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:59.505 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:59.505 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:59.663 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:59.663 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:59.664 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:59.664 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:59.664 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:59.665 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:59.665 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:59.665 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:59.665 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:22:59.818 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:22:59.818 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:22:59.818 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:22:59.819 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:22:59.819 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:22:59.819 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:22:59.819 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:22:59.819 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:22:59.819 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:23:00.160 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:23:00.160 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:23:00.160 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:23:00.162 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:23:00.162 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:23:00.162 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:23:00.162 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:23:00.162 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:23:00.162 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:23:00.317 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:23:00.317 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:23:00.317 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:23:00.318 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:23:00.318 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:23:00.319 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:23:00.319 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:23:00.319 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:23:00.319 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:23:00.345  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:23:00.492 24734 24734 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 02:23:00.492 24734 24734 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 02:23:00.492 24734 24734 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 02:23:00.493 24734 24734 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 02:23:00.493 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Betterments (26743)
+10-28 02:23:00.493 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Contents (26744)
+10-28 02:23:00.493 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Daily Progress (26741)
+10-28 02:23:00.493 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Damage Assessment (26740)
+10-28 02:23:00.493 24734 24734 D ProjectDetailVM: 🚫 Filtering project-scoped album Pre-existing Damages (26742)
+10-28 02:23:04.748  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:23:04.752  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:23:04.752  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:23:10.484  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
+10-28 02:23:10.514 12348 12373 W time    : icon time = 0
+10-28 02:23:14.769  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:23:14.774  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:23:14.774  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:23:16.856  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:23:21.660   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:23:21.665   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:23:24.791  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:23:24.795  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:23:24.795  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:23:26.462   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:23:34.810  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:23:34.815  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:23:34.815  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:23:44.830  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:23:44.837  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:23:44.837  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:23:54.850  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:23:54.855  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:23:54.855  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:24:04.870  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:24:04.875  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:24:04.875  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:24:09.806   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:24:09.811   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:24:14.891  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:24:14.899  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:24:14.899  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:24:16.856  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:24:24.911  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:24:24.919  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:24:24.919  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:24:27.450 25883 25883 W ResourceType: ResTable_typeSpec entry count inconsistent: given 225, previously 258
+10-28 02:24:27.450 25883 25883 W ResourceType: ResTable_typeSpec entry count inconsistent: given 5666, previously 5667
+10-28 02:24:30.073   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:24:30.074   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:24:30.075   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:24:30.089   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:24:30.090   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:24:30.090   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:24:30.107   566   651 W XTCC-5.1.0.19-a: [LOWIUtils] to_eScanTypeResponse - default case
+10-28 02:24:30.107   566   651 W XTCC-5.1.0.19-a: [WifiScanner] WiFi scan result : [11] AP's
+10-28 02:24:30.242 25883 25911 W PlayCommon: [5788] No account for auth token provided
+10-28 02:24:32.962   347   347 E cnss-daemon: gateway mac address: %02x:%02x:%02x:%02x:%02x:%02x
+10-28 02:24:32.962   347   347 E cnss-daemon: : 00:00:00:00:00:00
+10-28 02:24:32.962   347   347 E cnss-daemon: Invalid mac address: 0xb32a7e6cM
+10-28 02:24:34.931  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:24:34.939  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:24:34.939  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:24:38.302   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:24:44.950  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:24:44.955  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:24:44.955  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:24:57.955   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:24:57.961   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:25:00.137  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1367, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
+10-28 02:25:00.140  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:25:04.987  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:25:04.992  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:25:04.992  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:25:15.013  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:25:15.016  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:25:15.016  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:25:16.856  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:25:25.032  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:25:25.036  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:25:25.036  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:25:35.051  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:25:35.055  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:25:35.055  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:25:46.097   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:25:46.102   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:25:55.090  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:25:55.095  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:25:55.095  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:05.107  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:05.112  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:05.112  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:15.130  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:15.136  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:15.136  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:16.856  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:26:25.152  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:25.156  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:25.156  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:31.172   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 16
+10-28 02:26:34.246   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:26:34.250   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:26:34.282  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:34.289  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:34.289  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:34.294  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:34.298  2874  2943 E BatteryStatsService: no controller energy info supplied
+10-28 02:26:34.298  2874  2943 E BatteryStatsService: no controller energy info supplied
+10-28 02:26:34.299  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:34.299  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:34.321  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:34.323  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:34.323  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:34.333  2874  2943 E BatteryStatsService: modem info is invalid: ModemActivityInfo{ mTimestamp=0 mSleepTimeMs=0 mIdleTimeMs=0 mTxTimeMs[]=[0, 0, 0, 0, 0] mRxTimeMs=0 mEnergyUsed=0}
+10-28 02:26:35.180  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:35.184  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:35.184  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:39.142   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:26:45.211  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:45.215  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:45.215  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:50.522   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 16
+10-28 02:26:55.234  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:26:55.240  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:26:55.240  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:26:58.482   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:27:05.250  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:05.254  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:05.254  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:15.143  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
+10-28 02:27:15.270  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:15.275  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:15.275  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:15.319  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
+10-28 02:27:16.856  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:27:17.956   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.957   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.957   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.957   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.958   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.971   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.972   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.972   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.972   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.973   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:27:17.995   566   651 W XTCC-5.1.0.19-a: [LOWIUtils] to_eScanTypeResponse - default case
+10-28 02:27:17.995   566   651 W XTCC-5.1.0.19-a: [WifiScanner] WiFi scan result : [18] AP's
+10-28 02:27:22.384   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:27:22.389   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:27:22.421  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:22.426  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:22.426  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:22.440  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:22.443  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:22.443  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:25.290  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:25.295  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:25.295  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:35.310  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:35.314  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:35.315  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:45.332  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:45.337  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:45.337  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:50.232   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 16
+10-28 02:27:55.350  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:27:55.357  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:27:55.357  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:27:59.822   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:28:05.222   347   347 E cnss-daemon: gateway mac address: %02x:%02x:%02x:%02x:%02x:%02x
+10-28 02:28:05.222   347   347 E cnss-daemon: : 00:00:00:00:00:00
+10-28 02:28:05.222   347   347 E cnss-daemon: Invalid mac address: 0xb32a7e6cM
+10-28 02:28:08.172   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:28:10.533   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:28:10.538   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:28:15.390  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:28:15.394  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:28:15.394  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:28:16.860  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:28:24.691 19444 26551 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:24.729 19444 26551 W Settings: Setting install_non_market_apps has moved from android.provider.Settings.Global to android.provider.Settings.Secure, returning read-only value.
+10-28 02:28:25.227 19444 19493 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:25.408  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:28:25.415  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:28:25.415  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:28:25.437 19444 19493 E Finsky  : [5010] 5 file not found
+10-28 02:28:25.441 19444 19493 E Finsky  : [5010] APK Analysis allow list check failed; APK Analysis will be skipped!
+10-28 02:28:25.441 19444 19493 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at axac.d(PG:447)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at axab.b(PG:372)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at axab.a(PG:13)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at bvew.aZ(PG:10)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at axbm.b(PG:641)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at axbm.a(PG:324)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at bvaf.p(PG:28)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at bvaf.h(PG:12)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at axgm.a(PG:106)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at axbm.b(PG:598)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at buyd.ok(PG:6)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at bvff.run(PG:109)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at qqi.run(PG:412)
+10-28 02:28:25.441 19444 19493 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
+10-28 02:28:25.445 19444 19493 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:25.447 19444 19493 E Finsky  : [5010] Logging timeout report message
+10-28 02:28:25.447 19444 19493 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at axac.d(PG:447)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at axab.b(PG:372)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at axab.a(PG:13)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at bvew.aZ(PG:10)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at axbm.b(PG:641)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at axbm.a(PG:324)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at bvaf.p(PG:28)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at bvaf.h(PG:12)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at axgm.a(PG:106)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at axbm.b(PG:598)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at buyd.ok(PG:6)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at bvff.run(PG:109)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at qqi.run(PG:412)
+10-28 02:28:25.447 19444 19493 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
+10-28 02:28:25.448 19444 19493 E Finsky  : [5010] VerifyApps: APK Analysis scan failed for com.example.rocketplan_android
+10-28 02:28:25.448 19444 19493 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at axac.d(PG:447)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at axab.b(PG:372)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at axab.a(PG:13)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at bvew.aZ(PG:10)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at axbm.b(PG:641)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at axbm.a(PG:324)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at bvaf.p(PG:28)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at bvaf.h(PG:12)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at axgm.a(PG:106)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at axbm.b(PG:598)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at buyd.ok(PG:6)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at bvff.run(PG:109)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at qqi.run(PG:412)
+10-28 02:28:25.448 19444 19493 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
+10-28 02:28:25.466 19444 19498 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:25.697 19444 19444 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:25.709 19444 26551 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:25.724 19444 26551 E Finsky  : [5413] Package name null is not an installed package
+10-28 02:28:25.756 19444 26551 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:25.759 19444 19493 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
+10-28 02:28:25.776  2874  2952 W PackageManager: Package com.example.rocketplan_android desires unavailable shared library androidx.window.extensions; ignoring!
+10-28 02:28:25.776  2874  2952 W PackageManager: Package com.example.rocketplan_android desires unavailable shared library androidx.window.sidecar; ignoring!
+10-28 02:28:25.781   334   334 E         : dexopt apk_path='/data/app/vmdl759808364.tmp/base.apk' , pkgname='com.example.rocketplan_android', instruction_set='arm', oat_dir='/data/app/vmdl759808364.tmp/oat', compiler_filter='interpret-only', volume_uuid='(null)', shared_libraries='(null)'
+10-28 02:28:25.781   334   334 E         : dexopt dexopt_needed ='1', dexopt_flags='26'
+10-28 02:28:29.795 26562 26576 W dex2oat : Before Android 4.1, method int androidx.appcompat.widget.DropDownListView.lookForSelectablePosition(int, boolean) would have incorrectly overridden the package-private method in android.widget.ListView
+10-28 02:28:29.798 26562 26575 W dex2oat : Before Android 4.1, method int androidx.appcompat.widget.MenuPopupWindow$MenuDropDownListView.lookForSelectablePosition(int, boolean) would have incorrectly overridden the package-private method in android.widget.ListView
+10-28 02:28:29.947 26562 26562 W dex2oat : Before Android 4.1, method android.graphics.PorterDuffColorFilter androidx.vectordrawable.graphics.drawable.VectorDrawableCompat.updateTintFilter(android.graphics.PorterDuffColorFilter, android.content.res.ColorStateList, android.graphics.PorterDuff$Mode) would have incorrectly overridden the package-private method in android.graphics.drawable.Drawable
+10-28 02:28:30.021 26562 26575 W dex2oat : Before Android 4.1, method android.graphics.drawable.Drawable com.google.android.material.progressindicator.BaseProgressIndicator.getCurrentDrawable() would have incorrectly overridden the package-private method in android.widget.ProgressBar
+10-28 02:28:30.452   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 16
+10-28 02:28:32.657 26562 26577 W dex2oat : Before Android 4.1, method double java.util.concurrent.ThreadLocalRandom.internalNextDouble(double, double) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:32.657 26562 26577 W dex2oat : Before Android 4.1, method int java.util.concurrent.ThreadLocalRandom.internalNextInt(int, int) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:32.657 26562 26577 W dex2oat : Before Android 4.1, method long java.util.concurrent.ThreadLocalRandom.internalNextLong(long, long) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:35.430  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:28:35.433  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:28:35.433  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:28:36.140  2874  2952 W PackageManager: Package com.example.rocketplan_android desires unavailable shared library androidx.window.extensions; ignoring!
+10-28 02:28:36.140  2874  2952 W PackageManager: Package com.example.rocketplan_android desires unavailable shared library androidx.window.sidecar; ignoring!
+10-28 02:28:36.140  2874  2952 W PackageManager: Code path for com.example.rocketplan_android changing from /data/app/com.example.rocketplan_android-1 to /data/app/com.example.rocketplan_android-2
+10-28 02:28:36.140  2874  2952 W PackageManager: Resource path for com.example.rocketplan_android changing from /data/app/com.example.rocketplan_android-1 to /data/app/com.example.rocketplan_android-2
+10-28 02:28:36.406  2874  2952 W PackageManager: Unknown permission android.permission.USE_BIOMETRIC in package com.example.rocketplan_android
+10-28 02:28:36.406  2874  2952 W PackageManager: Unknown permission android.permission.FOREGROUND_SERVICE in package com.example.rocketplan_android
+10-28 02:28:36.953   334   334 E         : Couldn't opendir /data/app/vmdl759808364.tmp: No such file or directory
+10-28 02:28:37.038  2874  5959 E NetdConnector: yingjie i: 16 ,start: 0
+10-28 02:28:37.067  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
+10-28 02:28:37.068  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
+10-28 02:28:37.068  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
+10-28 02:28:37.068  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
+10-28 02:28:37.068  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
+10-28 02:28:37.080  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 82, previously 83
+10-28 02:28:37.081  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4835, previously 4875
+10-28 02:28:37.081  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6148, previously 6185
+10-28 02:28:37.081  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4634, previously 4654
+10-28 02:28:37.085  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4653, previously 4654
+10-28 02:28:37.085  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 4767
+10-28 02:28:37.138  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 26, previously 35
+10-28 02:28:37.139  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1322, previously 1351
+10-28 02:28:37.139  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 381, previously 3300
+10-28 02:28:37.146  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
+10-28 02:28:37.147  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
+10-28 02:28:37.147  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
+10-28 02:28:37.147  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
+10-28 02:28:37.162 26598 26598 W System  : ClassLoader referenced unknown path: /system/app/KeyChain/lib/arm
+10-28 02:28:37.180 26598 26598 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.startService:1357 android.content.ContextWrapper.startService:613 android.content.ContextWrapper.startService:613 com.android.keychain.KeyChainBroadcastReceiver.onReceive:12 android.app.ActivityThread.handleReceiver:3040 
+10-28 02:28:37.206  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
+10-28 02:28:37.207  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
+10-28 02:28:37.221  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2129, previously 2249
+10-28 02:28:37.221  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1163, previously 1222
+10-28 02:28:37.221  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 375, previously 2643
+10-28 02:28:37.256  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 23, previously 36
+10-28 02:28:37.257  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 696, previously 3214
+10-28 02:28:37.257  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1897, previously 1921
+10-28 02:28:37.257  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 394, previously 3435
+10-28 02:28:37.303  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
+10-28 02:28:37.303  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
+10-28 02:28:37.305  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
+10-28 02:28:37.305  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
+10-28 02:28:37.308 26614 26614 W System  : ClassLoader referenced unknown path: /system/priv-app/Settings/lib/arm
+10-28 02:28:37.320  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
+10-28 02:28:37.320  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
+10-28 02:28:37.320  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
+10-28 02:28:37.320  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
+10-28 02:28:37.320  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
+10-28 02:28:37.381  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
+10-28 02:28:37.383 19444 19492 E Finsky  : [5009] [Counters] attempted to use a non-positive increment for: 4752
+10-28 02:28:37.386 19444 19492 E Finsky  : [5009] [Counters] attempted to use a non-positive increment for: 4753
+10-28 02:28:37.416 19444 19493 E Finsky  : [5010] [Counters] attempted to use a non-positive increment for: 4752
+10-28 02:28:37.417 19444 19493 E Finsky  : [5010] [Counters] attempted to use a non-positive increment for: 4753
+10-28 02:28:37.425 12348 12373 W time    : icon time = 0
+10-28 02:28:37.513 26633 26633 W ResourceType: ResTable_typeSpec entry count inconsistent: given 225, previously 258
+10-28 02:28:37.513 26633 26633 W ResourceType: ResTable_typeSpec entry count inconsistent: given 5666, previously 5667
+10-28 02:28:38.271 26633 26664 W art     : Before Android 4.1, method double java.util.concurrent.ThreadLocalRandom.internalNextDouble(double, double) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:38.271 26633 26664 W art     : Before Android 4.1, method int java.util.concurrent.ThreadLocalRandom.internalNextInt(int, int) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:38.271 26633 26664 W art     : Before Android 4.1, method long java.util.concurrent.ThreadLocalRandom.internalNextLong(long, long) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:38.291 26633 26664 W Settings: Setting download_manager_max_bytes_over_mobile has moved from android.provider.Settings.Secure to android.provider.Settings.Global.
+10-28 02:28:38.295 26633 26664 W Settings: Setting download_manager_recommended_max_bytes_over_mobile has moved from android.provider.Settings.Secure to android.provider.Settings.Global.
+10-28 02:28:38.476  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
+10-28 02:28:38.481 26674 26674 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
+10-28 02:28:38.481 26674 26674 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
+10-28 02:28:38.517  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:28:38.572  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
+10-28 02:28:38.944  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:28:38.949  2874  2940 W BroadcastQueue: Permission Denial: broadcasting Intent { act=android.intent.action.BATTERY_CHANGED flg=0x60000010 (has extras) } from null (pid=-1, uid=-1) requires com.google.android.apps.magazines.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION due to registered receiver BroadcastFilter{c47161b u0 ReceiverList{951282a 26674 com.google.android.apps.magazines/10137/u0 remote:bb50d15}}
+10-28 02:28:39.480 26713 26713 W ResourceType: ResTable_typeSpec entry count inconsistent: given 34, previously 36
+10-28 02:28:39.480 26713 26713 W ResourceType: ResTable_typeSpec entry count inconsistent: given 9326, previously 9327
+10-28 02:28:39.486 26713 26713 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3580, previously 3599
+10-28 02:28:39.486 26713 26713 W ResourceType: ResTable_typeSpec entry count inconsistent: given 380, previously 3014
+10-28 02:28:40.338 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_REMOVED com.example.rocketplan_android
+10-28 02:28:40.389 26753 26753 W Background_4: type=1400 audit(0.0:70335): avc: denied { read } for name="gpuclk" dev="sysfs" ino=10641 scontext=u:r:untrusted_app:s0:c512,c768 tcontext=u:object_r:sysfs:s0 tclass=file permissive=0
+10-28 02:28:40.393 26713 26753 W Adreno-ES20: <get_gpu_clk:229>: open failed: errno 13
+10-28 02:28:40.508 19444 19479 E Finsky  : [4999] [Counters] attempted to use a non-positive increment for: 4752
+10-28 02:28:40.518 19444 19479 E Finsky  : [4999] [Counters] attempted to use a non-positive increment for: 4753
+10-28 02:28:40.544 19444 19498 E Finsky  : [5011] [Counters] attempted to use a non-positive increment for: 4752
+10-28 02:28:40.545 19444 19498 E Finsky  : [5011] [Counters] attempted to use a non-positive increment for: 4753
+10-28 02:28:40.575  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:28:40.739 26780 26780 W System  : ClassLoader referenced unknown path: /system/lib/FB_AppInstaller_20170216_v19.0
+10-28 02:28:40.904  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 34, previously 36
+10-28 02:28:40.904  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 9326, previously 9327
+10-28 02:28:40.906  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3580, previously 3599
+10-28 02:28:40.906  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 380, previously 3014
+10-28 02:28:40.984 26800 26800 W System  : ClassLoader referenced unknown path: /system/priv-app/GooglePartnerSetup/lib/arm
+10-28 02:28:41.171 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_ADDED com.example.rocketplan_android
+10-28 02:28:41.237 26713 26751 W art     : Before Android 4.1, method double java.util.concurrent.ThreadLocalRandom.internalNextDouble(double, double) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:41.238 26713 26751 W art     : Before Android 4.1, method int java.util.concurrent.ThreadLocalRandom.internalNextInt(int, int) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:41.238 26713 26751 W art     : Before Android 4.1, method long java.util.concurrent.ThreadLocalRandom.internalNextLong(long, long) would have incorrectly overridden the package-private method in java.util.Random
+10-28 02:28:41.404 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_REPLACED com.example.rocketplan_android
+10-28 02:28:41.590 26674 26848 W System  : ClassLoader referenced unknown path: 
+10-28 02:28:41.609 26674 26848 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
+10-28 02:28:41.610 26674 26848 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
+10-28 02:28:41.610 26674 26848 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
+10-28 02:28:41.610 26674 26848 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
+10-28 02:28:41.610 26674 26848 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
+10-28 02:28:41.649 26674 26848 W System  : ClassLoader referenced unknown path: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000b/n/armeabi-v7a
+10-28 02:28:41.649 26674 26848 W System  : ClassLoader referenced unknown path: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000b/n/armeabi
+10-28 02:28:45.102  4886 18347 W GetConfigSnapshotOp: Succeeded but not registered: com.google.android.libraries.performance.primes#com.android.vending [CONTEXT service_id=51 ]
+10-28 02:28:45.450  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:28:45.453  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:28:45.453  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:28:48.342   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:28:51.172  9898 19294 W GetGamesServiceReqFacto: Parsing request with ignored arguments. signInOptionsBundle [Bundle[{com.google.android.gms.signin.internal.serverClientId=null, com.google.android.gms.signin.internal.usePromptModeForAuthCode=true, com.google.android.gms.signin.internal.logSessionId=null, com.google.android.gms.signin.internal.hostedDomain=null, com.google.android.gms.signin.internal.offlineAccessRequested=false, com.google.android.gms.signin.internal.waitForAccessTokenRefresh=false, com.google.android.gms.signin.internal.clientRequestedAccount=Account {name=<<default account>>, type=com.google}, com.google.android.gms.signin.internal.idTokenRequested=false, com.google.android.gms.signin.internal.forceCodeForRefreshToken=false}]], isRetryingSignIn [false], skipWelcomePopup [false], requireGooglePlus [false]
+10-28 02:28:55.470  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:28:55.476  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:28:55.476  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:28:58.680   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:28:58.685   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:29:05.489  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:29:05.494  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:29:05.494  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:29:06.798  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1385, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
+10-28 02:29:06.804  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
+10-28 02:29:16.857  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:29:25.531  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:29:25.537  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:29:25.538  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:29:35.550  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:29:35.555  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:29:35.555  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:29:45.567  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:29:45.571  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:29:45.571  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:29:46.824   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:29:46.829   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:29:50.442   347   347 E cnss-daemon: gateway mac address: %02x:%02x:%02x:%02x:%02x:%02x
+10-28 02:29:50.442   347   347 E cnss-daemon: : 00:00:00:00:00:00
+10-28 02:29:50.442   347   347 E cnss-daemon: Invalid mac address: 0xb32a7e6cM
+10-28 02:29:55.591  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:29:55.594  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:29:55.594  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:29:57.872   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:29:57.883   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
+10-28 02:29:57.895   566   651 W XTCC-5.1.0.19-a: [LOWIUtils] to_eScanTypeResponse - default case
+10-28 02:29:57.896   566   651 W XTCC-5.1.0.19-a: [WifiScanner] WiFi scan result : [10] AP's
+10-28 02:30:01.082 27112 27112 W System  : ClassLoader referenced unknown path: /system/app/DeskClock/lib/arm
+10-28 02:30:01.102  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
+10-28 02:30:01.182  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
+10-28 02:30:04.742   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
+10-28 02:30:05.612  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:05.615  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:05.615  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:30:15.631  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:15.638  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:15.638  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:30:16.859  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
+10-28 02:30:25.652  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:25.656  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:25.656  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:30:34.973   502   502 E VM_BMS  : failed to set wake_lock rc=-13
+10-28 02:30:34.977   502   502 E VM_BMS  : failed to wake_unlock rc=-13
+10-28 02:30:35.010  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:35.017  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:35.018  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:30:35.036  2874  2943 E BatteryStatsService: no controller energy info supplied
+10-28 02:30:35.036  2874  2943 E BatteryStatsService: no controller energy info supplied
+10-28 02:30:35.036  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:35.042  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:35.042  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:30:35.051  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:35.055  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:35.055  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:30:35.074  2874  2943 E BatteryStatsService: modem info is invalid: ModemActivityInfo{ mTimestamp=0 mSleepTimeMs=0 mIdleTimeMs=0 mTxTimeMs[]=[0, 0, 0, 0, 0] mRxTimeMs=0 mEnergyUsed=0}
+10-28 02:30:35.673  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:35.678  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:35.678  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+10-28 02:30:39.230 19444 20595 W PlayCommon: [5112] No account for auth token provided
+10-28 02:30:45.687  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+10-28 02:30:45.692  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
+10-28 02:30:45.692  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null

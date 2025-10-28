@@ -89,40 +89,6 @@ class OfflineSyncRepository(
         val collectedLocationIds = mutableSetOf<Long>()
         val collectedRoomIds = mutableSetOf<Long>()
 
-        suspend fun persistPhotos(photos: List<PhotoDto>, defaultRoomId: Long? = null) {
-            if (photos.isNotEmpty()) {
-                // Preserve existing room assignment if incoming payload doesn't include one
-                val entities = mutableListOf<OfflinePhotoEntity>()
-                for (photo in photos) {
-                    val existing = localDataService.getPhotoByServerId(photo.id)
-                    val preservedRoom = existing?.roomId
-                    val resolvedRoomId = defaultRoomId ?: photo.roomId ?: preservedRoom
-                    entities += photo.toEntity(defaultRoomId = resolvedRoomId)
-                }
-                localDataService.savePhotos(entities)
-
-                // Save album-photo relationships
-                val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {
-                    photos.forEach { photo ->
-                        photo.albums?.forEach { album ->
-                            add(
-                                OfflineAlbumPhotoEntity(
-                                    albumId = album.id,
-                                    photoServerId = photo.id
-                                )
-                            )
-                        }
-                    }
-                }
-                if (albumPhotoRelationships.isNotEmpty()) {
-                    localDataService.saveAlbumPhotos(albumPhotoRelationships)
-                    Log.d("API", "📸 [persistPhotos] Saved ${albumPhotoRelationships.size} album-photo relationships")
-                }
-
-                didFetchPhotos = true
-            }
-        }
-
         detail?.let { dto ->
             val projectEntity = dto.toEntity()
             localDataService.saveProjects(listOf(projectEntity))
@@ -148,8 +114,10 @@ class OfflineSyncRepository(
                 Log.d("API", "🏠 [syncProjectGraph] Saved ${it.size} rooms from project detail")
             }
             dto.photos?.let {
-                persistPhotos(it)
-                Log.d("API", "📸 [syncProjectGraph] Saved ${it.size} photos from project detail")
+                if (persistPhotos(it)) {
+                    didFetchPhotos = true
+                    Log.d("API", "📸 [syncProjectGraph] Saved ${it.size} photos from project detail")
+                }
             }
             dto.atmosphericLogs?.let {
                 localDataService.saveAtmosphericLogs(it.map { log -> log.toEntity() })
@@ -252,8 +220,11 @@ class OfflineSyncRepository(
                 }
 
                 if (photos.isNotEmpty()) {
-                    persistPhotos(photos, defaultRoomId = roomId)
-                    Log.d("API", "💾 [syncProjectGraph] Saved ${photos.size} photos for room $roomId")
+                    val saved = persistPhotos(photos, defaultRoomId = roomId)
+                    if (saved) {
+                        didFetchPhotos = true
+                        Log.d("API", "💾 [syncProjectGraph] Saved ${photos.size} photos for room $roomId")
+                    }
                 }
             }
         }
@@ -267,19 +238,25 @@ class OfflineSyncRepository(
             fetchAllPages { page -> api.getProjectFloorPhotos(projectId, page) }
                 .map { it.toPhotoDto(projectId) }
         }.getOrDefault(emptyList())
-        persistPhotos(floorPhotos)
+        if (persistPhotos(floorPhotos)) {
+            didFetchPhotos = true
+        }
 
         val locationPhotos = runCatching {
             fetchAllPages { page -> api.getProjectLocationPhotos(projectId, page) }
                 .map { it.toPhotoDto(projectId) }
         }.getOrDefault(emptyList())
-        persistPhotos(locationPhotos)
+        if (persistPhotos(locationPhotos)) {
+            didFetchPhotos = true
+        }
 
         val unitPhotos = runCatching {
             fetchAllPages { page -> api.getProjectUnitPhotos(projectId, page) }
                 .map { it.toPhotoDto(projectId) }
         }.getOrDefault(emptyList())
-        persistPhotos(unitPhotos)
+        if (persistPhotos(unitPhotos)) {
+            didFetchPhotos = true
+        }
 
         runCatching { api.getProjectEquipment(projectId) }.onSuccess { equipment ->
             localDataService.saveEquipment(equipment.map { it.toEntity() })
@@ -317,6 +294,30 @@ class OfflineSyncRepository(
         }
 
         Log.d("API", "✅ [syncProjectGraph] Sync completed for project $projectId - Locations: ${collectedLocationIds.size}, Rooms: ${collectedRoomIds.size}")
+    }
+
+    suspend fun refreshRoomPhotos(projectId: Long, roomId: Long) = withContext(ioDispatcher) {
+        Log.d("API", "🔄 [refreshRoomPhotos] Requesting photos for room $roomId (project $projectId)")
+
+        val photos = runCatching {
+            fetchRoomPhotoPages(roomId = roomId, projectId = projectId)
+        }.onFailure { error ->
+            if (error is retrofit2.HttpException && error.code() == 404) {
+                Log.d("API", "INFO [refreshRoomPhotos] Room $roomId has no photos (404)")
+            } else {
+                Log.e("API", "❌ [refreshRoomPhotos] Failed to fetch photos for room $roomId", error)
+            }
+        }.getOrElse { emptyList() }
+
+        if (photos.isEmpty()) {
+            Log.d("API", "ℹ️ [refreshRoomPhotos] No photos returned for room $roomId")
+            return@withContext
+        }
+
+        if (persistPhotos(photos, defaultRoomId = roomId)) {
+            Log.d("API", "💾 [refreshRoomPhotos] Saved ${photos.size} photos for room $roomId")
+            photoCacheScheduler.schedulePrefetch()
+        }
     }
 
     private suspend fun <T> fetchAllPages(
@@ -413,6 +414,43 @@ class OfflineSyncRepository(
             hasMore = hasMore,
             nextPage = nextPage
         )
+    }
+
+    private suspend fun persistPhotos(
+        photos: List<PhotoDto>,
+        defaultRoomId: Long? = null
+    ): Boolean {
+        if (photos.isEmpty()) {
+            return false
+        }
+
+        val entities = mutableListOf<OfflinePhotoEntity>()
+        for (photo in photos) {
+            val existing = localDataService.getPhotoByServerId(photo.id)
+            val preservedRoom = existing?.roomId
+            val resolvedRoomId = defaultRoomId ?: photo.roomId ?: preservedRoom
+            entities += photo.toEntity(defaultRoomId = resolvedRoomId)
+        }
+        localDataService.savePhotos(entities)
+
+        val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {
+            photos.forEach { photo ->
+                photo.albums?.forEach { album ->
+                    add(
+                        OfflineAlbumPhotoEntity(
+                            albumId = album.id,
+                            photoServerId = photo.id
+                        )
+                    )
+                }
+            }
+        }
+        if (albumPhotoRelationships.isNotEmpty()) {
+            localDataService.saveAlbumPhotos(albumPhotoRelationships)
+            Log.d("API", "📸 [persistPhotos] Saved ${albumPhotoRelationships.size} album-photo relationships")
+        }
+
+        return true
     }
 
     private data class RoomPhotoPageResult(
@@ -611,7 +649,8 @@ private fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocatio
         type?.takeIf { it.isNotBlank() },
         locationType?.takeIf { it.isNotBlank() }
     ).firstOrNull() ?: "location"
-    val resolvedProjectId = projectId ?: defaultProjectId ?: 0L
+    val resolvedProjectId = projectId ?: defaultProjectId
+        ?: throw IllegalStateException("Location $id has no projectId")
     return OfflineLocationEntity(
         locationId = id,
         serverId = id,

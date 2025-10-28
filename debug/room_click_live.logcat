@@ -1,0 +1,872 @@
+--------- beginning of main
+10-28 09:40:14.210  7938  7938 D ProjectsViewModel: 📱 ProjectsViewModel initialized
+10-28 09:40:14.220  7938  7938 D ProjectsViewModel: 🔄 Starting initial sync...
+10-28 09:40:14.570  7938  7938 D ProjectsViewModel: 📊 Received 10 projects from database
+10-28 09:40:14.574  7938  7938 D ProjectsViewModel: ✅ Projects - My Projects: 10, WIP: 0
+10-28 09:40:14.859  7938  7958 D API     : 🔄 [syncProjectGraph] Starting sync for project 4909
+10-28 09:40:15.162  7938  7938 W lan_android.dev: JNI critical lock held for 16.361ms on Thread[1,tid=7938,Runnable,Thread*=0x72a021a09380,peer=0x73378f68,"main"]
+10-28 09:40:16.067  7938  7938 D ProjectsViewModel: 📊 Received 10 projects from database
+10-28 09:40:16.070  7938  7938 D ProjectsViewModel: ✅ Projects - My Projects: 10, WIP: 0
+10-28 09:40:16.286  7938  7943 W lan_android.dev: userfaultfd: MOVE ioctl seems unsupported: Try again
+10-28 09:40:18.187  7938  7958 E API     : ❌ [syncProjectGraph] Failed to fetch project detail for 4909
+10-28 09:40:18.187  7938  7958 E API     : retrofit2.HttpException: HTTP 400 
+10-28 09:40:18.187  7938  7958 E API     : 	at retrofit2.KotlinExtensions$await$2$2.onResponse(KotlinExtensions.kt:53)
+10-28 09:40:18.187  7938  7958 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:161)
+10-28 09:40:18.187  7938  7958 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-28 09:40:18.187  7938  7958 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-28 09:40:18.187  7938  7958 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-28 09:40:18.187  7938  7958 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-28 09:40:18.188  7938  7958 D API     : 🏢 [syncProjectGraph] Fetching property for project 4909
+10-28 09:40:19.491  7938  7958 D API     : ✅ [syncProjectGraph] Fetched and saved property 2979
+10-28 09:40:19.491  7938  7958 D API     : 📍 [syncProjectGraph] Fetching locations for property 2979
+10-28 09:40:20.325  7938  7958 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-28 09:40:21.121  7938  7958 D API     : ✅ [syncProjectGraph] Fetched 5 nested locations
+10-28 09:40:21.145  7938  7958 D API     : 📍 [syncProjectGraph] Saved 10 property locations, total collected: 10
+10-28 09:40:21.147  7938  7958 D API     : 🏠 [syncProjectGraph] Fetching rooms for 10 locations
+10-28 09:40:22.039  7938  7958 D API     : INFO [syncProjectGraph] Location 37381 has no rooms (404)
+10-28 09:40:22.040  7938  7958 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37381) returned 0 rooms
+10-28 09:40:22.040  7938  7958 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37381 (empty list)
+10-28 09:40:23.945  7938  7958 D API     : INFO [syncProjectGraph] Location 37382 has no rooms (404)
+10-28 09:40:23.945  7938  7958 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37382) returned 0 rooms
+10-28 09:40:23.946  7938  7958 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37382 (empty list)
+10-28 09:40:27.133  7938  7958 D API     : INFO [syncProjectGraph] Location 37383 has no rooms (404)
+10-28 09:40:27.134  7938  7958 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37383) returned 0 rooms
+10-28 09:40:27.135  7938  7958 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37383 (empty list)
+10-28 09:40:27.605  7938  7938 D ProjectsViewModel: ⚡ Prioritizing project: 4970
+10-28 09:40:27.699  7938  7938 D MainActivity: Navigation destination changed: Project Detail
+10-28 09:40:28.260  7938  7958 D API     : INFO [syncProjectGraph] Location 37384 has no rooms (404)
+10-28 09:40:28.260  7938  7958 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37384) returned 0 rooms
+10-28 09:40:28.261  7938  7958 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37384 (empty list)
+10-28 09:40:28.574  7938  7958 D API     : 🔄 [syncProjectGraph] Starting sync for project 4970
+10-28 09:40:29.158  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:40:29.160  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:40:29.164  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:40:29.173  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:40:29.293  7938  7958 D API     : INFO [syncProjectGraph] Location 37385 has no rooms (404)
+10-28 09:40:29.293  7938  7958 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37385) returned 0 rooms
+10-28 09:40:29.294  7938  7958 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37385 (empty list)
+10-28 09:40:29.398  7938  7938 D ProjectDetailFrag: 📚 Submitting 0 albums to albumsAdapter
+10-28 09:40:29.400  7938  7938 D ProjectDetailFrag: 🏠 Submitting 10 room items to roomsAdapter (1 sections)
+10-28 09:40:29.951  7938  8006 E API     : ❌ [syncProjectGraph] Failed to fetch project detail for 4970
+10-28 09:40:29.951  7938  8006 E API     : retrofit2.HttpException: HTTP 400 
+10-28 09:40:29.951  7938  8006 E API     : 	at retrofit2.KotlinExtensions$await$2$2.onResponse(KotlinExtensions.kt:53)
+10-28 09:40:29.951  7938  8006 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:161)
+10-28 09:40:29.951  7938  8006 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
+10-28 09:40:29.951  7938  8006 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1154)
+10-28 09:40:29.951  7938  8006 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:652)
+10-28 09:40:29.951  7938  8006 E API     : 	at java.lang.Thread.run(Thread.java:1563)
+10-28 09:40:29.951  7938  8006 D API     : 🏢 [syncProjectGraph] Fetching property for project 4970
+10-28 09:40:30.230  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 7 rooms for location 3927 (page 1)
+10-28 09:40:30.231  7938  8006 D API     : 🔍 [DEBUG] Room payload - id: 5678, name: null, title: null, roomType.name: Shop, level.name: Main Level
+10-28 09:40:30.232  7938  8006 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3927) returned 7 rooms
+10-28 09:40:30.278  7938  8006 D API     : 💾 [syncProjectGraph] Saved 7 rooms for location 3927 to database
+10-28 09:40:30.290  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:40:30.290  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:40:30.290  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:40:30.295  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:40:30.357  7938  8007 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+10-28 09:40:30.357  7938  8007 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+10-28 09:40:31.178  7938  8004 D API     : ✅ [syncProjectGraph] Fetched and saved property 3021
+10-28 09:40:31.178  7938  8004 D API     : 📍 [syncProjectGraph] Fetching locations for property 3021
+10-28 09:40:31.508  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3928 (page 1)
+10-28 09:40:31.508  7938  8004 D API     : 🔍 [DEBUG] Room payload - id: 5616, name: null, title: null, roomType.name: Bathroom, level.name: Main Level
+10-28 09:40:31.508  7938  8004 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3928) returned 1 rooms
+10-28 09:40:31.525  7938  8004 D API     : 💾 [syncProjectGraph] Saved 1 rooms for location 3928 to database
+10-28 09:40:31.537  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:40:31.538  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:40:31.539  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:40:31.543  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:40:31.757  7938  7938 D MainActivity: Navigation destination changed: Room Detail
+10-28 09:40:31.966  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 5 levels
+10-28 09:40:32.177  7938  7938 D RoomDetailFrag: 🧭 onViewCreated(projectId=4970, roomId=5949)
+10-28 09:40:32.204  7938  7938 D RoomDetailVM: 📦 init(projectId=4970, roomId=5949)
+10-28 09:40:32.206  7938  7938 D RoomDetailFrag: 🎨 State received: com.example.rocketplan_android.ui.projects.RoomDetailUiState$Loading@dc0c3c6
+10-28 09:40:32.209  7938  7938 D RoomDetailFrag: 🧩 applyTabState: PHOTOS, albums=0, photoItems=0
+10-28 09:40:32.303  7938  7938 D RoomDetailFrag: ▶️ onResume -> ensureRoomPhotosFresh()
+10-28 09:40:32.307  7938  7938 D RoomDetailVM: 🔄 ensureRoomPhotosFresh(force=false) -> refreshRoomPhotos(4970, 5949)
+10-28 09:40:32.312  7938  8004 D API     : 🔄 [refreshRoomPhotos] Requesting photos for room 5949 (project 4970)
+10-28 09:40:32.696  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:40:32.697  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:40:32.751  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:40:32.890  7938  7938 D RoomDetailFrag: 🎨 State received: Ready(header=RoomDetailHeader(title=Basement, noteSummary=No Notes), photos=[RoomPhotoItem(id=57840, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c5ae8a5-0544-4e82-8db6-a13e3311ecfa/1761628376_255072.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c5ae8a5-0544-4e82-8db6-a13e3311ecfa/80x80/1761628376_255072.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57839, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/da23bd32-230d-4aa8-8ff1-8d46900f9526/1761628376_255031.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/da23bd32-230d-4aa8-8ff1-8d46900f9526/80x80/1761628376_255031.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57837, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/617fd31f-67ca-480f-834e-3a5875d1da12/1761628376_25483.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/617fd31f-67ca-480f-834e-3a5875d1da12/80x80/1761628376_25483.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57838, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/58897026-ce6b-4ac0-916f-c0bc2dfca6d7/1761628376_254983.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/58897026-ce6b-4ac0-916f-c0bc2dfca6d7/80x80/1761628376_254983.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57830, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/de17134f-021f-48b1-b17e-10ae257ff4c0/1761626223_59326.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/de17134f-021f-48b1-b17e-10ae257ff4c0/80x80/1761626223_59326.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57831, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c141b8c-1783-44e4-a4cb-5b444bb3b35e/1761626223_593326.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c141b8c-1783-44e4-a4cb-5b444bb3b35e/80x80/1761626223_593326.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57828, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/c1d07e65-fd69-40e3-b97f-30fb53167f1e/1761626223_593149.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/c1d07e65-fd69-40e3-b97f-30fb53167f1e/80x80/1761626223_593149.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57829, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/e47a7928-8a21-47b2-b842-3796f0f5de0c/1761626223_593207.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/e47a7928-8a21-47b2-b842-3796f0f5de0c/80x80/1761626223_593207.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57827, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/5ed26c95-5c33-4975-90cf-304533308e75/1761626223_5930948.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/5ed26c95-5c33-4975-90cf-304533308e75/80x80/1761626223_5930948.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57825, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/fc2e1ea3-e9d0-48c0-9356-cc3f1b9563d2/1761626223_592869.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/fc2e1ea3-e9d0-48c0-9356-cc3f1b9563d2/80x80/1761626223_592869.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57826, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/dec47c32-d74c-4371-8f98-e29fc56235aa/1761626223_593035.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/dec47c32-d74c-4371-8f98-e29fc56235aa/80x80/1761626223_593035.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57823, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplante
+10-28 09:40:32.894  7938  7938 D RoomDetailFrag: 📸 Ready state: 484 photos, 0 albums
+10-28 09:40:32.901  7938  7938 D RoomDetailFrag: 🎛 renderState: photos=484, albums=0
+10-28 09:40:32.904  7938  7938 D RoomDetailFrag: 📚 submitting albums: 0
+10-28 09:40:32.910  7938  7938 D RoomDetailFrag: 🖼 submitting photos items: 485 (incl AddPhoto)
+10-28 09:40:32.917  7938  7938 D RoomDetailFrag: 👁 visibility -> photosRV=true, placeholder=false
+10-28 09:40:33.405  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
+10-28 09:40:33.420  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 6 rooms for location 3930 (page 1)
+10-28 09:40:33.420  7938  8004 D API     : 🔍 [DEBUG] Room payload - id: 5691, name: null, title: null, roomType.name: Machine Room, level.name: Main Level
+10-28 09:40:33.420  7938  8004 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3930) returned 6 rooms
+10-28 09:40:33.520  7938  8006 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
+10-28 09:40:33.521  7938  8006 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
+10-28 09:40:33.640  7938  8006 D API     : 💾 [syncProjectGraph] Saved 6 rooms for location 3930 to database
+10-28 09:40:36.839  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 14 rooms for location 3931 (page 1)
+10-28 09:40:36.840  7938  8006 D API     : 🔍 [DEBUG] Room payload - id: 5651, name: null, title: null, roomType.name: Lobby, level.name: Main Level
+10-28 09:40:36.847  7938  8006 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3931) returned 14 rooms
+10-28 09:40:37.209  7938  8006 D API     : 💾 [syncProjectGraph] Saved 14 rooms for location 3931 to database
+10-28 09:40:37.216  7938  8004 D API     : INFO [syncProjectGraph] Location 37845 has no rooms (404)
+10-28 09:40:37.217  7938  8004 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37845) returned 0 rooms
+10-28 09:40:37.217  7938  8004 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37845 (empty list)
+10-28 09:40:41.160  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3935 (page 1)
+10-28 09:40:41.161  7938  8004 D API     : 🔍 [DEBUG] Room payload - id: 5692, name: null, title: null, roomType.name: Machine Room, level.name: Main Level
+10-28 09:40:41.161  7938  8004 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3935) returned 1 rooms
+10-28 09:40:41.212  7938  8004 D API     : 💾 [syncProjectGraph] Saved 1 rooms for location 3935 to database
+10-28 09:40:41.213  7938  8004 D API     : 🏠 [syncProjectGraph] Total rooms collected: 29
+10-28 09:40:41.213  7938  8004 D API     : 📸 [syncProjectGraph] Fetching photos for 29 rooms
+10-28 09:40:41.364  7938  8006 D API     : INFO [syncProjectGraph] Location 37846 has no rooms (404)
+10-28 09:40:41.365  7938  8006 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37846) returned 0 rooms
+10-28 09:40:41.366  7938  8006 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37846 (empty list)
+10-28 09:40:43.604  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5678 (paginated)
+10-28 09:40:43.922  7938  8002 D API     : INFO [syncProjectGraph] Location 37847 has no rooms (404)
+10-28 09:40:43.924  7938  8002 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37847) returned 0 rooms
+10-28 09:40:43.925  7938  8002 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37847 (empty list)
+10-28 09:40:44.222  7938  7938 W lan_android.dev: JNI critical lock held for 33.866ms on Thread[1,tid=7938,Runnable,Thread*=0x72a021a09380,peer=0x73378f68,"main"]
+10-28 09:40:44.304  7938  8002 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
+10-28 09:40:44.307  7938  8002 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5678
+10-28 09:40:44.924  7938  8002 D API     : INFO [syncProjectGraph] Location 37848 has no rooms (404)
+10-28 09:40:44.925  7938  8002 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37848) returned 0 rooms
+10-28 09:40:44.925  7938  8002 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37848 (empty list)
+10-28 09:40:45.665  7938  7938 W lan_android.dev: JNI critical lock held for 23.510ms on Thread[1,tid=7938,Runnable,Thread*=0x72a021a09380,peer=0x73378f68,"main"]
+10-28 09:40:46.835  7938  8002 D API     : INFO [syncProjectGraph] Location 37849 has no rooms (404)
+10-28 09:40:46.836  7938  8002 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37849) returned 0 rooms
+10-28 09:40:46.836  7938  8002 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37849 (empty list)
+10-28 09:40:49.454  7938  8002 D API     : ✅ [syncProjectGraph] Fetched 9 rooms for location 3971 (page 1)
+10-28 09:40:49.455  7938  8002 D API     : 🔍 [DEBUG] Room payload - id: 6008, name: null, title: null, roomType.name: Pumpkin, level.name: Main Level
+10-28 09:40:49.455  7938  8002 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3971) returned 9 rooms
+10-28 09:40:49.624  7938  8006 D API     : 💾 [syncProjectGraph] Saved 9 rooms for location 3971 to database
+10-28 09:40:49.626  7938  8006 D API     : 🏠 [syncProjectGraph] Total rooms collected: 9
+10-28 09:40:49.628  7938  8006 D API     : 📸 [syncProjectGraph] Fetching photos for 9 rooms
+10-28 09:40:51.387  7938  7938 W lan_android.dev: JNI critical lock held for 24.472ms on Thread[1,tid=7938,Runnable,Thread*=0x72a021a09380,peer=0x73378f68,"main"]
+10-28 09:40:52.086  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 100 photos for room 5677 (paginated)
+10-28 09:40:52.782  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 6008 (paginated)
+10-28 09:40:54.482  7938  7943 W lan_android.dev: Suspending all threads took: 8.594ms
+10-28 09:40:56.149  7938  8006 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+10-28 09:40:56.150  7938  8006 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 6008
+10-28 09:40:57.230  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 6007 (paginated)
+10-28 09:40:57.482  7938  8009 W lan_android.dev: JNI critical lock held for 30.789ms on Thread[46,tid=8009,Runnable,Thread*=0x72a021aa7670,peer=0x25c46b0,"OkHttp https://api-qa-mongoose-br2wu78v1.rocketplantech.com/..."]
+10-28 09:40:57.859  7938  8006 D API     : 📸 [persistPhotos] Saved 100 album-photo relationships
+10-28 09:40:57.860  7938  8006 D API     : 💾 [syncProjectGraph] Saved 100 photos for room 5677
+10-28 09:40:58.078  7938  8006 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
+10-28 09:40:58.080  7938  8006 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 6007
+10-28 09:40:59.749  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:40:59.750  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:40:59.793  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:40:59.822  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:40:59.826  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:40:59.850  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:40:59.870  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:40:59.870  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:40:59.871  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:40:59.874  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:40:59.906  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:40:59.906  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:40:59.907  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:40:59.910  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:40:59.948  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:40:59.949  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:40:59.966  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:00.009  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:00.009  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:00.036  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:00.064  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:00.065  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:00.067  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:00.074  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:00.078  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:00.083  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:00.088  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:00.095  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:00.146  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:00.147  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:00.188  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:00.206  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:00.206  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:00.206  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5676 (paginated)
+10-28 09:41:00.206  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:00.219  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:00.241  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 15 photos for room 5999 (paginated)
+10-28 09:41:00.310  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:00.310  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:00.311  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:00.317  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:00.447  7938  8006 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
+10-28 09:41:00.448  7938  8006 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5676
+10-28 09:41:00.530  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:00.530  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:00.552  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:00.575  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:00.575  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:00.576  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:00.579  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:00.689  7938  8006 D API     : 📸 [persistPhotos] Saved 15 album-photo relationships
+10-28 09:41:00.689  7938  8006 D API     : 💾 [syncProjectGraph] Saved 15 photos for room 5999
+10-28 09:41:00.737  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:00.738  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:00.759  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:00.775  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:00.775  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:00.776  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:00.779  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:02.073  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 3 photos for room 5994 (paginated)
+10-28 09:41:02.213  7938  8006 D API     : 📸 [persistPhotos] Saved 3 album-photo relationships
+10-28 09:41:02.214  7938  8006 D API     : 💾 [syncProjectGraph] Saved 3 photos for room 5994
+10-28 09:41:02.270  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:02.271  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:02.288  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:02.305  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:02.305  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:02.306  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:02.309  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:04.393  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 6 photos for room 5979 (paginated)
+10-28 09:41:04.429  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5675 (paginated)
+10-28 09:41:04.655  7938  8006 D API     : 📸 [persistPhotos] Saved 6 album-photo relationships
+10-28 09:41:04.656  7938  8006 D API     : 💾 [syncProjectGraph] Saved 6 photos for room 5979
+10-28 09:41:04.746  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:04.746  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:04.773  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:04.794  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:04.795  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:04.796  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:04.802  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:05.693  7938  8006 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+10-28 09:41:05.697  7938  8006 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5675
+10-28 09:41:05.733  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:05.737  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:05.812  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:05.841  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:05.842  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:05.844  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:05.858  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:07.616  7938  8006 D API     : INFO [syncProjectGraph] No photos returned for room 5978
+10-28 09:41:08.041  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5674 (paginated)
+10-28 09:41:08.320  7938  8006 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+10-28 09:41:08.320  7938  8006 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5674
+10-28 09:41:08.374  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:08.374  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:08.393  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:08.411  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:08.411  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:08.413  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:08.417  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:10.366  7938  8006 D API     : INFO [syncProjectGraph] No photos returned for room 5961
+10-28 09:41:11.559  7938  8002 D API     : INFO [syncProjectGraph] No photos returned for room 5952
+10-28 09:41:12.252  7938  8002 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5673 (paginated)
+10-28 09:41:13.086  7938  8006 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+10-28 09:41:13.087  7938  8006 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5673
+10-28 09:41:13.122  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:13.123  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:13.152  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:13.172  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:13.172  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:13.172  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:13.175  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:15.331  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 11 photos for room 5614 (paginated)
+10-28 09:41:15.481  7938  8002 D API     : 📸 [persistPhotos] Saved 11 album-photo relationships
+10-28 09:41:15.481  7938  8002 D API     : 💾 [syncProjectGraph] Saved 11 photos for room 5614
+10-28 09:41:15.532  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:15.532  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:15.532  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:15.534  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:15.547  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:15.548  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:15.569  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:17.733  7938  8002 D API     : ✅ [syncProjectGraph] Fetched 14 photos for room 5616 (paginated)
+10-28 09:41:17.902  7938  8002 D API     : 📸 [persistPhotos] Saved 14 album-photo relationships
+10-28 09:41:17.902  7938  8002 D API     : 💾 [syncProjectGraph] Saved 14 photos for room 5616
+10-28 09:41:17.950  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:17.950  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:17.977  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:17.996  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:17.997  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:17.998  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:18.004  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:18.790  7938  7960 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5691 (paginated)
+10-28 09:41:18.929  7938  8004 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
+10-28 09:41:18.929  7938  8004 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5691
+10-28 09:41:18.998  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:18.999  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:19.022  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:19.038  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:19.039  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:19.040  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:19.042  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:22.053  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 11 photos for room 5690 (paginated)
+10-28 09:41:22.192  7938  7960 D API     : 📸 [persistPhotos] Saved 11 album-photo relationships
+10-28 09:41:22.192  7938  7960 D API     : 💾 [syncProjectGraph] Saved 11 photos for room 5690
+10-28 09:41:22.239  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:22.240  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:22.256  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:22.266  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:22.266  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:22.267  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:22.268  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:23.531  7938  8002 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5689 (paginated)
+10-28 09:41:23.777  7938  7960 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
+10-28 09:41:23.779  7938  7960 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5689
+10-28 09:41:23.874  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:23.874  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:23.875  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:23.876  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:23.888  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:23.888  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:23.904  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:25.160  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:25.160  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:25.181  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:25.190  7938  7960 D API     : ✅ [syncProjectGraph] Fetched 15 photos for room 5636 (paginated)
+10-28 09:41:25.197  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:25.197  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:25.198  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:25.200  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:25.419  7938  8004 D API     : 📸 [persistPhotos] Saved 484 album-photo relationships
+10-28 09:41:25.420  7938  8004 D API     : 💾 [refreshRoomPhotos] Saved 484 photos for room 5949
+10-28 09:41:25.444  7938  7938 D RoomDetailVM: ✅ ensureRoomPhotosFresh done; lastRefreshAt=6314762
+10-28 09:41:25.543  7938  8004 D API     : 📸 [persistPhotos] Saved 15 album-photo relationships
+10-28 09:41:25.544  7938  8004 D API     : 💾 [syncProjectGraph] Saved 15 photos for room 5636
+10-28 09:41:25.549  7938  8013 W JobInfo : Requested important-while-foreground flag for job33 is ignored and takes no effect
+10-28 09:41:25.622  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:25.622  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:25.648  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:25.676  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:25.676  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:25.676  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:25.678  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:25.918  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:25.920  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:25.940  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:25.954  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:25.955  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:25.955  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:25.957  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:27.772  7938  7960 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5635 (paginated)
+10-28 09:41:28.370  7938  8002 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+10-28 09:41:28.370  7938  8002 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5635
+10-28 09:41:28.402  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:28.402  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:28.419  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:28.433  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:28.433  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:28.434  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:28.435  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:29.022  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:29.022  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:29.022  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:29.025  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:29.026  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:29.027  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:29.042  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:29.110  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:29.111  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:29.111  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:29.113  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:29.123  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:29.123  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:29.134  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:29.913  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:29.913  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:29.930  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:29.945  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:29.945  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:29.946  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:29.947  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:29.975  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:29.975  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:29.985  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:30.047  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:30.048  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:30.049  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:30.052  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:30.463  7938  7960 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5634 (paginated)
+10-28 09:41:30.733  7938  7996 W lan_android.dev: JNI critical lock held for 33.028ms on Thread[41,tid=7996,Runnable,Thread*=0x72a021a8f110,peer=0x20f66c0,"arch_disk_io_3"]
+10-28 09:41:30.881  7938  8006 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+10-28 09:41:30.881  7938  8006 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5634
+10-28 09:41:30.916  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:30.916  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:30.930  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:30.942  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:30.942  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:30.942  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:30.943  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:30.972  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:30.972  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:30.981  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:30.994  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:30.994  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:30.995  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:30.996  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:32.544  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 22 photos for room 5651 (paginated)
+10-28 09:41:32.773  7938  8006 D API     : 📸 [persistPhotos] Saved 22 album-photo relationships
+10-28 09:41:32.773  7938  8006 D API     : 💾 [syncProjectGraph] Saved 22 photos for room 5651
+10-28 09:41:32.795  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:32.795  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:32.805  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:32.817  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:32.817  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:32.817  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:32.820  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:34.231  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:34.231  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:34.243  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:34.255  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:34.255  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:34.256  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:34.257  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:34.289  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:34.289  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:34.298  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:34.309  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:34.309  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:34.310  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:34.311  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:35.375  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:35.375  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:35.384  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:35.394  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:35.394  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:35.394  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:35.395  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:35.420  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:35.421  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:35.432  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:35.444  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:35.444  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:35.444  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:35.446  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:36.787  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:36.787  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:36.793  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:36.801  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:36.801  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:36.802  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:36.803  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:36.833  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:36.834  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:36.842  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:36.852  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:36.853  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:36.854  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:36.856  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:38.584  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:38.584  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:38.593  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:38.604  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:38.604  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:38.605  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:38.608  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:38.633  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:38.633  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:38.644  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:38.659  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:38.659  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:38.660  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:38.661  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:39.561  7938  7957 D API     : ✅ [syncProjectGraph] Fetched 100 photos for room 5650 (paginated)
+10-28 09:41:39.603  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:39.604  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:39.629  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:39.655  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:39.656  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:39.657  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:39.658  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:39.696  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:39.697  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:39.697  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:39.701  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:39.709  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:39.709  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:39.724  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:40.986  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:40.986  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:41.001  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:41.020  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:41.020  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:41.020  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:41.022  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:41.042  7938  8004 D API     : 📸 [persistPhotos] Saved 100 album-photo relationships
+10-28 09:41:41.042  7938  8004 D API     : 💾 [syncProjectGraph] Saved 100 photos for room 5650
+10-28 09:41:41.107  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:41.108  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:41.120  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:41.133  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:41.133  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:41.134  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:41.139  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:41.195  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:41.196  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:41.213  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:41.226  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:41.226  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:41.226  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:41.228  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:42.376  7938  7960 D API     : ✅ [syncProjectGraph] Fetched 13 photos for room 5649 (paginated)
+10-28 09:41:42.644  7938  7996 W lan_android.dev: JNI critical lock held for 69.750ms on Thread[41,tid=7996,Runnable,Thread*=0x72a021a8f110,peer=0x20f66c0,"arch_disk_io_3"]
+10-28 09:41:42.695  7938  7960 D API     : 📸 [persistPhotos] Saved 13 album-photo relationships
+10-28 09:41:42.695  7938  7960 D API     : 💾 [syncProjectGraph] Saved 13 photos for room 5649
+10-28 09:41:42.728  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:42.729  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:42.746  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:42.782  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:42.782  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:42.783  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:42.784  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:42.838  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:42.838  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:42.850  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:42.872  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:42.874  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:42.874  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:42.877  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:42.943  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:42.945  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:42.964  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:42.984  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:42.984  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:42.985  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:42.988  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:43.836  7938  7957 D API     : ✅ [syncProjectGraph] Fetched 484 photos for room 5949 (paginated)
+10-28 09:41:43.945  7938  7957 D API     : ✅ [syncProjectGraph] Fetched 6 photos for room 5648 (paginated)
+10-28 09:41:44.057  7938  7960 D API     : 📸 [persistPhotos] Saved 6 album-photo relationships
+10-28 09:41:44.057  7938  7960 D API     : 💾 [syncProjectGraph] Saved 6 photos for room 5648
+10-28 09:41:44.105  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:44.106  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:44.121  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:44.140  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:44.140  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:44.141  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:44.142  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:44.203  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:44.203  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:44.217  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:44.228  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:44.228  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:44.229  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:44.230  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:44.266  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:44.271  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:44.279  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:44.289  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:44.289  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:44.290  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:44.291  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:45.380  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:45.380  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:45.389  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:45.400  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:45.401  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:45.401  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:45.402  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:45.429  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:45.429  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:45.435  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:45.446  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:45.446  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:45.446  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:45.447  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:45.853  7938  8002 D API     : ✅ [syncProjectGraph] Fetched 26 photos for room 5647 (paginated)
+10-28 09:41:46.236  7938  7957 D API     : 📸 [persistPhotos] Saved 26 album-photo relationships
+10-28 09:41:46.236  7938  7957 D API     : 💾 [syncProjectGraph] Saved 26 photos for room 5647
+10-28 09:41:46.261  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:46.261  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:46.272  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:46.281  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:46.281  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:46.281  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:46.282  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:46.428  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:46.428  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:46.439  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:46.448  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:46.448  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:46.449  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:46.450  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:46.469  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:46.469  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:46.475  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:46.486  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:46.486  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:46.489  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:46.490  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:47.179  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5646 (paginated)
+10-28 09:41:47.433  7938  8006 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+10-28 09:41:47.433  7938  8006 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5646
+10-28 09:41:47.470  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:47.471  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:47.480  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:47.505  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:47.506  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:47.507  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:47.509  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:47.574  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:47.574  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:47.581  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:47.592  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:47.592  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:47.593  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:47.593  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:47.613  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:47.613  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:47.619  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:47.638  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:47.638  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:47.638  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:47.640  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:48.645  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:48.646  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:48.658  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:48.672  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:48.672  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:48.673  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:48.674  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:48.705  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:48.706  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:48.714  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:48.726  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:48.726  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:48.727  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:48.727  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:50.215  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:50.216  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:50.225  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:50.239  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:50.239  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:50.241  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:50.242  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:50.293  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:50.293  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:50.303  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:50.316  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:50.316  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:50.317  7938  7960 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5645 (paginated)
+10-28 09:41:50.317  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:50.318  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:51.120  7938  8002 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+10-28 09:41:51.121  7938  8002 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5645
+10-28 09:41:51.136  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:51.136  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:51.150  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:51.164  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:51.165  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:51.165  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:51.166  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:51.294  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:51.294  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:51.303  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:51.316  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:51.317  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:51.317  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:51.318  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:51.367  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:51.367  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:51.368  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:51.369  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:51.372  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:51.372  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:51.383  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:52.034  7938  7960 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5644 (paginated)
+10-28 09:41:52.452  7938  8006 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+10-28 09:41:52.454  7938  8006 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5644
+10-28 09:41:52.493  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:52.493  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:52.510  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:52.527  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:52.528  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:52.528  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:52.530  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:52.582  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:52.582  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:52.595  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:52.612  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:52.612  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:52.613  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:52.616  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:52.686  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:52.686  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:52.696  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:53.541  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:53.541  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:53.549  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:53.566  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:53.567  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:53.568  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:53.569  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:53.598  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:53.598  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:53.607  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:53.617  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:53.617  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:53.617  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:53.619  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:54.938  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:54.938  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:54.950  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:54.964  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:54.965  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:54.965  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:54.966  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:54.997  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:54.997  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:55.010  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:55.028  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:55.029  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:55.031  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:55.032  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:56.238  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:56.238  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:56.247  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:56.346  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:56.347  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:56.364  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:56.385  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:56.385  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:56.386  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:56.386  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:56.508  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:56.509  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:56.510  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:56.513  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:57.332  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 77 photos for room 5643 (paginated)
+10-28 09:41:58.316  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:58.316  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:58.317  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:58.318  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:58.340  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:58.340  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:58.357  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:58.534  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:58.535  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:58.546  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:58.569  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:58.569  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:58.569  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:58.570  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:58.595  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:58.595  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:58.602  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:58.669  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:58.669  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:58.670  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:58.672  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:58.752  7938  7957 D API     : 📸 [persistPhotos] Saved 484 album-photo relationships
+10-28 09:41:58.752  7938  7957 D API     : 💾 [syncProjectGraph] Saved 484 photos for room 5949
+10-28 09:41:58.797  7938  7957 D API     : 📸 [persistPhotos] Saved 77 album-photo relationships
+10-28 09:41:58.798  7938  7957 D API     : 💾 [syncProjectGraph] Saved 77 photos for room 5643
+10-28 09:41:58.853  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:58.853  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:58.860  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:58.871  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:58.871  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:58.872  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:58.874  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:59.854  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:59.854  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:59.862  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:59.874  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:59.874  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:59.874  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:59.875  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:41:59.895  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:41:59.895  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:41:59.904  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:41:59.913  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:41:59.913  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:41:59.916  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:41:59.917  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:01.352  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:01.352  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:01.359  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:01.368  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:01.368  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:01.369  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:01.370  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:01.386  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:01.387  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:01.393  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:01.401  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:01.401  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:01.402  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:01.403  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:02.308  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:02.308  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:02.313  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:02.321  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:02.322  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:02.322  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:02.323  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:02.896  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5642 (paginated)
+10-28 09:42:03.418  7938  8004 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+10-28 09:42:03.419  7938  8004 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5642
+10-28 09:42:03.524  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:03.524  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:03.524  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:03.525  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:03.549  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:03.550  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:03.565  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:09.550  7938  8004 D API     : ✅ [syncProjectGraph] Fetched 77 photos for room 5641 (paginated)
+10-28 09:42:10.426  7938  7989 W lan_android.dev: JNI critical lock held for 26.302ms on Thread[36,tid=7989,Runnable,Thread*=0x72a021a7daf0,peer=0x22e7dd0,"arch_disk_io_0"]
+10-28 09:42:10.713  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:10.714  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:10.735  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:10.758  7938  8004 D API     : 📸 [persistPhotos] Saved 77 album-photo relationships
+10-28 09:42:10.758  7938  8004 D API     : 💾 [syncProjectGraph] Saved 77 photos for room 5641
+10-28 09:42:10.764  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:10.765  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:10.768  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:10.774  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:13.467  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5640 (paginated)
+10-28 09:42:13.812  7938  8006 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+10-28 09:42:13.812  7938  8006 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5640
+10-28 09:42:13.869  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:13.870  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:13.884  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:13.900  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:13.900  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:13.901  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:13.901  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:16.019  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5639 (paginated)
+10-28 09:42:16.194  7938  8006 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+10-28 09:42:16.195  7938  8006 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5639
+10-28 09:42:16.222  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:16.223  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:16.231  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:16.243  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:16.243  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:16.244  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:16.245  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:19.834  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5638 (paginated)
+10-28 09:42:20.148  7938  8006 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+10-28 09:42:20.148  7938  8006 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5638
+10-28 09:42:20.163  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:20.163  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:20.168  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:20.178  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:20.179  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:20.179  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:20.180  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:21.630  7938  8006 D API     : ✅ [syncProjectGraph] Fetched 11 photos for room 5692 (paginated)
+10-28 09:42:21.758  7938  8006 D API     : 📸 [persistPhotos] Saved 11 album-photo relationships
+10-28 09:42:21.759  7938  8006 D API     : 💾 [syncProjectGraph] Saved 11 photos for room 5692
+10-28 09:42:21.792  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:21.792  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:21.797  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:21.807  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:21.808  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:21.808  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:21.809  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:34.219  7938  7938 D RoomDetailVM: 🔭 combine: rooms=9, photos=484, notes=0, albums=0
+10-28 09:42:34.219  7938  7938 D RoomDetailVM: ✅ Room found: 'Basement', photoCount=484, noteCount=0
+10-28 09:42:34.225  7938  7938 D RoomDetailVM: 🎯 UI -> Ready(photos=484, albums=0)
+10-28 09:42:34.270  7938  7938 D RoomDetailFrag: 🎨 State received: Ready(header=RoomDetailHeader(title=Basement, noteSummary=No Notes), photos=[RoomPhotoItem(id=57840, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c5ae8a5-0544-4e82-8db6-a13e3311ecfa/800x600/1761628376_255072.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c5ae8a5-0544-4e82-8db6-a13e3311ecfa/40x40/1761628376_255072.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57839, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/da23bd32-230d-4aa8-8ff1-8d46900f9526/800x600/1761628376_255031.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/da23bd32-230d-4aa8-8ff1-8d46900f9526/40x40/1761628376_255031.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57837, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/617fd31f-67ca-480f-834e-3a5875d1da12/800x600/1761628376_25483.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/617fd31f-67ca-480f-834e-3a5875d1da12/40x40/1761628376_25483.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57838, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/58897026-ce6b-4ac0-916f-c0bc2dfca6d7/800x600/1761628376_254983.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/58897026-ce6b-4ac0-916f-c0bc2dfca6d7/40x40/1761628376_254983.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57830, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/de17134f-021f-48b1-b17e-10ae257ff4c0/800x600/1761626223_59326.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/de17134f-021f-48b1-b17e-10ae257ff4c0/40x40/1761626223_59326.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57831, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c141b8c-1783-44e4-a4cb-5b444bb3b35e/800x600/1761626223_593326.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/3c141b8c-1783-44e4-a4cb-5b444bb3b35e/40x40/1761626223_593326.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57828, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/c1d07e65-fd69-40e3-b97f-30fb53167f1e/800x600/1761626223_593149.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/c1d07e65-fd69-40e3-b97f-30fb53167f1e/40x40/1761626223_593149.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57829, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/e47a7928-8a21-47b2-b842-3796f0f5de0c/800x600/1761626223_593207.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/e47a7928-8a21-47b2-b842-3796f0f5de0c/40x40/1761626223_593207.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57827, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/5ed26c95-5c33-4975-90cf-304533308e75/800x600/1761626223_5930948.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/5ed26c95-5c33-4975-90cf-304533308e75/40x40/1761626223_5930948.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57825, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/fc2e1ea3-e9d0-48c0-9356-cc3f1b9563d2/800x600/1761626223_592869.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/fc2e1ea3-e9d0-48c0-9356-cc3f1b9563d2/40x40/1761626223_592869.jpg, capturedOn=10/27/2025), RoomPhotoItem(id=57826, imageUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/dec47c32-d74c-4371-8f98-e29fc56235aa/800x600/1761626223_593035.jpg, thumbnailUrl=https://storage-qa-mongoose-br2wu78v1.rocketplantech.com/photos/oP1DM4/Bo98kM/dec47c32-d74c-4371-8f98-e29fc56235aa/40x40/1761626223_593035.jpg, capturedOn=10/27/20
+10-28 09:42:34.275  7938  7938 D RoomDetailFrag: 📸 Ready state: 484 photos, 0 albums
+10-28 09:42:34.278  7938  7938 D RoomDetailFrag: 🎛 renderState: photos=484, albums=0
+10-28 09:42:34.280  7938  7938 D RoomDetailFrag: 📚 submitting albums: 0
+10-28 09:42:34.428  7938  7938 D RoomDetailFrag: 🖼 submitting photos items: 485 (incl AddPhoto)
+10-28 09:42:34.429  7938  8028 W lan_android.dev: Verification of void androidx.recyclerview.widget.DiffUtil.<clinit>() took 127.624ms (62.68 bytecodes/s) (0B arena alloc)
+10-28 09:42:34.476  7938  7938 D RoomDetailFrag: 👁 visibility -> photosRV=true, placeholder=false
+10-28 09:42:34.492  7938  7938 D ProjectDetailVM: 📊 Data update for project 4970: 9 rooms, 5 albums, 568 photos
+10-28 09:42:34.493  7938  7938 D ProjectDetailVM: ✅ Project found: 201 Faker Road
+10-28 09:42:34.494  7938  7938 D ProjectDetailVM: 🏠 Loading 9 rooms: [[5949] Basement, [5961] Bathroom, [5994] Bathroom, [5978] Bedroom, [5952] Den, [5979] Dining Room, [6007] Entire Unit, [5999] Kitchen, [6008] Pumpkin]
+10-28 09:42:34.497  7938  7938 D ProjectDetailVM: 📚 Loading 5 albums: [[26743] Betterments (null), [26744] Contents (null), [26741] Daily Progress (null), [26740] Damage Assessment (null), [26742] Pre-existing Damages (null)]
+10-28 09:42:36.409  7938  7938 W lan_android.dev: JNI critical lock held for 89.782ms on Thread[1,tid=7938,Runnable,Thread*=0x72a021a09380,peer=0x73378f68,"main"]
+10-28 09:42:37.381  7938  7938 W lan_android.dev: JNI critical lock held for 17.797ms on Thread[1,tid=7938,Runnable,Thread*=0x72a021a09380,peer=0x73378f68,"main"]

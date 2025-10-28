@@ -24,6 +24,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.launch
+import android.util.Log
 
 class RoomDetailFragment : Fragment() {
 
@@ -79,11 +80,18 @@ class RoomDetailFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "🧭 onViewCreated(projectId=${args.projectId}, roomId=${args.roomId})")
         bindViews(view)
         configureRecycler()
         configureToggleGroup()
         bindListeners()
         observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "▶️ onResume -> ensureRoomPhotosFresh()")
+        viewModel.ensureRoomPhotosFresh()
     }
 
     private fun bindViews(root: View) {
@@ -117,7 +125,10 @@ class RoomDetailFragment : Fragment() {
 
     private fun configureRecycler() {
         albumsRecyclerView.configureForAlbums(albumsAdapter)
-        photosRecyclerView.adapter = photoAdapter
+        photosRecyclerView.apply {
+            layoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), 3)
+            adapter = photoAdapter
+        }
         photosRecyclerView.addItemDecoration(
             SimpleGridSpacingDecoration(
                 spanCount = 3,
@@ -179,9 +190,13 @@ class RoomDetailFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     viewModel.uiState.collect { state ->
+                        Log.d(TAG, "🎨 State received: $state")
                         when (state) {
                             RoomDetailUiState.Loading -> showLoading()
-                            is RoomDetailUiState.Ready -> renderState(state)
+                            is RoomDetailUiState.Ready -> {
+                                Log.d(TAG, "📸 Ready state: ${state.photos.size} photos, ${state.albums.size} albums")
+                                renderState(state)
+                            }
                         }
                     }
                 }
@@ -204,6 +219,7 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun renderState(state: RoomDetailUiState.Ready) {
+        Log.d(TAG, "🎛 renderState: photos=${state.photos.size}, albums=${state.albums.size}")
         loadingOverlay.isVisible = false
         roomTitle.text = state.header.title
         noteSummary.text = state.header.noteSummary
@@ -218,21 +234,25 @@ class RoomDetailFragment : Fragment() {
                 thumbnailUrl = albumItem.thumbnailUrl
             )
         }
+        Log.d(TAG, "📚 submitting albums: ${albumSections.size}")
         albumsAdapter.submitList(albumSections)
         albumsHeader.isVisible = albumSections.isNotEmpty() && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
         albumsRecyclerView.isVisible = albumSections.isNotEmpty() && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
 
         // Photos
         val items = listOf(RoomPhotoListItem.AddPhoto) + state.photos.map { RoomPhotoListItem.Photo(it) }
+        Log.d(TAG, "🖼 submitting photos items: ${items.size} (incl AddPhoto)")
         photoAdapter.submitList(items)
 
         val hasPhotos = state.photos.isNotEmpty()
         photosRecyclerView.isVisible = hasPhotos && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
         placeholderText.isVisible = !hasPhotos && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
         placeholderText.text = if (hasPhotos) "" else getString(R.string.rocket_scan_empty_state)
+        Log.d(TAG, "👁 visibility -> photosRV=${photosRecyclerView.isVisible}, placeholder=${placeholderText.isVisible}")
     }
 
     private fun applyTabState(tab: RoomDetailTab) {
+        Log.d(TAG, "🧩 applyTabState: $tab, albums=${albumsAdapter.currentList.size}, photoItems=${photoAdapter.currentList.size}")
         when (tab) {
             RoomDetailTab.PHOTOS -> {
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
@@ -253,5 +273,9 @@ class RoomDetailFragment : Fragment() {
                 gridSectionTitle.isVisible = false
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "RoomDetailFrag"
     }
 }
