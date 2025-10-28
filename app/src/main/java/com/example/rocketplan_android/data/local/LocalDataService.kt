@@ -79,7 +79,8 @@ class LocalDataService private constructor(
                 pageSize = pageSize,
                 prefetchDistance = pageSize / 2,
                 enablePlaceholders = false,
-                initialLoadSize = pageSize
+                initialLoadSize = pageSize,
+                maxSize = pageSize * MAX_ROOM_PHOTO_PAGES
             ),
             pagingSourceFactory = { dao.pagingPhotosForRoom(roomId) }
         ).flow
@@ -240,7 +241,8 @@ class LocalDataService private constructor(
     companion object {
         @Volatile
         private var instance: LocalDataService? = null
-        private const val DEFAULT_ROOM_PHOTO_PAGE_SIZE = 60
+        private const val DEFAULT_ROOM_PHOTO_PAGE_SIZE = 30
+        private const val MAX_ROOM_PHOTO_PAGES = 5
 
         fun initialize(context: Context): LocalDataService =
             instance ?: synchronized(this) {

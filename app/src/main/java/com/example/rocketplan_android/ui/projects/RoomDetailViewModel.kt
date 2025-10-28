@@ -36,6 +36,9 @@ class RoomDetailViewModel(
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
     private val remoteLogger = rocketPlanApp.remoteLogger
+    private val dateFormatter: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
+        SimpleDateFormat("MM/dd/yyyy", Locale.US)
+    }
 
     private val _uiState = MutableStateFlow<RoomDetailUiState>(RoomDetailUiState.Loading)
     val uiState: StateFlow<RoomDetailUiState> = _uiState
@@ -122,7 +125,7 @@ class RoomDetailViewModel(
         localDataService
             .pagedPhotosForRoom(roomId)
             .map { pagingData ->
-                val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.US)
+                val formatter = dateFormatter.get()
                 pagingData
                     .filter { it.hasRenderableUrl() }
                     .map { photo -> photo.toPhotoItem(formatter) }

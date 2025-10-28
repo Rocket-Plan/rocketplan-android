@@ -19,8 +19,9 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.paging.LoadState
-import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -155,6 +156,11 @@ class RoomDetailFragment : Fragment() {
         photosRecyclerView.apply {
             layoutManager = gridLayoutManager
             adapter = photoConcatAdapter
+            setHasFixedSize(true)
+            (itemAnimator as? SimpleItemAnimator)?.apply {
+                supportsChangeAnimations = false
+                changeDuration = 0
+            }
         }
         photosRecyclerView.addItemDecoration(
             SimpleGridSpacingDecoration(
