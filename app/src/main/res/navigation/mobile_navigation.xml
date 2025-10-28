@@ -146,6 +146,21 @@
         <argument
             android:name="roomId"
             app:argType="long" />
+
+        <action
+            android:id="@+id/action_roomDetailFragment_to_photoViewerFragment"
+            app:destination="@id/photoViewerFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/photoViewerFragment"
+        android:name="com.example.rocketplan_android.ui.projects.PhotoViewerFragment"
+        android:label="@string/photo_viewer_title"
+        tools:layout="@layout/fragment_photo_viewer">
+
+        <argument
+            android:name="photoId"
+            app:argType="long" />
     </fragment>
 
     <fragment
