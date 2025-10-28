@@ -74,6 +74,7 @@
     <string name="rocket_scan_photo_preview_placeholder">Photo preview coming soon.</string>
     <string name="material_count">%d Material</string>
     <string name="materials_count">%d Materials</string>
+    <string name="photo_viewer_title">Photo</string>
 
     <plurals name="photo_count">
         <item quantity="one">%d Photo</item>
