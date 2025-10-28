@@ -7,18 +7,23 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
+import androidx.paging.filter
+import androidx.paging.map
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.logging.LogLevel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Date
 import java.util.Locale
 
 class RoomDetailViewModel(
@@ -46,28 +51,28 @@ class RoomDetailViewModel(
         viewModelScope.launch {
             combine(
                 localDataService.observeRooms(projectId),
-                localDataService.observePhotosForRoom(roomId),
                 localDataService.observeNotes(projectId),
-                localDataService.observeAlbumsForRoom(roomId)
-            ) { rooms, photos, notes, albums ->
-                Log.d(TAG, "🔭 combine: rooms=${rooms.size}, photos=${photos.size}, notes=${notes.size}, albums=${albums.size}")
+                localDataService.observeAlbumsForRoom(roomId),
+                localDataService.observePhotoCountForRoom(roomId)
+            ) { rooms, notes, albums, photoCount ->
+                Log.d(TAG, "🔭 combine: rooms=${rooms.size}, notes=${notes.size}, albums=${albums.size}, photoCount=$photoCount")
                 val room = rooms.firstOrNull { it.roomId == roomId }
                 if (room == null) {
                     Log.d(TAG, "⚠️ Room $roomId not found in project $projectId yet; showing Loading")
                     RoomDetailUiState.Loading
                 } else {
                     val roomNotes = notes.filter { it.roomId == roomId }
-                    Log.d(TAG, "✅ Room found: '${room.title}', photoCount=${photos.size}, noteCount=${roomNotes.size}")
+                    Log.d(TAG, "✅ Room found: '${room.title}', photoCount=$photoCount, noteCount=${roomNotes.size}")
                     RoomDetailUiState.Ready(
                         header = room.toHeader(roomNotes),
-                        photos = photos.toPhotoItems(),
-                        albums = albums.toAlbumItems()
+                        albums = albums.toAlbumItems(),
+                        photoCount = photoCount
                     )
                 }
             }.collect { state ->
                 when (state) {
                     RoomDetailUiState.Loading -> Log.d(TAG, "⏳ UI -> Loading")
-                    is RoomDetailUiState.Ready -> Log.d(TAG, "🎯 UI -> Ready(photos=${state.photos.size}, albums=${state.albums.size})")
+                    is RoomDetailUiState.Ready -> Log.d(TAG, "🎯 UI -> Ready(photoCount=${state.photoCount}, albums=${state.albums.size})")
                 }
                 _uiState.value = state
             }
@@ -113,6 +118,17 @@ class RoomDetailViewModel(
         }
     }
 
+    val photoPagingData: Flow<PagingData<RoomPhotoItem>> =
+        localDataService
+            .pagedPhotosForRoom(roomId)
+            .map { pagingData ->
+                val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.US)
+                pagingData
+                    .filter { it.hasRenderableUrl() }
+                    .map { photo -> photo.toPhotoItem(formatter) }
+            }
+            .cachedIn(viewModelScope)
+
     private fun OfflineRoomEntity.toHeader(notes: List<OfflineNoteEntity>): RoomDetailHeader {
         val noteCount = notes.size
         val summary = when (noteCount) {
@@ -126,21 +142,13 @@ class RoomDetailViewModel(
         )
     }
 
-    private fun List<OfflinePhotoEntity>.toPhotoItems(): List<RoomPhotoItem> {
-        val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.US)
-        return this
-            .sortedByDescending { it.capturedAt ?: it.updatedAt ?: Date(0) }
-            .mapNotNull { photo ->
-                val image = photo.remoteUrl ?: photo.thumbnailUrl
-                if (image.isNullOrBlank()) return@mapNotNull null
-                RoomPhotoItem(
-                    id = photo.photoId,
-                    imageUrl = image,
-                    thumbnailUrl = photo.thumbnailUrl ?: photo.remoteUrl ?: image,
-                    capturedOn = photo.capturedAt?.let { formatter.format(it) }
-                )
-            }
-    }
+    private fun OfflinePhotoEntity.toPhotoItem(formatter: SimpleDateFormat): RoomPhotoItem =
+        RoomPhotoItem(
+            id = photoId,
+            imageUrl = remoteUrl ?: thumbnailUrl.orEmpty(),
+            thumbnailUrl = thumbnailUrl ?: remoteUrl.orEmpty(),
+            capturedOn = capturedAt?.let { formatter.format(it) }
+        )
 
     private fun List<OfflineAlbumEntity>.toAlbumItems(): List<RoomAlbumItem> {
         return this.map { album ->
@@ -177,8 +185,8 @@ sealed class RoomDetailUiState {
     object Loading : RoomDetailUiState()
     data class Ready(
         val header: RoomDetailHeader,
-        val photos: List<RoomPhotoItem>,
-        val albums: List<RoomAlbumItem> = emptyList()
+        val albums: List<RoomAlbumItem> = emptyList(),
+        val photoCount: Int = 0
     ) : RoomDetailUiState()
 }
 
@@ -193,6 +201,9 @@ data class RoomPhotoItem(
     val thumbnailUrl: String,
     val capturedOn: String?
 )
+
+private fun OfflinePhotoEntity.hasRenderableUrl(): Boolean =
+    !remoteUrl.isNullOrBlank() || !thumbnailUrl.isNullOrBlank()
 
 data class RoomAlbumItem(
     val id: Long,

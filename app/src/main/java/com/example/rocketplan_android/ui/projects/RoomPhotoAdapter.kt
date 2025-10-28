@@ -4,73 +4,40 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
+import androidx.core.view.isVisible
+import androidx.paging.LoadState
+import androidx.paging.LoadStateAdapter
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.rocketplan_android.R
+import com.google.android.material.button.MaterialButton
 
-sealed class RoomPhotoListItem {
-    object AddPhoto : RoomPhotoListItem()
-    data class Photo(val data: RoomPhotoItem) : RoomPhotoListItem()
-}
-
-class RoomPhotoAdapter(
-    private val onAddPhoto: () -> Unit,
+class RoomPhotoPagingAdapter(
     private val onPhotoSelected: (RoomPhotoItem) -> Unit
-) : ListAdapter<RoomPhotoListItem, RecyclerView.ViewHolder>(DiffCallback) {
+) : PagingDataAdapter<RoomPhotoItem, RoomPhotoPagingAdapter.RoomPhotoViewHolder>(DiffCallback) {
 
-    override fun getItemViewType(position: Int): Int = when (getItem(position)) {
-        RoomPhotoListItem.AddPhoto -> VIEW_TYPE_ADD
-        is RoomPhotoListItem.Photo -> VIEW_TYPE_PHOTO
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RoomPhotoViewHolder {
+        val view = LayoutInflater
+            .from(parent.context)
+            .inflate(R.layout.item_room_photo, parent, false)
+        return RoomPhotoViewHolder(view, onPhotoSelected)
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
-        return when (viewType) {
-            VIEW_TYPE_ADD -> AddPhotoViewHolder(
-                inflater.inflate(R.layout.item_room_photo_add, parent, false),
-                onAddPhoto
-            )
-            else -> RoomPhotoViewHolder(
-                inflater.inflate(R.layout.item_room_photo, parent, false),
-                onPhotoSelected
-            )
-        }
+    override fun onBindViewHolder(holder: RoomPhotoViewHolder, position: Int) {
+        val item = getItem(position) ?: return
+        holder.bind(item)
     }
 
-    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-        when (holder) {
-            is AddPhotoViewHolder -> holder.bind()
-            is RoomPhotoViewHolder -> holder.bind((getItem(position) as RoomPhotoListItem.Photo).data)
-        }
-    }
+    private object DiffCallback : DiffUtil.ItemCallback<RoomPhotoItem>() {
+        override fun areItemsTheSame(oldItem: RoomPhotoItem, newItem: RoomPhotoItem): Boolean =
+            oldItem.id == newItem.id
 
-    private object DiffCallback : DiffUtil.ItemCallback<RoomPhotoListItem>() {
-        override fun areItemsTheSame(oldItem: RoomPhotoListItem, newItem: RoomPhotoListItem): Boolean =
-            when {
-                oldItem is RoomPhotoListItem.AddPhoto && newItem is RoomPhotoListItem.AddPhoto -> true
-                oldItem is RoomPhotoListItem.Photo && newItem is RoomPhotoListItem.Photo ->
-                    oldItem.data.id == newItem.data.id
-                else -> false
-            }
-
-        override fun areContentsTheSame(oldItem: RoomPhotoListItem, newItem: RoomPhotoListItem): Boolean =
+        override fun areContentsTheSame(oldItem: RoomPhotoItem, newItem: RoomPhotoItem): Boolean =
             oldItem == newItem
-    }
-
-    class AddPhotoViewHolder(
-        view: View,
-        private val onAddPhoto: () -> Unit
-    ) : RecyclerView.ViewHolder(view) {
-        init {
-            view.setOnClickListener { onAddPhoto() }
-        }
-
-        fun bind() {
-            // no-op
-        }
     }
 
     class RoomPhotoViewHolder(
@@ -91,9 +58,77 @@ class RoomPhotoAdapter(
             itemView.setOnClickListener { onPhotoSelected(photo) }
         }
     }
+}
 
-    companion object {
-        private const val VIEW_TYPE_ADD = 0
-        private const val VIEW_TYPE_PHOTO = 1
+class RoomPhotoAddAdapter(
+    private val onAddPhoto: () -> Unit
+) : RecyclerView.Adapter<RoomPhotoAddAdapter.AddPhotoViewHolder>() {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): AddPhotoViewHolder {
+        val view = LayoutInflater
+            .from(parent.context)
+            .inflate(R.layout.item_room_photo_add, parent, false)
+        return AddPhotoViewHolder(view, onAddPhoto)
+    }
+
+    override fun onBindViewHolder(holder: AddPhotoViewHolder, position: Int) {
+        holder.bind()
+    }
+
+    override fun getItemCount(): Int = 1
+
+    class AddPhotoViewHolder(
+        view: View,
+        private val onAddPhoto: () -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+
+        init {
+            view.setOnClickListener { onAddPhoto() }
+        }
+
+        fun bind() {
+            // no-op
+        }
+    }
+}
+
+class RoomPhotoLoadStateAdapter(
+    private val onRetry: () -> Unit
+) : LoadStateAdapter<RoomPhotoLoadStateAdapter.LoadStateViewHolder>() {
+
+    override fun onCreateViewHolder(parent: ViewGroup, loadState: LoadState): LoadStateViewHolder {
+        val view = LayoutInflater
+            .from(parent.context)
+            .inflate(R.layout.item_room_photo_load_state, parent, false)
+        return LoadStateViewHolder(view, onRetry)
+    }
+
+    override fun onBindViewHolder(holder: LoadStateViewHolder, loadState: LoadState) {
+        holder.bind(loadState)
+    }
+
+    class LoadStateViewHolder(
+        view: View,
+        private val onRetry: () -> Unit
+    ) : RecyclerView.ViewHolder(view) {
+
+        private val progress: ProgressBar = view.findViewById(R.id.roomPhotoLoadProgress)
+        private val errorText: TextView = view.findViewById(R.id.roomPhotoErrorText)
+        private val retryButton: MaterialButton = view.findViewById(R.id.roomPhotoRetryButton)
+
+        fun bind(loadState: LoadState) {
+            progress.isVisible = loadState is LoadState.Loading
+            errorText.isVisible = loadState is LoadState.Error
+            retryButton.isVisible = loadState is LoadState.Error
+
+            if (loadState is LoadState.Error) {
+                errorText.text = loadState.error.localizedMessage
+                    ?.takeIf { it.isNotBlank() }
+                    ?: itemView.context.getString(R.string.room_photos_load_error)
+                retryButton.setOnClickListener { onRetry() }
+            } else {
+                retryButton.setOnClickListener(null)
+            }
+        }
     }
 }

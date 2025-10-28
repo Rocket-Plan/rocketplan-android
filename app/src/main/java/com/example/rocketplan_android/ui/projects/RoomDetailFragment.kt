@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,14 +18,16 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.ConcatAdapter
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.launch
-import android.util.Log
+import kotlinx.coroutines.flow.collectLatest
 
 class RoomDetailFragment : Fragment() {
 
@@ -54,6 +57,8 @@ class RoomDetailFragment : Fragment() {
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var placeholderText: TextView
     private lateinit var loadingOverlay: View
+    private lateinit var photoConcatAdapter: ConcatAdapter
+    private var latestPhotoCount: Int = 0
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -63,13 +68,20 @@ class RoomDetailFragment : Fragment() {
         )
     }
 
+    private val addPhotoAdapter by lazy {
+        RoomPhotoAddAdapter {
+            Toast.makeText(requireContext(), getString(R.string.add_photo), Toast.LENGTH_SHORT).show()
+        }
+    }
+
     private val photoAdapter by lazy {
-        RoomPhotoAdapter(
-            onAddPhoto = {
-                Toast.makeText(requireContext(), getString(R.string.add_photo), Toast.LENGTH_SHORT).show()
-            },
-            onPhotoSelected = { /* TODO: open photo detail */ }
+        RoomPhotoPagingAdapter(
+            onPhotoSelected = { openPhotoViewer(it) }
         )
+    }
+
+    private val photoLoadStateAdapter by lazy {
+        RoomPhotoLoadStateAdapter { photoAdapter.retry() }
     }
 
     override fun onCreateView(
@@ -125,9 +137,24 @@ class RoomDetailFragment : Fragment() {
 
     private fun configureRecycler() {
         albumsRecyclerView.configureForAlbums(albumsAdapter)
+
+        photoConcatAdapter = ConcatAdapter(addPhotoAdapter, photoAdapter, photoLoadStateAdapter)
+
+        val gridLayoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), 3).apply {
+            spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
+                override fun getSpanSize(position: Int): Int {
+                    val isHeader = position == 0
+                    val loadStateCount = photoLoadStateAdapter.itemCount
+                    val isFooter = loadStateCount > 0 &&
+                        position >= photoConcatAdapter.itemCount - loadStateCount
+                    return if (isHeader || isFooter) spanCount else 1
+                }
+            }
+        }
+
         photosRecyclerView.apply {
-            layoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), 3)
-            adapter = photoAdapter
+            layoutManager = gridLayoutManager
+            adapter = photoConcatAdapter
         }
         photosRecyclerView.addItemDecoration(
             SimpleGridSpacingDecoration(
@@ -194,10 +221,21 @@ class RoomDetailFragment : Fragment() {
                         when (state) {
                             RoomDetailUiState.Loading -> showLoading()
                             is RoomDetailUiState.Ready -> {
-                                Log.d(TAG, "📸 Ready state: ${state.photos.size} photos, ${state.albums.size} albums")
+                                Log.d(TAG, "📸 Ready state: ${state.photoCount} photos, ${state.albums.size} albums")
                                 renderState(state)
                             }
                         }
+                    }
+                }
+                launch {
+                    viewModel.photoPagingData.collectLatest { pagingData ->
+                        photoAdapter.submitData(viewLifecycleOwner.lifecycle, pagingData)
+                    }
+                }
+                launch {
+                    photoAdapter.loadStateFlow.collectLatest { loadStates ->
+                        photoLoadStateAdapter.loadState = loadStates.append
+                        updatePhotoVisibility(loadStates.refresh)
                     }
                 }
                 launch {
@@ -211,6 +249,7 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun showLoading() {
+        latestPhotoCount = 0
         loadingOverlay.isVisible = true
         roomTitle.text = ""
         noteSummary.text = ""
@@ -219,11 +258,12 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun renderState(state: RoomDetailUiState.Ready) {
-        Log.d(TAG, "🎛 renderState: photos=${state.photos.size}, albums=${state.albums.size}")
+        Log.d(TAG, "🎛 renderState: photoCount=${state.photoCount}, albums=${state.albums.size}")
         loadingOverlay.isVisible = false
         roomTitle.text = state.header.title
         noteSummary.text = state.header.noteSummary
         noteCardSummary.text = state.header.noteSummary
+        latestPhotoCount = state.photoCount
 
         // Albums - convert RoomAlbumItem to AlbumSection
         val albumSections = state.albums.map { albumItem ->
@@ -239,27 +279,17 @@ class RoomDetailFragment : Fragment() {
         albumsHeader.isVisible = albumSections.isNotEmpty() && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
         albumsRecyclerView.isVisible = albumSections.isNotEmpty() && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
 
-        // Photos
-        val items = listOf(RoomPhotoListItem.AddPhoto) + state.photos.map { RoomPhotoListItem.Photo(it) }
-        Log.d(TAG, "🖼 submitting photos items: ${items.size} (incl AddPhoto)")
-        photoAdapter.submitList(items)
-
-        val hasPhotos = state.photos.isNotEmpty()
-        photosRecyclerView.isVisible = hasPhotos && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
-        placeholderText.isVisible = !hasPhotos && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
-        placeholderText.text = if (hasPhotos) "" else getString(R.string.rocket_scan_empty_state)
-        Log.d(TAG, "👁 visibility -> photosRV=${photosRecyclerView.isVisible}, placeholder=${placeholderText.isVisible}")
+        // Photos (visibility handled via load state listener)
+        updatePhotoVisibility()
     }
 
     private fun applyTabState(tab: RoomDetailTab) {
-        Log.d(TAG, "🧩 applyTabState: $tab, albums=${albumsAdapter.currentList.size}, photoItems=${photoAdapter.currentList.size}")
+        Log.d(TAG, "🧩 applyTabState: $tab, albums=${albumsAdapter.currentList.size}, photoCount=$latestPhotoCount")
         when (tab) {
             RoomDetailTab.PHOTOS -> {
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
                 albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
-                photosRecyclerView.isVisible = photoAdapter.currentList.size > 1
-                placeholderText.isVisible = photoAdapter.currentList.size <= 1
-                placeholderText.text = getString(R.string.rocket_scan_empty_state)
+                updatePhotoVisibility()
                 filterChipGroup.isVisible = true
                 gridSectionTitle.isVisible = true
             }
@@ -271,8 +301,33 @@ class RoomDetailFragment : Fragment() {
                 placeholderText.text = getString(R.string.damages) + " coming soon"
                 filterChipGroup.isVisible = false
                 gridSectionTitle.isVisible = false
+                loadingOverlay.isVisible = false
             }
         }
+    }
+
+    private fun openPhotoViewer(photo: RoomPhotoItem) {
+        val action = RoomDetailFragmentDirections
+            .actionRoomDetailFragmentToPhotoViewerFragment(photo.id)
+        findNavController().navigate(action)
+    }
+
+    private fun updatePhotoVisibility(loadState: LoadState? = null) {
+        if (viewModel.selectedTab.value != RoomDetailTab.PHOTOS) {
+            photosRecyclerView.isVisible = false
+            placeholderText.isVisible = false
+            return
+        }
+
+        val hasPhotos = latestPhotoCount > 0 || photoAdapter.itemCount > 0
+        val isLoading = loadState is LoadState.Loading && !hasPhotos
+        loadingOverlay.isVisible = isLoading
+
+        val showPlaceholder = !hasPhotos && loadState !is LoadState.Loading
+
+        photosRecyclerView.isVisible = hasPhotos
+        placeholderText.isVisible = showPlaceholder
+        placeholderText.text = if (showPlaceholder) getString(R.string.rocket_scan_empty_state) else ""
     }
 
     companion object {

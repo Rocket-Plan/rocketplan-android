@@ -1,6 +1,9 @@
 package com.example.rocketplan_android.data.local
 
 import android.content.Context
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
@@ -63,6 +66,23 @@ class LocalDataService private constructor(
 
     fun observePhotosForRoom(roomId: Long): Flow<List<OfflinePhotoEntity>> =
         dao.observePhotosForRoom(roomId)
+
+    fun observePhotoCountForRoom(roomId: Long): Flow<Int> =
+        dao.observePhotoCountForRoom(roomId)
+
+    fun pagedPhotosForRoom(
+        roomId: Long,
+        pageSize: Int = DEFAULT_ROOM_PHOTO_PAGE_SIZE
+    ): Flow<PagingData<OfflinePhotoEntity>> =
+        Pager(
+            config = PagingConfig(
+                pageSize = pageSize,
+                prefetchDistance = pageSize / 2,
+                enablePlaceholders = false,
+                initialLoadSize = pageSize
+            ),
+            pagingSourceFactory = { dao.pagingPhotosForRoom(roomId) }
+        ).flow
 
     suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity? =
         withContext(ioDispatcher) { dao.getPhotoByServerId(serverId) }
@@ -220,6 +240,7 @@ class LocalDataService private constructor(
     companion object {
         @Volatile
         private var instance: LocalDataService? = null
+        private const val DEFAULT_ROOM_PHOTO_PAGE_SIZE = 60
 
         fun initialize(context: Context): LocalDataService =
             instance ?: synchronized(this) {

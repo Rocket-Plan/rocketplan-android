@@ -128,6 +128,7 @@ dependencies {
     implementation(libs.androidx.browser)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.paging)
     kapt(libs.androidx.room.compiler)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
@@ -137,6 +138,8 @@ dependencies {
     implementation(libs.androidx.viewpager2)
     implementation(libs.androidx.swiperefreshlayout)
     implementation(libs.coil)
+    implementation(libs.androidx.paging.runtime)
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
@@ -154,27 +157,28 @@ dependencies {
 }
 
 // Auto-start log capture after installing dev build
-tasks.register<Exec>("autoLogDev") {
-    group = "logging"
-    description = "Auto-start live log capture after dev build installs"
-
-    workingDir(rootProject.projectDir)
-    commandLine("bash", "-c", """
-        # Kill any existing log captures first
-        pkill -f 'capture-logs.sh' 2>/dev/null || true
-        sleep 1
-
-        # Start new capture in background
-        ./scripts/auto-log.sh live > /dev/null 2>&1 &
-        echo "🎬 Log capture started in background"
-    """.trimIndent())
-
-    isIgnoreExitValue = true
-}
-
-// Hook into dev install tasks
-tasks.whenTaskAdded {
-    if (name == "installDevDebug" || name == "installDevRelease") {
-        finalizedBy("autoLogDev")
-    }
-}
+// NOTE: Disabled for now - run manually with ./scripts/auto-log.sh live
+// tasks.register<Exec>("autoLogDev") {
+//     group = "logging"
+//     description = "Auto-start live log capture after dev build installs"
+//
+//     workingDir(rootProject.projectDir)
+//     commandLine("bash", "-c", """
+//         # Kill any existing log captures first
+//         pkill -f 'capture-logs.sh' 2>/dev/null || true
+//         sleep 1
+//
+//         # Start new capture in background
+//         ./scripts/auto-log.sh live > /dev/null 2>&1 &
+//         echo "🎬 Log capture started in background"
+//     """.trimIndent())
+//
+//     isIgnoreExitValue = true
+// }
+//
+// // Hook into dev install tasks
+// tasks.whenTaskAdded {
+//     if (name == "installDevDebug" || name == "installDevRelease") {
+//         finalizedBy("autoLogDev")
+//     }
+// }

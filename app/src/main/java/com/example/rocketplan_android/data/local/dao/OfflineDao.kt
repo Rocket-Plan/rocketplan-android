@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.local.dao
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Upsert
@@ -89,6 +90,16 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_photos WHERE roomId = :roomId AND isDeleted = 0 ORDER BY capturedAt DESC")
     fun observePhotosForRoom(roomId: Long): Flow<List<OfflinePhotoEntity>>
 
+    @Query(
+        """
+        SELECT * FROM offline_photos 
+        WHERE roomId = :roomId 
+          AND isDeleted = 0 
+        ORDER BY capturedAt DESC, photoId DESC
+        """
+    )
+    fun pagingPhotosForRoom(roomId: Long): PagingSource<Int, OfflinePhotoEntity>
+
     @Query("SELECT * FROM offline_photos WHERE serverId = :serverId LIMIT 1")
     suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity?
 
@@ -141,6 +152,9 @@ interface OfflineDao {
 
     @Query("SELECT COUNT(*) FROM offline_photos WHERE cacheStatus = :status AND isDeleted = 0")
     fun observePhotoCountByCacheStatus(status: PhotoCacheStatus): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM offline_photos WHERE roomId = :roomId AND isDeleted = 0")
+    fun observePhotoCountForRoom(roomId: Long): Flow<Int>
     // endregion
 
     // region Albums
