@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.room.withTransaction
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
@@ -54,6 +55,12 @@ class LocalDataService private constructor(
 
     fun observeRooms(projectId: Long): Flow<List<OfflineRoomEntity>> =
         dao.observeRoomsForProject(projectId)
+
+    suspend fun getRoomByServerId(serverId: Long): OfflineRoomEntity? =
+        withContext(ioDispatcher) { dao.getRoomByServerId(serverId) }
+
+    suspend fun getRoomByUuid(uuid: String): OfflineRoomEntity? =
+        withContext(ioDispatcher) { dao.getRoomByUuid(uuid) }
 
     fun observeAtmosphericLogsForProject(projectId: Long): Flow<List<OfflineAtmosphericLogEntity>> =
         dao.observeAtmosphericLogsForProject(projectId)
@@ -136,6 +143,85 @@ class LocalDataService private constructor(
 
     suspend fun saveLocations(locations: List<OfflineLocationEntity>) = withContext(ioDispatcher) {
         dao.upsertLocations(locations)
+    }
+
+    suspend fun relinkRoomScopedData(): RoomDataRepairResult = withContext(ioDispatcher) {
+        val rooms = dao.getRoomsWithServerId()
+        if (rooms.isEmpty()) {
+            return@withContext RoomDataRepairResult()
+        }
+
+        var roomsAdjusted = 0
+        var photosRelinked = 0
+        var notesRelinked = 0
+        var damagesRelinked = 0
+        var equipmentRelinked = 0
+        var atmosphericRelinked = 0
+        var moistureRelinked = 0
+        var albumsRelinked = 0
+
+        database.withTransaction {
+            rooms.forEach { room ->
+                val serverId = room.serverId ?: return@forEach
+                val localRoomId = room.roomId
+
+                suspend fun migrateReferences(oldId: Long, newId: Long): ReferenceMigrationCounts {
+                    val photoCount = dao.migratePhotoRoomIds(oldId, newId)
+                    val noteCount = dao.migrateNoteRoomIds(oldId, newId)
+                    val damageCount = dao.migrateDamageRoomIds(oldId, newId)
+                    val equipmentCount = dao.migrateEquipmentRoomIds(oldId, newId)
+                    val atmosphericCount = dao.migrateAtmosphericLogRoomIds(oldId, newId)
+                    val moistureCount = dao.migrateMoistureLogRoomIds(oldId, newId)
+                    val albumCount = dao.migrateAlbumRoomIds(oldId, newId)
+                    return ReferenceMigrationCounts(
+                        photos = photoCount,
+                        notes = noteCount,
+                        damages = damageCount,
+                        equipment = equipmentCount,
+                        atmosphericLogs = atmosphericCount,
+                        moistureLogs = moistureCount,
+                        albums = albumCount
+                    )
+                }
+
+                if (localRoomId == serverId) {
+                    val newRoomId = dao.insertRoom(room.copy(roomId = 0, isDirty = false))
+                    val counts = migrateReferences(serverId, newRoomId)
+                    dao.deleteRoomById(localRoomId)
+                    roomsAdjusted += 1
+                    photosRelinked += counts.photos
+                    notesRelinked += counts.notes
+                    damagesRelinked += counts.damages
+                    equipmentRelinked += counts.equipment
+                    atmosphericRelinked += counts.atmosphericLogs
+                    moistureRelinked += counts.moistureLogs
+                    albumsRelinked += counts.albums
+                } else {
+                    val counts = migrateReferences(serverId, localRoomId)
+                    if (counts.hasAnyUpdates()) {
+                        roomsAdjusted += 1
+                        photosRelinked += counts.photos
+                        notesRelinked += counts.notes
+                        damagesRelinked += counts.damages
+                        equipmentRelinked += counts.equipment
+                        atmosphericRelinked += counts.atmosphericLogs
+                        moistureRelinked += counts.moistureLogs
+                        albumsRelinked += counts.albums
+                    }
+                }
+            }
+        }
+
+        RoomDataRepairResult(
+            roomsAdjusted = roomsAdjusted,
+            photosRelinked = photosRelinked,
+            notesRelinked = notesRelinked,
+            damagesRelinked = damagesRelinked,
+            equipmentRelinked = equipmentRelinked,
+            atmosphericLogsRelinked = atmosphericRelinked,
+            moistureLogsRelinked = moistureRelinked,
+            albumsRelinked = albumsRelinked
+        )
     }
 
     suspend fun saveRooms(rooms: List<OfflineRoomEntity>) = withContext(ioDispatcher) {
@@ -252,4 +338,28 @@ class LocalDataService private constructor(
         fun getInstance(): LocalDataService =
             instance ?: throw IllegalStateException("LocalDataService has not been initialized.")
     }
+}
+
+data class RoomDataRepairResult(
+    val roomsAdjusted: Int = 0,
+    val photosRelinked: Int = 0,
+    val notesRelinked: Int = 0,
+    val damagesRelinked: Int = 0,
+    val equipmentRelinked: Int = 0,
+    val atmosphericLogsRelinked: Int = 0,
+    val moistureLogsRelinked: Int = 0,
+    val albumsRelinked: Int = 0
+)
+
+private data class ReferenceMigrationCounts(
+    val photos: Int,
+    val notes: Int,
+    val damages: Int,
+    val equipment: Int,
+    val atmosphericLogs: Int,
+    val moistureLogs: Int,
+    val albums: Int
+) {
+    fun hasAnyUpdates(): Boolean =
+        photos + notes + damages + equipment + atmosphericLogs + moistureLogs + albums > 0
 }

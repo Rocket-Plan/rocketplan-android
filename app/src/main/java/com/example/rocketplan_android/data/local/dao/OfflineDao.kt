@@ -2,6 +2,8 @@ package com.example.rocketplan_android.data.local.dao
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
@@ -67,6 +69,21 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_rooms WHERE roomId = :roomId LIMIT 1")
     suspend fun getRoom(roomId: Long): OfflineRoomEntity?
+
+    @Query("SELECT * FROM offline_rooms WHERE serverId = :serverId LIMIT 1")
+    suspend fun getRoomByServerId(serverId: Long): OfflineRoomEntity?
+
+    @Query("SELECT * FROM offline_rooms WHERE uuid = :uuid LIMIT 1")
+    suspend fun getRoomByUuid(uuid: String): OfflineRoomEntity?
+
+    @Query("SELECT * FROM offline_rooms WHERE serverId IS NOT NULL")
+    suspend fun getRoomsWithServerId(): List<OfflineRoomEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoom(room: OfflineRoomEntity): Long
+
+    @Query("DELETE FROM offline_rooms WHERE roomId = :roomId")
+    suspend fun deleteRoomById(roomId: Long)
     // endregion
 
     // region Atmospheric Logs
@@ -78,6 +95,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_atmospheric_logs WHERE roomId = :roomId AND isDeleted = 0 ORDER BY date DESC")
     fun observeAtmosphericLogsForRoom(roomId: Long): Flow<List<OfflineAtmosphericLogEntity>>
+
+    @Query("UPDATE offline_atmospheric_logs SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migrateAtmosphericLogRoomIds(oldRoomId: Long, newRoomId: Long): Int
     // endregion
 
     // region Photos
@@ -108,6 +128,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_photos WHERE photoId = :photoId LIMIT 1")
     suspend fun getPhotoById(photoId: Long): OfflinePhotoEntity?
+
+    @Query("UPDATE offline_photos SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migratePhotoRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
     @Query(
         """
@@ -223,6 +246,9 @@ interface OfflineDao {
         """
     )
     fun observePhotosForAlbum(albumId: Long): Flow<List<OfflinePhotoEntity>>
+
+    @Query("UPDATE offline_albums SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migrateAlbumRoomIds(oldRoomId: Long, newRoomId: Long): Int
     // endregion
 
     // region Equipment
@@ -234,6 +260,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_equipment WHERE roomId = :roomId AND isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeEquipmentForRoom(roomId: Long): Flow<List<OfflineEquipmentEntity>>
+
+    @Query("UPDATE offline_equipment SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migrateEquipmentRoomIds(oldRoomId: Long, newRoomId: Long): Int
     // endregion
 
     // region Moisture Logs
@@ -245,6 +274,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_moisture_logs WHERE roomId = :roomId AND isDeleted = 0 ORDER BY date DESC")
     fun observeMoistureLogsForRoom(roomId: Long): Flow<List<OfflineMoistureLogEntity>>
+
+    @Query("UPDATE offline_moisture_logs SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int
     // endregion
 
     // region Notes & Damages & Work Scopes
@@ -254,11 +286,17 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeNotesForProject(projectId: Long): Flow<List<OfflineNoteEntity>>
 
+    @Query("UPDATE offline_notes SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migrateNoteRoomIds(oldRoomId: Long, newRoomId: Long): Int
+
     @Upsert
     suspend fun upsertDamages(damages: List<OfflineDamageEntity>)
 
     @Query("SELECT * FROM offline_damages WHERE projectId = :projectId AND isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeDamagesForProject(projectId: Long): Flow<List<OfflineDamageEntity>>
+
+    @Query("UPDATE offline_damages SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migrateDamageRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
     @Upsert
     suspend fun upsertWorkScopes(scopes: List<OfflineWorkScopeEntity>)

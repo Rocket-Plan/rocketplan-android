@@ -107,11 +107,23 @@ class OfflineSyncRepository(
                 collectedLocationIds += it.map { loc -> loc.id }
                 Log.d("API", "📍 [syncProjectGraph] Saved ${it.size} locations from project detail")
             }
-            dto.rooms?.let {
-                localDataService.saveRooms(it.map { room -> room.toEntity(projectId = dto.id) })
-                collectedRoomIds += it.map { room -> room.id }
-                collectedLocationIds += it.mapNotNull { room -> room.locationId }
-                Log.d("API", "🏠 [syncProjectGraph] Saved ${it.size} rooms from project detail")
+            dto.rooms?.let { rooms ->
+                val resolvedRooms = mutableListOf<OfflineRoomEntity>()
+                for (room in rooms) {
+                    val existing = localDataService.getRoomByServerId(room.id)
+                        ?: room.uuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
+                    resolvedRooms += room.toEntity(
+                        existing = existing,
+                        projectId = dto.id,
+                        locationId = room.locationId
+                    )
+                }
+                if (resolvedRooms.isNotEmpty()) {
+                    localDataService.saveRooms(resolvedRooms)
+                }
+                collectedRoomIds += rooms.map { room -> room.id }
+                collectedLocationIds += rooms.mapNotNull { room -> room.locationId }
+                Log.d("API", "🏠 [syncProjectGraph] Saved ${rooms.size} rooms from project detail")
             }
             dto.photos?.let {
                 if (persistPhotos(it)) {
@@ -185,9 +197,20 @@ class OfflineSyncRepository(
             Log.d("API", "🔍 [syncProjectGraph] fetchRoomsForLocation($locationId) returned ${rooms.size} rooms")
 
             if (rooms.isNotEmpty()) {
-                localDataService.saveRooms(
-                    rooms.map { room -> room.toEntity(projectId = projectId, locationId = room.locationId ?: locationId) }
-                )
+                val resolvedRooms = mutableListOf<OfflineRoomEntity>()
+                for (room in rooms) {
+                    val existing = localDataService.getRoomByServerId(room.id)
+                        ?: room.uuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
+                    val locationOverride = room.locationId ?: locationId
+                    resolvedRooms += room.toEntity(
+                        existing = existing,
+                        projectId = projectId,
+                        locationId = locationOverride
+                    )
+                }
+                if (resolvedRooms.isNotEmpty()) {
+                    localDataService.saveRooms(resolvedRooms)
+                }
                 Log.d("API", "💾 [syncProjectGraph] Saved ${rooms.size} rooms for location $locationId to database")
                 collectedRoomIds += rooms.map { room -> room.id }
             } else {
@@ -195,6 +218,19 @@ class OfflineSyncRepository(
             }
         }
         Log.d("API", "🏠 [syncProjectGraph] Total rooms collected: ${collectedRoomIds.size}")
+
+        runCatching { localDataService.relinkRoomScopedData() }
+            .onSuccess { result ->
+                if (result.roomsAdjusted > 0) {
+                    Log.d(
+                        "API",
+                        "🧹 [syncProjectGraph] Relinked room-scoped data: rooms=${result.roomsAdjusted}, photos=${result.photosRelinked}, notes=${result.notesRelinked}, damages=${result.damagesRelinked}, equipment=${result.equipmentRelinked}, atmosphericLogs=${result.atmosphericLogsRelinked}, moistureLogs=${result.moistureLogsRelinked}, albums=${result.albumsRelinked}"
+                    )
+                }
+            }
+            .onFailure { error ->
+                Log.e("API", "❌ [syncProjectGraph] Failed to relink room-scoped data", error)
+            }
 
         // Room photos (paginated)
         val roomIds = collectedRoomIds.distinct()
@@ -670,25 +706,51 @@ private fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocatio
     )
 }
 
-private fun RoomDto.toEntity(projectId: Long, locationId: Long? = this.locationId): OfflineRoomEntity {
+private fun RoomDto.toEntity(
+    existing: OfflineRoomEntity?,
+    projectId: Long,
+    locationId: Long? = this.locationId
+): OfflineRoomEntity {
     val timestamp = now()
-    return OfflineRoomEntity(
-        roomId = id,
+    val resolvedUuid = uuid ?: existing?.uuid ?: UUID.randomUUID().toString()
+    val createdAtValue = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp
+    val updatedAtValue = DateUtils.parseApiDate(updatedAt) ?: timestamp
+
+    val base = existing ?: OfflineRoomEntity(
+        roomId = 0,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
-        projectId = projectId,  // Use passed projectId instead of DTO projectId
+        uuid = resolvedUuid,
+        projectId = projectId,
         locationId = locationId,
-        title = title ?: name ?: roomType?.name ?: "Room $id",  // Match iOS: title -> name -> roomType.name
-        roomType = roomType?.name,  // Extract name from RoomTypeDto object for category
-        level = level?.name ?: level?.title,  // Extract name from LocationDto object
-        squareFootage = squareFootage,
+        title = "",
+        roomType = null,
+        level = null,
+        squareFootage = null,
         isAccessible = isAccessible ?: true,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         isDirty = false,
         isDeleted = false,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
-        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        createdAt = createdAtValue,
+        updatedAt = updatedAtValue,
+        lastSyncedAt = timestamp
+    )
+
+    return base.copy(
+        serverId = id,
+        projectId = projectId,
+        locationId = locationId,
+        title = title ?: name ?: roomType?.name ?: base.title.ifBlank { "Room $id" },
+        roomType = roomType?.name,
+        level = level?.name ?: level?.title,
+        squareFootage = squareFootage,
+        isAccessible = isAccessible ?: true,
+        syncStatus = SyncStatus.SYNCED,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
+        isDirty = false,
+        isDeleted = false,
+        createdAt = createdAtValue,
+        updatedAt = updatedAtValue,
         lastSyncedAt = timestamp
     )
 }

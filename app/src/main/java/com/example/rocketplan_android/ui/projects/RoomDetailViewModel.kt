@@ -17,15 +17,20 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.logging.LogLevel
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RoomDetailViewModel(
     application: Application,
     private val projectId: Long,
@@ -48,36 +53,62 @@ class RoomDetailViewModel(
 
     private var lastRefreshAt = 0L
     private var isRefreshing = false
+    private val _resolvedRoom = MutableStateFlow<OfflineRoomEntity?>(null)
 
     init {
         Log.d(TAG, "📦 init(projectId=$projectId, roomId=$roomId)")
         viewModelScope.launch {
-            combine(
-                localDataService.observeRooms(projectId),
-                localDataService.observeNotes(projectId),
-                localDataService.observeAlbumsForRoom(roomId),
-                localDataService.observePhotoCountForRoom(roomId)
-            ) { rooms, notes, albums, photoCount ->
-                Log.d(TAG, "🔭 combine: rooms=${rooms.size}, notes=${notes.size}, albums=${albums.size}, photoCount=$photoCount")
-                val room = rooms.firstOrNull { it.roomId == roomId }
+            localDataService.observeRooms(projectId)
+                .map { rooms ->
+                    rooms.firstOrNull { it.roomId == roomId || it.serverId == roomId }
+                        ?.also { room ->
+                            Log.d(
+                                TAG,
+                                "🏠 Resolved room: title='${room.title}', localId=${room.roomId}, serverId=${room.serverId}, navArg=$roomId"
+                            )
+                        }
+                }
+                .collect { resolved ->
+                    if (resolved == null) {
+                        Log.d(TAG, "⏳ Room resolution pending for navArg=$roomId (projectId=$projectId)")
+                    }
+                    _resolvedRoom.value = resolved
+                }
+        }
+
+        viewModelScope.launch {
+            _resolvedRoom.collectLatest { room ->
                 if (room == null) {
-                    Log.d(TAG, "⚠️ Room $roomId not found in project $projectId yet; showing Loading")
-                    RoomDetailUiState.Loading
-                } else {
-                    val roomNotes = notes.filter { it.roomId == roomId }
-                    Log.d(TAG, "✅ Room found: '${room.title}', photoCount=$photoCount, noteCount=${roomNotes.size}")
+                    Log.d(TAG, "⚠️ Room $roomId not yet available; emitting Loading")
+                    _uiState.value = RoomDetailUiState.Loading
+                    return@collectLatest
+                }
+
+                val localRoomId = room.roomId
+                if (room.serverId != null && room.serverId == localRoomId) {
+                    Log.w(
+                        TAG,
+                        "⚠️ Room ${room.serverId} still shares local/server ids; run relinkRoomScopedData to repair."
+                    )
+                }
+                combine(
+                    localDataService.observeNotes(projectId),
+                    localDataService.observeAlbumsForRoom(localRoomId),
+                    localDataService.observePhotoCountForRoom(localRoomId)
+                ) { notes, albums, photoCount ->
+                    val roomNotes = notes.filter { it.roomId == localRoomId }
+                    Log.d(
+                        TAG,
+                        "✅ Room ready: '${room.title}', localRoomId=$localRoomId, serverId=${room.serverId}, photoCount=$photoCount, noteCount=${roomNotes.size}"
+                    )
                     RoomDetailUiState.Ready(
                         header = room.toHeader(roomNotes),
                         albums = albums.toAlbumItems(),
                         photoCount = photoCount
                     )
+                }.collect { state ->
+                    _uiState.value = state
                 }
-            }.collect { state ->
-                when (state) {
-                    RoomDetailUiState.Loading -> Log.d(TAG, "⏳ UI -> Loading")
-                    is RoomDetailUiState.Ready -> Log.d(TAG, "🎯 UI -> Ready(photoCount=${state.photoCount}, albums=${state.albums.size})")
-                }
-                _uiState.value = state
             }
         }
     }
@@ -97,20 +128,24 @@ class RoomDetailViewModel(
             return
         }
 
+        val remoteRoomId = _resolvedRoom.value?.serverId ?: roomId
         isRefreshing = true
         viewModelScope.launch {
             try {
-                Log.d(TAG, "🔄 ensureRoomPhotosFresh(force=$force) -> refreshRoomPhotos($projectId, $roomId)")
-                offlineSyncRepository.refreshRoomPhotos(projectId, roomId)
+                Log.d(
+                    TAG,
+                    "🔄 ensureRoomPhotosFresh(force=$force) -> refreshRoomPhotos(projectId=$projectId, remoteRoomId=$remoteRoomId)"
+                )
+                offlineSyncRepository.refreshRoomPhotos(projectId, remoteRoomId)
             } catch (t: Throwable) {
-                Log.e(TAG, "❌ Failed to refresh photos for room $roomId", t)
+                Log.e(TAG, "❌ Failed to refresh photos for remoteRoomId=$remoteRoomId", t)
                 remoteLogger.log(
                     level = LogLevel.ERROR,
                     tag = TAG,
                     message = "Failed to refresh room photos",
                     metadata = mapOf(
                         "projectId" to projectId.toString(),
-                        "roomId" to roomId.toString()
+                        "roomId" to remoteRoomId.toString()
                     )
                 )
             } finally {
@@ -122,13 +157,20 @@ class RoomDetailViewModel(
     }
 
     val photoPagingData: Flow<PagingData<RoomPhotoItem>> =
-        localDataService
-            .pagedPhotosForRoom(roomId)
-            .map { pagingData ->
-                val formatter = dateFormatter.get()
-                pagingData
-                    .filter { it.hasRenderableUrl() }
-                    .map { photo -> photo.toPhotoItem(formatter) }
+        _resolvedRoom
+            .flatMapLatest { room ->
+                if (room == null) {
+                    flowOf(PagingData.empty())
+                } else {
+                    localDataService
+                        .pagedPhotosForRoom(room.roomId)
+                        .map { pagingData ->
+                            val formatter = requireNotNull(dateFormatter.get())
+                            pagingData
+                                .filter { it.hasRenderableAsset() }
+                                .map { photo -> photo.toPhotoItem(formatter) }
+                        }
+                }
             }
             .cachedIn(viewModelScope)
 
@@ -148,8 +190,8 @@ class RoomDetailViewModel(
     private fun OfflinePhotoEntity.toPhotoItem(formatter: SimpleDateFormat): RoomPhotoItem =
         RoomPhotoItem(
             id = photoId,
-            imageUrl = remoteUrl ?: thumbnailUrl.orEmpty(),
-            thumbnailUrl = thumbnailUrl ?: remoteUrl.orEmpty(),
+            imageUrl = preferredImageSource(),
+            thumbnailUrl = preferredThumbnailSource(),
             capturedOn = capturedAt?.let { formatter.format(it) }
         )
 
@@ -205,8 +247,32 @@ data class RoomPhotoItem(
     val capturedOn: String?
 )
 
-private fun OfflinePhotoEntity.hasRenderableUrl(): Boolean =
-    !remoteUrl.isNullOrBlank() || !thumbnailUrl.isNullOrBlank()
+private fun OfflinePhotoEntity.hasRenderableAsset(): Boolean =
+    !remoteUrl.isNullOrBlank() ||
+        !thumbnailUrl.isNullOrBlank() ||
+        !cachedOriginalPath.isNullOrBlank() ||
+        !cachedThumbnailPath.isNullOrBlank() ||
+        localPath.isNotBlank()
+
+private fun OfflinePhotoEntity.preferredImageSource(): String =
+    when {
+        !cachedOriginalPath.isNullOrBlank() -> cachedOriginalPath
+        !remoteUrl.isNullOrBlank() -> remoteUrl
+        !localPath.isNullOrBlank() -> localPath
+        !cachedThumbnailPath.isNullOrBlank() -> cachedThumbnailPath
+        !thumbnailUrl.isNullOrBlank() -> thumbnailUrl!!
+        else -> ""
+    }
+
+private fun OfflinePhotoEntity.preferredThumbnailSource(): String =
+    when {
+        !cachedThumbnailPath.isNullOrBlank() -> cachedThumbnailPath
+        !thumbnailUrl.isNullOrBlank() -> thumbnailUrl
+        !cachedOriginalPath.isNullOrBlank() -> cachedOriginalPath
+        !remoteUrl.isNullOrBlank() -> remoteUrl
+        !localPath.isNullOrBlank() -> localPath
+        else -> ""
+    }
 
 data class RoomAlbumItem(
     val id: Long,
