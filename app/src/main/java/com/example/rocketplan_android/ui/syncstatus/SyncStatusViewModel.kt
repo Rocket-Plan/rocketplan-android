@@ -64,21 +64,12 @@ class SyncStatusViewModel(application: Application) : AndroidViewModel(applicati
         photos: List<OfflinePhotoEntity>,
         albums: List<OfflineAlbumEntity>
     ): ProjectSyncStatus {
-        val roomDetails = rooms.take(5).joinToString(", ") { room ->
-            if (room.serverId != null && room.serverId != room.roomId) {
-                "${room.serverId} (local: ${room.roomId})"
-            } else {
-                "${room.roomId}"
-            }
-        }.let { if (rooms.size > 5) "$it..." else it }
-
         return ProjectSyncStatus(
             projectId = project.projectId,
             projectTitle = project.title,
             roomCount = rooms.size,
             photoCount = photos.size,
-            albumCount = albums.size,
-            roomDetails = "Room IDs: ${roomDetails.ifBlank { "None" }}"
+            albumCount = albums.size
         )
     }
 }
@@ -94,6 +85,5 @@ data class ProjectSyncStatus(
     val projectTitle: String,
     val roomCount: Int,
     val photoCount: Int,
-    val albumCount: Int,
-    val roomDetails: String
+    val albumCount: Int
 )

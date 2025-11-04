@@ -39,7 +39,10 @@ class SyncStatusFragment : Fragment() {
             findNavController().popBackStack()
         }
 
-        adapter = SyncStatusAdapter()
+        adapter = SyncStatusAdapter { projectStatus ->
+            // TODO: Navigate to detail screen with projectId
+            // For now, we'll just add the click handling
+        }
         binding.syncStatusRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@SyncStatusFragment.adapter
@@ -72,7 +75,9 @@ class SyncStatusFragment : Fragment() {
     }
 }
 
-class SyncStatusAdapter : RecyclerView.Adapter<SyncStatusViewHolder>() {
+class SyncStatusAdapter(
+    private val onItemClick: (ProjectSyncStatus) -> Unit
+) : RecyclerView.Adapter<SyncStatusViewHolder>() {
 
     private var items: List<ProjectSyncStatus> = emptyList()
 
@@ -84,7 +89,7 @@ class SyncStatusAdapter : RecyclerView.Adapter<SyncStatusViewHolder>() {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SyncStatusViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_sync_status, parent, false)
-        return SyncStatusViewHolder(view)
+        return SyncStatusViewHolder(view, onItemClick)
     }
 
     override fun onBindViewHolder(holder: SyncStatusViewHolder, position: Int) {
@@ -94,13 +99,15 @@ class SyncStatusAdapter : RecyclerView.Adapter<SyncStatusViewHolder>() {
     override fun getItemCount(): Int = items.size
 }
 
-class SyncStatusViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+class SyncStatusViewHolder(
+    itemView: View,
+    private val onItemClick: (ProjectSyncStatus) -> Unit
+) : RecyclerView.ViewHolder(itemView) {
     private val projectTitle: TextView = itemView.findViewById(R.id.projectTitle)
     private val projectId: TextView = itemView.findViewById(R.id.projectId)
     private val roomCount: TextView = itemView.findViewById(R.id.roomCount)
     private val photoCount: TextView = itemView.findViewById(R.id.photoCount)
     private val albumCount: TextView = itemView.findViewById(R.id.albumCount)
-    private val roomDetails: TextView = itemView.findViewById(R.id.roomDetails)
 
     fun bind(status: ProjectSyncStatus) {
         projectTitle.text = status.projectTitle
@@ -108,6 +115,9 @@ class SyncStatusViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         roomCount.text = status.roomCount.toString()
         photoCount.text = status.photoCount.toString()
         albumCount.text = status.albumCount.toString()
-        roomDetails.text = status.roomDetails
+
+        itemView.setOnClickListener {
+            onItemClick(status)
+        }
     }
 }

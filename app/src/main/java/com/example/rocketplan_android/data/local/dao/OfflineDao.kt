@@ -26,6 +26,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
 
@@ -147,6 +148,30 @@ interface OfflineDao {
         failed: PhotoCacheStatus = PhotoCacheStatus.FAILED,
         limit: Int = 25
     ): List<OfflinePhotoEntity>
+
+    @Query(
+        """
+        SELECT
+            roomId,
+            CAST(COUNT(*) AS INTEGER) AS photoCount,
+            (
+                SELECT COALESCE(
+                    NULLIF(p2.thumbnailUrl, ''),
+                    NULLIF(p2.remoteUrl, '')
+                )
+                FROM offline_photos p2
+                WHERE p2.roomId = p.roomId
+                  AND p2.isDeleted = 0
+                ORDER BY p2.capturedAt DESC, p2.photoId DESC
+                LIMIT 1
+            ) AS latestThumbnailUrl
+        FROM offline_photos p
+        WHERE p.projectId = :projectId
+          AND p.isDeleted = 0
+        GROUP BY roomId
+        """
+    )
+    fun observeRoomPhotoSummaries(projectId: Long): Flow<List<RoomPhotoSummary>>
 
     @Query("UPDATE offline_photos SET cacheStatus = :status, lastAccessedAt = :timestamp WHERE photoId = :photoId")
     suspend fun updatePhotoCacheStatus(

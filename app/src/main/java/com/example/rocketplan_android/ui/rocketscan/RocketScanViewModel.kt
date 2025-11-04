@@ -4,8 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
-import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import com.example.rocketplan_android.ui.projects.RoomCard
 import com.example.rocketplan_android.ui.projects.RoomListItem
 import kotlinx.coroutines.Job
@@ -45,9 +45,9 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
         roomsJob = viewModelScope.launch {
             combine(
                 localDataService.observeRooms(projectId),
-                localDataService.observePhotosForProject(projectId)
-            ) { rooms, photos ->
-                buildRoomItems(rooms, photos)
+                localDataService.observeRoomPhotoSummaries(projectId)
+            ) { rooms, summaries ->
+                buildRoomItems(rooms, summaries)
             }.collect { items ->
                 _uiState.value = if (items.isEmpty()) {
                     RocketScanUiState.Empty
@@ -72,13 +72,13 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun buildRoomItems(
         rooms: List<OfflineRoomEntity>,
-        photos: List<OfflinePhotoEntity>
+        photoSummaries: List<RoomPhotoSummary>
     ): List<RoomListItem> {
         if (rooms.isEmpty()) {
             return emptyList()
         }
 
-        val photosByRoomId = photos.groupBy { it.roomId }
+        val summariesByRoomId = photoSummaries.associateBy { it.roomId }
         val sections = rooms
             .groupBy { room ->
                 room.level?.takeIf { it.isNotBlank() } ?: "Unassigned"
@@ -93,18 +93,15 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
                 .map { room ->
                     // Photos are persisted with server room ID, use that for lookup
                     val photoLookupId = room.serverId ?: room.roomId
-                    val roomPhotos = photosByRoomId[photoLookupId].orEmpty()
+                    val summary = summariesByRoomId[photoLookupId]
                     val navigationId = room.serverId ?: room.roomId
                     RoomListItem.Room(
                         RoomCard(
                             roomId = navigationId,
                             title = room.title,
                             level = level,
-                            photoCount = roomPhotos.size,
-                            thumbnailUrl = roomPhotos.firstNotNullOfOrNull { photo ->
-                                photo.thumbnailUrl?.takeIf { it.isNotBlank() }
-                                    ?: photo.remoteUrl?.takeIf { it.isNotBlank() }
-                            }
+                            photoCount = summary?.photoCount ?: 0,
+                            thumbnailUrl = summary?.latestThumbnailUrl?.takeIf { it.isNotBlank() }
                         )
                     )
                 }

@@ -112,14 +112,6 @@
             </LinearLayout>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/roomDetails"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:textColor="@color/light_text_rp"
-            android:textSize="11sp"
-            tools:text="Room IDs: 5949 (local: 38), 5950 (local: 39)..." />
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

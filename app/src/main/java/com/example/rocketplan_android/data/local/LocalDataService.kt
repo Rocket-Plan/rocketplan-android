@@ -25,6 +25,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -115,6 +116,9 @@ class LocalDataService private constructor(
 
     fun observeCachedPhotoCount(): Flow<Int> =
         dao.observePhotoCountByCacheStatus(PhotoCacheStatus.READY)
+
+    fun observeRoomPhotoSummaries(projectId: Long): Flow<List<RoomPhotoSummary>> =
+        dao.observeRoomPhotoSummaries(projectId)
 
     fun observeEquipmentForProject(projectId: Long): Flow<List<OfflineEquipmentEntity>> =
         dao.observeEquipmentForProject(projectId)
