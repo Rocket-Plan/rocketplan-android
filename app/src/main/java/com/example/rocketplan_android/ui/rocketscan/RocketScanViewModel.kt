@@ -91,8 +91,9 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
             val roomItems = groupedRooms
                 .sortedBy { it.title }
                 .map { room ->
-                    // Use stable local roomId to query photos, serverId for navigation
-                    val roomPhotos = photosByRoomId[room.roomId].orEmpty()
+                    // Photos are persisted with server room ID, use that for lookup
+                    val photoLookupId = room.serverId ?: room.roomId
+                    val roomPhotos = photosByRoomId[photoLookupId].orEmpty()
                     val navigationId = room.serverId ?: room.roomId
                     RoomListItem.Room(
                         RoomCard(

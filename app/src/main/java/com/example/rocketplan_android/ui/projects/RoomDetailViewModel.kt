@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -85,6 +86,8 @@ class RoomDetailViewModel(
                 }
 
                 val localRoomId = room.roomId
+                // Photos are persisted with server room ID, so use that for lookups
+                val photoLookupRoomId = room.serverId ?: room.roomId
                 if (room.serverId != null && room.serverId == localRoomId) {
                     Log.w(
                         TAG,
@@ -94,12 +97,12 @@ class RoomDetailViewModel(
                 combine(
                     localDataService.observeNotes(projectId),
                     localDataService.observeAlbumsForRoom(localRoomId),
-                    localDataService.observePhotoCountForRoom(localRoomId)
+                    localDataService.observePhotoCountForRoom(photoLookupRoomId)
                 ) { notes, albums, photoCount ->
                     val roomNotes = notes.filter { it.roomId == localRoomId }
                     Log.d(
                         TAG,
-                        "✅ Room ready: '${room.title}', localRoomId=$localRoomId, serverId=${room.serverId}, photoCount=$photoCount, noteCount=${roomNotes.size}"
+                        "✅ Room ready: '${room.title}', localRoomId=$localRoomId, serverId=${room.serverId}, photoLookupId=$photoLookupRoomId, photoCount=$photoCount, noteCount=${roomNotes.size}"
                     )
                     RoomDetailUiState.Ready(
                         header = room.toHeader(roomNotes),
@@ -158,12 +161,18 @@ class RoomDetailViewModel(
 
     val photoPagingData: Flow<PagingData<RoomPhotoItem>> =
         _resolvedRoom
-            .flatMapLatest { room ->
-                if (room == null) {
+            .map { room -> Pair(room?.roomId, room?.serverId ?: room?.roomId) }
+            .distinctUntilChanged()
+            .flatMapLatest { pair ->
+                val localId = pair.first
+                val lookupId = pair.second
+                if (localId == null || lookupId == null) {
                     flowOf(PagingData.empty())
                 } else {
+                    // Photos are persisted with server room ID (persistPhotos uses defaultRoomId = serverId)
+                    Log.d(TAG, "📸 Setting up photo paging for room: localId=$localId, lookupId=$lookupId")
                     localDataService
-                        .pagedPhotosForRoom(room.roomId)
+                        .pagedPhotosForRoom(lookupId)
                         .map { pagingData ->
                             val formatter = requireNotNull(dateFormatter.get())
                             pagingData
