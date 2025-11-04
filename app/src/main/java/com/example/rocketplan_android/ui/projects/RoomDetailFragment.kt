@@ -235,11 +235,13 @@ class RoomDetailFragment : Fragment() {
                 }
                 launch {
                     viewModel.photoPagingData.collectLatest { pagingData ->
+                        Log.d(TAG, "📥 Received new PagingData, submitting to adapter")
                         photoAdapter.submitData(viewLifecycleOwner.lifecycle, pagingData)
                     }
                 }
                 launch {
                     photoAdapter.loadStateFlow.collectLatest { loadStates ->
+                        Log.d(TAG, "📊 LoadState: refresh=${loadStates.refresh}, append=${loadStates.append}, itemCount=${photoAdapter.itemCount}")
                         photoLoadStateAdapter.loadState = loadStates.append
                         updatePhotoVisibility(loadStates.refresh)
                     }
@@ -330,6 +332,8 @@ class RoomDetailFragment : Fragment() {
         loadingOverlay.isVisible = isLoading
 
         val showPlaceholder = !hasPhotos && loadState !is LoadState.Loading
+
+        Log.d(TAG, "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=${photoAdapter.itemCount}, loadState=$loadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder")
 
         photosRecyclerView.isVisible = hasPhotos
         placeholderText.isVisible = showPlaceholder

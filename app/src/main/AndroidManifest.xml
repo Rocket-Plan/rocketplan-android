@@ -14,7 +14,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Rocketplan_android"
-        android:name=".RocketPlanApplication">
+        android:name="com.example.rocketplan_android.RocketPlanApplication">
         <activity
             android:name="com.example.rocketplan_android.MainActivity"
             android:exported="true"

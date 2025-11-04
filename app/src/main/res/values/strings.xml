@@ -78,6 +78,20 @@
     <string name="retry">Retry</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>
 
+    <!-- Project landing screen -->
+    <string name="project_overview_header">Map</string>
+    <string name="add_alias">Add Alias</string>
+    <string name="project_alias_coming_soon">Project alias editing coming soon.</string>
+    <string name="add_project_info_title">Add Project/Loss Info</string>
+    <string name="add_project_info_subtitle">Collect property and loss details here.</string>
+    <string name="add_project_info_coming_soon">Project/Loss info collection coming soon.</string>
+    <string name="rocket_scan_title">RocketScan</string>
+    <string name="rocket_scan_subtitle">View all project photos and documents by folder.</string>
+    <string name="all_project_notes_title">All Project Notes</string>
+    <string name="project_notes_subtitle_with_count">View all notes added to the project (%1$d)</string>
+    <string name="all_notes_coming_soon">Viewing all project notes is coming soon.</string>
+    <string name="loading_project">Loading project…</string>
+
     <plurals name="photo_count">
         <item quantity="one">%d Photo</item>
         <item quantity="other">%d Photos</item>

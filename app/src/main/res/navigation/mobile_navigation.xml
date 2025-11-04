@@ -95,8 +95,23 @@
             app:popUpToInclusive="true" />
 
         <action
-            android:id="@+id/action_nav_projects_to_projectDetail"
-            app:destination="@id/projectDetailFragment" />
+            android:id="@+id/action_nav_projects_to_projectLandingFragment"
+            app:destination="@id/projectLandingFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/projectLandingFragment"
+        android:name="com.example.rocketplan_android.ui.projects.ProjectLandingFragment"
+        android:label="Project Overview"
+        tools:layout="@layout/fragment_project_landing">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_rocketScanFragment"
+            app:destination="@id/rocketScanFragment" />
     </fragment>
 
     <fragment
@@ -184,5 +199,9 @@
         <argument
             android:name="projectId"
             app:argType="long" />
+
+        <action
+            android:id="@+id/action_rocketScanFragment_to_roomDetailFragment"
+            app:destination="@id/roomDetailFragment" />
     </fragment>
 </navigation>

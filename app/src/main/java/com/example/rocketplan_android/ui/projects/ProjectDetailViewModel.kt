@@ -130,9 +130,10 @@ class ProjectDetailViewModel(
                 val roomCards = groupedRooms
                     .sortedBy { it.title }
                     .map { room ->
-                        val roomPhotos = photosByRoom[room.roomId].orEmpty()
+                        val roomKey = room.serverId ?: room.roomId
+                        val roomPhotos = photosByRoom[roomKey].orEmpty()
                         RoomCard(
-                            roomId = room.roomId,
+                            roomId = roomKey,
                             title = room.title,
                             level = level,
                             photoCount = roomPhotos.size,

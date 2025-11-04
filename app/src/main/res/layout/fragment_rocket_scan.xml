@@ -9,7 +9,7 @@
     tools:context=".ui.rocketscan.RocketScanFragment">
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/photoRecyclerView"
+        android:id="@+id/roomsRecyclerView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:clipToPadding="false"
@@ -19,7 +19,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:listitem="@layout/item_rocket_scan_photo"
+        tools:listitem="@layout/item_album_card"
         tools:visibility="gone" />
 
     <ProgressBar

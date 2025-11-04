@@ -4,15 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.GridLayoutManager
+import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.databinding.FragmentRocketScanBinding
+import com.example.rocketplan_android.ui.projects.ProjectRoomsAdapter
+import com.example.rocketplan_android.ui.projects.configureForProjectRooms
 import kotlinx.coroutines.launch
 
 class RocketScanFragment : Fragment() {
@@ -23,8 +24,7 @@ class RocketScanFragment : Fragment() {
     private val args: RocketScanFragmentArgs by navArgs()
     private val viewModel: RocketScanViewModel by viewModels()
 
-    private lateinit var photoAdapter: RocketScanPhotoAdapter
-    private var hasShownError = false
+    private lateinit var roomsAdapter: ProjectRoomsAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,19 +44,12 @@ class RocketScanFragment : Fragment() {
     }
 
     private fun setupRecyclerView() {
-        photoAdapter = RocketScanPhotoAdapter {
-            Toast.makeText(
-                requireContext(),
-                R.string.rocket_scan_photo_preview_placeholder,
-                Toast.LENGTH_SHORT
-            ).show()
+        roomsAdapter = ProjectRoomsAdapter { room ->
+            val action = RocketScanFragmentDirections
+                .actionRocketScanFragmentToRoomDetailFragment(projectId = args.projectId, roomId = room.roomId)
+            findNavController().navigate(action)
         }
-
-        binding.photoRecyclerView.apply {
-            layoutManager = GridLayoutManager(requireContext(), 2)
-            adapter = photoAdapter
-            setHasFixedSize(true)
-        }
+        binding.roomsRecyclerView.configureForProjectRooms(roomsAdapter)
     }
 
     private fun observeUiState() {
@@ -75,38 +68,33 @@ class RocketScanFragment : Fragment() {
     private fun renderLoading() {
         binding.progressBar.isVisible = true
         binding.emptyView.isVisible = false
-        binding.photoRecyclerView.isVisible = false
+        binding.roomsRecyclerView.isVisible = false
     }
 
     private fun renderEmpty() {
         binding.progressBar.isVisible = false
-        binding.photoRecyclerView.isVisible = false
+        binding.roomsRecyclerView.isVisible = false
         binding.emptyView.isVisible = true
         binding.emptyView.setText(R.string.rocket_scan_empty_state)
-        photoAdapter.submitList(emptyList())
+        roomsAdapter.submitList(emptyList())
     }
 
     private fun renderContent(content: RocketScanUiState.Content) {
         binding.progressBar.isVisible = false
         binding.emptyView.isVisible = false
-        binding.photoRecyclerView.isVisible = true
-        photoAdapter.submitList(content.photos)
+        binding.roomsRecyclerView.isVisible = true
+        roomsAdapter.submitList(content.items)
     }
 
     private fun renderError(error: RocketScanUiState.Error) {
         binding.progressBar.isVisible = false
-        binding.photoRecyclerView.isVisible = false
+        binding.roomsRecyclerView.isVisible = false
         binding.emptyView.isVisible = true
         binding.emptyView.text = error.message
-
-        if (!hasShownError) {
-            Toast.makeText(requireContext(), error.message, Toast.LENGTH_SHORT).show()
-            hasShownError = true
-        }
     }
 
     override fun onDestroyView() {
-        binding.photoRecyclerView.adapter = null
+        binding.roomsRecyclerView.adapter = null
         _binding = null
         super.onDestroyView()
     }
