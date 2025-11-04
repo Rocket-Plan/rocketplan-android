@@ -69,6 +69,7 @@ class RoomDetailViewModel(
                             )
                         }
                 }
+                .distinctUntilChanged()
                 .collect { resolved ->
                     if (resolved == null) {
                         Log.d(TAG, "⏳ Room resolution pending for navArg=$roomId (projectId=$projectId)")

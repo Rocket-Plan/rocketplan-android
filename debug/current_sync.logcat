@@ -1,1116 +1,171 @@
 --------- beginning of main
-10-28 03:21:56.224   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:21:56.228   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:21:56.258  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
+11-03 18:37:32.566 10061 10083 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+11-03 18:37:32.566 10061 10083 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5646
+11-03 18:37:32.935 10061 10083 D API     : ✅ [syncProjectGraph] Fetched 760 photos for room 5949 (paginated)
+11-03 18:37:33.328 10061 10083 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5645 (paginated)
+11-03 18:37:33.683 10061 10083 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+11-03 18:37:33.684 10061 10083 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5645
+11-03 18:37:34.129 10061 10083 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5644 (paginated)
+11-03 18:37:34.353 10061 10120 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+11-03 18:37:34.353 10061 10120 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5644
+11-03 18:37:36.008 10061 10083 D API     : ✅ [syncProjectGraph] Fetched 77 photos for room 5643 (paginated)
+11-03 18:37:37.726 10061 10082 D API     : 📸 [persistPhotos] Saved 77 album-photo relationships
+11-03 18:37:37.726 10061 10082 D API     : 💾 [syncProjectGraph] Saved 77 photos for room 5643
+11-03 18:37:38.705 10061 10081 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5642 (paginated)
+11-03 18:37:40.755 10061 10067 W lan_android.dev: Suspending all threads took: 6.737ms
+11-03 18:37:41.205 10061 10081 D API     : 📸 [persistPhotos] Saved 760 album-photo relationships
+11-03 18:37:41.205 10061 10081 D API     : 💾 [syncProjectGraph] Saved 760 photos for room 5949
+11-03 18:37:41.269 10061 10081 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+11-03 18:37:41.269 10061 10081 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5642
+11-03 18:37:42.732 10061 10081 D API     : ✅ [syncProjectGraph] Fetched 77 photos for room 5641 (paginated)
+11-03 18:37:43.523 10061 10082 D API     : 📸 [persistPhotos] Saved 77 album-photo relationships
+11-03 18:37:43.523 10061 10082 D API     : 💾 [syncProjectGraph] Saved 77 photos for room 5641
+11-03 18:37:43.924 10061 10082 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5640 (paginated)
+11-03 18:37:44.019 10061 10082 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+11-03 18:37:44.019 10061 10082 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5640
+11-03 18:37:44.537 10061 10082 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5639 (paginated)
+11-03 18:37:44.672 10061 10082 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
+11-03 18:37:44.672 10061 10082 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5639
+11-03 18:37:45.475 10061 10082 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5638 (paginated)
+11-03 18:37:45.738 10061 10082 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
+11-03 18:37:45.738 10061 10082 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5638
+11-03 18:37:46.101 10061 10082 D API     : ✅ [syncProjectGraph] Fetched 11 photos for room 5692 (paginated)
+11-03 18:37:46.159 10061 10082 D API     : 📸 [persistPhotos] Saved 11 album-photo relationships
+11-03 18:37:46.160 10061 10082 D API     : 💾 [syncProjectGraph] Saved 11 photos for room 5692
+11-03 18:37:49.278   830   850 W AS.PlaybackActivityMon: No piid assigned for invalid/internal port id 15
+11-03 18:37:49.306 10061 10061 D MainActivity: Navigation destination changed: Room Detail
+11-03 18:37:49.710 10061 10061 D RoomDetailFrag: 🧭 onViewCreated(projectId=4970, roomId=5949)
+11-03 18:37:49.763 10061 10061 D RoomDetailVM: 📦 init(projectId=4970, roomId=5949)
+11-03 18:37:49.789 10061 10061 D RoomDetailFrag: 🎨 State received: com.example.rocketplan_android.ui.projects.RoomDetailUiState$Loading@448384e
+11-03 18:37:49.798 10061 10061 D RoomDetailFrag: 🧩 applyTabState: PHOTOS, albums=0, photoCount=0
+11-03 18:37:49.804 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=0, adapterItemCount=0, loadState=null, hasPhotos=false, showPlaceholder=true
+11-03 18:37:49.818 10061 10061 D RoomDetailVM: ⚠️ Room 5949 not yet available; emitting Loading
+11-03 18:37:49.853 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:37:49.884 10061 10061 D RoomDetailFrag: ▶️ onResume -> ensureRoomPhotosFresh()
+11-03 18:37:49.886 10061 10061 D RoomDetailVM: 🔄 ensureRoomPhotosFresh(force=false) -> refreshRoomPhotos(projectId=4970, remoteRoomId=5949)
+11-03 18:37:49.888 10061 10081 D API     : 🔄 [refreshRoomPhotos] Requesting photos for room 5949 (project 4970)
+11-03 18:37:49.902 10061 10061 D RoomDetailVM: 🏠 Resolved room: title='Basement', localId=38, serverId=5949, navArg=5949
+11-03 18:37:49.908 10061 10061 D RoomDetailVM: 📸 Setting up photo paging for room: localId=38, lookupId=5949
+11-03 18:37:49.968 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:37:50.309 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:37:50.312 10061 10061 D RoomDetailFrag: 🎨 State received: Ready(header=RoomDetailHeader(title=Basement, noteSummary=No Notes), albums=[], photoCount=760)
+11-03 18:37:50.312 10061 10061 D RoomDetailFrag: 📸 Ready state: 760 photos, 0 albums
+11-03 18:37:50.313 10061 10061 D RoomDetailFrag: 🎛 renderState: photoCount=760, albums=0
+11-03 18:37:50.320 10061 10061 D RoomDetailFrag: 📚 submitting albums: 0
+11-03 18:37:50.324 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=0, loadState=null, hasPhotos=true, showPlaceholder=false
+11-03 18:37:50.471 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:37:50.473 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:37:50.538 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:37:50.539 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:37:57.353 10061 10090 W lan_android.dev: JNI critical lock held for 19.051ms on Thread[25,tid=10090,Runnable,Thread*=0x7de4c7464eb0,peer=0x2273e50,"OkHttp https://api-qa-mongoose-br2wu78v1.rocketplantech.com/..."]
+11-03 18:37:57.471 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:37:57.477 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:37:57.479 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:37:57.479 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:37:57.504 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:37:57.504 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:11.666 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:11.671 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:11.672 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:11.672 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:12.011 10061 10082 D API     : 📸 [persistPhotos] Saved 760 album-photo relationships
+11-03 18:38:12.011 10061 10082 D API     : 💾 [refreshRoomPhotos] Saved 760 photos for room 5949
+11-03 18:38:12.033 10061 10061 D RoomDetailVM: ✅ ensureRoomPhotosFresh done; lastRefreshAt=10464962
+11-03 18:38:12.061 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:12.061 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:12.111 10061 10130 W JobInfo : Requested important-while-foreground flag for job19 is ignored and takes no effect
+11-03 18:38:12.310 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:12.314 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:12.316 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:12.316 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:12.392 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:12.392 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:12.888 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:12.892 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:12.893 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:12.894 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:12.903 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:12.920 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:12.983 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:12.984 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:13.201   830  2089 W SignedPackage: Package doesn't have required signing certificate: com.google.android.retaildemo
+11-03 18:38:13.203   830  2089 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms.supervision, role: android.app.role.SYSTEM_SUPERVISION, user: 0
+11-03 18:38:13.227   830  2089 W SignedPackage: Package doesn't have required signing certificate: com.google.android.apps.work.clouddpc
 --------- beginning of system
-10-28 03:21:56.262  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:21:56.262  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:21:56.267  2874  2943 E BatteryStatsService: power: Missing API
-10-28 03:21:56.267  2874  2943 E BatteryStatsService: power: Missing API
-10-28 03:21:56.273  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:21:56.274  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:21:56.299  2874  2943 E BatteryStatsService: modem info is invalid: ModemActivityInfo{ mTimestamp=0 mSleepTimeMs=0 mIdleTimeMs=0 mTxTimeMs[]=[0, 0, 0, 0, 0] mRxTimeMs=0 mEnergyUsed=0}
-10-28 03:21:56.316  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:21:56.324  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:21:56.324  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:22:01.893  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:22:01.895  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:22:01.895  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:22:02.945  4352  4352 E RecyclerView: No layout manager attached; skipping layout
-10-28 03:22:03.315  4352  4549 D API     : 📸 [persistPhotos] Saved 484 album-photo relationships
-10-28 03:22:03.315  4352  4549 D API     : 💾 [syncProjectGraph] Saved 484 photos for room 5949
-10-28 03:22:03.662   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:22:09.272   347   347 E cnss-daemon: gateway mac address: %02x:%02x:%02x:%02x:%02x:%02x
-10-28 03:22:09.272   347   347 E cnss-daemon: : 00:00:00:00:00:00
-10-28 03:22:09.272   347   347 E cnss-daemon: Invalid mac address: 0xb32a7e6cM
-10-28 03:22:11.908  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:22:11.917  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:22:11.917  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:22:16.875  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:22:21.932  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:22:21.939  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:22:21.939  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:22:25.562   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:22:26.542  4352  4352 E RecyclerView: No layout manager attached; skipping layout
-10-28 03:22:31.949  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:22:31.956  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:22:31.956  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:22:41.979  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:22:41.983  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:22:41.984  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:22:44.367   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:22:44.373   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:22:45.438  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1467, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
-10-28 03:22:45.443  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:22:46.962   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:22:50.911  4352  4549 D API     : 📚 [syncProjectGraph] Fetched 5 albums from API
-10-28 03:22:50.911  4352  4549 D API     :    Album[26740] 'Damage Assessment' type=null
-10-28 03:22:50.912  4352  4549 D API     :    Album[26741] 'Daily Progress' type=null
-10-28 03:22:50.913  4352  4549 D API     :    Album[26742] 'Pre-existing Damages' type=null
-10-28 03:22:50.913  4352  4549 D API     :    Album[26743] 'Betterments' type=null
-10-28 03:22:50.913  4352  4549 D API     :    Album[26744] 'Contents' type=null
-10-28 03:22:50.942  4352  4549 D API     : 📚 [syncProjectGraph] Saved 5 albums (photo counts will be calculated from database)
-10-28 03:22:50.958  4352  4549 D API     : ✅ [syncProjectGraph] Sync completed for project 4970 - Locations: 6, Rooms: 9
-10-28 03:22:50.961  4352  4549 D API     : 🔄 [syncProjectGraph] Starting sync for project 4926
-10-28 03:22:51.023  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:22:51.314  4352  4990 E API     : ❌ [syncProjectGraph] Failed to fetch project detail for 4926
-10-28 03:22:51.314  4352  4990 E API     : retrofit2.HttpException: HTTP 400 
-10-28 03:22:51.314  4352  4990 E API     : 	at retrofit2.KotlinExtensions$await$2$2.onResponse(KotlinExtensions.kt:53)
-10-28 03:22:51.314  4352  4990 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:161)
-10-28 03:22:51.314  4352  4990 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
-10-28 03:22:51.314  4352  4990 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:22:51.314  4352  4990 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:22:51.314  4352  4990 E API     : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:22:51.314  4352  4990 D API     : 🏢 [syncProjectGraph] Fetching property for project 4926
-10-28 03:22:51.663  4352  4549 D API     : ✅ [syncProjectGraph] Fetched and saved property 2986
-10-28 03:22:51.663  4352  4549 D API     : 📍 [syncProjectGraph] Fetching locations for property 2986
-10-28 03:22:51.988  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:22:51.999  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:22:51.999  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:22:52.029  4352  4732 D API     : ✅ [syncProjectGraph] Fetched 5 levels
-10-28 03:22:52.372  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 2 nested locations
-10-28 03:22:52.395  4352  4990 D API     : 📍 [syncProjectGraph] Saved 7 property locations, total collected: 7
-10-28 03:22:52.396  4352  4990 D API     : 🏠 [syncProjectGraph] Fetching rooms for 7 locations
-10-28 03:22:52.763  4352  5144 D API     : INFO [syncProjectGraph] Location 37458 has no rooms (404)
-10-28 03:22:52.764  4352  5144 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37458) returned 0 rooms
-10-28 03:22:52.764  4352  5144 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37458 (empty list)
-10-28 03:22:53.106  4352  4996 D API     : INFO [syncProjectGraph] Location 37459 has no rooms (404)
-10-28 03:22:53.106  4352  4996 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37459) returned 0 rooms
-10-28 03:22:53.106  4352  4996 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37459 (empty list)
-10-28 03:22:53.280  2874  5959 E NetdConnector: yingjie i: 33 ,start: 0
-10-28 03:22:53.301  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
-10-28 03:22:53.390  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
-10-28 03:22:53.454  4352  5144 D API     : INFO [syncProjectGraph] Location 37460 has no rooms (404)
-10-28 03:22:53.454  4352  5144 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37460) returned 0 rooms
-10-28 03:22:53.454  4352  5144 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37460 (empty list)
-10-28 03:22:53.816  4352  4990 D API     : INFO [syncProjectGraph] Location 37461 has no rooms (404)
-10-28 03:22:53.816  4352  4990 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37461) returned 0 rooms
-10-28 03:22:53.816  4352  4990 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37461 (empty list)
-10-28 03:22:54.520  4352  4996 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3919 (page 1)
-10-28 03:22:54.520  4352  4996 D API     : 🔍 [DEBUG] Room payload - id: 5497, name: null, title: null, roomType.name: Bathroom, level.name: Main Level
-10-28 03:22:54.520  4352  4996 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3919) returned 1 rooms
-10-28 03:22:54.534  4352  5144 D API     : 💾 [syncProjectGraph] Saved 1 rooms for location 3919 to database
-10-28 03:22:54.902  4352  4732 D API     : ✅ [syncProjectGraph] Fetched 1 rooms for location 3920 (page 1)
-10-28 03:22:54.902  4352  4732 D API     : 🔍 [DEBUG] Room payload - id: 5498, name: null, title: null, roomType.name: Bay, level.name: Main Level
-10-28 03:22:54.903  4352  4732 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3920) returned 1 rooms
-10-28 03:22:54.915  4352  4732 D API     : 💾 [syncProjectGraph] Saved 1 rooms for location 3920 to database
-10-28 03:22:54.916  4352  4732 D API     : 🏠 [syncProjectGraph] Total rooms collected: 2
-10-28 03:22:54.916  4352  4732 D API     : 📸 [syncProjectGraph] Fetching photos for 2 rooms
-10-28 03:22:55.487  2874  5959 E NetdConnector: yingjie i: 33 ,start: 0
-10-28 03:22:55.510  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
-10-28 03:22:55.605  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
-10-28 03:22:55.792  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 46 photos for room 5497 (paginated)
-10-28 03:22:55.894  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:22:56.508  4352  4990 D API     : 📸 [persistPhotos] Saved 46 album-photo relationships
-10-28 03:22:56.508  4352  4990 D API     : 💾 [syncProjectGraph] Saved 46 photos for room 5497
-10-28 03:22:58.270  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 53 photos for room 5498 (paginated)
-10-28 03:22:59.041  4352  4996 D API     : 📸 [persistPhotos] Saved 53 album-photo relationships
-10-28 03:22:59.041  4352  4996 D API     : 💾 [syncProjectGraph] Saved 53 photos for room 5498
-10-28 03:23:01.079  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:23:01.081  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:23:01.081  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:23:01.081  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:23:01.081  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:23:01.081  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:23:01.081  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:23:01.090  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 82, previously 83
-10-28 03:23:01.090  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4835, previously 4875
-10-28 03:23:01.090  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6148, previously 6185
-10-28 03:23:01.090  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4634, previously 4654
-10-28 03:23:01.091  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:23:01.091  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:23:01.092  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4653, previously 4654
-10-28 03:23:01.092  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 4767
-10-28 03:23:01.147  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 26, previously 35
-10-28 03:23:01.148  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1322, previously 1351
-10-28 03:23:01.148  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 381, previously 3300
-10-28 03:23:01.154  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2129, previously 2249
-10-28 03:23:01.155  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1163, previously 1222
-10-28 03:23:01.155  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 375, previously 2643
-10-28 03:23:01.155  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
-10-28 03:23:01.156  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
-10-28 03:23:01.156  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
-10-28 03:23:01.156  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
-10-28 03:23:01.160  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:23:01.160  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:23:01.160  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:23:01.160  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:23:01.160  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:23:01.170  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
-10-28 03:23:01.170  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
-10-28 03:23:01.210  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 23, previously 36
-10-28 03:23:01.211  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 696, previously 3214
-10-28 03:23:01.211  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1897, previously 1921
-10-28 03:23:01.212  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 394, previously 3435
-10-28 03:23:01.228  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
-10-28 03:23:01.258 12348 12373 W time    : icon time = 0
-10-28 03:23:02.006  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:02.014  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:02.014  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:23:12.037  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:12.039  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:12.039  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:23:15.505  4352  4990 D API     : 📚 [syncProjectGraph] Fetched 5 albums from API
-10-28 03:23:15.506  4352  4990 D API     :    Album[26500] 'Damage Assessment' type=null
-10-28 03:23:15.506  4352  4990 D API     :    Album[26501] 'Daily Progress' type=null
-10-28 03:23:15.507  4352  4990 D API     :    Album[26502] 'Pre-existing Damages' type=null
-10-28 03:23:15.507  4352  4990 D API     :    Album[26503] 'Contents' type=null
-10-28 03:23:15.508  4352  4990 D API     :    Album[26504] 'Betterments' type=null
-10-28 03:23:15.525  4352  4990 D API     : 📚 [syncProjectGraph] Saved 5 albums (photo counts will be calculated from database)
-10-28 03:23:15.542  4352  4990 D API     : ✅ [syncProjectGraph] Sync completed for project 4926 - Locations: 7, Rooms: 2
-10-28 03:23:15.544  4352  4990 D API     : 🔄 [syncProjectGraph] Starting sync for project 4929
-10-28 03:23:15.599  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:23:15.924  4352  4996 E API     : ❌ [syncProjectGraph] Failed to fetch project detail for 4929
-10-28 03:23:15.924  4352  4996 E API     : retrofit2.HttpException: HTTP 400 
-10-28 03:23:15.924  4352  4996 E API     : 	at retrofit2.KotlinExtensions$await$2$2.onResponse(KotlinExtensions.kt:53)
-10-28 03:23:15.924  4352  4996 E API     : 	at retrofit2.OkHttpCall$1.onResponse(OkHttpCall.java:161)
-10-28 03:23:15.924  4352  4996 E API     : 	at okhttp3.internal.connection.RealCall$AsyncCall.run(RealCall.kt:519)
-10-28 03:23:15.924  4352  4996 E API     : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:23:15.924  4352  4996 E API     : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:23:15.924  4352  4996 E API     : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:23:15.924  4352  4996 D API     : 🏢 [syncProjectGraph] Fetching property for project 4929
-10-28 03:23:16.259  4352  4996 D API     : ✅ [syncProjectGraph] Fetched and saved property 2990
-10-28 03:23:16.259  4352  4996 D API     : 📍 [syncProjectGraph] Fetching locations for property 2990
-10-28 03:23:16.588  4352  4549 D API     : ✅ [syncProjectGraph] Fetched 5 levels
-10-28 03:23:16.875  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:23:16.929  4352  4732 D API     : ✅ [syncProjectGraph] Fetched 1 nested locations
-10-28 03:23:16.955  4352  4732 D API     : 📍 [syncProjectGraph] Saved 6 property locations, total collected: 6
-10-28 03:23:16.956  4352  4732 D API     : 🏠 [syncProjectGraph] Fetching rooms for 6 locations
-10-28 03:23:17.290  4352  4996 D API     : INFO [syncProjectGraph] Location 37502 has no rooms (404)
-10-28 03:23:17.290  4352  4996 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37502) returned 0 rooms
-10-28 03:23:17.290  4352  4996 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37502 (empty list)
-10-28 03:23:17.598  2874  5959 E NetdConnector: yingjie i: 33 ,start: 0
-10-28 03:23:17.623  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
-10-28 03:23:17.654  4352  4732 D API     : INFO [syncProjectGraph] Location 37503 has no rooms (404)
-10-28 03:23:17.654  4352  4732 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37503) returned 0 rooms
-10-28 03:23:17.654  4352  4732 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37503 (empty list)
-10-28 03:23:17.741  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
-10-28 03:23:18.006  4352  4996 D API     : INFO [syncProjectGraph] Location 37504 has no rooms (404)
-10-28 03:23:18.006  4352  4996 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37504) returned 0 rooms
-10-28 03:23:18.006  4352  4996 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37504 (empty list)
-10-28 03:23:18.694  4352  4990 D API     : INFO [syncProjectGraph] Location 37506 has no rooms (404)
-10-28 03:23:18.694  4352  4990 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(37506) returned 0 rooms
-10-28 03:23:18.694  4352  4990 D API     : ⚠️ [syncProjectGraph] No rooms to save for location 37506 (empty list)
-10-28 03:23:19.190  4352  4996 D API     : ✅ [syncProjectGraph] Fetched 22 rooms for location 3929 (page 1)
-10-28 03:23:19.190  4352  4996 D API     : 🔍 [DEBUG] Room payload - id: 5755, name: null, title: null, roomType.name: Dining Room, level.name: Main Level
-10-28 03:23:19.191  4352  4996 D API     : 🔍 [syncProjectGraph] fetchRoomsForLocation(3929) returned 22 rooms
-10-28 03:23:19.255  4352  4996 D API     : 💾 [syncProjectGraph] Saved 22 rooms for location 3929 to database
-10-28 03:23:19.260  4352  4996 D API     : 🏠 [syncProjectGraph] Total rooms collected: 22
-10-28 03:23:19.260  4352  4996 D API     : 📸 [syncProjectGraph] Fetching photos for 22 rooms
-10-28 03:23:19.710  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 22 photos for room 5755 (paginated)
-10-28 03:23:20.061  4352  4365 W art     : Suspending all threads took: 6.006ms
-10-28 03:23:20.173  2874  5959 E NetdConnector: yingjie i: 33 ,start: 0
-10-28 03:23:20.197  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
-10-28 03:23:20.313  4352  4990 D API     : 📸 [persistPhotos] Saved 22 album-photo relationships
-10-28 03:23:20.313  4352  4990 D API     : 💾 [syncProjectGraph] Saved 22 photos for room 5755
-10-28 03:23:20.332  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
-10-28 03:23:20.373  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:23:22.049  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:22.054  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:22.054  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:23:22.161  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5688 (paginated)
-10-28 03:23:23.149  4352  5144 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
-10-28 03:23:23.149  4352  5144 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5688
-10-28 03:23:23.562  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 15 photos for room 5687 (paginated)
-10-28 03:23:23.848  4352  4990 D API     : 📸 [persistPhotos] Saved 15 album-photo relationships
-10-28 03:23:23.848  4352  4990 D API     : 💾 [syncProjectGraph] Saved 15 photos for room 5687
-10-28 03:23:25.212  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5686 (paginated)
-10-28 03:23:25.709  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
-10-28 03:23:25.753 12348 12373 W time    : icon time = 0
-10-28 03:23:26.292  4352  4990 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
-10-28 03:23:26.292  4352  4990 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5686
-10-28 03:23:26.734  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5685 (paginated)
-10-28 03:23:26.999  4352  4990 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
-10-28 03:23:26.999  4352  4990 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5685
-10-28 03:23:27.967  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5684 (paginated)
-10-28 03:23:29.065  4352  4990 D API     : 📸 [persistPhotos] Saved 50 album-photo relationships
-10-28 03:23:29.065  4352  4990 D API     : 💾 [syncProjectGraph] Saved 50 photos for room 5684
-10-28 03:23:29.472  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5632 (paginated)
-10-28 03:23:29.737  4352  4990 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
-10-28 03:23:29.737  4352  4990 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5632
-10-28 03:23:30.182  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5631 (paginated)
-10-28 03:23:30.628  4352  5144 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
-10-28 03:23:30.628  4352  5144 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5631
-10-28 03:23:31.552  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 20 photos for room 5630 (paginated)
-10-28 03:23:32.018  4352  5144 D API     : 📸 [persistPhotos] Saved 20 album-photo relationships
-10-28 03:23:32.018  4352  5144 D API     : 💾 [syncProjectGraph] Saved 20 photos for room 5630
-10-28 03:23:32.072  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:32.077  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:32.077  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:23:32.517   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:23:32.522   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:23:32.560  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:32.566  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:32.566  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:23:32.575  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:32.575  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:23:32.576  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:23:32.579  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:32.579  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:23:32.587  2874  2943 E BatteryStatsService: power: Missing API
-10-28 03:23:32.609  2874  2943 E BatteryStatsService: modem info is invalid: ModemActivityInfo{ mTimestamp=0 mSleepTimeMs=0 mIdleTimeMs=0 mTxTimeMs[]=[0, 0, 0, 0, 0] mRxTimeMs=0 mEnergyUsed=0}
-10-28 03:23:33.302  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 60 photos for room 5629 (paginated)
-10-28 03:23:34.116   310   310 E SurfaceFlinger: hwc1 createLayer1 for (1 x 1), name=Toast
-10-28 03:23:34.116   310   310 E SurfaceFlinger: hwc1 createLayer2 for (1 x 1), name=Toast
-10-28 03:23:34.172   347   347 E cnss-daemon: gateway mac address: %02x:%02x:%02x:%02x:%02x:%02x
-10-28 03:23:34.172   347   347 E cnss-daemon: : 00:00:00:00:00:00
-10-28 03:23:34.172   347   347 E cnss-daemon: Invalid mac address: 0xb32a7e6cM
-10-28 03:23:34.682  4352  5144 D API     : 📸 [persistPhotos] Saved 60 album-photo relationships
-10-28 03:23:34.682  4352  5144 D API     : 💾 [syncProjectGraph] Saved 60 photos for room 5629
-10-28 03:23:35.111  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 16 photos for room 5628 (paginated)
-10-28 03:23:35.467  4352  5144 D API     : 📸 [persistPhotos] Saved 16 album-photo relationships
-10-28 03:23:35.467  4352  5144 D API     : 💾 [syncProjectGraph] Saved 16 photos for room 5628
-10-28 03:23:35.881  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5627 (paginated)
-10-28 03:23:36.074  2874  2874 W WindowManager: Attempted to remove non-existing token: android.os.Binder@a390a68
-10-28 03:23:36.158  4352  5144 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
-10-28 03:23:36.158  4352  5144 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5627
-10-28 03:23:36.885  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 30 photos for room 5626 (paginated)
-10-28 03:23:37.542  4352  5144 D API     : 📸 [persistPhotos] Saved 30 album-photo relationships
-10-28 03:23:37.542  4352  5144 D API     : 💾 [syncProjectGraph] Saved 30 photos for room 5626
-10-28 03:23:37.954  4352  5144 D API     : ✅ [syncProjectGraph] Fetched 10 photos for room 5625 (paginated)
-10-28 03:23:38.229  4352  4990 D API     : 📸 [persistPhotos] Saved 10 album-photo relationships
-10-28 03:23:38.229  4352  4990 D API     : 💾 [syncProjectGraph] Saved 10 photos for room 5625
-10-28 03:23:39.739  4352  4990 D API     : ✅ [syncProjectGraph] Fetched 50 photos for room 5624 (paginated)
-10-28 03:23:39.829  5260  5260 W main    : type=1400 audit(0.0:75303): avc: denied { read } for name="name" dev="sysfs" ino=10246 scontext=u:r:shell:s0 tcontext=u:object_r:sysfs:s0 tclass=file permissive=0
-10-28 03:23:39.837  5260  5260 E libmdmdetect: Failed to open /sys/bus/msm_subsys/devices/subsys0/name: Permission denied
-10-28 03:23:39.980  2874  6422 W ActivityManager: Force removing ActivityRecord{ef74a20 u0 com.example.rocketplan_android.dev/com.example.rocketplan_android.MainActivity t86}: app died, no saved state
-10-28 03:23:40.046   310   310 E SurfaceFlinger: hwc1 createLayer1 for (800 x 1280), name=com.tct.tablet.launcher/com.tct.launcher.Launcher
-10-28 03:23:40.046   310   310 E SurfaceFlinger: hwc1 createLayer2 for (800 x 1280), name=com.tct.tablet.launcher/com.tct.launcher.Launcher
-10-28 03:23:40.062  2874 16082 E JavaBinder: !!! FAILED BINDER TRANSACTION !!!  (parcel size = 104)
-10-28 03:23:40.062  2874 16082 W InputMethodManagerService: Got RemoteException sending setActive(false) notification to pid 4352 uid 10170
-10-28 03:23:40.062  2874 16082 E JavaBinder: !!! FAILED BINDER TRANSACTION !!!  (parcel size = 108)
-10-28 03:23:40.099  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ LISTEN id=1470, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN&FOREGROUND] ]
-10-28 03:23:40.103  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1468, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
-10-28 03:23:40.107  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:23:40.603 12348 12400 W OpenGLRenderer: Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
-10-28 03:23:40.603 12348 12400 W OpenGLRenderer: Incorrectly called buildLayer on View: ShortcutAndWidgetContainer, destroying layer...
-10-28 03:23:42.088  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:42.093  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:42.093  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:23:50.542   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:23:52.112  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:23:52.116  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:23:52.116  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:24:02.131  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:24:02.135  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:24:02.135  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:24:12.151  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:24:12.159  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:24:12.159  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:24:16.875  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:24:20.663   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:24:20.668   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:24:22.172  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:24:22.176  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:24:22.176  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:24:32.190  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:24:32.194  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:24:32.195  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:24:41.032   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 16
-10-28 03:24:42.210  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:24:42.217  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:24:42.217  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:24:52.231  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:24:52.237  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:24:52.237  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:24:58.902   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:25:08.805   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:25:08.810   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:25:08.841  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:25:08.847  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:25:08.847  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:25:08.859  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:25:08.861  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:25:08.862  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:25:08.864  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:25:08.864  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:25:08.872  2874  2943 E BatteryStatsService: power: Missing API
-10-28 03:25:08.895  2874  2943 E BatteryStatsService: modem info is invalid: ModemActivityInfo{ mTimestamp=0 mSleepTimeMs=0 mIdleTimeMs=0 mTxTimeMs[]=[0, 0, 0, 0, 0] mRxTimeMs=0 mEnergyUsed=0}
-10-28 03:25:12.269  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:25:12.274  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:25:12.274  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:25:16.876  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:25:22.290  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:25:22.298  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:25:22.298  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:25:32.309  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:25:32.314  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:25:32.314  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:25:42.330  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:25:42.335  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:25:42.335  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:25:52.352  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:25:52.359  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:25:52.359  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:25:56.951   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:25:56.957   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:26:02.371  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:26:02.377  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:26:02.378  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:26:16.876  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:26:18.102   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 16
-10-28 03:26:32.431  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:26:32.436  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:26:32.436  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:26:35.981   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:26:42.449  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:26:42.455  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:26:42.455  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:26:45.094   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:26:45.098   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:27:02.491  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:27:02.495  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:27:02.495  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:27:12.510  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:27:12.518  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:27:12.518  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:27:15.144  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
-10-28 03:27:15.281  2874  5959 E NetdConnector: yingjie i: 37 ,start: 0
-10-28 03:27:16.875  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:27:17.902   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.902   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.903   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.903   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.912   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.913   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.913   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.914   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:27:17.928   566   651 W XTCC-5.1.0.19-a: [LOWIUtils] to_eScanTypeResponse - default case
-10-28 03:27:17.928   566   651 W XTCC-5.1.0.19-a: [WifiScanner] WiFi scan result : [7] AP's
-10-28 03:27:22.530  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:27:22.537  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:27:22.537  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:27:32.551  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:27:32.557  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:27:32.557  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:27:33.237   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:27:33.242   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:27:37.362   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 16
-10-28 03:27:52.590  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:27:52.597  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:27:52.597  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:27:55.222   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:28:02.611  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:28:02.619  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:28:02.619  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:28:12.631  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:28:12.635  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:28:12.635  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:28:16.876  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:28:21.378   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:28:21.383   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:28:42.692  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:28:42.700  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:28:42.700  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:28:52.709  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:28:52.717  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:28:52.717  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:29:02.729  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:29:02.734  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:29:02.734  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:29:09.523   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:29:09.528   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:29:16.876  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:29:22.768  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:29:22.775  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:29:22.775  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:29:32.791  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:29:32.795  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:29:32.795  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:29:42.810  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:29:42.816  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:29:42.816  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:29:49.946  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:49.949  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:49.951  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:49.952  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:49.988  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.010  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.061  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.090  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.099  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.101  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.104  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.105  6204  6204 E Parcel  : Reading a NULL string not supported here.
-10-28 03:29:50.125   309   309 E SELinux : avc:  denied  { find } for service=netd pid=6204 uid=2000 scontext=u:r:shell:s0 tcontext=u:object_r:netd_service:s0 tclass=service_manager permissive=0
-10-28 03:29:50.167   309   309 E SELinux : avc:  denied  { find } for service=android.service.gatekeeper.IGateKeeperService pid=6204 uid=2000 scontext=u:r:shell:s0 tcontext=u:object_r:gatekeeper_service:s0 tclass=service_manager permissive=0
-10-28 03:29:52.829  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:29:52.837  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:29:52.837  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:29:52.909  6212  6212 W main    : type=1400 audit(0.0:75304): avc: denied { read } for name="name" dev="sysfs" ino=10246 scontext=u:r:shell:s0 tcontext=u:object_r:sysfs:s0 tclass=file permissive=0
-10-28 03:29:52.918  6212  6212 E libmdmdetect: Failed to open /sys/bus/msm_subsys/devices/subsys0/name: Permission denied
-10-28 03:29:54.884 19444  6231 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:54.926 19444  6231 W Settings: Setting install_non_market_apps has moved from android.provider.Settings.Global to android.provider.Settings.Secure, returning read-only value.
-10-28 03:29:55.442 19444 19493 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:55.650 19444 19498 E Finsky  : [5011] 5 file not found
-10-28 03:29:55.650 19444 19498 E Finsky  : [5011] APK Analysis allow list check failed; APK Analysis will be skipped!
-10-28 03:29:55.650 19444 19498 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at axac.d(PG:447)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at axab.b(PG:372)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at axab.a(PG:13)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at bvew.aZ(PG:10)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at axbm.b(PG:641)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at axbm.a(PG:324)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at bvaf.p(PG:28)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at bvaf.h(PG:12)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at axgm.a(PG:106)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at axbm.b(PG:598)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at buyd.ok(PG:6)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at bvff.run(PG:109)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at qqi.run(PG:412)
-10-28 03:29:55.650 19444 19498 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:29:55.661 19444 19498 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:55.663 19444 19498 E Finsky  : [5011] Logging timeout report message
-10-28 03:29:55.663 19444 19498 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at axac.d(PG:447)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at axab.b(PG:372)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at axab.a(PG:13)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at bvew.aZ(PG:10)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at axbm.b(PG:641)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at axbm.a(PG:324)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at bvaf.p(PG:28)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at bvaf.h(PG:12)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at axgm.a(PG:106)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at axbm.b(PG:598)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at buyd.ok(PG:6)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at bvff.run(PG:109)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at qqi.run(PG:412)
-10-28 03:29:55.663 19444 19498 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:29:55.665 19444 19498 E Finsky  : [5011] VerifyApps: APK Analysis scan failed for com.example.rocketplan_android.dev
-10-28 03:29:55.665 19444 19498 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at axac.d(PG:447)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at axab.b(PG:372)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at axab.a(PG:13)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at bvew.aZ(PG:10)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at axbm.b(PG:641)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at axbm.a(PG:324)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at bvaf.p(PG:28)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at bvaf.h(PG:12)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at axgm.a(PG:106)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at axbm.b(PG:598)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at buyd.ok(PG:6)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at bvff.run(PG:109)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at qqi.run(PG:412)
-10-28 03:29:55.665 19444 19498 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:29:55.682 19444 19492 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:57.664   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:29:57.670   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:29:57.803   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:29:57.825   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:29:57.852   566   651 W XTCC-5.1.0.19-a: [LOWIUtils] to_eScanTypeResponse - default case
-10-28 03:29:57.852   566   651 W XTCC-5.1.0.19-a: [WifiScanner] WiFi scan result : [22] AP's
-10-28 03:29:58.146 19444 19444 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:58.168 19444  6231 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:58.182 19444  6231 E Finsky  : [5602] Package name null is not an installed package
-10-28 03:29:58.213 19444 19498 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:58.218 19444  6231 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:29:58.227  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.extensions; ignoring!
-10-28 03:29:58.227  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.sidecar; ignoring!
-10-28 03:29:58.233   334   334 E         : dexopt apk_path='/data/app/vmdl2124470401.tmp/base.apk' , pkgname='com.example.rocketplan_android.dev', instruction_set='arm', oat_dir='/data/app/vmdl2124470401.tmp/oat', compiler_filter='interpret-only', volume_uuid='(null)', shared_libraries='(null)'
-10-28 03:29:58.233   334   334 E         : dexopt dexopt_needed ='1', dexopt_flags='26'
-10-28 03:30:01.079  6266  6266 W System  : ClassLoader referenced unknown path: /system/app/DeskClock/lib/arm
-10-28 03:30:01.109  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:01.192  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:02.357  6250  6250 W dex2oat : Before Android 4.1, method int androidx.appcompat.widget.DropDownListView.lookForSelectablePosition(int, boolean) would have incorrectly overridden the package-private method in android.widget.ListView
-10-28 03:30:02.360  6250  6293 W dex2oat : Before Android 4.1, method int androidx.appcompat.widget.MenuPopupWindow$MenuDropDownListView.lookForSelectablePosition(int, boolean) would have incorrectly overridden the package-private method in android.widget.ListView
-10-28 03:30:02.522  6250  6292 W dex2oat : Before Android 4.1, method android.graphics.PorterDuffColorFilter androidx.vectordrawable.graphics.drawable.VectorDrawableCompat.updateTintFilter(android.graphics.PorterDuffColorFilter, android.content.res.ColorStateList, android.graphics.PorterDuff$Mode) would have incorrectly overridden the package-private method in android.graphics.drawable.Drawable
-10-28 03:30:02.595  6250  6293 W dex2oat : Before Android 4.1, method android.graphics.drawable.Drawable com.google.android.material.progressindicator.BaseProgressIndicator.getCurrentDrawable() would have incorrectly overridden the package-private method in android.widget.ProgressBar
-10-28 03:30:02.848  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:30:02.856  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:30:02.856  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:30:02.992   347   347 E cnss-daemon: gateway mac address: %02x:%02x:%02x:%02x:%02x:%02x
-10-28 03:30:02.992   347   347 E cnss-daemon: : 00:00:00:00:00:00
-10-28 03:30:02.992   347   347 E cnss-daemon: Invalid mac address: 0xb32a7e6cM
-10-28 03:30:05.260  6250  6292 W dex2oat : Before Android 4.1, method double java.util.concurrent.ThreadLocalRandom.internalNextDouble(double, double) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:30:05.260  6250  6292 W dex2oat : Before Android 4.1, method int java.util.concurrent.ThreadLocalRandom.internalNextInt(int, int) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:30:05.261  6250  6292 W dex2oat : Before Android 4.1, method long java.util.concurrent.ThreadLocalRandom.internalNextLong(long, long) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:30:08.753  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.extensions; ignoring!
-10-28 03:30:08.753  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.sidecar; ignoring!
-10-28 03:30:08.754  2874  2952 W PackageManager: Code path for com.example.rocketplan_android.dev changing from /data/app/com.example.rocketplan_android.dev-2 to /data/app/com.example.rocketplan_android.dev-1
-10-28 03:30:08.754  2874  2952 W PackageManager: Resource path for com.example.rocketplan_android.dev changing from /data/app/com.example.rocketplan_android.dev-2 to /data/app/com.example.rocketplan_android.dev-1
-10-28 03:30:09.019  2874  2952 W PackageManager: Unknown permission android.permission.USE_BIOMETRIC in package com.example.rocketplan_android.dev
-10-28 03:30:09.019  2874  2952 W PackageManager: Unknown permission android.permission.FOREGROUND_SERVICE in package com.example.rocketplan_android.dev
-10-28 03:30:09.356  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1469, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
-10-28 03:30:09.359  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:30:09.546   334   334 E         : Couldn't opendir /data/app/vmdl2124470401.tmp: No such file or directory
-10-28 03:30:09.627  2874  5959 E NetdConnector: yingjie i: 16 ,start: 0
-10-28 03:30:09.669  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:30:09.672  6316  6316 W System  : ClassLoader referenced unknown path: /system/app/KeyChain/lib/arm
-10-28 03:30:09.672  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:30:09.672  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:30:09.673  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:30:09.673  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:30:09.683  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 82, previously 83
-10-28 03:30:09.683  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4835, previously 4875
-10-28 03:30:09.683  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6148, previously 6185
-10-28 03:30:09.683  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4634, previously 4654
-10-28 03:30:09.684  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4653, previously 4654
-10-28 03:30:09.684  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 4767
-10-28 03:30:09.726  6316  6316 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.startService:1357 android.content.ContextWrapper.startService:613 android.content.ContextWrapper.startService:613 com.android.keychain.KeyChainBroadcastReceiver.onReceive:12 android.app.ActivityThread.handleReceiver:3040 
-10-28 03:30:09.743  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 26, previously 35
-10-28 03:30:09.744  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1322, previously 1351
-10-28 03:30:09.744  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 381, previously 3300
-10-28 03:30:09.749  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
-10-28 03:30:09.750  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
-10-28 03:30:09.750  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
-10-28 03:30:09.750  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
-10-28 03:30:09.793  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
-10-28 03:30:09.793  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
-10-28 03:30:09.804  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2129, previously 2249
-10-28 03:30:09.804  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1163, previously 1222
-10-28 03:30:09.804  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 375, previously 2643
-10-28 03:30:09.837  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 23, previously 36
-10-28 03:30:09.838  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 696, previously 3214
-10-28 03:30:09.838  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1897, previously 1921
-10-28 03:30:09.838  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 394, previously 3435
-10-28 03:30:09.884  6336  6336 W System  : ClassLoader referenced unknown path: /system/priv-app/Settings/lib/arm
-10-28 03:30:09.907  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:30:09.907  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:30:09.910  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:30:09.910  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:30:09.930  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:30:09.931  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:30:09.931  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:30:09.931  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:30:09.931  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:30:09.969  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1462, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
-10-28 03:30:09.971  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1461, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
-10-28 03:30:09.972  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:30:09.978 19444 19492 E Finsky  : [5009] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:30:09.992  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:30:10.007 19444 19492 E Finsky  : [5009] [Counters] attempted to use a non-positive increment for: 4753
-10-28 03:30:10.015 19444 19498 E Finsky  : [5011] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:30:10.017 19444 19498 E Finsky  : [5011] [Counters] attempted to use a non-positive increment for: 4753
-10-28 03:30:10.063  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
-10-28 03:30:10.105 12348 12373 W time    : icon time = 0
-10-28 03:30:10.190  6365  6365 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
-10-28 03:30:10.191  6365  6365 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
-10-28 03:30:10.192  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:10.272  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:10.569  2874  2940 W BroadcastQueue: Permission Denial: broadcasting Intent { act=android.intent.action.BATTERY_CHANGED flg=0x60000010 (has extras) } from null (pid=-1, uid=-1) requires com.google.android.apps.magazines.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION due to registered receiver BroadcastFilter{d1ca718 u0 ReceiverList{6809afb 6365 com.google.android.apps.magazines/10137/u0 remote:4dc348a}}
-10-28 03:30:10.571  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:30:10.901  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:10.982  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:11.096  6418  6418 W ResourceType: ResTable_typeSpec entry count inconsistent: given 34, previously 36
-10-28 03:30:11.096  6418  6418 W ResourceType: ResTable_typeSpec entry count inconsistent: given 9326, previously 9327
-10-28 03:30:11.097  6418  6418 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3580, previously 3599
-10-28 03:30:11.097  6418  6418 W ResourceType: ResTable_typeSpec entry count inconsistent: given 380, previously 3014
-10-28 03:30:11.769  6462  6462 W Background_4: type=1400 audit(0.0:75305): avc: denied { read } for name="gpuclk" dev="sysfs" ino=10641 scontext=u:r:untrusted_app:s0:c512,c768 tcontext=u:object_r:sysfs:s0 tclass=file permissive=0
-10-28 03:30:11.932  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:11.963  6478  6478 W ResourceType: ResTable_typeSpec entry count inconsistent: given 23, previously 36
-10-28 03:30:11.964  6478  6478 W ResourceType: ResTable_typeSpec entry count inconsistent: given 696, previously 3214
-10-28 03:30:11.964  6478  6478 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1897, previously 1921
-10-28 03:30:11.965  6478  6478 W ResourceType: ResTable_typeSpec entry count inconsistent: given 394, previously 3435
-10-28 03:30:12.012  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:30:12.089  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:30:12.326  6418  6418 W art     : Before Android 4.1, method double java.util.concurrent.ThreadLocalRandom.internalNextDouble(double, double) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:30:12.326  6418  6418 W art     : Before Android 4.1, method int java.util.concurrent.ThreadLocalRandom.internalNextInt(int, int) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:30:12.327  6418  6418 W art     : Before Android 4.1, method long java.util.concurrent.ThreadLocalRandom.internalNextLong(long, long) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:30:12.533  6478  6535 W PlayMovies: mgk.run:22 User config found
-10-28 03:30:12.533  6478  6535 W PlayMovies: 
-10-28 03:30:12.535  6478  6535 W PlayMovies: mgk.run:33 Loading user config
-10-28 03:30:12.535  6478  6535 W PlayMovies: 
-10-28 03:30:12.683  6478  6478 W art     : Class sez failed lock verification and will run slower.
-10-28 03:30:12.683  6478  6478 W art     : Common causes for lock verification issues are non-optimized dex code
-10-28 03:30:12.684  6478  6478 W art     : and incorrect proguard optimizations.
-10-28 03:30:12.777  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:30:12.784  6478  6547 E SQLiteLog: (5) statement aborts at 2: [PRAGMA journal_mode=PERSIST] 
-10-28 03:30:12.785  6478  6547 W SQLiteConnection: Could not change the database journal mode of '/data/user/0/com.google.android.videos/databases/purchase_store.db' from 'wal' to 'PERSIST' because the database is locked.  This usually means that there are other open connections to the database which prevents the database from enabling or disabling write-ahead logging mode.  Proceeding without changing the journal mode.
-10-28 03:30:12.854  6478  6535 W PlayMovies: qi.invokeSuspend:54 Observing cache file clear_cache_file_name.tmp
-10-28 03:30:12.854  6478  6535 W PlayMovies: 
-10-28 03:30:12.871  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:30:12.874  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:30:12.874  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:30:13.023  6478  6478 W PlayMovies: kxr.onCreate:494 Installer Package: com.android.vending
-10-28 03:30:13.023  6478  6478 W PlayMovies: 
-10-28 03:30:13.054  6478  6478 W MediaSessionCompat: Couldn't find a unique registered media button receiver in the given context.
-10-28 03:30:13.054  6365  6561 W System  : ClassLoader referenced unknown path: 
-10-28 03:30:13.065  6365  6561 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:30:13.066  6365  6561 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:30:13.066  6365  6561 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:30:13.066  6365  6561 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:30:13.066  6365  6561 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:30:13.101  6365  6561 W System  : ClassLoader referenced unknown path: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000b/n/armeabi-v7a
-10-28 03:30:13.101  6365  6561 W System  : ClassLoader referenced unknown path: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000b/n/armeabi
-10-28 03:30:13.160  6478  6478 W ResourceType: For resource 0x7f07076d, entry index(1901) is beyond type entryCount(696)
-10-28 03:30:13.161  6478  6478 W ResourceType: For resource 0x7f07076e, entry index(1902) is beyond type entryCount(696)
-10-28 03:30:13.161  6478  6478 W ResourceType: For resource 0x7f07076c, entry index(1900) is beyond type entryCount(696)
-10-28 03:30:13.161  6478  6478 W ResourceType: For resource 0x7f07076b, entry index(1899) is beyond type entryCount(696)
-10-28 03:30:13.161  6478  6478 W ResourceType: For resource 0x7f07076d, entry index(1901) is beyond type entryCount(696)
-10-28 03:30:13.237 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_REMOVED com.example.rocketplan_android.dev
-10-28 03:30:13.317  6478  6478 W AxMediaRouter: Ignoring attempt to select selected route: MediaRouter.RouteInfo{ uniqueId=DEFAULT_ROUTE, name=Tablet, description=null, iconUri=null, enabled=true, isSystemRoute=true, connectionState=0, canDisconnect=false, playbackType=0, playbackStream=3, deviceType=0, volumeHandling=1, volume=8, volumeMax=15, presentationDisplayId=-1, extras=null, settingsIntent=null, providerPackageName=android }
-10-28 03:30:13.384  6478  6590 W UnpinContentCleanerImpl: com.google.android.apps.play.movies.common.store.pinning.unpinning.UnpinContentCleanerImpl.cleanUp:76 Start clean up task with reason 1
-10-28 03:30:13.437 19444 19492 E Finsky  : [5009] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:30:13.439 19444 19492 E Finsky  : [5009] [Counters] attempted to use a non-positive increment for: 4753
-10-28 03:30:13.458  6478  6590 W PlayMovies: mhh.a:49 Start cleanup unpinned content
-10-28 03:30:13.458  6478  6590 W PlayMovies: 
-10-28 03:30:13.477 19444 19479 E Finsky  : [4999] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:30:13.480 19444 19493 E Finsky  : [5010] [Counters] attempted to use a non-positive increment for: 4753
-10-28 03:30:13.497  6478  6590 W PlayMovies: mhh.a:321 Done cleanup unpinned content: removed 0 files
-10-28 03:30:13.497  6478  6590 W PlayMovies: 
-10-28 03:30:13.505  6478  6478 W TransfersExecutor: com.google.android.apps.play.movies.common.service.pinning.TransfersExecutor.quit:195 BACKGROUND_QUIT_SAFELY pending jobs == 0
-10-28 03:30:13.804  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:30:13.877 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_ADDED com.example.rocketplan_android.dev
-10-28 03:30:13.883  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 23, previously 36
-10-28 03:30:13.884  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 696, previously 3214
-10-28 03:30:13.884  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1897, previously 1921
-10-28 03:30:13.884  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 394, previously 3435
-10-28 03:30:14.243 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_REPLACED com.example.rocketplan_android.dev
-10-28 03:30:14.502  6478  6623 W VideoCapabilities: Unsupported mime video/divx
-10-28 03:30:14.509  6478  6623 W VideoCapabilities: Unsupported mime video/divx4
-10-28 03:30:14.520  6478  6623 W VideoCapabilities: Unsupported mime video/mp4v-esdp
-10-28 03:30:14.552  6478  6623 W VideoCapabilities: Unsupported mime video/mp4v-esdp
-10-28 03:30:16.876  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:30:22.891  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:30:22.901  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:30:22.901  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:30:24.054  9898 19294 W GetGamesServiceReqFacto: Parsing request with ignored arguments. signInOptionsBundle [Bundle[{com.google.android.gms.signin.internal.serverClientId=null, com.google.android.gms.signin.internal.usePromptModeForAuthCode=true, com.google.android.gms.signin.internal.logSessionId=null, com.google.android.gms.signin.internal.hostedDomain=null, com.google.android.gms.signin.internal.offlineAccessRequested=false, com.google.android.gms.signin.internal.waitForAccessTokenRefresh=false, com.google.android.gms.signin.internal.clientRequestedAccount=Account {name=<<default account>>, type=com.google}, com.google.android.gms.signin.internal.idTokenRequested=false, com.google.android.gms.signin.internal.forceCodeForRefreshToken=false}]], isRetryingSignIn [false], skipWelcomePopup [false], requireGooglePlus [false]
-10-28 03:30:28.182   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:30:32.912  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:30:32.918  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:30:32.918  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:30:40.326 19444 20595 W PlayCommon: [5112] No account for auth token provided
-10-28 03:30:42.933  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:30:42.937  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:30:42.937  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:30:45.807   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:30:45.813   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:30:45.862  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:30:45.862  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:30:45.862  2874  2943 E BatteryStatsService: no controller energy info supplied
-10-28 03:30:45.867  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:30:45.867  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:30:45.874  2874  2943 E BatteryStatsService: power: Missing API
-10-28 03:30:45.893  2874  2943 E BatteryStatsService: modem info is invalid: ModemActivityInfo{ mTimestamp=0 mSleepTimeMs=0 mIdleTimeMs=0 mTxTimeMs[]=[0, 0, 0, 0, 0] mRxTimeMs=0 mEnergyUsed=0}
-10-28 03:30:52.951  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:30:52.959  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:30:52.959  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:30:58.582   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:31:02.971  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:31:02.979  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:31:02.979  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:31:16.877  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:31:23.006  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:31:23.015  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:31:23.015  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:31:33.030  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:31:33.037  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:31:33.037  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:31:33.954   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:31:33.958   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:32:03.090  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:32:03.098  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:32:03.098  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:32:13.112  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:32:13.118  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:32:13.118  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:32:16.877  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:32:22.095   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:32:22.101   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:32:33.154  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:32:33.158  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:32:33.158  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:32:37.856   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:32:37.870   564  7673 E LOWI-7.7.2.5.b: [LOWIUtils] channelBandToFreq: Invalid band,channel = 1,0
-10-28 03:32:37.887   566   651 W XTCC-5.1.0.19-a: [LOWIUtils] to_eScanTypeResponse - default case
-10-28 03:32:37.887   566   651 W XTCC-5.1.0.19-a: [WifiScanner] WiFi scan result : [13] AP's
-10-28 03:32:43.167  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:32:43.177  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:32:43.177  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:32:44.139  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:32:44.140  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:32:44.140  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:32:44.140  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:32:44.141  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:32:44.156  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 82, previously 83
-10-28 03:32:44.156  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4835, previously 4875
-10-28 03:32:44.156  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6148, previously 6185
-10-28 03:32:44.156  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4634, previously 4654
-10-28 03:32:44.159  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4653, previously 4654
-10-28 03:32:44.159  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 4767
-10-28 03:32:44.182  2874  5959 E NetdConnector: yingjie i: 39 ,start: 0
-10-28 03:32:44.277  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 26, previously 35
-10-28 03:32:44.278  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1322, previously 1351
-10-28 03:32:44.278  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 381, previously 3300
-10-28 03:32:44.283  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
-10-28 03:32:44.284  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
-10-28 03:32:44.284  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
-10-28 03:32:44.284  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
-10-28 03:32:44.322  7097  7097 W System  : ClassLoader referenced unknown path: /system/app/KeyChain/lib/arm
-10-28 03:32:44.332  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
-10-28 03:32:44.332  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
-10-28 03:32:44.342  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2129, previously 2249
-10-28 03:32:44.342  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1163, previously 1222
-10-28 03:32:44.342  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 375, previously 2643
-10-28 03:32:44.364  7097  7097 W ContextImpl: Calling a method in the system process without a qualified user: android.app.ContextImpl.startService:1357 android.content.ContextWrapper.startService:613 android.content.ContextWrapper.startService:613 com.android.keychain.KeyChainBroadcastReceiver.onReceive:12 android.app.ActivityThread.handleReceiver:3040 
-10-28 03:32:44.493  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 23, previously 36
-10-28 03:32:44.494  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 696, previously 3214
-10-28 03:32:44.494  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1897, previously 1921
-10-28 03:32:44.494  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 394, previously 3435
-10-28 03:32:44.501  7135  7135 W System  : ClassLoader referenced unknown path: /system/priv-app/Settings/lib/arm
-10-28 03:32:44.502  2874  5959 E NetdConnector: yingjie i: 16 ,start: 0
-10-28 03:32:44.567  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:32:44.567  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:32:44.569  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:32:44.569  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:32:44.584 19444 19498 E Finsky  : [5011] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:32:44.588 19444 19493 W asset   : Asset path /data/app/com.example.rocketplan_android.dev-1/base.apk is neither a directory nor file (type=1).
-10-28 03:32:44.588 19444 19493 E ResourcesManager: failed to add asset path /data/app/com.example.rocketplan_android.dev-1/base.apk
-10-28 03:32:44.588 19444 19493 W PackageManager: Failure retrieving resources for com.example.rocketplan_android.dev
-10-28 03:32:44.590  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:32:44.590  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:32:44.590  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:32:44.590  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:32:44.590  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:32:44.601  2874  2952 W PackageManager: Failed to find settings for com.example.rocketplan_android.dev
-10-28 03:32:44.617 19444 19479 E Finsky  : [4999] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:32:44.618 19444 19479 E Finsky  : [4999] [Counters] attempted to use a non-positive increment for: 4753
-10-28 03:32:44.637  2874  5975 E ConnectivityService: RemoteException caught trying to send a callback msg for NetworkRequest [ TRACK_DEFAULT id=1475, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VPN] ]
-10-28 03:32:44.640  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:32:44.655  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
-10-28 03:32:44.717 19444 19444 W Finsky  : [1] STU: Failed to get storage stats for package 'com.example.rocketplan_android.dev' (1601: Error getting stats)
-10-28 03:32:45.082  7170  7170 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
-10-28 03:32:45.082  7170  7170 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
-10-28 03:32:45.091  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:32:45.182  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:32:45.514  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:32:45.519  2874  2940 W BroadcastQueue: Permission Denial: broadcasting Intent { act=android.intent.action.BATTERY_CHANGED flg=0x60000010 (has extras) } from null (pid=-1, uid=-1) requires com.google.android.apps.magazines.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION due to registered receiver BroadcastFilter{e25de51 u0 ReceiverList{b05b778 7170 com.google.android.apps.magazines/10137/u0 remote:adc30db}}
-10-28 03:32:45.895 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_REMOVED com.example.rocketplan_android.dev
-10-28 03:32:45.909  9898  7216 W Blockstore: [DataStoreImpl] Does not contain gms package key space. [CONTEXT service_id=258 ]
-10-28 03:32:45.954  9898  7215 W RWIPackageIntentOps: Registries cleared for package: com.example.rocketplan_android.dev
-10-28 03:32:46.661  7270  7270 W System  : ClassLoader referenced unknown path: /system/priv-app/DocumentsUI/lib/arm
-10-28 03:32:46.872  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:32:46.925  7286  7286 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
-10-28 03:32:46.926  7286  7286 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
-10-28 03:32:46.926  7286  7286 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
-10-28 03:32:46.926  7286  7286 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
-10-28 03:32:46.972  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:32:47.059  7310  7310 W System  : ClassLoader referenced unknown path: /system/lib/FB_AppInstaller_20170216_v19.0
-10-28 03:32:47.406  7286  7347 W CacheStorage: cache doesn't exist
-10-28 03:32:47.426  6384  6384 E QtiRilInterface: instance = com.qualcomm.qti.internal.telephony.QtiRilInterface@3d07930
-10-28 03:32:48.024  7170  7389 W System  : ClassLoader referenced unknown path: 
-10-28 03:32:48.033  7170  7389 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:32:48.034  7170  7389 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:32:48.034  7170  7389 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:32:48.034  7170  7389 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:32:48.035  7170  7389 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:32:48.064  7170  7389 W System  : ClassLoader referenced unknown path: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000b/n/armeabi-v7a
-10-28 03:32:48.065  7170  7389 W System  : ClassLoader referenced unknown path: /data/user_de/0/com.google.android.gms/app_chimera/m/0000000b/n/armeabi
-10-28 03:32:48.312 19444  7164 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:32:48.370 19444  7164 W Settings: Setting install_non_market_apps has moved from android.provider.Settings.Global to android.provider.Settings.Secure, returning read-only value.
-10-28 03:32:48.584  7286  7400 W JniCorpus: state isInitialized = true
-10-28 03:32:48.587  7286  7330 W JniCorpus: state isInitialized = true
-10-28 03:32:48.592  7286  7400 W JniCorpus: state isInitialized = true
-10-28 03:32:48.592  7286  7400 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.593  7286  7417 W JniCorpus: state isInitialized = true
-10-28 03:32:48.594  7286  7417 W JniCorpus: state isInitialized = true
-10-28 03:32:48.594  7286  7417 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.594  7286  7417 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.621  7286  7400 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.623  7286  7330 W JniCorpus: state isInitialized = true
-10-28 03:32:48.623  7286  7330 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.624  7286  7330 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.716  7286  7418 W JniCorpus: state isInitialized = true
-10-28 03:32:48.716  7286  7418 W JniCorpus: state isInitialized = true
-10-28 03:32:48.716  7286  7418 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.717  7286  7418 W JniCorpus: driveCoreOptions registerChangeObserver = true
-10-28 03:32:48.770  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
-10-28 03:32:48.771  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
-10-28 03:32:48.775  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
-10-28 03:32:48.775  4886 18347 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
-10-28 03:32:48.967 19444 19498 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:32:49.150 19444 19479 E Finsky  : [4999] 5 file not found
-10-28 03:32:49.151 19444 19479 E Finsky  : [4999] APK Analysis allow list check failed; APK Analysis will be skipped!
-10-28 03:32:49.151 19444 19479 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at axac.d(PG:447)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at axab.b(PG:372)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at axab.a(PG:13)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at bvew.aZ(PG:10)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at axbm.b(PG:641)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at axbm.a(PG:324)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at bvaf.p(PG:28)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at bvaf.h(PG:12)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at axgm.a(PG:106)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at axbm.b(PG:598)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at buyd.ok(PG:6)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at bvff.run(PG:109)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at qqi.run(PG:412)
-10-28 03:32:49.151 19444 19479 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:32:49.156 19444 19479 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:32:49.157 19444 19479 E Finsky  : [4999] Logging timeout report message
-10-28 03:32:49.157 19444 19479 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at axac.d(PG:447)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at axab.b(PG:372)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at axab.a(PG:13)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at bvew.aZ(PG:10)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at axbm.b(PG:641)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at axbm.a(PG:324)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at bvaf.p(PG:28)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at bvaf.h(PG:12)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at axgm.a(PG:106)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at axbm.b(PG:598)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at buyd.ok(PG:6)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at bvff.run(PG:109)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at qqi.run(PG:412)
-10-28 03:32:49.157 19444 19479 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:32:49.159 19444 19479 E Finsky  : [4999] VerifyApps: APK Analysis scan failed for com.example.rocketplan_android.dev
-10-28 03:32:49.159 19444 19479 E Finsky  : com.google.android.finsky.verifier.apkanalysis.client.ApkAnalysisException: DOWNLOAD_FILE_NOT_FOUND_EXCEPTION while analyzing APK
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at axac.d(PG:447)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at axab.b(PG:372)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at axab.a(PG:13)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.v(PG:2)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at bvew.aZ(PG:10)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at axbm.b(PG:641)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at axbm.a(PG:324)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at org.chromium.net.AndroidNetworkLibrary.w(PG:14)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at bvaf.p(PG:28)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at bvaf.h(PG:12)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at axgm.a(PG:106)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at axbm.b(PG:598)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at buyd.ok(PG:6)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at bvff.run(PG:109)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1133)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:607)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at qqi.run(PG:412)
-10-28 03:32:49.159 19444 19479 E Finsky  : 	at java.lang.Thread.run(Thread.java:761)
-10-28 03:32:49.177 19444 19498 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:32:49.261 19444 19444 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:32:49.278 19444  7164 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:32:49.297 19444  7164 E Finsky  : [5628] Package name null is not an installed package
-10-28 03:32:49.320 19444  7164 E AbstractLogEventBuilder: The provided ProductIdOrigin 3 is not one of the process-level expected values: 1 or 2
-10-28 03:32:49.331  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.extensions; ignoring!
-10-28 03:32:49.331  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.sidecar; ignoring!
-10-28 03:32:49.338   334   334 E         : dexopt apk_path='/data/app/vmdl1661824485.tmp/base.apk' , pkgname='com.example.rocketplan_android.dev', instruction_set='arm', oat_dir='/data/app/vmdl1661824485.tmp/oat', compiler_filter='interpret-only', volume_uuid='(null)', shared_libraries='(null)'
-10-28 03:32:49.339   334   334 E         : dexopt dexopt_needed ='1', dexopt_flags='26'
-10-28 03:32:50.456  7286  7334 W DynamiteModule: Local module descriptor class for com.google.android.gms.providerinstaller.dynamite not found.
-10-28 03:32:50.487  4886  4964 W ProviderHelper: Unknown dynamite feature providerinstaller.dynamite
-10-28 03:32:50.497  7286  7334 W ProviderInstaller: Failed to load providerinstaller module: No acceptable module com.google.android.gms.providerinstaller.dynamite found. Local version is 0 and remote version is 0.
-10-28 03:32:50.704  7286  7334 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:32:50.705  7286  7334 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:32:50.706  7286  7334 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:32:50.706  7286  7334 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:32:50.706  7286  7334 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:32:50.787  2874  6631 W AppOps  : Bad call: specified package com.google.android.gms under uid 10112 but it is really 10074
-10-28 03:32:50.787  2874  6631 W AppOps  : java.lang.RuntimeException: here
-10-28 03:32:50.787  2874  6631 W AppOps  : 	at com.android.server.AppOpsService.getOpsRawLocked(AppOpsService.java:1302)
-10-28 03:32:50.787  2874  6631 W AppOps  : 	at com.android.server.AppOpsService.checkPackage(AppOpsService.java:998)
-10-28 03:32:50.787  2874  6631 W AppOps  : 	at com.android.internal.app.IAppOpsService$Stub.onTransact(IAppOpsService.java:169)
-10-28 03:32:50.787  2874  6631 W AppOps  : 	at android.os.Binder.execTransact(Binder.java:565)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: Failed to get service from broker. 
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: java.lang.SecurityException: Unknown calling package name 'com.google.android.gms'.
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at android.os.Parcel.readException(Parcel.java:1684)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at android.os.Parcel.readException(Parcel.java:1637)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at axsp.a(:com.google.android.gms@254131000@25.41.31 (040300-820295184):36)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at axqq.z(:com.google.android.gms@254131000@25.41.31 (040300-820295184):116)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at awxn.run(:com.google.android.gms@254131000@25.41.31 (040300-820295184):42)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at android.os.Handler.handleCallback(Handler.java:751)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at android.os.Handler.dispatchMessage(Handler.java:95)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at cglp.lM(:com.google.android.gms@254131000@25.41.31 (040300-820295184):1)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at cglp.dispatchMessage(:com.google.android.gms@254131000@25.41.31 (040300-820295184):5)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at android.os.Looper.loop(Looper.java:154)
-10-28 03:32:50.789  7286  7438 E GoogleApiManager: 	at android.os.HandlerThread.run(HandlerThread.java:61)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: Failed to register com.google.android.gms.providerinstaller#com.google.android.apps.docs
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: ehwj: 17: 17: API: Phenotype.API is not available on this device. Connection failed with: ConnectionResult{statusCode=DEVELOPER_ERROR, resolution=null, message=null, clientMethodKey=null}
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at ehwl.a(:com.google.android.gms@254131000@25.41.31 (040300-820295184):13)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at faxv.d(:com.google.android.gms@254131000@25.41.31 (040300-820295184):3)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at faxx.run(:com.google.android.gms@254131000@25.41.31 (040300-820295184):130)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at fbae.execute(:com.google.android.gms@254131000@25.41.31 (040300-820295184):1)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at fayf.f(:com.google.android.gms@254131000@25.41.31 (040300-820295184):1)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at fayf.m(:com.google.android.gms@254131000@25.41.31 (040300-820295184):99)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at fayf.r(:com.google.android.gms@254131000@25.41.31 (040300-820295184):17)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at eaic.hC(:com.google.android.gms@254131000@25.41.31 (040300-820295184):35)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at dqpl.run(:com.google.android.gms@254131000@25.41.31 (040300-820295184):12)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at fbae.execute(:com.google.android.gms@254131000@25.41.31 (040300-820295184):1)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at dqpm.b(:com.google.android.gms@254131000@25.41.31 (040300-820295184):18)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at dqqb.b(:com.google.android.gms@254131000@25.41.31 (040300-820295184):36)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at dqqd.d(:com.google.android.gms@254131000@25.41.31 (040300-820295184):25)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awuw.c(:com.google.android.gms@254131000@25.41.31 (040300-820295184):9)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awxl.q(:com.google.android.gms@254131000@25.41.31 (040300-820295184):48)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awxl.d(:com.google.android.gms@254131000@25.41.31 (040300-820295184):10)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awxl.g(:com.google.android.gms@254131000@25.41.31 (040300-820295184):192)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awxl.onConnectionFailed(:com.google.android.gms@254131000@25.41.31 (040300-820295184):2)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awxn.run(:com.google.android.gms@254131000@25.41.31 (040300-820295184):70)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at android.os.Handler.handleCallback(Handler.java:751)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at android.os.Handler.dispatchMessage(Handler.java:95)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at cglp.lM(:com.google.android.gms@254131000@25.41.31 (040300-820295184):1)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at cglp.dispatchMessage(:com.google.android.gms@254131000@25.41.31 (040300-820295184):5)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at android.os.Looper.loop(Looper.java:154)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at android.os.HandlerThread.run(HandlerThread.java:61)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: Caused by: awtd: 17: API: Phenotype.API is not available on this device. Connection failed with: ConnectionResult{statusCode=DEVELOPER_ERROR, resolution=null, message=null, clientMethodKey=null}
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at axqc.a(:com.google.android.gms@254131000@25.41.31 (040300-820295184):15)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awuz.a(:com.google.android.gms@254131000@25.41.31 (040300-820295184):1)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	at awuw.c(:com.google.android.gms@254131000@25.41.31 (040300-820295184):5)
-10-28 03:32:50.798  7286  7437 W FlagRegistrar: 	... 11 more
-10-28 03:32:53.191  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:32:53.197  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:32:53.197  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:32:53.602  7430  7448 W dex2oat : Before Android 4.1, method int androidx.appcompat.widget.DropDownListView.lookForSelectablePosition(int, boolean) would have incorrectly overridden the package-private method in android.widget.ListView
-10-28 03:32:53.604  7430  7446 W dex2oat : Before Android 4.1, method int androidx.appcompat.widget.MenuPopupWindow$MenuDropDownListView.lookForSelectablePosition(int, boolean) would have incorrectly overridden the package-private method in android.widget.ListView
-10-28 03:32:53.765  7430  7446 W dex2oat : Before Android 4.1, method android.graphics.PorterDuffColorFilter androidx.vectordrawable.graphics.drawable.VectorDrawableCompat.updateTintFilter(android.graphics.PorterDuffColorFilter, android.content.res.ColorStateList, android.graphics.PorterDuff$Mode) would have incorrectly overridden the package-private method in android.graphics.drawable.Drawable
-10-28 03:32:53.843  7430  7430 W dex2oat : Before Android 4.1, method android.graphics.drawable.Drawable com.google.android.material.progressindicator.BaseProgressIndicator.getCurrentDrawable() would have incorrectly overridden the package-private method in android.widget.ProgressBar
-10-28 03:32:56.533  7430  7448 W dex2oat : Before Android 4.1, method double java.util.concurrent.ThreadLocalRandom.internalNextDouble(double, double) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:32:56.534  7430  7448 W dex2oat : Before Android 4.1, method int java.util.concurrent.ThreadLocalRandom.internalNextInt(int, int) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:32:56.534  7430  7448 W dex2oat : Before Android 4.1, method long java.util.concurrent.ThreadLocalRandom.internalNextLong(long, long) would have incorrectly overridden the package-private method in java.util.Random
-10-28 03:32:58.408   347   347 E cnss-daemon: gateway mac address: %02x:%02x:%02x:%02x:%02x:%02x
-10-28 03:32:58.408   347   347 E cnss-daemon: : 00:00:00:00:00:00
-10-28 03:32:58.408   347   347 E cnss-daemon: Invalid mac address: 0xb32a7e6cM
-10-28 03:32:59.796  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.extensions; ignoring!
-10-28 03:32:59.796  2874  2952 W PackageManager: Package com.example.rocketplan_android.dev desires unavailable shared library androidx.window.sidecar; ignoring!
-10-28 03:33:00.086  2874  2952 W PackageManager: Unknown permission android.permission.USE_BIOMETRIC in package com.example.rocketplan_android.dev
-10-28 03:33:00.086  2874  2952 W PackageManager: Unknown permission android.permission.FOREGROUND_SERVICE in package com.example.rocketplan_android.dev
-10-28 03:33:00.671   334   334 E         : Couldn't opendir /data/app/vmdl1661824485.tmp: No such file or directory
-10-28 03:33:00.676  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
-10-28 03:33:00.676  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
-10-28 03:33:00.676  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
-10-28 03:33:00.676  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
-10-28 03:33:00.678  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:33:00.679  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:33:00.679  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:33:00.679  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:33:00.679  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:33:00.686  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 82, previously 83
-10-28 03:33:00.686  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4835, previously 4875
-10-28 03:33:00.686  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6148, previously 6185
-10-28 03:33:00.686  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4634, previously 4654
-10-28 03:33:00.686  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4653, previously 4654
-10-28 03:33:00.686  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 4767
-10-28 03:33:00.688  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f0803a6
-10-28 03:33:00.688  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f14073d
-10-28 03:33:00.688  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f14073d
-10-28 03:33:00.700  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f0803a2
-10-28 03:33:00.700  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f14073b
-10-28 03:33:00.700  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f14073b
-10-28 03:33:00.718  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f0803a4
-10-28 03:33:00.719  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f14073c
-10-28 03:33:00.719  2874  2939 W ResourceType: No known package when getting value for resource number 0x7f14073c
-10-28 03:33:00.727  2874  2939 W ShortcutService: Invalid tag 'capability' found at depth 2
-10-28 03:33:00.727  2874  2939 E ShortcutService: Ignoring excessive intent tag.
-10-28 03:33:00.727  2874  2939 W ShortcutService: Invalid tag 'parameter' found at depth 4
-10-28 03:33:00.728  2874  2939 W ShortcutService: Invalid tag 'capability' found at depth 2
-10-28 03:33:00.728  2874  2939 W ShortcutService: Invalid tag 'slice' found at depth 3
-10-28 03:33:00.729  2874  2939 W ShortcutService: Invalid tag 'url-template' found at depth 4
-10-28 03:33:00.730  2874  2939 W ShortcutService: Invalid tag 'share-target' found at depth 2
-10-28 03:33:00.733  2874  2939 W ShortcutService: Invalid tag 'data' found at depth 3
-10-28 03:33:00.733  2874  2939 W ShortcutService: Invalid tag 'category' found at depth 3
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: Write failure
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: java.io.IOException: write failed: EIO (I/O error)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at libcore.io.IoBridge.write(IoBridge.java:501)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at java.io.FileOutputStream.write(FileOutputStream.java:316)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at com.android.internal.util.FastPrintWriter.flushBytesLocked(FastPrintWriter.java:336)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at com.android.internal.util.FastPrintWriter.flushLocked(FastPrintWriter.java:359)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at com.android.internal.util.FastPrintWriter.flush(FastPrintWriter.java:394)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at android.os.ShellCommand.exec(ShellCommand.java:113)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at com.android.server.pm.PackageManagerService.onShellCommand(PackageManagerService.java:18697)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at android.os.Binder.shellCommand(Binder.java:468)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at android.os.Binder.onTransact(Binder.java:367)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at android.content.pm.IPackageManager$Stub.onTransact(IPackageManager.java:2387)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at com.android.server.pm.PackageManagerService.onTransact(PackageManagerService.java:3297)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at android.os.Binder.execTransact(Binder.java:565)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: Caused by: android.system.ErrnoException: write failed: EIO (I/O error)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at libcore.io.Posix.writeBytes(Native Method)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at libcore.io.Posix.write(Posix.java:273)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at libcore.io.BlockGuardOs.write(BlockGuardOs.java:319)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	at libcore.io.IoBridge.write(IoBridge.java:496)
-10-28 03:33:00.737  2874  2930 W FastPrintWriter: 	... 11 more
-10-28 03:33:00.746  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:33:00.746  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:33:00.750  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2, previously 147
-10-28 03:33:00.750  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 6, previously 158
-10-28 03:33:00.757  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 26, previously 35
-10-28 03:33:00.758  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1322, previously 1351
-10-28 03:33:00.758  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 381, previously 3300
-10-28 03:33:00.797  7480  7480 W System  : ClassLoader referenced unknown path: /system/priv-app/MusicFX/lib/arm
-10-28 03:33:00.807  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1315, previously 1381
-10-28 03:33:00.808  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 379, previously 3081
-10-28 03:33:00.819  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 2129, previously 2249
-10-28 03:33:00.820  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1163, previously 1222
-10-28 03:33:00.820  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 375, previously 2643
-10-28 03:33:00.836  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 101, previously 105
-10-28 03:33:00.836  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 4802, previously 5423
-10-28 03:33:00.836  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 3606, previously 3627
-10-28 03:33:00.836  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 261, previously 265
-10-28 03:33:00.837  2874  2939 W ResourceType: ResTable_typeSpec entry count inconsistent: given 534, previously 5644
-10-28 03:33:00.840  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:33:00.849  2874  7505 W AppOps  : Bad call: specified package com.google.android.gms under uid 10112 but it is really 10074
-10-28 03:33:00.849  2874  7505 W AppOps  : java.lang.RuntimeException: here
-10-28 03:33:00.849  2874  7505 W AppOps  : 	at com.android.server.AppOpsService.getOpsRawLocked(AppOpsService.java:1302)
-10-28 03:33:00.849  2874  7505 W AppOps  : 	at com.android.server.AppOpsService.checkPackage(AppOpsService.java:998)
-10-28 03:33:00.849  2874  7505 W AppOps  : 	at com.android.internal.app.IAppOpsService$Stub.onTransact(IAppOpsService.java:169)
-10-28 03:33:00.849  2874  7505 W AppOps  : 	at android.os.Binder.execTransact(Binder.java:565)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: Failed to get service from broker. 
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: java.lang.SecurityException: Unknown calling package name 'com.google.android.gms'.
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at android.os.Parcel.readException(Parcel.java:1684)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at android.os.Parcel.readException(Parcel.java:1637)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at axsp.a(:com.google.android.gms@254131000@25.41.31 (040300-820295184):36)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at axqq.z(:com.google.android.gms@254131000@25.41.31 (040300-820295184):116)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at awxn.run(:com.google.android.gms@254131000@25.41.31 (040300-820295184):42)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at android.os.Handler.handleCallback(Handler.java:751)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at android.os.Handler.dispatchMessage(Handler.java:95)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at cglp.lM(:com.google.android.gms@254131000@25.41.31 (040300-820295184):1)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at cglp.dispatchMessage(:com.google.android.gms@254131000@25.41.31 (040300-820295184):5)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at android.os.Looper.loop(Looper.java:154)
-10-28 03:33:00.853  7286  7438 E GoogleApiManager: 	at android.os.HandlerThread.run(HandlerThread.java:61)
-10-28 03:33:00.854  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 23, previously 36
-10-28 03:33:00.856  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 696, previously 3214
-10-28 03:33:00.857  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1897, previously 1921
-10-28 03:33:00.857  2874  2874 W ResourceType: ResTable_typeSpec entry count inconsistent: given 394, previously 3435
-10-28 03:33:00.930  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:33:00.950 19444 19493 E Finsky  : [5010] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:33:00.956 19444 19493 E Finsky  : [5010] [Counters] attempted to use a non-positive increment for: 4753
-10-28 03:33:00.960 19444 19493 E Finsky  : [5010] [Counters] attempted to use a non-positive increment for: 4752
-10-28 03:33:00.964  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
-10-28 03:33:00.967 19444 19493 E Finsky  : [5010] [Counters] attempted to use a non-positive increment for: 4753
-10-28 03:33:00.994 12348 12373 W ResourceType: ResTable_typeSpec entry count inconsistent: given 20, previously 33
-10-28 03:33:00.996 12348 12373 W ResourceType: ResTable_typeSpec entry count inconsistent: given 969, previously 2450
-10-28 03:33:00.996 12348 12373 W ResourceType: ResTable_typeSpec entry count inconsistent: given 1697, previously 1700
-10-28 03:33:00.996 12348 12373 W ResourceType: ResTable_typeSpec entry count inconsistent: given 373, previously 3274
-10-28 03:33:01.002 12348 12373 W time    : icon time = 0
-10-28 03:33:01.066  2874 29652 W BackupManagerService: dataChanged but no participant pkg='com.tct.tablet.launcher' uid=10094
-10-28 03:33:01.087  2874  2939 W FusedProxy: Odd, no component found for service com.android.location.service.FusedProvider
-10-28 03:33:01.120 12348 12373 W time    : icon time = 0
-10-28 03:33:01.224  4886  7518 W GCM     : Unexpected forwarded intent: Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.example.rocketplan_android.dev flg=0x4000010 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) }
-10-28 03:33:01.227  4886  7518 W NetworkScheduler: Unexpected forwarded intent: Intent { act=android.intent.action.PACKAGE_ADDED dat=package:com.example.rocketplan_android.dev flg=0x4000010 pkg=com.google.android.gms cmp=com.google.android.gms/.chimera.PersistentIntentOperationService (has extras) }
-10-28 03:33:01.308  7521  7521 W System  : ClassLoader referenced unknown path: /system/priv-app/GooglePartnerSetup/lib/arm
-10-28 03:33:01.369  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:33:01.448  2874  5959 E NetdConnector: yingjie i: 35 ,start: 0
-10-28 03:33:01.518 16069 16069 E PackageIntentReceiver: action android.intent.action.PACKAGE_ADDED com.example.rocketplan_android.dev
-10-28 03:33:02.781   347   347 E cnss-daemon: Stale or unreachable neighbors, ndm state: 4
-10-28 03:33:03.208  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:33:03.214  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:33:03.214  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:33:10.241   502   502 E VM_BMS  : failed to set wake_lock rc=-13
-10-28 03:33:10.246   502   502 E VM_BMS  : failed to wake_unlock rc=-13
-10-28 03:33:11.626  9898 19294 W GetGamesServiceReqFacto: Parsing request with ignored arguments. signInOptionsBundle [Bundle[{com.google.android.gms.signin.internal.serverClientId=null, com.google.android.gms.signin.internal.usePromptModeForAuthCode=true, com.google.android.gms.signin.internal.logSessionId=null, com.google.android.gms.signin.internal.hostedDomain=null, com.google.android.gms.signin.internal.offlineAccessRequested=false, com.google.android.gms.signin.internal.waitForAccessTokenRefresh=false, com.google.android.gms.signin.internal.clientRequestedAccount=Account {name=<<default account>>, type=com.google}, com.google.android.gms.signin.internal.idTokenRequested=false, com.google.android.gms.signin.internal.forceCodeForRefreshToken=false}]], isRetryingSignIn [false], skipWelcomePopup [false], requireGooglePlus [false]
-10-28 03:33:13.229  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:33:13.236  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:33:13.236  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
-10-28 03:33:16.877  2874  6368 E IzatSvc_PassiveLocListener: E/Exiting with error virtual void izat_manager::IzatPassiveLocationListener::onLocationChanged(const izat_manager::IzatLocation *, const IzatLocationStatus) line 171 "1"
-10-28 03:33:33.271  6568  6618 W QCNEJ   : |CORE| CNE received unexpected action: android.intent.action.BATTERY_CHANGED
-10-28 03:33:33.276  6384  6384 E QtiImsExtUtils: getConfigForPhoneId subId is invalid
-10-28 03:33:33.276  6384  6384 E QtiImsExtUtils: isCarrierConfigEnabled bundle is null
+11-03 18:38:13.302   830  3379 W ProcessStats: Tracking association SourceState{7401617 system/1000 ImpFg #6790} whose proc state 5 is better than process ProcessState{a3e81 com.google.android.permissioncontroller/10191 pkg=com.google.android.permissioncontroller} proc state 14 (2 skipped)
+11-03 18:38:13.322   830  1024 W MagnificationConnectionManager: requestConnection duplicated request: connect=false, mConnectionState=DISCONNECTED
+11-03 18:38:13.324   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.325   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.325   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.326   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.326   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.327   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.327   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.328   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.329   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.330   830   830 W libbinder.IPCThreadState: Sending oneway calls to frozen process.
+11-03 18:38:13.432   830  2089 E RoleControllerServiceImpl: Default/fallback role holder package doesn't qualify for the role, package: com.google.android.gms, role: android.app.role.WALLET, user: 0
+11-03 18:38:13.445 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:13.447 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:13.447 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:13.453 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:13.475 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:13.481   830  2089 W SignedPackage: Cannot get ApplicationInfo for package: com.google.android.devicelockcontroller
+11-03 18:38:13.495 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:13.507  1380  2634 W HWUI    : Failed to choose config with EGL_SWAP_BEHAVIOR_PRESERVED, retrying without...
+11-03 18:38:13.508  1380  2634 W HWUI    : Failed to initialize 101010-2 format, error = EGL_SUCCESS
+11-03 18:38:13.594 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:13.594 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:13.921 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:13.923 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:13.924 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:13.927 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:13.927 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:14.002 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:14.002 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:14.588 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:14.603 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:14.608 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:14.609 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:14.610 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:14.689 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:14.690 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:15.221 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:15.231 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:15.233 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:15.236 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:15.236 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:15.272 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:15.273 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:15.756 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:15.761 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:15.761 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:15.773 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:15.777 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:15.850 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:15.851 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:16.351 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:16.353 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:16.355 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:16.357 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:16.357 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:16.408 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:16.409 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:16.819 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:16.822 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:16.822 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:16.834 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:16.835 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:16.971 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=NotLoading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:16.972 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=NotLoading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:18.621 10061 10061 D RoomDetailFrag: 📥 Received new PagingData, submitting to adapter
+11-03 18:38:18.625 10061 10061 D RoomDetailFrag: 📊 LoadState: refresh=Loading(endOfPaginationReached=false), append=NotLoading(endOfPaginationReached=false), itemCount=30
+11-03 18:38:18.625 10061 10061 D RoomDetailFrag: 👁 updatePhotoVisibility: latestPhotoCount=760, adapterItemCount=30, loadState=Loading(endOfPaginationReached=false), hasPhotos=true, showPlaceholder=false
+11-03 18:38:18.629 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:18.635 10061 10061 D RoomDetailVM: ✅ Room ready: 'Basement', localRoomId=38, serverId=5949, photoLookupId=5949, photoCount=760, noteCount=0
+11-03 18:38:20.340 10061 10083 D API     : 📚 [syncProjectGraph] Fetched 5 albums from API
+11-03 18:38:20.340 10061 10083 D API     :    Album[26740] 'Damage Assessment' type=null
+11-03 18:38:20.340 10061 10083 D API     :    Album[26741] 'Daily Progress' type=null
+11-03 18:38:20.340 10061 10083 D API     :    Album[26742] 'Pre-existing Damages' type=null
+11-03 18:38:20.341 10061 10083 D API     :    Album[26743] 'Betterments' type=null
+11-03 18:38:20.341 10061 10083 D API     :    Album[26744] 'Contents' type=null

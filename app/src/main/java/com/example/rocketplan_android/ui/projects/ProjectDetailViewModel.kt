@@ -156,12 +156,8 @@ class ProjectDetailViewModel(
             "📚 Loading ${this.size} albums: ${this.map { "[${it.albumId}] ${it.name} (${it.albumableType ?: "null"})" }}"
         )
 
-        // Only show room-scoped albums at the project level
-        val roomScoped = this.filter { album ->
-            album.roomId != null || album.albumableType?.endsWith("Room", ignoreCase = true) == true
-        }
-
-        return roomScoped.map { album ->
+        // Show all albums (both project-level and room-scoped)
+        return this.map { album ->
             AlbumSection(
                 albumId = album.albumId,
                 name = album.name,
