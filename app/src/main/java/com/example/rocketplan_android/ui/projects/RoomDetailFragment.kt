@@ -327,11 +327,12 @@ class RoomDetailFragment : Fragment() {
             return
         }
 
-        val hasPhotos = latestPhotoCount > 0 || photoAdapter.itemCount > 0
-        val isLoading = loadState is LoadState.Loading && !hasPhotos
+        // Show RecyclerView immediately if adapter has items, even if latestPhotoCount hasn't updated yet
+        val hasPhotos = photoAdapter.itemCount > 0 || latestPhotoCount > 0
+        val isLoading = loadState is LoadState.Loading && photoAdapter.itemCount == 0
         loadingOverlay.isVisible = isLoading
 
-        val showPlaceholder = !hasPhotos && loadState !is LoadState.Loading
+        val showPlaceholder = photoAdapter.itemCount == 0 && latestPhotoCount == 0 && loadState !is LoadState.Loading
 
         Log.d(TAG, "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=${photoAdapter.itemCount}, loadState=$loadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder")
 

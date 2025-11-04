@@ -210,6 +210,11 @@
         android:id="@+id/syncStatusFragment"
         android:name="com.example.rocketplan_android.ui.syncstatus.SyncStatusFragment"
         android:label="Sync Status"
-        tools:layout="@layout/fragment_sync_status" />
+        tools:layout="@layout/fragment_sync_status">
+
+        <action
+            android:id="@+id/action_syncStatusFragment_to_projectLandingFragment"
+            app:destination="@id/projectLandingFragment" />
+    </fragment>
 
 </navigation>

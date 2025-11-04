@@ -40,8 +40,9 @@ class SyncStatusFragment : Fragment() {
         }
 
         adapter = SyncStatusAdapter { projectStatus ->
-            // TODO: Navigate to detail screen with projectId
-            // For now, we'll just add the click handling
+            val action = SyncStatusFragmentDirections
+                .actionSyncStatusFragmentToProjectLandingFragment(projectStatus.projectId)
+            findNavController().navigate(action)
         }
         binding.syncStatusRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
