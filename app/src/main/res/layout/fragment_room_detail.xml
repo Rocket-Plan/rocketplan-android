@@ -220,6 +220,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:minHeight="200dp"
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_room_photo" />
 
