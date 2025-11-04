@@ -204,4 +204,12 @@
             android:id="@+id/action_rocketScanFragment_to_roomDetailFragment"
             app:destination="@id/roomDetailFragment" />
     </fragment>
+
+    <!-- Sync Status Fragment -->
+    <fragment
+        android:id="@+id/syncStatusFragment"
+        android:name="com.example.rocketplan_android.ui.syncstatus.SyncStatusFragment"
+        android:label="Sync Status"
+        tools:layout="@layout/fragment_sync_status" />
+
 </navigation>

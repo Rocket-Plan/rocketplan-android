@@ -180,8 +180,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "onOptionsItemSelected: ${item.itemId}")
+        }
         return when (item.itemId) {
             R.id.action_profile -> {
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "Profile button clicked, showing menu")
+                }
                 showProfileMenu()
                 true
             }
@@ -268,12 +274,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProfileMenu() {
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "showProfileMenu() called")
+        }
         val toolbar = binding.appBarMain.toolbar
         val anchor = toolbar.findViewById<View>(R.id.action_profile) ?: toolbar
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "Creating PopupMenu with anchor: $anchor")
+        }
         PopupMenu(this, anchor, Gravity.END).apply {
             menuInflater.inflate(R.menu.profile_menu, menu)
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Profile menu inflated with ${menu.size()} items")
+            }
             setOnMenuItemClickListener { menuItem ->
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "Profile menu item clicked: ${menuItem.itemId}")
+                }
                 when (menuItem.itemId) {
+                    R.id.action_sync_status -> {
+                        if (BuildConfig.ENABLE_LOGGING) {
+                            Log.d(TAG, "Navigating to Sync Status")
+                        }
+                        findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.syncStatusFragment)
+                        true
+                    }
                     R.id.action_sign_out -> {
                         performSignOut()
                         true

@@ -103,6 +103,10 @@ class ProjectsFragment : Fragment() {
             menuInflater.inflate(R.menu.profile_menu, menu)
             setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
+                    R.id.action_sync_status -> {
+                        findNavController().navigate(R.id.syncStatusFragment)
+                        true
+                    }
                     R.id.action_sign_out -> {
                         performSignOut()
                         true
