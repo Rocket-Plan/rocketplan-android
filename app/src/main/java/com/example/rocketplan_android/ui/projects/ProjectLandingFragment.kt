@@ -31,9 +31,7 @@ class ProjectLandingFragment : Fragment() {
         ProjectLandingViewModel.provideFactory(requireActivity().application, args.projectId)
     }
 
-    private lateinit var backButton: ImageButton
     private lateinit var menuButton: ImageButton
-    private lateinit var headerTitle: TextView
     private lateinit var projectTitle: TextView
     private lateinit var aliasAction: TextView
     private lateinit var projectCode: TextView
@@ -65,9 +63,7 @@ class ProjectLandingFragment : Fragment() {
     }
 
     private fun bindViews(root: View) {
-        backButton = root.findViewById(R.id.backButton)
         menuButton = root.findViewById(R.id.menuButton)
-        headerTitle = root.findViewById(R.id.headerTitle)
         projectTitle = root.findViewById(R.id.projectTitle)
         aliasAction = root.findViewById(R.id.projectAliasAction)
         projectCode = root.findViewById(R.id.projectCode)
@@ -85,11 +81,9 @@ class ProjectLandingFragment : Fragment() {
         allNotesIcon = root.findViewById(R.id.allNotesIcon)
         allNotesSubtitle = root.findViewById(R.id.allNotesSubtitle)
 
-        headerTitle.text = getString(R.string.project_overview_header)
     }
 
     private fun bindListeners() {
-        backButton.setOnClickListener { findNavController().navigateUp() }
         menuButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.menu), Toast.LENGTH_SHORT).show()
         }
@@ -174,11 +168,5 @@ class ProjectLandingFragment : Fragment() {
             R.string.project_notes_subtitle_with_count,
             summary.noteCount
         )
-
-        // Ensure icons respect purple tint for cohesion
-        val iconTint = requireContext().getColor(R.color.main_purple)
-        addProjectInfoIcon.setColorFilter(iconTint)
-        rocketScanIcon.setColorFilter(iconTint)
-        allNotesIcon.setColorFilter(iconTint)
     }
 }
