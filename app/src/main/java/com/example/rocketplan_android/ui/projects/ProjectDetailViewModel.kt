@@ -25,7 +25,7 @@ class ProjectDetailViewModel(
 
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
-    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val syncQueueManager = rocketPlanApp.syncQueueManager
 
     private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
     val uiState: StateFlow<ProjectDetailUiState> = _uiState
@@ -34,12 +34,9 @@ class ProjectDetailViewModel(
     val selectedTab: StateFlow<ProjectDetailTab> = _selectedTab
 
     init {
-        // Trigger sync once per app session for this project (avoid repeated refresh on recreation)
-        if (syncOnce(projectId)) {
-            viewModelScope.launch {
-                runCatching { offlineSyncRepository.syncProjectGraph(projectId) }
-            }
-        }
+        // Prioritize this project in the sync queue
+        // This ensures project essentials are synced via the queue (can be cancelled)
+        syncQueueManager.prioritizeProject(projectId)
 
         viewModelScope.launch {
             combine(
@@ -168,13 +165,6 @@ class ProjectDetailViewModel(
     }
 
     companion object {
-        // Track which projects have already been synced this app session
-        private val syncedProjects: MutableSet<Long> = java.util.Collections.synchronizedSet(mutableSetOf())
-
-        private fun syncOnce(projectId: Long): Boolean {
-            return if (syncedProjects.add(projectId)) true else false
-        }
-
         fun provideFactory(
             application: Application,
             projectId: Long

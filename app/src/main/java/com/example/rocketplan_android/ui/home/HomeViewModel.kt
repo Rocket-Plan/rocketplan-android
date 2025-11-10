@@ -3,21 +3,17 @@ package com.example.rocketplan_android.ui.home
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.map
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
-import com.example.rocketplan_android.data.repository.OfflineSyncRepository
-import kotlinx.coroutines.launch
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val localDataService: LocalDataService =
-        (application as RocketPlanApplication).localDataService
-    private val offlineSyncRepository: OfflineSyncRepository =
-        (application as RocketPlanApplication).offlineSyncRepository
+    private val rocketPlanApp = application as RocketPlanApplication
+    private val localDataService = rocketPlanApp.localDataService
+    private val syncQueueManager = rocketPlanApp.syncQueueManager
 
     val projects: LiveData<List<OfflineProjectEntity>> =
         localDataService.observeProjects().asLiveData()
@@ -37,20 +33,17 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun refreshProject(projectId: Long) {
-        viewModelScope.launch {
-            runCatching { offlineSyncRepository.syncProjectGraph(projectId) }
-        }
+        // Route through SyncQueueManager so it can be cancelled
+        syncQueueManager.prioritizeProject(projectId)
     }
 
     fun refreshCompanyProjects(companyId: Long) {
-        viewModelScope.launch {
-            runCatching { offlineSyncRepository.syncCompanyProjects(companyId) }
-        }
+        // Route through SyncQueueManager
+        syncQueueManager.refreshProjects()
     }
 
     fun refreshUserProjects(userId: Long) {
-        viewModelScope.launch {
-            runCatching { offlineSyncRepository.syncUserProjects(userId) }
-        }
+        // Route through SyncQueueManager
+        syncQueueManager.refreshProjects()
     }
 }

@@ -1,15 +1,23 @@
 package com.example.rocketplan_android.ui.projects
 
+import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.webkit.MimeTypeMap
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -22,13 +30,19 @@ import androidx.paging.LoadState
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
-import kotlinx.coroutines.launch
+import java.io.File
+import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class RoomDetailFragment : Fragment() {
 
@@ -47,6 +61,7 @@ class RoomDetailFragment : Fragment() {
     private lateinit var photosTabButton: MaterialButton
     private lateinit var damagesTabButton: MaterialButton
     private lateinit var noteCard: View
+    private lateinit var addPhotoCard: View
     private lateinit var noteCardLabel: TextView
     private lateinit var noteCardSummary: TextView
     private lateinit var gridSectionTitle: TextView
@@ -60,6 +75,10 @@ class RoomDetailFragment : Fragment() {
     private lateinit var loadingOverlay: View
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
+    private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
+    private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
+    private var pendingPhotoFile: File? = null
+    private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -70,9 +89,7 @@ class RoomDetailFragment : Fragment() {
     }
 
     private val addPhotoAdapter by lazy {
-        RoomPhotoAddAdapter {
-            Toast.makeText(requireContext(), getString(R.string.add_photo), Toast.LENGTH_SHORT).show()
-        }
+        RoomPhotoAddAdapter { handleAddPhotoClick() }
     }
 
     private val photoAdapter by lazy {
@@ -83,6 +100,41 @@ class RoomDetailFragment : Fragment() {
 
     private val photoLoadStateAdapter by lazy {
         RoomPhotoLoadStateAdapter { photoAdapter.retry() }
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        cameraPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+                val granted = permissions.entries.all { it.value }
+                if (granted) {
+                    launchCameraCapture()
+                } else if (isAdded) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.camera_permission_required),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        takePictureLauncher =
+            registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+                val photoFile = pendingPhotoFile
+                if (success && photoFile != null) {
+                    val mimeType = photoFile.guessMimeType()
+                    viewModel.onLocalPhotoCaptured(photoFile, mimeType)
+                    if (isAdded) {
+                        Toast.makeText(
+                            requireContext(),
+                            getString(R.string.photo_saved_to_room),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    photoFile?.delete()
+                }
+                pendingPhotoFile = null
+            }
     }
 
     override fun onCreateView(
@@ -103,8 +155,16 @@ class RoomDetailFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "▶️ onResume -> ensureRoomPhotosFresh()")
-        viewModel.ensureRoomPhotosFresh()
+        Log.d(TAG, "▶️ onResume -> onRoomVisible()")
+        viewModel.onRoomVisible()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Only resume background sync when actually leaving the room
+        // onStop is not called for temporary pauses like camera launches
+        Log.d(TAG, "⏹️ onStop -> onRoomHidden()")
+        viewModel.onRoomHidden()
     }
 
     private fun bindViews(root: View) {
@@ -119,6 +179,7 @@ class RoomDetailFragment : Fragment() {
         noteCard = root.findViewById(R.id.roomNoteCard)
         noteCardLabel = root.findViewById(R.id.roomNoteLabel)
         noteCardSummary = root.findViewById(R.id.roomNoteSummary)
+        addPhotoCard = root.findViewById(R.id.addPhotoQuickCard)
         albumsHeader = root.findViewById(R.id.roomAlbumsHeader)
         albumsRecyclerView = root.findViewById(R.id.roomAlbumsRecyclerView)
         gridSectionTitle = root.findViewById(R.id.gridSectionTitle)
@@ -207,8 +268,9 @@ class RoomDetailFragment : Fragment() {
         menuButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.menu), Toast.LENGTH_SHORT).show()
         }
+        addPhotoCard.setOnClickListener { handleAddPhotoClick() }
         addPhotoChip.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.add_photo), Toast.LENGTH_SHORT).show()
+            handleAddPhotoClick()
         }
         damageAssessmentChip.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
@@ -216,6 +278,60 @@ class RoomDetailFragment : Fragment() {
         noteCard.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.add_note), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun handleAddPhotoClick() {
+        if (hasCameraPermission()) {
+            launchCameraCapture()
+        } else {
+            cameraPermissionLauncher.launch(cameraPermissions)
+        }
+    }
+
+    private fun hasCameraPermission(): Boolean =
+        cameraPermissions.all {
+            ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
+        }
+
+    private fun launchCameraCapture() {
+        val context = context ?: return
+        val photoFile = createTempPhotoFile() ?: return
+        val uri = FileProvider.getUriForFile(
+            context,
+            "${BuildConfig.APPLICATION_ID}.fileprovider",
+            photoFile
+        )
+        pendingPhotoFile = photoFile
+        try {
+            takePictureLauncher.launch(uri)
+        } catch (error: ActivityNotFoundException) {
+            photoFile.delete()
+            pendingPhotoFile = null
+            Toast.makeText(context, getString(R.string.camera_launch_error), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun createTempPhotoFile(): File? {
+        val context = context ?: return null
+        val storageDir = File(context.cacheDir, "captured_photos")
+        if (!storageDir.exists() && !storageDir.mkdirs()) {
+            Toast.makeText(context, getString(R.string.camera_file_error), Toast.LENGTH_SHORT).show()
+            return null
+        }
+        return try {
+            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            File.createTempFile("rocketplan_${timeStamp}_", ".jpg", storageDir)
+        } catch (error: IOException) {
+            Toast.makeText(context, getString(R.string.camera_file_error), Toast.LENGTH_SHORT).show()
+            null
+        }
+    }
+
+    private fun File.guessMimeType(): String {
+        val extension = extension.lowercase(Locale.ROOT)
+        return MimeTypeMap.getSingleton()
+            .getMimeTypeFromExtension(extension)
+            ?: "image/jpeg"
     }
 
     private fun observeViewModel() {

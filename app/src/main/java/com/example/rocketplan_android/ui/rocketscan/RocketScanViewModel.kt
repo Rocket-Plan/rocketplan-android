@@ -67,6 +67,18 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun pauseBackgroundSync() {
+        currentProjectId?.let { projectId ->
+            syncQueueManager.cancelProjectSync(projectId)
+        }
+    }
+
+    fun resumeBackgroundSync() {
+        currentProjectId?.let { projectId ->
+            syncQueueManager.prioritizeProject(projectId)
+        }
+    }
+
     private fun buildRoomItems(
         rooms: List<OfflineRoomEntity>,
         photoSummaries: List<RoomPhotoSummary>

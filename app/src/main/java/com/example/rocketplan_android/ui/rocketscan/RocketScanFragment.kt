@@ -43,6 +43,18 @@ class RocketScanFragment : Fragment() {
         viewModel.loadProject(args.projectId)
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Pause background sync while user is viewing RocketScan
+        viewModel.pauseBackgroundSync()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        // Resume background sync when user leaves RocketScan
+        viewModel.resumeBackgroundSync()
+    }
+
     private fun setupRecyclerView() {
         roomsAdapter = ProjectRoomsAdapter { room ->
             val action = RocketScanFragmentDirections
