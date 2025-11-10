@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
+import com.example.rocketplan_android.ui.projects.ProjectSyncTracker
 import com.example.rocketplan_android.ui.projects.RoomCard
 import com.example.rocketplan_android.ui.projects.RoomListItem
 import kotlinx.coroutines.Job
@@ -63,7 +64,7 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     private fun requestProjectSync(projectId: Long) {
-        if (syncedProjects.add(projectId)) {
+        if (ProjectSyncTracker.markAsSynced(projectId)) {
             viewModelScope.launch {
                 runCatching { offlineSyncRepository.syncProjectGraph(projectId) }
             }
@@ -122,5 +123,3 @@ sealed class RocketScanUiState {
     data class Content(val items: List<RoomListItem>) : RocketScanUiState()
     data class Error(val message: String) : RocketScanUiState()
 }
-
-private val syncedProjects = java.util.Collections.synchronizedSet(mutableSetOf<Long>())

@@ -7,10 +7,21 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.model.ProjectStatus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+
+/**
+ * Shared singleton to track which projects have been synced in this app session.
+ * Prevents duplicate syncs across different ViewModels.
+ */
+object ProjectSyncTracker {
+    private val syncedProjects = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
+
+    fun markAsSynced(projectId: Long): Boolean = syncedProjects.add(projectId)
+}
 
 sealed class ProjectLandingUiState {
     object Loading : ProjectLandingUiState()
@@ -22,6 +33,7 @@ data class ProjectLandingSummary(
     val projectCode: String,
     val aliasText: String?,
     val aliasIsActionable: Boolean,
+    val status: ProjectStatus?,
     val statusLabel: String?,
     val noteCount: Int
 )
@@ -33,12 +45,16 @@ class ProjectLandingViewModel(
 
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
+    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
 
     private val _uiState: MutableStateFlow<ProjectLandingUiState> =
         MutableStateFlow(ProjectLandingUiState.Loading)
     val uiState: StateFlow<ProjectLandingUiState> = _uiState
 
     init {
+        // Trigger background sync for this project
+        requestProjectSync(projectId)
+
         viewModelScope.launch {
             combine(
                 localDataService.observeProjects(),
@@ -58,6 +74,14 @@ class ProjectLandingViewModel(
         }
     }
 
+    private fun requestProjectSync(projectId: Long) {
+        if (ProjectSyncTracker.markAsSynced(projectId)) {
+            viewModelScope.launch {
+                runCatching { offlineSyncRepository.syncProjectGraph(projectId) }
+            }
+        }
+    }
+
     private fun OfflineProjectEntity.toSummary(noteCount: Int): ProjectLandingSummary {
         val titleCandidates = listOfNotNull(
             addressLine1?.takeIf { it.isNotBlank() },
@@ -73,16 +97,26 @@ class ProjectLandingViewModel(
         val aliasText = alias?.takeIf { it.isNotBlank() }
         val aliasActionable = aliasText == null
 
-        val statusLabel = status.takeIf { it.isNotBlank() }?.uppercase()
+        val projectStatus = ProjectStatus.fromApiValue(status)
+        val statusLabel = projectStatus?.let { projectStatus ->
+            getApplication<Application>().getString(projectStatus.labelRes)
+        }
 
         return ProjectLandingSummary(
             projectTitle = titleText,
             projectCode = codeText,
             aliasText = aliasText,
             aliasIsActionable = aliasActionable,
+            status = projectStatus,
             statusLabel = statusLabel,
             noteCount = noteCount
         )
+    }
+
+    fun updateProjectStatus(projectStatus: ProjectStatus) {
+        viewModelScope.launch {
+            localDataService.updateProjectStatus(projectId, projectStatus)
+        }
     }
 
     companion object {

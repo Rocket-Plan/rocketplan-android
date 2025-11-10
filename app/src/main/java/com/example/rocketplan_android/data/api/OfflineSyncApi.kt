@@ -40,7 +40,7 @@ interface OfflineSyncApi {
     @GET("/api/projects/{projectId}")
     suspend fun getProjectDetail(
         @Path("projectId") projectId: Long,
-        @Query("include") include: String? = "projectStatus,address,projectType,property,locations,rooms.roomType,rooms.level,notes,atmosphericLogs,moistureLogs,equipment,damages,workScopes,users"
+        @Query("include") include: String? = "projectStatus,address,projectType,properties,notes,atmosphericLogs"
     ): ProjectDetailDto
 
     @GET("/api/projects/{projectId}/users")

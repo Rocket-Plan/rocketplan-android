@@ -86,7 +86,7 @@ class ProjectRoomsAdapter(
                 room.photoCount,
                 room.photoCount
             )
-            // If there are 0 photos, show the placeholder (no spinner)
+            // Don't show spinner - room has been synced, it just has no photos
             spinner.isVisible = false
 
             thumbnail.load(room.thumbnailUrl) {
