@@ -13,16 +13,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
-/**
- * Shared singleton to track which projects have been synced in this app session.
- * Prevents duplicate syncs across different ViewModels.
- */
-object ProjectSyncTracker {
-    private val syncedProjects = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
-
-    fun markAsSynced(projectId: Long): Boolean = syncedProjects.add(projectId)
-}
-
 sealed class ProjectLandingUiState {
     object Loading : ProjectLandingUiState()
     data class Ready(val summary: ProjectLandingSummary) : ProjectLandingUiState()
@@ -45,15 +35,16 @@ class ProjectLandingViewModel(
 
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
-    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val syncQueueManager = rocketPlanApp.syncQueueManager
 
     private val _uiState: MutableStateFlow<ProjectLandingUiState> =
         MutableStateFlow(ProjectLandingUiState.Loading)
     val uiState: StateFlow<ProjectLandingUiState> = _uiState
 
     init {
-        // Trigger background sync for this project
-        requestProjectSync(projectId)
+        // Prioritize this project in the sync queue
+        // This ensures the project is synced immediately and jumps to front of queue
+        syncQueueManager.prioritizeProject(projectId)
 
         viewModelScope.launch {
             combine(
@@ -70,14 +61,6 @@ class ProjectLandingViewModel(
                 }
             }.collect { state ->
                 _uiState.value = state
-            }
-        }
-    }
-
-    private fun requestProjectSync(projectId: Long) {
-        if (ProjectSyncTracker.markAsSynced(projectId)) {
-            viewModelScope.launch {
-                runCatching { offlineSyncRepository.syncProjectGraph(projectId) }
             }
         }
     }

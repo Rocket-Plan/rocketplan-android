@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
-import com.example.rocketplan_android.ui.projects.ProjectSyncTracker
 import com.example.rocketplan_android.ui.projects.RoomCard
 import com.example.rocketplan_android.ui.projects.RoomListItem
 import kotlinx.coroutines.Job
@@ -19,7 +18,7 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
 
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
-    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val syncQueueManager = rocketPlanApp.syncQueueManager
 
     private val _uiState = MutableStateFlow<RocketScanUiState>(RocketScanUiState.Loading)
     val uiState: StateFlow<RocketScanUiState> = _uiState
@@ -41,7 +40,9 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
         roomsJob?.cancel()
         _uiState.value = RocketScanUiState.Loading
 
-        requestProjectSync(projectId)
+        // Prioritize this project in the sync queue
+        // This ensures rooms are fetched first, jumping ahead of other projects
+        syncQueueManager.prioritizeProject(projectId)
 
         roomsJob = viewModelScope.launch {
             combine(
@@ -60,14 +61,9 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun retry() {
-        currentProjectId?.let { loadProject(it) }
-    }
-
-    private fun requestProjectSync(projectId: Long) {
-        if (ProjectSyncTracker.markAsSynced(projectId)) {
-            viewModelScope.launch {
-                runCatching { offlineSyncRepository.syncProjectGraph(projectId) }
-            }
+        currentProjectId?.let { projectId ->
+            // Re-prioritize the project for retry
+            syncQueueManager.prioritizeProject(projectId)
         }
     }
 
