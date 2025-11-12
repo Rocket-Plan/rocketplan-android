@@ -29,6 +29,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -37,6 +38,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import kotlin.collections.buildSet
 
@@ -69,7 +72,11 @@ class RoomDetailViewModel(
     private var isRefreshing = false
     private var lastSyncedServerRoomId: Long? = null
     private var currentPhotoLookupRoomId: Long? = null
+    private var lastSnapshotRoomId: Long? = null
     private val _resolvedRoom = MutableStateFlow<OfflineRoomEntity?>(null)
+    private val snapshotRefreshMutex = Mutex()
+    private val _isSnapshotRefreshing = MutableStateFlow(false)
+    val isSnapshotRefreshing: StateFlow<Boolean> = _isSnapshotRefreshing.asStateFlow()
 
     init {
         Log.d(TAG, "📦 init(projectId=$projectId, roomId=$roomId)")
@@ -117,8 +124,12 @@ class RoomDetailViewModel(
                 // Photos and albums are persisted with server room ID when available
                 val photoLookupRoomId = room.serverId ?: room.roomId
                 currentPhotoLookupRoomId = photoLookupRoomId
-                Log.d(TAG, "🗂 Refreshing photo snapshot for roomId=$photoLookupRoomId")
-                localDataService.refreshRoomPhotoSnapshot(photoLookupRoomId)
+                if (lastSnapshotRoomId != photoLookupRoomId) {
+                    Log.d(TAG, "🗂 Refreshing photo snapshot for roomId=$photoLookupRoomId")
+                    refreshSnapshot(photoLookupRoomId)
+                } else {
+                    Log.d(TAG, "🗂 Snapshot already fresh for roomId=$photoLookupRoomId; skipping refresh")
+                }
                 if (room.serverId != null && room.serverId != room.roomId) {
                     Log.d(TAG, "🧹 Clearing legacy snapshot for localRoomId=${room.roomId}")
                     localDataService.clearRoomPhotoSnapshot(room.roomId)
@@ -189,7 +200,7 @@ class RoomDetailViewModel(
                 )
                 offlineSyncRepository.refreshRoomPhotos(projectId, remoteRoomId)
                 Log.d(TAG, "🗂 Sync complete; refreshing snapshot for roomId=$remoteRoomId")
-                localDataService.refreshRoomPhotoSnapshot(remoteRoomId)
+                refreshSnapshot(remoteRoomId)
             } catch (t: Throwable) {
                 Log.e(TAG, "❌ Failed to refresh photos for remoteRoomId=$remoteRoomId", t)
                 remoteLogger.log(
@@ -261,6 +272,18 @@ class RoomDetailViewModel(
             current.title != next.title
     }
 
+    private suspend fun refreshSnapshot(roomId: Long) {
+        snapshotRefreshMutex.withLock {
+            _isSnapshotRefreshing.value = true
+            try {
+                localDataService.refreshRoomPhotoSnapshot(roomId)
+                lastSnapshotRoomId = roomId
+            } finally {
+                _isSnapshotRefreshing.value = false
+            }
+        }
+    }
+
     private fun OfflinePhotoEntity.toPhotoItem(formatter: SimpleDateFormat): RoomPhotoItem =
         RoomPhotoItem(
             id = photoId,
@@ -319,7 +342,7 @@ class RoomDetailViewModel(
             )
             localDataService.savePhotos(listOf(entity))
             Log.d(TAG, "♻️ Refreshing snapshot after local capture for roomId=$lookupRoomId")
-            localDataService.refreshRoomPhotoSnapshot(lookupRoomId)
+            refreshSnapshot(lookupRoomId)
             Log.d(TAG, "✅ Photo saved to local database: uuid=${entity.uuid}, isDirty=true, syncStatus=PENDING")
 
             remoteLogger.log(

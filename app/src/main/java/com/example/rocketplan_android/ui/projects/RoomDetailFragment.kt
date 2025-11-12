@@ -80,6 +80,8 @@ class RoomDetailFragment : Fragment() {
     private var pendingPhotoFile: File? = null
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
     private var photoLoadStartTime: Long = 0L
+    private var latestLoadState: LoadState? = null
+    private var snapshotRefreshInProgress: Boolean = false
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -347,6 +349,7 @@ class RoomDetailFragment : Fragment() {
                 launch {
                     photoAdapter.loadStateFlow.collectLatest { loadStates ->
                         val refresh = loadStates.refresh
+                        latestLoadState = refresh
                         val itemCount = photoAdapter.itemCount
 
                         // Track load timing
@@ -377,13 +380,20 @@ class RoomDetailFragment : Fragment() {
 
                         Log.d(TAG, "📊 LoadState: refresh=$refresh, append=${loadStates.append}, itemCount=$itemCount")
                         photoLoadStateAdapter.loadState = loadStates.append
-                        updatePhotoVisibility(loadStates.refresh)
+                        updatePhotoVisibility(refresh)
                     }
                 }
                 launch {
                     viewModel.selectedTab.collect { tab ->
                         applyTabState(tab)
                         updateToggleStyles(tab)
+                    }
+                }
+                launch {
+                    viewModel.isSnapshotRefreshing.collect { refreshing ->
+                        snapshotRefreshInProgress = refreshing
+                        Log.d(TAG, if (refreshing) "🌀 Snapshot refresh started" else "✅ Snapshot refresh finished")
+                        updatePhotoVisibility()
                     }
                 }
             }
@@ -455,7 +465,17 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun updatePhotoVisibility(loadState: LoadState? = null) {
-        if (viewModel.selectedTab.value != RoomDetailTab.PHOTOS) {
+        loadState?.let { latestLoadState = it }
+        val activeTab = viewModel.selectedTab.value
+        if (activeTab != RoomDetailTab.PHOTOS) {
+            photosRecyclerView.isVisible = false
+            placeholderText.isVisible = false
+            loadingOverlay.isVisible = snapshotRefreshInProgress
+            return
+        }
+
+        if (snapshotRefreshInProgress) {
+            loadingOverlay.isVisible = true
             photosRecyclerView.isVisible = false
             placeholderText.isVisible = false
             return
@@ -463,12 +483,16 @@ class RoomDetailFragment : Fragment() {
 
         val adapterItemCount = photoAdapter.itemCount
         val hasPhotos = adapterItemCount > 0
-        val isLoading = loadState is LoadState.Loading && adapterItemCount == 0
+        val effectiveLoadState = latestLoadState
+        val isLoading = effectiveLoadState is LoadState.Loading && adapterItemCount == 0
         loadingOverlay.isVisible = isLoading
 
-        val showPlaceholder = adapterItemCount == 0 && latestPhotoCount == 0 && loadState !is LoadState.Loading
+        val showPlaceholder = adapterItemCount == 0 && latestPhotoCount == 0 && effectiveLoadState !is LoadState.Loading
 
-        Log.d(TAG, "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=$adapterItemCount, loadState=$loadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder")
+        Log.d(
+            TAG,
+            "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=$adapterItemCount, loadState=$effectiveLoadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder, snapshotRefreshing=$snapshotRefreshInProgress"
+        )
 
         photosRecyclerView.isVisible = hasPhotos
         placeholderText.isVisible = showPlaceholder

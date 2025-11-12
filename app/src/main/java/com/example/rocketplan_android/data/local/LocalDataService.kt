@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.local
 
 import android.content.Context
+import android.util.Log
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
@@ -140,6 +141,13 @@ class LocalDataService private constructor(
                 .filter { it.hasRenderableAsset() }
             dao.clearRoomPhotoSnapshots(roomId)
             if (photos.isEmpty()) return@withTransaction
+
+            // Log first 10 photos to verify ordering
+            Log.d("LocalDataService", "📸 Snapshot for room $roomId: ${photos.size} photos")
+            photos.take(10).forEachIndexed { index, photo ->
+                Log.d("LocalDataService", "  [$index] id=${photo.photoId}, capturedAt=${photo.capturedAt}, createdAt=${photo.createdAt}")
+            }
+
             val snapshots = photos.mapIndexed { index, photo ->
                 OfflineRoomPhotoSnapshotEntity(
                     roomId = roomId,
@@ -150,6 +158,13 @@ class LocalDataService private constructor(
                     capturedOn = photo.capturedAt ?: photo.createdAt
                 )
             }
+
+            // Log first 10 snapshot entries being inserted
+            Log.d("LocalDataService", "📝 Inserting ${snapshots.size} snapshot entries")
+            snapshots.take(10).forEach { snapshot ->
+                Log.d("LocalDataService", "  orderIndex=${snapshot.orderIndex}, photoId=${snapshot.photoId}, capturedOn=${snapshot.capturedOn}")
+            }
+
             dao.insertRoomPhotoSnapshots(snapshots)
         }
     }
