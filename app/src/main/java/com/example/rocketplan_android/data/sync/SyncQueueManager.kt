@@ -249,6 +249,12 @@ class SyncQueueManager(
                             Log.d(TAG, "⏭️ Photo sync already pending for project ${job.projectId}, skipping duplicate")
                             false
                         } else {
+                            // Drop any queued FAST job so the full photo run can start immediately.
+                            taskIndex[job.key]?.let { existing ->
+                                Log.d(TAG, "♻️ Replacing queued FAST job with FULL sync for project ${job.projectId}")
+                                queue.remove(existing)
+                                taskIndex.remove(existing.key)
+                            }
                             pendingPhotoSyncs.add(job.projectId)
                             true
                         }
@@ -291,7 +297,11 @@ class SyncQueueManager(
 
     private suspend fun focusProjectSync(projectId: Long) {
         val jobsToCancel = mutableListOf<Job>()
-        mutex.withLock {
+        val shouldEnqueueFast = mutex.withLock {
+            if (pendingPhotoSyncs.contains(projectId)) {
+                Log.d(TAG, "📷 Photo sync already queued for project $projectId; skipping extra FAST request")
+                return@withLock false
+            }
             if (foregroundProjectId != projectId) {
                 foregroundProjectId = projectId
             }
@@ -309,6 +319,10 @@ class SyncQueueManager(
                     taskIndex.remove(task.key)
                 }
             }
+            true
+        }
+        if (!shouldEnqueueFast) {
+            return
         }
         jobsToCancel.forEach { it.cancel() }
         Log.d(TAG, "🚀 Foreground sync for project $projectId (FAST mode - rooms only)")
