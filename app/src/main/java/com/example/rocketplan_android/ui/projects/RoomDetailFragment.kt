@@ -153,19 +153,6 @@ class RoomDetailFragment : Fragment() {
         observeViewModel()
     }
 
-    override fun onResume() {
-        super.onResume()
-        Log.d(TAG, "▶️ onResume -> onRoomVisible()")
-        viewModel.onRoomVisible()
-    }
-
-    override fun onStop() {
-        super.onStop()
-        // Only resume background sync when actually leaving the room
-        // onStop is not called for temporary pauses like camera launches
-        Log.d(TAG, "⏹️ onStop -> onRoomHidden()")
-        viewModel.onRoomHidden()
-    }
 
     private fun bindViews(root: View) {
         backButton = root.findViewById(R.id.backButton)

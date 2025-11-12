@@ -214,8 +214,9 @@ class OfflineSyncRepository(
      * Full project sync: syncs essentials + metadata + all photos.
      * Uses modular functions to avoid duplication.
      */
-    suspend fun syncProjectGraph(projectId: Long) = withContext(ioDispatcher) {
-        Log.d("API", "🔄 [syncProjectGraph] Starting full sync for project $projectId")
+    suspend fun syncProjectGraph(projectId: Long, skipPhotos: Boolean = false) = withContext(ioDispatcher) {
+        val syncType = if (skipPhotos) "FAST (rooms only)" else "FULL"
+        Log.d("API", "🔄 [syncProjectGraph] Starting $syncType sync for project $projectId")
         val startTime = System.currentTimeMillis()
 
         // 1. Sync essentials (navigation chain)
@@ -225,6 +226,14 @@ class OfflineSyncRepository(
             return@withContext
         }
         ensureActive()
+
+        // Skip metadata and photos for FAST foreground sync - rooms are available now
+        if (skipPhotos) {
+            val duration = System.currentTimeMillis() - startTime
+            Log.d("API", "✅ [syncProjectGraph] FAST sync completed in ${duration}ms (metadata & photos deferred)")
+            Log.d("API", "   Essentials: ${essentialsResult.itemsSynced} items in ${essentialsResult.durationMs}ms")
+            return@withContext
+        }
 
         // 2. Sync metadata (notes, equipment, damages, logs, work scopes)
         val metadataResult = syncProjectMetadata(projectId)
@@ -247,7 +256,7 @@ class OfflineSyncRepository(
         }
 
         val duration = System.currentTimeMillis() - startTime
-        Log.d("API", "✅ [syncProjectGraph] Completed in ${duration}ms")
+        Log.d("API", "✅ [syncProjectGraph] FULL sync completed in ${duration}ms")
         Log.d("API", "   Essentials: ${essentialsResult.itemsSynced} items in ${essentialsResult.durationMs}ms")
         Log.d("API", "   Metadata: ${metadataResult.itemsSynced} items in ${metadataResult.durationMs}ms")
         Log.d("API", "   Room photos: ${roomPhotosResult.itemsSynced} photos in ${roomPhotosResult.durationMs}ms")

@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.ui.projects
 
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -17,6 +18,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.model.ProjectStatus
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 /**
@@ -49,6 +52,9 @@ class ProjectLandingFragment : Fragment() {
     private lateinit var allNotesIcon: ImageView
     private lateinit var allNotesSubtitle: TextView
 
+    private var latestSummary: ProjectLandingSummary? = null
+    private var statusDialog: androidx.appcompat.app.AlertDialog? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -80,7 +86,6 @@ class ProjectLandingFragment : Fragment() {
         allNotesCard = root.findViewById(R.id.allNotesCard)
         allNotesIcon = root.findViewById(R.id.allNotesIcon)
         allNotesSubtitle = root.findViewById(R.id.allNotesSubtitle)
-
     }
 
     private fun bindListeners() {
@@ -115,6 +120,9 @@ class ProjectLandingFragment : Fragment() {
                 Toast.LENGTH_SHORT
             ).show()
         }
+        statusContainer.setOnClickListener {
+            showStatusSelectionDialog()
+        }
     }
 
     private fun observeViewModel() {
@@ -131,6 +139,7 @@ class ProjectLandingFragment : Fragment() {
     }
 
     private fun showLoadingState() {
+        latestSummary = null
         projectInfoCard.isVisible = false
         projectActionsContainer.isVisible = false
         emptyState.isVisible = true
@@ -138,6 +147,7 @@ class ProjectLandingFragment : Fragment() {
     }
 
     private fun renderState(summary: ProjectLandingSummary) {
+        latestSummary = summary
         projectInfoCard.isVisible = true
         projectActionsContainer.isVisible = true
         emptyState.isVisible = false
@@ -157,16 +167,37 @@ class ProjectLandingFragment : Fragment() {
         }
         aliasAction.setTextColor(aliasColor)
 
-        if (summary.statusLabel != null) {
-            statusContainer.isVisible = true
-            statusBadge.text = summary.statusLabel
-        } else {
-            statusContainer.isVisible = false
-        }
+        statusContainer.isVisible = true
+        statusContainer.isEnabled = true
+        statusBadge.text = summary.statusLabel ?: getString(R.string.project_status_set_placeholder)
 
         allNotesSubtitle.text = getString(
             R.string.project_notes_subtitle_with_count,
             summary.noteCount
         )
+    }
+
+    private fun showStatusSelectionDialog() {
+        val summary = latestSummary ?: return
+        val statuses = ProjectStatus.orderedStatuses
+        val labels = statuses.map { getString(it.labelRes) }.toTypedArray()
+        val checkedIndex = summary.status?.let { statuses.indexOf(it) } ?: -1
+
+        statusDialog?.dismiss()
+        statusDialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.project_status_dialog_title)
+            .setSingleChoiceItems(labels, checkedIndex) { dialog, which ->
+                val selectedStatus = statuses[which]
+                viewModel.updateProjectStatus(selectedStatus)
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    override fun onDestroyView() {
+        statusDialog?.dismiss()
+        statusDialog = null
+        super.onDestroyView()
     }
 }

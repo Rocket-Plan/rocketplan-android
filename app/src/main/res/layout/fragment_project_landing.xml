@@ -56,6 +56,11 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_wip_badge"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackgroundBorderless"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
                         android:paddingStart="12dp"
                         android:paddingTop="4dp"
                         android:paddingEnd="12dp"
@@ -69,6 +74,14 @@
                             android:textSize="12sp"
                             android:textStyle="bold"
                             tools:text="WIP" />
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:layout_marginStart="4dp"
+                            android:contentDescription="@string/change_project_status"
+                            android:src="@drawable/ic_chevron_down"
+                            android:tint="@color/team_member_tag_dark" />
                     </LinearLayout>
 
                     <TextView

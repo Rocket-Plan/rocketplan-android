@@ -12,11 +12,18 @@ import androidx.paging.cachedIn
 import androidx.paging.filter
 import androidx.paging.map
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
+import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
-import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.logging.LogLevel
+import java.io.File
+import java.util.Date
+import java.util.Locale
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +36,7 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
-import java.util.Locale
+import kotlin.collections.buildSet
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RoomDetailViewModel(
@@ -54,6 +61,7 @@ class RoomDetailViewModel(
 
     private var lastRefreshAt = 0L
     private var isRefreshing = false
+    private var lastSyncedServerRoomId: Long? = null
     private val _resolvedRoom = MutableStateFlow<OfflineRoomEntity?>(null)
 
     init {
@@ -87,23 +95,24 @@ class RoomDetailViewModel(
                 }
 
                 val localRoomId = room.roomId
-                // Photos are persisted with server room ID, so use that for lookups
+                // Photos and albums are persisted with server room ID when available
                 val photoLookupRoomId = room.serverId ?: room.roomId
-                if (room.serverId != null && room.serverId == localRoomId) {
-                    Log.w(
-                        TAG,
-                        "⚠️ Room ${room.serverId} still shares local/server ids; run relinkRoomScopedData to repair."
-                    )
-                }
                 combine(
                     localDataService.observeNotes(projectId),
-                    localDataService.observeAlbumsForRoom(localRoomId),
+                    localDataService.observeAlbumsForRoom(photoLookupRoomId),
                     localDataService.observePhotoCountForRoom(photoLookupRoomId)
                 ) { notes, albums, photoCount ->
-                    val roomNotes = notes.filter { it.roomId == localRoomId }
+                    val noteRoomIds = buildSet {
+                        add(localRoomId)
+                        room.serverId?.let { add(it) }
+                    }
+                    val roomNotes = notes.filter { note ->
+                        val noteRoomId = note.roomId
+                        noteRoomId != null && noteRoomId in noteRoomIds
+                    }
                     Log.d(
                         TAG,
-                        "✅ Room ready: '${room.title}', localRoomId=$localRoomId, serverId=${room.serverId}, photoLookupId=$photoLookupRoomId, photoCount=$photoCount, noteCount=${roomNotes.size}"
+                        "✅ Room ready: '${room.title}', localRoomId=$localRoomId, serverId=${room.serverId}, photoLookupId=$photoLookupRoomId, photoCount=$photoCount, albumCount=${albums.size}, noteCount=${roomNotes.size}"
                     )
                     RoomDetailUiState.Ready(
                         header = room.toHeader(roomNotes),
@@ -112,6 +121,13 @@ class RoomDetailViewModel(
                     )
                 }.collect { state ->
                     _uiState.value = state
+                }
+
+                val serverId = room.serverId
+                if (serverId != null && serverId != lastSyncedServerRoomId) {
+                    lastSyncedServerRoomId = serverId
+                    Log.d(TAG, "⚡️ Server room id resolved ($serverId); forcing photo refresh")
+                    ensureRoomPhotosFresh(force = true)
                 }
             }
         }
@@ -123,6 +139,7 @@ class RoomDetailViewModel(
         }
     }
 
+
     fun ensureRoomPhotosFresh(force: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
         if (!force && now - lastRefreshAt < ROOM_REFRESH_INTERVAL_MS) {
@@ -132,7 +149,11 @@ class RoomDetailViewModel(
             return
         }
 
-        val remoteRoomId = _resolvedRoom.value?.serverId ?: roomId
+        val remoteRoomId = _resolvedRoom.value?.serverId
+        if (remoteRoomId == null) {
+            Log.d(TAG, "⏭️ Skipping remote photo refresh; room $roomId has no serverId yet")
+            return
+        }
         isRefreshing = true
         viewModelScope.launch {
             try {
@@ -212,6 +233,54 @@ class RoomDetailViewModel(
                 name = album.name,
                 photoCount = album.photoCount,
                 thumbnailUrl = album.thumbnailUrl
+            )
+        }
+    }
+
+    fun onLocalPhotoCaptured(photoFile: File, mimeType: String, albumId: Long? = null) {
+        val room = _resolvedRoom.value
+        if (room == null) {
+            remoteLogger.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "Ignoring captured photo because room is not resolved yet."
+            )
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val timestamp = Date()
+            val lookupRoomId = room.serverId ?: room.roomId
+            val entity = OfflinePhotoEntity(
+                uuid = UUID.randomUUID().toString(),
+                projectId = projectId,
+                roomId = lookupRoomId,
+                albumId = albumId,
+                fileName = photoFile.name,
+                localPath = photoFile.absolutePath,
+                mimeType = mimeType,
+                fileSize = photoFile.length(),
+                capturedAt = timestamp,
+                createdAt = timestamp,
+                updatedAt = timestamp,
+                uploadStatus = "local_pending",
+                syncStatus = SyncStatus.PENDING,
+                isDirty = true,
+                cacheStatus = PhotoCacheStatus.READY,
+                cachedOriginalPath = photoFile.absolutePath,
+                cachedThumbnailPath = null,
+                lastAccessedAt = timestamp
+            )
+            localDataService.savePhotos(listOf(entity))
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Captured photo saved locally",
+                metadata = mapOf(
+                    "projectId" to projectId.toString(),
+                    "roomId" to lookupRoomId.toString(),
+                    "fileName" to photoFile.name
+                )
             )
         }
     }

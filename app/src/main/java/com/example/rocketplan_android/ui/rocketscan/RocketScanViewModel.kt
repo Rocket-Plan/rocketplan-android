@@ -25,6 +25,7 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
 
     private var currentProjectId: Long? = null
     private var roomsJob: Job? = null
+    private var hasReceivedRooms = false
 
     fun loadProject(projectId: Long) {
         if (projectId <= 0L) {
@@ -38,6 +39,7 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
 
         currentProjectId = projectId
         roomsJob?.cancel()
+        hasReceivedRooms = false
         _uiState.value = RocketScanUiState.Loading
 
         // Prioritize this project in the sync queue
@@ -45,15 +47,40 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
         syncQueueManager.prioritizeProject(projectId)
 
         roomsJob = viewModelScope.launch {
+            // Give sync 5 seconds to complete before showing empty state
+            val timeoutJob = launch {
+                kotlinx.coroutines.delay(5000)
+                hasReceivedRooms = true
+                android.util.Log.d("RocketScanVM", "⏱️ Sync timeout reached, showing current state")
+            }
+
             combine(
                 localDataService.observeRooms(projectId),
                 localDataService.observeRoomPhotoSummaries(projectId)
             ) { rooms, summaries ->
+                android.util.Log.d("RocketScanVM", "📊 Received ${rooms.size} rooms, ${summaries.size} summaries for project $projectId")
                 buildRoomItems(rooms, summaries)
             }.collect { items ->
+                android.util.Log.d("RocketScanVM", "🏗️ Built ${items.size} room items")
+
+                // Once we receive rooms, cancel the timeout
+                if (items.isNotEmpty() && !hasReceivedRooms) {
+                    timeoutJob.cancel()
+                    hasReceivedRooms = true
+                }
+
+                // Show loading state until we've received rooms OR timeout
+                if (!hasReceivedRooms && items.isEmpty()) {
+                    android.util.Log.d("RocketScanVM", "⏳ Still loading (0 rooms, waiting for sync)")
+                    _uiState.value = RocketScanUiState.Loading
+                    return@collect
+                }
+
                 _uiState.value = if (items.isEmpty()) {
+                    android.util.Log.d("RocketScanVM", "❌ Emitting Empty state (sync completed, no rooms)")
                     RocketScanUiState.Empty
                 } else {
+                    android.util.Log.d("RocketScanVM", "✅ Emitting Content state with ${items.size} items")
                     RocketScanUiState.Content(items)
                 }
             }
@@ -63,18 +90,6 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
     fun retry() {
         currentProjectId?.let { projectId ->
             // Re-prioritize the project for retry
-            syncQueueManager.prioritizeProject(projectId)
-        }
-    }
-
-    fun pauseBackgroundSync() {
-        currentProjectId?.let { projectId ->
-            syncQueueManager.cancelProjectSync(projectId)
-        }
-    }
-
-    fun resumeBackgroundSync() {
-        currentProjectId?.let { projectId ->
             syncQueueManager.prioritizeProject(projectId)
         }
     }

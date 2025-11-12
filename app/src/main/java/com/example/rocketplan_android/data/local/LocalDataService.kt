@@ -26,6 +26,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
+import com.example.rocketplan_android.data.model.ProjectStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -145,10 +146,29 @@ class LocalDataService private constructor(
         dao.upsertProjects(projects)
     }
 
+    suspend fun updateProjectStatus(projectId: Long, status: ProjectStatus) = withContext(ioDispatcher) {
+        val existing = dao.getProject(projectId) ?: return@withContext
+        if (existing.status.equals(status.apiValue, ignoreCase = true)) {
+            return@withContext
+        }
+        val updatedProject = existing.copy(
+            status = status.apiValue,
+            isDirty = true,
+            syncStatus = SyncStatus.PENDING,
+            updatedAt = Date()
+        )
+        dao.upsertProject(updatedProject)
+    }
+
     suspend fun saveLocations(locations: List<OfflineLocationEntity>) = withContext(ioDispatcher) {
         dao.upsertLocations(locations)
     }
 
+    /**
+     * Ensures all room-scoped entities reference the canonical server room ID once it exists.
+     * This is required because locally-created content uses the auto-generated roomId until
+     * the backend assigns a serverId, at which point everything needs to be migrated.
+     */
     suspend fun relinkRoomScopedData(): RoomDataRepairResult = withContext(ioDispatcher) {
         val rooms = dao.getRoomsWithServerId()
         if (rooms.isEmpty()) {
@@ -168,8 +188,15 @@ class LocalDataService private constructor(
             rooms.forEach { room ->
                 val serverId = room.serverId ?: return@forEach
                 val localRoomId = room.roomId
+                if (localRoomId == serverId) {
+                    // Nothing to migrate if the auto PK already matches the server id
+                    return@forEach
+                }
 
                 suspend fun migrateReferences(oldId: Long, newId: Long): ReferenceMigrationCounts {
+                    if (oldId == newId) {
+                        return ReferenceMigrationCounts(0, 0, 0, 0, 0, 0, 0)
+                    }
                     val photoCount = dao.migratePhotoRoomIds(oldId, newId)
                     val noteCount = dao.migrateNoteRoomIds(oldId, newId)
                     val damageCount = dao.migrateDamageRoomIds(oldId, newId)
@@ -188,10 +215,8 @@ class LocalDataService private constructor(
                     )
                 }
 
-                if (localRoomId == serverId) {
-                    val newRoomId = dao.insertRoom(room.copy(roomId = 0, isDirty = false))
-                    val counts = migrateReferences(serverId, newRoomId)
-                    dao.deleteRoomById(localRoomId)
+                val counts = migrateReferences(localRoomId, serverId)
+                if (counts.hasAnyUpdates()) {
                     roomsAdjusted += 1
                     photosRelinked += counts.photos
                     notesRelinked += counts.notes
@@ -200,18 +225,6 @@ class LocalDataService private constructor(
                     atmosphericRelinked += counts.atmosphericLogs
                     moistureRelinked += counts.moistureLogs
                     albumsRelinked += counts.albums
-                } else {
-                    val counts = migrateReferences(serverId, localRoomId)
-                    if (counts.hasAnyUpdates()) {
-                        roomsAdjusted += 1
-                        photosRelinked += counts.photos
-                        notesRelinked += counts.notes
-                        damagesRelinked += counts.damages
-                        equipmentRelinked += counts.equipment
-                        atmosphericRelinked += counts.atmosphericLogs
-                        moistureRelinked += counts.moistureLogs
-                        albumsRelinked += counts.albums
-                    }
                 }
             }
         }

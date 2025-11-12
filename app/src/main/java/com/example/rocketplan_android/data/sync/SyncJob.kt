@@ -9,6 +9,9 @@ sealed class SyncJob(
     data class SyncProjects(val force: Boolean = false) :
         SyncJob(priority = if (force) 0 else 1, key = "sync_projects")
 
-    data class SyncProjectGraph(val projectId: Long, val prio: Int = 3) :
-        SyncJob(priority = prio, key = "project_$projectId")
+    data class SyncProjectGraph(
+        val projectId: Long,
+        val prio: Int = 3,
+        val skipPhotos: Boolean = false
+    ) : SyncJob(priority = prio, key = "project_$projectId")
 }
