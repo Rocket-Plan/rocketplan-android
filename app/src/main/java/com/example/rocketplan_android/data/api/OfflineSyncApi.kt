@@ -108,8 +108,7 @@ interface OfflineSyncApi {
         @Query("page") page: Int? = null,
         @Query("limit") limit: Int? = 30,
         @Query("include") include: String? = "photo,albums,notes_count,creator",
-        @Query("filter[updated_date]") updatedSince: String? = null,
-        @Query("sort") sort: String? = "-id"
+        @Query("filter[updated_date]") updatedSince: String? = null
     ): JsonObject
 
     @GET("/api/projects/{projectId}/floor-photos")
