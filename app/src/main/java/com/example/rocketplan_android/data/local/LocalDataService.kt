@@ -22,9 +22,13 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
+import com.example.rocketplan_android.data.local.entity.preferredImageSource
+import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import com.example.rocketplan_android.data.model.ProjectStatus
 import kotlinx.coroutines.CoroutineDispatcher
@@ -94,6 +98,21 @@ class LocalDataService private constructor(
             pagingSourceFactory = { dao.pagingPhotosForRoom(roomId) }
         ).flow
 
+    fun pagedPhotoSnapshotsForRoom(
+        roomId: Long,
+        pageSize: Int = DEFAULT_ROOM_PHOTO_PAGE_SIZE
+    ): Flow<PagingData<OfflineRoomPhotoSnapshotEntity>> =
+        Pager(
+            config = PagingConfig(
+                pageSize = pageSize,
+                prefetchDistance = pageSize / 2,
+                enablePlaceholders = false,
+                initialLoadSize = pageSize,
+                maxSize = pageSize * MAX_ROOM_PHOTO_PAGES
+            ),
+            pagingSourceFactory = { dao.pagingRoomPhotoSnapshots(roomId) }
+        ).flow
+
     suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity? =
         withContext(ioDispatcher) { dao.getPhotoByServerId(serverId) }
 
@@ -114,6 +133,30 @@ class LocalDataService private constructor(
 
     suspend fun getPhotosNeedingCache(limit: Int = 25): List<OfflinePhotoEntity> =
         withContext(ioDispatcher) { dao.getPhotosNeedingCache(limit = limit) }
+
+    suspend fun refreshRoomPhotoSnapshot(roomId: Long) = withContext(ioDispatcher) {
+        database.withTransaction {
+            val photos = dao.getPhotosForRoomSnapshot(roomId)
+                .filter { it.hasRenderableAsset() }
+            dao.clearRoomPhotoSnapshots(roomId)
+            if (photos.isEmpty()) return@withTransaction
+            val snapshots = photos.mapIndexed { index, photo ->
+                OfflineRoomPhotoSnapshotEntity(
+                    roomId = roomId,
+                    photoId = photo.photoId,
+                    orderIndex = index,
+                    imageUrl = photo.preferredImageSource(),
+                    thumbnailUrl = photo.preferredThumbnailSource(),
+                    capturedOn = photo.capturedAt ?: photo.createdAt
+                )
+            }
+            dao.insertRoomPhotoSnapshots(snapshots)
+        }
+    }
+
+    suspend fun clearRoomPhotoSnapshot(roomId: Long) = withContext(ioDispatcher) {
+        dao.clearRoomPhotoSnapshots(roomId)
+    }
 
     fun observeCachedPhotoCount(): Flow<Int> =
         dao.observePhotoCountByCacheStatus(PhotoCacheStatus.READY)
@@ -301,7 +344,10 @@ class LocalDataService private constructor(
 
     suspend fun markRoomsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markRoomsDeleted(serverIds)
+        database.withTransaction {
+            dao.markRoomsDeleted(serverIds)
+            dao.clearRoomPhotoSnapshots(serverIds)
+        }
     }
 
     suspend fun markPhotosDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {

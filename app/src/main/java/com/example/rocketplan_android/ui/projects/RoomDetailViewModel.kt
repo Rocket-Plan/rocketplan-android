@@ -18,6 +18,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.logging.LogLevel
 import java.io.File
 import java.util.Date
@@ -38,6 +39,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import kotlin.collections.buildSet
+
+import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
+import com.example.rocketplan_android.data.local.entity.preferredImageSource
+import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class RoomDetailViewModel(
@@ -63,6 +68,7 @@ class RoomDetailViewModel(
     private var lastRefreshAt = 0L
     private var isRefreshing = false
     private var lastSyncedServerRoomId: Long? = null
+    private var currentPhotoLookupRoomId: Long? = null
     private val _resolvedRoom = MutableStateFlow<OfflineRoomEntity?>(null)
 
     init {
@@ -110,6 +116,13 @@ class RoomDetailViewModel(
                 val localRoomId = room.roomId
                 // Photos and albums are persisted with server room ID when available
                 val photoLookupRoomId = room.serverId ?: room.roomId
+                currentPhotoLookupRoomId = photoLookupRoomId
+                Log.d(TAG, "🗂 Refreshing photo snapshot for roomId=$photoLookupRoomId")
+                localDataService.refreshRoomPhotoSnapshot(photoLookupRoomId)
+                if (room.serverId != null && room.serverId != room.roomId) {
+                    Log.d(TAG, "🧹 Clearing legacy snapshot for localRoomId=${room.roomId}")
+                    localDataService.clearRoomPhotoSnapshot(room.roomId)
+                }
                 combine(
                     localDataService.observeNotes(projectId),
                     localDataService.observeAlbumsForRoom(photoLookupRoomId),
@@ -175,6 +188,8 @@ class RoomDetailViewModel(
                     "🔄 ensureRoomPhotosFresh(force=$force) -> refreshRoomPhotos(projectId=$projectId, remoteRoomId=$remoteRoomId)"
                 )
                 offlineSyncRepository.refreshRoomPhotos(projectId, remoteRoomId)
+                Log.d(TAG, "🗂 Sync complete; refreshing snapshot for roomId=$remoteRoomId")
+                localDataService.refreshRoomPhotoSnapshot(remoteRoomId)
             } catch (t: Throwable) {
                 Log.e(TAG, "❌ Failed to refresh photos for remoteRoomId=$remoteRoomId", t)
                 remoteLogger.log(
@@ -204,15 +219,12 @@ class RoomDetailViewModel(
                 if (localId == null || lookupId == null) {
                     flowOf(PagingData.empty())
                 } else {
-                    // Photos are persisted with server room ID (persistPhotos uses defaultRoomId = serverId)
-                    Log.d(TAG, "📸 Setting up photo paging for room: localId=$localId, lookupId=$lookupId")
+                    Log.d(TAG, "📸 Setting up snapshot paging for room: localId=$localId, snapshotRoomId=$lookupId")
                     localDataService
-                        .pagedPhotosForRoom(lookupId)
+                        .pagedPhotoSnapshotsForRoom(lookupId)
                         .map { pagingData ->
                             val formatter = requireNotNull(dateFormatter.get())
-                            pagingData
-                                .filter { it.hasRenderableAsset() }
-                                .map { photo -> photo.toPhotoItem(formatter) }
+                            pagingData.map { snapshot -> snapshot.toPhotoItem(formatter) }
                         }
                 }
             }
@@ -230,6 +242,14 @@ class RoomDetailViewModel(
             noteSummary = summary
         )
     }
+
+    private fun OfflineRoomPhotoSnapshotEntity.toPhotoItem(formatter: SimpleDateFormat): RoomPhotoItem =
+        RoomPhotoItem(
+            id = photoId,
+            imageUrl = imageUrl,
+            thumbnailUrl = thumbnailUrl,
+            capturedOn = capturedOn?.let { formatter.format(it) }
+        )
 
     private fun shouldUpdateResolvedRoom(
         current: OfflineRoomEntity?,
@@ -298,6 +318,8 @@ class RoomDetailViewModel(
                 lastAccessedAt = timestamp
             )
             localDataService.savePhotos(listOf(entity))
+            Log.d(TAG, "♻️ Refreshing snapshot after local capture for roomId=$lookupRoomId")
+            localDataService.refreshRoomPhotoSnapshot(lookupRoomId)
             Log.d(TAG, "✅ Photo saved to local database: uuid=${entity.uuid}, isDirty=true, syncStatus=PENDING")
 
             remoteLogger.log(
@@ -353,33 +375,6 @@ data class RoomPhotoItem(
     val thumbnailUrl: String,
     val capturedOn: String?
 )
-
-private fun OfflinePhotoEntity.hasRenderableAsset(): Boolean =
-    !remoteUrl.isNullOrBlank() ||
-        !thumbnailUrl.isNullOrBlank() ||
-        !cachedOriginalPath.isNullOrBlank() ||
-        !cachedThumbnailPath.isNullOrBlank() ||
-        localPath.isNotBlank()
-
-private fun OfflinePhotoEntity.preferredImageSource(): String =
-    cachedOriginalPath.existingFilePath() ?:
-    remoteUrl?.takeIf { it.isNotBlank() } ?:
-    localPath.existingFilePath() ?:
-    cachedThumbnailPath.existingFilePath() ?:
-    thumbnailUrl?.takeIf { it.isNotBlank() } ?: ""
-
-private fun OfflinePhotoEntity.preferredThumbnailSource(): String =
-    cachedThumbnailPath.existingFilePath() ?:
-    thumbnailUrl?.takeIf { it.isNotBlank() } ?:
-    cachedOriginalPath.existingFilePath() ?:
-    remoteUrl?.takeIf { it.isNotBlank() } ?:
-    localPath.existingFilePath() ?: ""
-
-private fun String?.existingFilePath(): String? {
-    if (this.isNullOrBlank()) return null
-    val file = File(this)
-    return file.takeIf { it.exists() }?.absolutePath
-}
 
 data class RoomAlbumItem(
     val id: Long,

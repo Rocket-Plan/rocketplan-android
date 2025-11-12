@@ -173,6 +173,23 @@ data class OfflineRoomEntity(
 )
 
 @Entity(
+    tableName = "offline_room_photo_snapshots",
+    primaryKeys = ["roomId", "orderIndex"],
+    indices = [
+        Index(value = ["roomId"]),
+        Index(value = ["photoId"])
+    ]
+)
+data class OfflineRoomPhotoSnapshotEntity(
+    val roomId: Long,
+    val photoId: Long,
+    val orderIndex: Int,
+    val imageUrl: String,
+    val thumbnailUrl: String,
+    val capturedOn: Date?
+)
+
+@Entity(
     tableName = "offline_atmospheric_logs",
     indices = [
         Index(value = ["uuid"], unique = true),

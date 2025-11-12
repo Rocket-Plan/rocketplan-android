@@ -21,6 +21,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
@@ -44,9 +45,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
         OfflineDamageEntity::class,
         OfflineWorkScopeEntity::class,
         OfflineSyncQueueEntity::class,
-        OfflineConflictResolutionEntity::class
+        OfflineConflictResolutionEntity::class,
+        OfflineRoomPhotoSnapshotEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)

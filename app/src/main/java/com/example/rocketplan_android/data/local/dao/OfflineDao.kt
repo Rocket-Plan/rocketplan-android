@@ -23,6 +23,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
@@ -139,6 +140,16 @@ interface OfflineDao {
     )
     fun pagingPhotosForRoom(roomId: Long): PagingSource<Int, OfflinePhotoEntity>
 
+    @Query(
+        """
+        SELECT * FROM offline_photos
+        WHERE roomId = :roomId
+          AND isDeleted = 0
+        ORDER BY COALESCE(capturedAt, createdAt) DESC, photoId DESC
+        """
+    )
+    suspend fun getPhotosForRoomSnapshot(roomId: Long): List<OfflinePhotoEntity>
+
     @Query("SELECT * FROM offline_photos WHERE serverId = :serverId LIMIT 1")
     suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity?
 
@@ -218,6 +229,26 @@ interface OfflineDao {
 
     @Query("UPDATE offline_photos SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markPhotosDeleted(serverIds: List<Long>)
+
+    // region Room photo snapshots
+    @Query("DELETE FROM offline_room_photo_snapshots WHERE roomId = :roomId")
+    suspend fun clearRoomPhotoSnapshots(roomId: Long)
+
+    @Query("DELETE FROM offline_room_photo_snapshots WHERE roomId IN (:roomIds)")
+    suspend fun clearRoomPhotoSnapshots(roomIds: List<Long>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRoomPhotoSnapshots(snapshots: List<OfflineRoomPhotoSnapshotEntity>)
+
+    @Query(
+        """
+        SELECT * FROM offline_room_photo_snapshots
+        WHERE roomId = :roomId
+        ORDER BY orderIndex ASC
+        """
+    )
+    fun pagingRoomPhotoSnapshots(roomId: Long): PagingSource<Int, OfflineRoomPhotoSnapshotEntity>
+    // endregion
 
     @Query("SELECT COUNT(*) FROM offline_photos WHERE cacheStatus = :status AND isDeleted = 0")
     fun observePhotoCountByCacheStatus(status: PhotoCacheStatus): Flow<Int>

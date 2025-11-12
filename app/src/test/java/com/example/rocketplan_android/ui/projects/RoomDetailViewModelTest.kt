@@ -12,6 +12,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
@@ -175,7 +176,8 @@ class RoomDetailViewModelTest {
         every { localDataService.observeNotes(projectId) } returns notes
         every { localDataService.observeAlbumsForRoom(any()) } returns albums
         every { localDataService.observePhotoCountForRoom(any()) } returns photoCount
-        every { localDataService.pagedPhotosForRoom(any()) } returns flowOf(PagingData.empty<OfflinePhotoEntity>())
+        every { localDataService.pagedPhotoSnapshotsForRoom(any()) } returns flowOf(PagingData.empty<OfflineRoomPhotoSnapshotEntity>())
+        coJustRun { localDataService.refreshRoomPhotoSnapshot(any()) }
         coJustRun { localDataService.savePhotos(any()) }
         coJustRun { offlineSyncRepository.refreshRoomPhotos(any(), any()) }
 

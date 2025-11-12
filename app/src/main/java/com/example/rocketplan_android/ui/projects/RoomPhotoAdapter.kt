@@ -50,14 +50,30 @@ class RoomPhotoPagingAdapter(
         private val dateLabel: TextView = view.findViewById(R.id.roomPhotoDate)
 
         fun bind(photo: RoomPhotoItem) {
-            Log.d(TAG, "🖼️ Binding photo: id=${photo.id}, thumbnailUrl=${photo.thumbnailUrl}, date=${photo.capturedOn}")
-            preview.load(photo.thumbnailUrl) {
-                placeholder(R.drawable.bg_room_placeholder)
-                error(R.drawable.bg_room_placeholder)
-                crossfade(true)
+            val previousPhoto = preview.getTag(R.id.tag_room_photo_id) as? RoomPhotoItem
+            val needsReload = previousPhoto?.let { hasVisualDifferences(it, photo) } ?: true
+
+            preview.setTag(R.id.tag_room_photo_id, photo)
+
+            if (needsReload) {
+                Log.d(TAG, "🔄 Loading image for photo id=${photo.id}, prev=${previousPhoto?.id}")
+                preview.load(photo.thumbnailUrl) {
+                    placeholder(R.drawable.bg_room_placeholder)
+                    error(R.drawable.bg_room_placeholder)
+                    crossfade(previousPhoto == null)
+                }
+            } else {
+                Log.v(TAG, "✅ Skipping reload for photo id=${photo.id} (same as previous)")
             }
+
             dateLabel.text = photo.capturedOn ?: ""
             itemView.setOnClickListener { onPhotoSelected(photo) }
+        }
+
+        private fun hasVisualDifferences(old: RoomPhotoItem, new: RoomPhotoItem): Boolean {
+            return old.id != new.id ||
+                old.thumbnailUrl != new.thumbnailUrl ||
+                old.imageUrl != new.imageUrl
         }
 
         companion object {
