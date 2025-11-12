@@ -583,14 +583,19 @@ class OfflineSyncRepository(
                 photo.albums?.forEach { album ->
                     // Use photo's projectId, fall back to defaultProjectId
                     val projectId = photo.projectId ?: defaultProjectId ?: 0L
-                    add(album.toEntity(defaultProjectId = projectId))
+                    // Prioritize defaultRoomId (canonical server ID) when available
+                    val roomId = defaultRoomId ?: photo.roomId
+                    add(album.toEntity(defaultProjectId = projectId, defaultRoomId = roomId))
                 }
             }
         }.distinctBy { it.albumId }
 
         if (albums.isNotEmpty()) {
             localDataService.saveAlbums(albums)
-            Log.d("API", "📂 [persistPhotos] Saved ${albums.size} albums from photos")
+            Log.d("API", "📂 [persistPhotos] Saved ${albums.size} albums from photos (defaultRoomId=$defaultRoomId)")
+            albums.forEach { album ->
+                Log.d("API", "  Album '${album.name}' (id=${album.albumId}): roomId=${album.roomId}, projectId=${album.projectId}")
+            }
         }
 
         val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {
@@ -1163,7 +1168,7 @@ private fun MoistureLogDto.toMaterialEntity(): OfflineMaterialEntity? {
 private fun List<MoistureLogDto>.extractMaterials(): List<OfflineMaterialEntity> =
     mapNotNull { it.toMaterialEntity() }
 
-private fun AlbumDto.toEntity(defaultProjectId: Long): OfflineAlbumEntity {
+private fun AlbumDto.toEntity(defaultProjectId: Long, defaultRoomId: Long? = null): OfflineAlbumEntity {
     val timestamp = now()
     val projectId: Long
     val roomId: Long?
@@ -1174,11 +1179,13 @@ private fun AlbumDto.toEntity(defaultProjectId: Long): OfflineAlbumEntity {
         }
         "App\\Models\\Room" -> {
             projectId = defaultProjectId
-            roomId = albumableId
+            roomId = albumableId ?: defaultRoomId
         }
         else -> {
+            // Embedded albums from photo responses don't have albumableType set
+            // Use defaultRoomId if provided (means it came from a room photo response)
             projectId = defaultProjectId
-            roomId = null
+            roomId = defaultRoomId
         }
     }
     return OfflineAlbumEntity(

@@ -45,14 +45,14 @@ class RocketScanFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Pause background sync while user is viewing RocketScan
-        viewModel.pauseBackgroundSync()
+        // Ensure project sync runs so rooms populate immediately
+        viewModel.resumeBackgroundSync()
     }
 
     override fun onStop() {
         super.onStop()
-        // Resume background sync when user leaves RocketScan
-        viewModel.resumeBackgroundSync()
+        // Let other screens take over syncing when user leaves RocketScan
+        viewModel.pauseBackgroundSync()
     }
 
     private fun setupRecyclerView() {
