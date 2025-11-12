@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.api
 
 import com.example.rocketplan_android.config.AppConfig
+import com.example.rocketplan_android.data.api.ImageProcessorService
 import com.google.gson.GsonBuilder
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -119,5 +120,9 @@ object RetrofitClient {
 
     val loggingService: LoggingService by lazy {
         createService<LoggingService>()
+    }
+
+    val imageProcessorService: ImageProcessorService by lazy {
+        createService<ImageProcessorService>()
     }
 }

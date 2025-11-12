@@ -25,6 +25,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.navigation.NavOptions
 import com.example.rocketplan_android.databinding.ActivityMainBinding
 import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import kotlinx.coroutines.launch
 
@@ -38,6 +39,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var authRepository: AuthRepository
     private lateinit var syncQueueManager: SyncQueueManager
+    private lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +56,7 @@ class MainActivity : AppCompatActivity() {
         val rocketPlanApp = application as RocketPlanApplication
         authRepository = rocketPlanApp.authRepository
         syncQueueManager = rocketPlanApp.syncQueueManager
+        imageProcessingConfigurationRepository = rocketPlanApp.imageProcessingConfigurationRepository
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
@@ -143,6 +146,9 @@ class MainActivity : AppCompatActivity() {
             val isLoggedIn = authRepository.isLoggedIn()
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "User logged in: $isLoggedIn")
+            }
+            if (isLoggedIn) {
+                preloadImageProcessorConfiguration()
             }
 
             // Wait for navigation graph to be ready
@@ -299,6 +305,10 @@ class MainActivity : AppCompatActivity() {
                         findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.syncStatusFragment)
                         true
                     }
+                    R.id.action_reload_image_processor_config -> {
+                        reloadImageProcessorConfiguration()
+                        true
+                    }
                     R.id.action_sign_out -> {
                         performSignOut()
                         true
@@ -314,6 +324,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try {
                 authRepository.logout()
+                imageProcessingConfigurationRepository.clearCachedConfiguration()
                 syncQueueManager.clear()
                 val navController = findNavController(R.id.nav_host_fragment_content_main)
                 navController.navigate(
@@ -329,6 +340,37 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(
                     this@MainActivity,
                     "Failed to sign out: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun preloadImageProcessorConfiguration(forceRefresh: Boolean = false) {
+        lifecycleScope.launch {
+            val result = imageProcessingConfigurationRepository.getConfiguration(forceRefresh)
+            result.exceptionOrNull()?.let { error ->
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.w(TAG, "Image processor config preload failed: ${error.message}")
+                }
+            }
+        }
+    }
+
+    private fun reloadImageProcessorConfiguration() {
+        lifecycleScope.launch {
+            val result = imageProcessingConfigurationRepository.getConfiguration(forceRefresh = true)
+            result.onSuccess { config ->
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.toast_image_processor_config_loaded, config.service),
+                    Toast.LENGTH_LONG
+                ).show()
+            }.onFailure { error ->
+                val reason = error.message ?: getString(R.string.toast_image_processor_config_unknown_error)
+                Toast.makeText(
+                    this@MainActivity,
+                    getString(R.string.toast_image_processor_config_failed, reason),
                     Toast.LENGTH_LONG
                 ).show()
             }

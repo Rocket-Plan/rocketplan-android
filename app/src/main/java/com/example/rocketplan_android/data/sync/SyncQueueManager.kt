@@ -309,6 +309,13 @@ class SyncQueueManager(
     }
 
     private suspend fun focusProjectSync(projectId: Long) {
+        try {
+            syncRepository.syncDeletedRecords()
+        } catch (ce: CancellationException) {
+            throw ce
+        } catch (t: Throwable) {
+            Log.w(TAG, "⚠️ Failed to sync deleted records before focusing project $projectId", t)
+        }
         val jobsToCancel = mutableListOf<Job>()
         val shouldEnqueueFast = mutex.withLock {
             if (pendingPhotoSyncs.contains(projectId)) {

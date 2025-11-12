@@ -164,6 +164,14 @@ class LocalDataService private constructor(
         dao.upsertLocations(locations)
     }
 
+    suspend fun getLatestLocationUpdate(projectId: Long): Date? = withContext(ioDispatcher) {
+        dao.getLatestLocationUpdatedAt(projectId)
+    }
+
+    suspend fun getLatestRoomUpdateForLocation(locationId: Long): Date? = withContext(ioDispatcher) {
+        dao.getLatestRoomUpdatedAt(locationId)
+    }
+
     /**
      * Ensures all room-scoped entities reference the canonical server room ID once it exists.
      * This is required because locally-created content uses the auto-generated roomId until
@@ -279,6 +287,51 @@ class LocalDataService private constructor(
 
     suspend fun saveWorkScopes(scopes: List<OfflineWorkScopeEntity>) = withContext(ioDispatcher) {
         dao.upsertWorkScopes(scopes)
+    }
+
+    suspend fun markProjectsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markProjectsDeleted(serverIds)
+    }
+
+    suspend fun markLocationsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markLocationsDeleted(serverIds)
+    }
+
+    suspend fun markRoomsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markRoomsDeleted(serverIds)
+    }
+
+    suspend fun markPhotosDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markPhotosDeleted(serverIds)
+    }
+
+    suspend fun markNotesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markNotesDeleted(serverIds)
+    }
+
+    suspend fun markDamagesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markDamagesDeleted(serverIds)
+    }
+
+    suspend fun markEquipmentDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markEquipmentDeleted(serverIds)
+    }
+
+    suspend fun markAtmosphericLogsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markAtmosphericLogsDeleted(serverIds)
+    }
+
+    suspend fun markWorkScopesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markWorkScopesDeleted(serverIds)
     }
 
     suspend fun saveMaterials(materials: List<OfflineMaterialEntity>) = withContext(ioDispatcher) {

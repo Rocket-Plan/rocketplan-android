@@ -8,7 +8,11 @@
     <string name="action_settings">Settings</string>
     <string name="action_profile">Profile</string>
     <string name="action_sync_status">Sync Status</string>
+    <string name="action_reload_image_processor_config">Reload Image Processor Config</string>
     <string name="action_sign_out">Sign Out</string>
+    <string name="toast_image_processor_config_loaded">Image processor config ready (%1$s)</string>
+    <string name="toast_image_processor_config_failed">Failed to load image processor config: %1$s</string>
+    <string name="toast_image_processor_config_unknown_error">Unknown error</string>
 
     <string name="menu_home">Home</string>
     <string name="menu_gallery">Gallery</string>

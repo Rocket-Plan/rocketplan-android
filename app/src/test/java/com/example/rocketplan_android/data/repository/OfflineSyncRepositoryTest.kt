@@ -9,6 +9,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
+import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
@@ -16,6 +17,8 @@ import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.NoteableDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.PhotoDto
+import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
+import com.example.rocketplan_android.data.model.offline.RoomPhotoFileDto
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
@@ -23,9 +26,14 @@ import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
+import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.testing.MainDispatcherRule
+import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.google.common.truth.Truth.assertThat
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonObject
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -33,10 +41,14 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.runs
+import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import okhttp3.Headers
 import org.junit.Rule
 import org.junit.Test
+import retrofit2.Response
+import java.util.Date
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OfflineSyncRepositoryTest {
@@ -117,8 +129,8 @@ class OfflineSyncRepositoryTest {
         )
         coEvery { api.getProjectProperties(projectId) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getPropertyLevels(any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getPropertyLocations(any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getRoomsForLocation(any(), any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getPropertyLocations(any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getRoomsForLocation(any(), any(), any(), any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomDetail(any()) } returns RoomDto(
             id = 100L,
             uuid = "room",
@@ -133,7 +145,7 @@ class OfflineSyncRepositoryTest {
             createdAt = "2025-05-01T00:00:00Z",
             updatedAt = "2025-05-01T00:00:00Z"
         )
-        coEvery { api.getRoomPhotos(any(), any(), any()) } returns emptyList()
+        coEvery { api.getRoomPhotos(any(), any(), any(), any(), any()) } returns JsonObject()
         coEvery { api.getRoomAtmosphericLogs(any()) } returns emptyList()
         coEvery { api.getRoomMoistureLogs(any()) } returns emptyList()
         coEvery { api.getRoomDamageMaterials(any()) } returns emptyList()
@@ -188,11 +200,13 @@ class OfflineSyncRepositoryTest {
         coEvery { localDataService.saveAlbumPhotos(capture(savedAlbumPhotos)) } just runs
 
         val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
 
         val repository = OfflineSyncRepository(
             api = api,
             localDataService = localDataService,
-            photoCacheScheduler = scheduler
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore
         )
 
         repository.syncProjectGraph(projectId)
@@ -287,10 +301,10 @@ class OfflineSyncRepositoryTest {
         )
         coEvery { api.getProjectProperties(projectId) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getPropertyLevels(any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getPropertyLocations(any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getRoomsForLocation(any(), any(), any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getRoomPhotos(any(), any(), any()) } returns emptyList()
-        coEvery { api.getRoomPhotos(roomId, any(), any()) } returns listOf(roomPhotoDto)
+        coEvery { api.getPropertyLocations(any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getRoomsForLocation(any(), any(), any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getRoomPhotos(any(), any(), any(), any(), any()) } returns JsonObject()
+        coEvery { api.getRoomPhotos(roomId, any(), any(), any(), any()) } returns roomPhotosResponse(roomPhotoDto)
         coEvery { api.getRoomAtmosphericLogs(any()) } returns emptyList()
         coEvery { api.getRoomMoistureLogs(any()) } returns emptyList()
         coEvery { api.getRoomDamageMaterials(any()) } returns emptyList()
@@ -313,19 +327,127 @@ class OfflineSyncRepositoryTest {
         val savedPhotos = mutableListOf<List<OfflinePhotoEntity>>()
         coEvery { localDataService.savePhotos(capture(savedPhotos)) } just runs
         val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
 
         val repository = OfflineSyncRepository(
             api = api,
             localDataService = localDataService,
-            photoCacheScheduler = scheduler
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore
         )
 
         repository.syncProjectGraph(projectId)
 
-        coVerify { api.getRoomPhotos(roomId, any(), any()) }
+        coVerify { api.getRoomPhotos(roomId, any(), any(), any(), any()) }
         val flattenedPhotos = savedPhotos.flatten()
         assertThat(flattenedPhotos.any { it.serverId == roomPhotoDto.id && it.roomId == roomId }).isTrue()
         coVerify { scheduler.schedulePrefetch() }
+    }
+
+    @Test
+    fun `syncRoomPhotos updates checkpoint using latest server timestamp`() = runTest {
+        val roomId = 77L
+        val timestamp = "2025-06-01T10:15:30Z"
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
+
+        val photo = PhotoDto(
+            id = 200L,
+            uuid = "photo-200",
+            projectId = projectId,
+            roomId = roomId,
+            logId = null,
+            moistureLogId = null,
+            fileName = "photo.jpg",
+            localPath = null,
+            remoteUrl = "https://example.com/photo.jpg",
+            thumbnailUrl = "https://example.com/photo_thumb.jpg",
+            assemblyId = null,
+            tusUploadId = null,
+            fileSize = 1024,
+            width = 1000,
+            height = 800,
+            mimeType = "image/jpeg",
+            capturedAt = timestamp,
+            createdAt = timestamp,
+            updatedAt = timestamp,
+            albums = null
+        )
+
+        every { checkpointStore.getCheckpoint(any()) } returns null
+        val capturedDate = slot<Date>()
+        every { checkpointStore.updateCheckpoint(any(), capture(capturedDate)) } just runs
+
+        coEvery { api.getRoomPhotos(roomId, any(), any(), any(), any()) } returns roomPhotosResponse(photo)
+        coEvery { localDataService.getPhotoByServerId(photo.id) } returns null
+        coEvery { localDataService.savePhotos(any()) } just runs
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore
+        )
+
+        repository.syncRoomPhotos(projectId, roomId)
+
+        val expected = DateUtils.parseApiDate(timestamp)!!
+        assertThat(capturedDate.isCaptured).isTrue()
+        assertThat(capturedDate.captured).isEqualTo(expected)
+    }
+
+    @Test
+    fun `syncRoomPhotos does not advance checkpoint when no photos returned`() = runTest {
+        val roomId = 88L
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
+
+        every { checkpointStore.getCheckpoint(any()) } returns null
+        coEvery { api.getRoomPhotos(roomId, any(), any(), any(), any()) } returns JsonObject()
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore
+        )
+
+        repository.syncRoomPhotos(projectId, roomId)
+
+        io.mockk.verify(exactly = 0) { checkpointStore.updateCheckpoint(any(), any()) }
+    }
+
+    @Test
+    fun `syncDeletedRecords stores server provided timestamp`() = runTest {
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
+        every { checkpointStore.getCheckpoint(any()) } returns null
+
+        val body = DeletedRecordsResponse(projects = listOf(1L))
+        val headerDate = "Wed, 06 Nov 2024 15:20:00 GMT"
+        val headers = Headers.headersOf("Date", headerDate)
+
+        coEvery { api.getDeletedRecords(any(), any()) } returns Response.success(body, headers)
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore
+        )
+
+        repository.syncDeletedRecords()
+
+        val expected = DateUtils.parseHttpDate(headerDate)!!
+        io.mockk.verify {
+            checkpointStore.updateCheckpoint("deleted_records_global", match { it == expected })
+        }
     }
 }
 
@@ -335,4 +457,37 @@ private fun everyLog() {
     every { Log.i(any<String>(), any<String>()) } returns 0
     every { Log.w(any<String>(), any<String>()) } returns 0
     every { Log.e(any<String>(), any<String>()) } returns 0
+}
+
+private fun roomPhotosResponse(vararg photos: PhotoDto): JsonObject {
+    val gson = Gson()
+    val roomPhotos = photos.map { photo ->
+        RoomPhotoDto(
+            id = photo.id,
+            uuid = photo.uuid,
+            createdAt = photo.createdAt,
+            updatedAt = photo.updatedAt,
+            photo = RoomPhotoFileDto(
+                id = photo.id,
+                uuid = photo.uuid,
+                projectId = photo.projectId,
+                roomId = photo.roomId,
+                fileName = photo.fileName,
+                remoteUrl = photo.remoteUrl,
+                thumbnailUrl = photo.thumbnailUrl,
+                mimeType = photo.mimeType,
+                capturedAt = photo.capturedAt,
+                createdAt = photo.createdAt,
+                updatedAt = photo.updatedAt
+            )
+        )
+    }
+    val meta = JsonObject().apply {
+        addProperty("current_page", 1)
+        addProperty("last_page", 1)
+    }
+    return JsonObject().apply {
+        add("data", gson.toJsonTree(roomPhotos).asJsonArray)
+        add("meta", meta)
+    }
 }

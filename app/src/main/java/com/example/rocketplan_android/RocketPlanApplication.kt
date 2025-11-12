@@ -6,8 +6,11 @@ import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
 import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
+import com.example.rocketplan_android.data.storage.ImageProcessingConfigStore
 import com.example.rocketplan_android.data.storage.SecureStorage
+import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.work.PhotoCacheScheduler
@@ -38,6 +41,14 @@ class RocketPlanApplication : Application() {
     lateinit var secureStorage: SecureStorage
         private set
 
+    lateinit var syncCheckpointStore: SyncCheckpointStore
+        private set
+
+    lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
+        private set
+
+    private lateinit var imageProcessingConfigStore: ImageProcessingConfigStore
+
     override fun onCreate() {
         super.onCreate()
 
@@ -51,6 +62,8 @@ class RocketPlanApplication : Application() {
             context = this,
             secureStorage = secureStorage
         )
+        syncCheckpointStore = SyncCheckpointStore(this)
+        imageProcessingConfigStore = ImageProcessingConfigStore.getInstance(this)
 
         authRepository = AuthRepository(secureStorage)
 
@@ -58,7 +71,8 @@ class RocketPlanApplication : Application() {
         offlineSyncRepository = OfflineSyncRepository(
             api = offlineSyncApi,
             localDataService = localDataService,
-            photoCacheScheduler = photoCacheScheduler
+            photoCacheScheduler = photoCacheScheduler,
+            syncCheckpointStore = syncCheckpointStore
         )
 
         syncQueueManager = SyncQueueManager(
@@ -66,6 +80,13 @@ class RocketPlanApplication : Application() {
             syncRepository = offlineSyncRepository,
             localDataService = localDataService,
             photoCacheScheduler = photoCacheScheduler,
+            remoteLogger = remoteLogger
+        )
+
+        val imageProcessorService = RetrofitClient.imageProcessorService
+        imageProcessingConfigurationRepository = ImageProcessingConfigurationRepository(
+            service = imageProcessorService,
+            cacheStore = imageProcessingConfigStore,
             remoteLogger = remoteLogger
         )
     }

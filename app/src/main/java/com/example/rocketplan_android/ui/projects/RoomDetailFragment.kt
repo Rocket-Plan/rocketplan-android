@@ -79,6 +79,7 @@ class RoomDetailFragment : Fragment() {
     private lateinit var takePictureLauncher: ActivityResultLauncher<Uri>
     private var pendingPhotoFile: File? = null
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
+    private var photoLoadStartTime: Long = 0L
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -344,7 +345,36 @@ class RoomDetailFragment : Fragment() {
                 }
                 launch {
                     photoAdapter.loadStateFlow.collectLatest { loadStates ->
-                        Log.d(TAG, "📊 LoadState: refresh=${loadStates.refresh}, append=${loadStates.append}, itemCount=${photoAdapter.itemCount}")
+                        val refresh = loadStates.refresh
+                        val itemCount = photoAdapter.itemCount
+
+                        // Track load timing
+                        when (refresh) {
+                            is LoadState.Loading -> {
+                                if (itemCount == 0) {
+                                    photoLoadStartTime = System.currentTimeMillis()
+                                    Log.d(TAG, "📊 LoadState: refresh=Loading (start), itemCount=0")
+                                }
+                            }
+                            is LoadState.NotLoading -> {
+                                if (photoLoadStartTime > 0L) {
+                                    val loadTime = System.currentTimeMillis() - photoLoadStartTime
+                                    Log.d(TAG, "⏱️ Photo load completed in ${loadTime}ms, itemCount=$itemCount")
+                                    photoLoadStartTime = 0L
+                                } else {
+                                    Log.d(TAG, "📊 LoadState: refresh=NotLoading, itemCount=$itemCount")
+                                }
+                            }
+                            is LoadState.Error -> {
+                                val loadTime = if (photoLoadStartTime > 0L) {
+                                    System.currentTimeMillis() - photoLoadStartTime
+                                } else 0L
+                                Log.e(TAG, "❌ Photo load failed after ${loadTime}ms: ${refresh.error.message}", refresh.error)
+                                photoLoadStartTime = 0L
+                            }
+                        }
+
+                        Log.d(TAG, "📊 LoadState: refresh=$refresh, append=${loadStates.append}, itemCount=$itemCount")
                         photoLoadStateAdapter.loadState = loadStates.append
                         updatePhotoVisibility(loadStates.refresh)
                     }

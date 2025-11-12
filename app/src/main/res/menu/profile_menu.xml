@@ -4,6 +4,9 @@
         android:id="@+id/action_sync_status"
         android:title="@string/action_sync_status" />
     <item
+        android:id="@+id/action_reload_image_processor_config"
+        android:title="@string/action_reload_image_processor_config" />
+    <item
         android:id="@+id/action_sign_out"
         android:title="@string/action_sign_out" />
 </menu>

@@ -240,6 +240,7 @@ class RoomDetailViewModel(
     fun onLocalPhotoCaptured(photoFile: File, mimeType: String, albumId: Long? = null) {
         val room = _resolvedRoom.value
         if (room == null) {
+            Log.w(TAG, "⚠️ Ignoring captured photo because room is not resolved yet")
             remoteLogger.log(
                 level = LogLevel.WARN,
                 tag = TAG,
@@ -251,6 +252,8 @@ class RoomDetailViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val timestamp = Date()
             val lookupRoomId = room.serverId ?: room.roomId
+            Log.d(TAG, "📸 Photo captured: file=${photoFile.name}, size=${photoFile.length()} bytes, roomId=$lookupRoomId, projectId=$projectId")
+
             val entity = OfflinePhotoEntity(
                 uuid = UUID.randomUUID().toString(),
                 projectId = projectId,
@@ -272,6 +275,8 @@ class RoomDetailViewModel(
                 lastAccessedAt = timestamp
             )
             localDataService.savePhotos(listOf(entity))
+            Log.d(TAG, "✅ Photo saved to local database: uuid=${entity.uuid}, isDirty=true, syncStatus=PENDING")
+
             remoteLogger.log(
                 level = LogLevel.INFO,
                 tag = TAG,

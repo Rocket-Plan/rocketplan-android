@@ -23,6 +23,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
+import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
@@ -37,6 +38,7 @@ import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
+import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
 import com.google.gson.Gson
@@ -51,14 +53,38 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 private const val ROOM_PHOTO_INCLUDE = "photo,albums,notes_count,creator"
 private const val ROOM_PHOTO_PAGE_LIMIT = 30
+private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"
+private val DEFAULT_DELETION_TYPES = listOf(
+    "projects",
+    "photos",
+    "notes",
+    "rooms",
+    "locations",
+    "equipment",
+    "damage_materials",
+    "atmospheric_logs",
+    "work_scope_actions"
+)
+private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
+private fun companyProjectsKey(companyId: Long) = "company_projects_$companyId"
+private fun userProjectsKey(userId: Long) = "user_projects_$userId"
+private fun roomPhotosKey(roomId: Long) = "room_photos_$roomId"
+private fun floorPhotosKey(projectId: Long) = "project_floor_photos_$projectId"
+private fun locationPhotosKey(projectId: Long) = "project_location_photos_$projectId"
+private fun unitPhotosKey(projectId: Long) = "project_unit_photos_$projectId"
+private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
+private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
+private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
 
 class OfflineSyncRepository(
     private val api: OfflineSyncApi,
     private val localDataService: LocalDataService,
     private val photoCacheScheduler: PhotoCacheScheduler,
+    private val syncCheckpointStore: SyncCheckpointStore,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
@@ -66,17 +92,25 @@ class OfflineSyncRepository(
     private val roomPhotoListType = object : TypeToken<List<RoomPhotoDto>>() {}.type
 
     suspend fun syncCompanyProjects(companyId: Long) = withContext(ioDispatcher) {
+        val checkpointKey = companyProjectsKey(companyId)
+        val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
         val projects = fetchAllPages { page ->
-            api.getCompanyProjects(companyId = companyId, page = page)
+            api.getCompanyProjects(companyId = companyId, page = page, updatedSince = updatedSince)
         }
         localDataService.saveProjects(projects.map { it.toEntity() })
+        projects.latestTimestamp { it.updatedAt }
+            ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
     }
 
     suspend fun syncUserProjects(userId: Long) = withContext(ioDispatcher) {
+        val checkpointKey = userProjectsKey(userId)
+        val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
         val projects = fetchAllPages { page ->
-            api.getUserProjects(userId = userId, page = page)
+            api.getUserProjects(userId = userId, page = page, updatedSince = updatedSince)
         }
         localDataService.saveProjects(projects.map { it.toEntity() })
+        projects.latestTimestamp { it.updatedAt }
+            ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
     }
 
     /**
@@ -152,11 +186,29 @@ class OfflineSyncRepository(
         ensureActive()
 
         // 2. Levels (Locations from property)
+        var usedIncrementalSync = false
         val propertyLocations = property?.id?.let { propertyId ->
+            val existingLocationData = localDataService.getLatestLocationUpdate(projectId = projectId)
             val levels = runCatching { api.getPropertyLevels(propertyId) }
                 .getOrNull()?.data ?: emptyList()
-            val nested = runCatching { api.getPropertyLocations(propertyId) }
+
+            val updatedSinceParam = existingLocationData?.let { DateUtils.formatApiDate(it) }
+            if (updatedSinceParam != null) {
+                Log.d("API", "🔄 [FAST] Requesting locations for property $propertyId since $updatedSinceParam (incremental)")
+                usedIncrementalSync = true
+            } else {
+                Log.d("API", "🔄 [FAST] Requesting locations for property $propertyId (full sync - first run)")
+            }
+
+            val nested = runCatching {
+                api.getPropertyLocations(
+                    propertyId,
+                    updatedSince = updatedSinceParam
+                )
+            }
                 .getOrNull()?.data ?: emptyList()
+
+            Log.d("API", "✅ [FAST] Received ${levels.size} levels + ${nested.size} nested locations for property $propertyId")
             levels + nested
         } ?: emptyList()
 
@@ -205,7 +257,8 @@ class OfflineSyncRepository(
         ensureActive()
 
         val duration = System.currentTimeMillis() - startTime
-        Log.d("API", "✅ [syncProjectEssentials] Synced $itemCount items in ${duration}ms")
+        val syncMode = if (usedIncrementalSync) "incremental" else "full"
+        Log.d("API", "✅ [syncProjectEssentials] Synced $itemCount items in ${duration}ms ($syncMode)")
         Log.d("API", "   Navigation chain: Property → ${locationIds.size} Levels → Rooms → Albums")
         SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, itemCount, duration)
     }
@@ -272,12 +325,16 @@ class OfflineSyncRepository(
         Log.d("API", "🔄 [syncProjectMetadata] Starting for project $projectId")
         var itemCount = 0
 
+        val notesCheckpointKey = projectNotesKey(projectId)
+        val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
         // Notes
-        runCatching { api.getProjectNotes(projectId) }
+        runCatching { api.getProjectNotes(projectId, updatedSince = notesSince) }
             .onSuccess { notes ->
                 localDataService.saveNotes(notes.mapNotNull { it.toEntity() })
                 itemCount += notes.size
                 Log.d("API", "📝 [syncProjectMetadata] Saved ${notes.size} notes")
+                notes.latestTimestamp { it.updatedAt }
+                    ?.let { syncCheckpointStore.updateCheckpoint(notesCheckpointKey, it) }
             }
             .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch notes", it) }
         ensureActive()
@@ -292,22 +349,30 @@ class OfflineSyncRepository(
             .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch equipment", it) }
         ensureActive()
 
+        val damagesCheckpointKey = projectDamagesKey(projectId)
+        val damagesSince = syncCheckpointStore.updatedSinceParam(damagesCheckpointKey)
         // Damages
-        runCatching { api.getProjectDamageMaterials(projectId) }
+        runCatching { api.getProjectDamageMaterials(projectId, updatedSince = damagesSince) }
             .onSuccess { damages ->
                 localDataService.saveDamages(damages.mapNotNull { it.toEntity(defaultProjectId = projectId) })
                 itemCount += damages.size
                 Log.d("API", "⚠️ [syncProjectMetadata] Saved ${damages.size} damages")
+                damages.latestTimestamp { it.updatedAt }
+                    ?.let { syncCheckpointStore.updateCheckpoint(damagesCheckpointKey, it) }
             }
             .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch damages", it) }
         ensureActive()
 
+        val atmosCheckpointKey = projectAtmosLogsKey(projectId)
+        val atmosSince = syncCheckpointStore.updatedSinceParam(atmosCheckpointKey)
         // Atmospheric logs
-        runCatching { api.getProjectAtmosphericLogs(projectId) }
+        runCatching { api.getProjectAtmosphericLogs(projectId, updatedSince = atmosSince) }
             .onSuccess { logs ->
                 localDataService.saveAtmosphericLogs(logs.map { it.toEntity(defaultRoomId = null) })
                 itemCount += logs.size
                 Log.d("API", "🌡️ [syncProjectMetadata] Saved ${logs.size} atmospheric logs")
+                logs.latestTimestamp { it.updatedAt }
+                    ?.let { syncCheckpointStore.updateCheckpoint(atmosCheckpointKey, it) }
             }
             .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch atmospheric logs", it) }
         ensureActive()
@@ -315,6 +380,51 @@ class OfflineSyncRepository(
         val duration = System.currentTimeMillis() - startTime
         Log.d("API", "✅ [syncProjectMetadata] Synced $itemCount items in ${duration}ms")
         SyncResult.success(SyncSegment.PROJECT_METADATA, itemCount, duration)
+    }
+
+    suspend fun syncDeletedRecords(types: List<String> = DEFAULT_DELETION_TYPES) = withContext(ioDispatcher) {
+        val sinceDate = syncCheckpointStore.getCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY)
+            ?: Date(System.currentTimeMillis() - DEFAULT_DELETION_LOOKBACK_MS)
+        val sinceParam = DateUtils.formatApiDate(sinceDate)
+        val filteredTypes = types.filter { it.isNotBlank() }
+
+        Log.d("API", "🔄 [syncDeletedRecords] Fetching deletions since $sinceParam (types=${filteredTypes.joinToString()})")
+        val response = runCatching {
+            api.getDeletedRecords(
+                since = sinceParam,
+                types = filteredTypes.takeIf { it.isNotEmpty() }
+            )
+        }.onFailure {
+            Log.e("API", "❌ [syncDeletedRecords] Failed to fetch deletions", it)
+        }.getOrElse { return@withContext }
+
+        if (!response.isSuccessful) {
+            Log.e(
+                "API",
+                "❌ [syncDeletedRecords] Non-success response ${response.code()}"
+            )
+            return@withContext
+        }
+
+        val body = response.body()
+        if (body == null) {
+            Log.w("API", "⚠️ [syncDeletedRecords] Empty body; skipping apply")
+            return@withContext
+        }
+
+        applyDeletedRecords(body)
+
+        val serverTimestamp = DateUtils.parseHttpDate(response.headers()["Date"])
+        if (serverTimestamp != null) {
+            syncCheckpointStore.updateCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY, serverTimestamp)
+        } else {
+            Log.w("API", "⚠️ [syncDeletedRecords] Missing Date header; checkpoint not advanced")
+        }
+
+        Log.d(
+            "API",
+            "✅ [syncDeletedRecords] Applied deletions projects=${body.projects.size}, rooms=${body.rooms.size}, photos=${body.photos.size}, notes=${body.notes.size}"
+        )
     }
 
     /**
@@ -362,10 +472,20 @@ class OfflineSyncRepository(
      */
     suspend fun syncRoomPhotos(projectId: Long, roomId: Long): SyncResult = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
-        Log.d("API", "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId)")
+        val checkpointKey = roomPhotosKey(roomId)
+        val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
+        if (updatedSince != null) {
+            Log.d("API", "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) since $updatedSince")
+        } else {
+            Log.d("API", "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) - full sync")
+        }
 
         val photos = runCatching {
-            fetchRoomPhotoPages(roomId = roomId, projectId = projectId)
+            fetchRoomPhotoPages(
+                roomId = roomId,
+                projectId = projectId,
+                updatedSince = updatedSince
+            )
         }.onFailure { error ->
             if (error is retrofit2.HttpException && error.code() == 404) {
                 Log.d("API", "INFO [syncRoomPhotos] Room $roomId has no photos (404)")
@@ -386,6 +506,8 @@ class OfflineSyncRepository(
             Log.d("API", "💾 [syncRoomPhotos] Saved ${photos.size} photos for room $roomId")
             photoCacheScheduler.schedulePrefetch()
         }
+        photos.latestTimestamp { it.serverBackedTimestamp() }
+            ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
 
         val duration = System.currentTimeMillis() - startTime
         SyncResult.success(SyncSegment.ROOM_PHOTOS, photos.size, duration)
@@ -410,15 +532,21 @@ class OfflineSyncRepository(
         var totalPhotos = 0
         var failedCount = 0
 
+        val floorKey = floorPhotosKey(projectId)
+        val floorSince = syncCheckpointStore.updatedSinceParam(floorKey)
         // Floor photos
         runCatching {
-            fetchAllPages { page -> api.getProjectFloorPhotos(projectId, page) }
+            fetchAllPages { page ->
+                api.getProjectFloorPhotos(projectId, page, updatedSince = floorSince)
+            }
                 .map { it.toPhotoDto(projectId) }
         }.onSuccess { photos ->
             if (persistPhotos(photos)) {
                 totalPhotos += photos.size
                 Log.d("API", "📸 [syncProjectLevelPhotos] Saved ${photos.size} floor photos")
             }
+            photos.latestTimestamp { it.updatedAt }
+                ?.let { syncCheckpointStore.updateCheckpoint(floorKey, it) }
         }.onFailure { error ->
             failedCount++
             Log.e("API", "❌ [syncProjectLevelPhotos] Failed to fetch floor photos", error)
@@ -426,14 +554,20 @@ class OfflineSyncRepository(
         ensureActive()
 
         // Location photos (THE SLOW ONE that was blocking room loading)
+        val locationKey = locationPhotosKey(projectId)
+        val locationSince = syncCheckpointStore.updatedSinceParam(locationKey)
         runCatching {
-            fetchAllPages { page -> api.getProjectLocationPhotos(projectId, page) }
+            fetchAllPages { page ->
+                api.getProjectLocationPhotos(projectId, page, updatedSince = locationSince)
+            }
                 .map { it.toPhotoDto(projectId) }
         }.onSuccess { photos ->
             if (persistPhotos(photos)) {
                 totalPhotos += photos.size
                 Log.d("API", "📸 [syncProjectLevelPhotos] Saved ${photos.size} location photos")
             }
+            photos.latestTimestamp { it.updatedAt }
+                ?.let { syncCheckpointStore.updateCheckpoint(locationKey, it) }
         }.onFailure { error ->
             failedCount++
             Log.e("API", "❌ [syncProjectLevelPhotos] Failed to fetch location photos", error)
@@ -441,14 +575,20 @@ class OfflineSyncRepository(
         ensureActive()
 
         // Unit photos
+        val unitKey = unitPhotosKey(projectId)
+        val unitSince = syncCheckpointStore.updatedSinceParam(unitKey)
         runCatching {
-            fetchAllPages { page -> api.getProjectUnitPhotos(projectId, page) }
+            fetchAllPages { page ->
+                api.getProjectUnitPhotos(projectId, page, updatedSince = unitSince)
+            }
                 .map { it.toPhotoDto(projectId) }
         }.onSuccess { photos ->
             if (persistPhotos(photos)) {
                 totalPhotos += photos.size
                 Log.d("API", "📸 [syncProjectLevelPhotos] Saved ${photos.size} unit photos")
             }
+            photos.latestTimestamp { it.updatedAt }
+                ?.let { syncCheckpointStore.updateCheckpoint(unitKey, it) }
         }.onFailure { error ->
             failedCount++
             Log.e("API", "❌ [syncProjectLevelPhotos] Failed to fetch unit photos", error)
@@ -491,7 +631,11 @@ class OfflineSyncRepository(
         return results
     }
 
-    private suspend fun fetchRoomPhotoPages(roomId: Long, projectId: Long): List<PhotoDto> {
+    private suspend fun fetchRoomPhotoPages(
+        roomId: Long,
+        projectId: Long,
+        updatedSince: String?
+    ): List<PhotoDto> {
         val collected = mutableListOf<PhotoDto>()
         var page = 1
 
@@ -500,7 +644,8 @@ class OfflineSyncRepository(
                 roomId = roomId,
                 page = page,
                 limit = ROOM_PHOTO_PAGE_LIMIT,
-                include = ROOM_PHOTO_INCLUDE
+                include = ROOM_PHOTO_INCLUDE,
+                updatedSince = updatedSince
             )
 
             val parsed = parseRoomPhotoResponse(json, projectId, roomId)
@@ -627,6 +772,18 @@ class OfflineSyncRepository(
         return true
     }
 
+    private suspend fun applyDeletedRecords(response: DeletedRecordsResponse) {
+        localDataService.markProjectsDeleted(response.projects)
+        localDataService.markRoomsDeleted(response.rooms)
+        localDataService.markLocationsDeleted(response.locations)
+        localDataService.markPhotosDeleted(response.photos)
+        localDataService.markNotesDeleted(response.notes)
+        localDataService.markEquipmentDeleted(response.equipment)
+        localDataService.markDamagesDeleted(response.damageMaterials)
+        localDataService.markAtmosphericLogsDeleted(response.atmosphericLogs)
+        localDataService.markWorkScopesDeleted(response.workScopeActions)
+    }
+
     private data class RoomPhotoPageResult(
         val photos: List<PhotoDto>,
         val hasMore: Boolean,
@@ -641,14 +798,31 @@ class OfflineSyncRepository(
     private suspend fun fetchRoomsForLocation(locationId: Long): List<RoomDto> {
         val collected = mutableListOf<RoomDto>()
         var page = 1
+        val updatedSince = localDataService.getLatestRoomUpdateForLocation(locationId)
+            ?.let { DateUtils.formatApiDate(it) }
+
+        if (page == 1) {
+            if (updatedSince != null) {
+                Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId since $updatedSince (incremental)")
+            } else {
+                Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId (full sync - first run)")
+            }
+        }
+
         while (true) {
-            val response = runCatching { api.getRoomsForLocation(locationId, page = page) }
+            val response = runCatching {
+                api.getRoomsForLocation(
+                    locationId,
+                    page = page,
+                    updatedSince = updatedSince
+                )
+            }
                 .onSuccess { result ->
                     val size = result.data.size
                     if (size == 0 && page == 1) {
-                        Log.d("API", "INFO [syncProjectGraph] No rooms returned for location $locationId")
+                        Log.d("API", "INFO [FAST] No rooms returned for location $locationId")
                     } else if (size > 0) {
-                        Log.d("API", "✅ [syncProjectGraph] Fetched $size rooms for location $locationId (page $page)")
+                        Log.d("API", "✅ [FAST] Fetched $size rooms for location $locationId (page $page)")
                     }
                 }
                 .onFailure { error ->
@@ -938,6 +1112,12 @@ private fun PhotoDto.toEntity(defaultRoomId: Long? = this.roomId): OfflinePhotoE
     val timestamp = now()
     val hasRemote = !remoteUrl.isNullOrBlank()
     val localCachePath = localPath?.takeIf { it.isNotBlank() }
+
+    // Normalize capturedAt: fall back to createdAt to ensure consistent ordering
+    val parsedCapturedAt = DateUtils.parseApiDate(capturedAt)
+    val parsedCreatedAt = DateUtils.parseApiDate(createdAt) ?: timestamp
+    val normalizedCapturedAt = parsedCapturedAt ?: parsedCreatedAt
+
     return OfflinePhotoEntity(
         photoId = id,
         serverId = id,
@@ -958,8 +1138,8 @@ private fun PhotoDto.toEntity(defaultRoomId: Long? = this.roomId): OfflinePhotoE
         width = width,
         height = height,
         mimeType = mimeType ?: "image/jpeg",
-        capturedAt = DateUtils.parseApiDate(capturedAt),
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        capturedAt = normalizedCapturedAt,
+        createdAt = parsedCreatedAt,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
@@ -976,6 +1156,9 @@ private fun PhotoDto.toEntity(defaultRoomId: Long? = this.roomId): OfflinePhotoE
         lastAccessedAt = timestamp.takeIf { localCachePath != null }
     )
 }
+
+private fun PhotoDto.serverBackedTimestamp(): String? =
+    updatedAt ?: capturedAt ?: createdAt
 
 private fun ProjectPhotoListingDto.toPhotoDto(defaultProjectId: Long): PhotoDto {
     val resolvedSizes = sizes
@@ -1007,6 +1190,12 @@ private fun ProjectPhotoListingDto.toPhotoDto(defaultProjectId: Long): PhotoDto 
         albums = null // ProjectPhotoListingDto doesn't include album info
     )
 }
+
+private fun SyncCheckpointStore.updatedSinceParam(key: String): String? =
+    getCheckpoint(key)?.let { DateUtils.formatApiDate(it) }
+
+private fun <T> Iterable<T>.latestTimestamp(extractor: (T) -> String?): Date? =
+    this.mapNotNull { DateUtils.parseApiDate(extractor(it)) }.maxOrNull()
 
 private fun AtmosphericLogDto.toEntity(defaultRoomId: Long? = roomId): OfflineAtmosphericLogEntity {
     val timestamp = now()
