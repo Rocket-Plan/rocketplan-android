@@ -12,6 +12,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -219,14 +220,11 @@ data class RoomLevelSection(
 )
 
 private fun OfflinePhotoEntity.preferredThumbnailSourceForRoomCard(): String? {
-    return when {
-        !cachedThumbnailPath.isNullOrBlank() -> cachedThumbnailPath
-        !thumbnailUrl.isNullOrBlank() -> thumbnailUrl
-        !cachedOriginalPath.isNullOrBlank() -> cachedOriginalPath
-        !remoteUrl.isNullOrBlank() -> remoteUrl
-        localPath.isNotBlank() -> localPath
-        else -> null
-    }
+    cachedThumbnailPath.existingFilePath()?.let { return it }
+    thumbnailUrl?.takeIf { it.isNotBlank() }?.let { return it }
+    cachedOriginalPath.existingFilePath()?.let { return it }
+    remoteUrl?.takeIf { it.isNotBlank() }?.let { return it }
+    return localPath.existingFilePath()
 }
 
 data class RoomCard(
@@ -247,4 +245,10 @@ data class AlbumSection(
 
 enum class ProjectDetailTab {
     PHOTOS, DAMAGES, SKETCH
+}
+
+private fun String?.existingFilePath(): String? {
+    if (this.isNullOrBlank()) return null
+    val file = File(this)
+    return file.takeIf { it.exists() }?.absolutePath
 }

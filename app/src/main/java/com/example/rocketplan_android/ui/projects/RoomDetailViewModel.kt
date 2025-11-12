@@ -82,8 +82,20 @@ class RoomDetailViewModel(
                 .collect { resolved ->
                     if (resolved == null) {
                         Log.d(TAG, "⏳ Room resolution pending for navArg=$roomId (projectId=$projectId)")
+                        if (_resolvedRoom.value != null) {
+                            _resolvedRoom.value = null
+                        }
+                        return@collect
                     }
-                    _resolvedRoom.value = resolved
+
+                    if (shouldUpdateResolvedRoom(_resolvedRoom.value, resolved)) {
+                        _resolvedRoom.value = resolved
+                    } else {
+                        Log.v(
+                            TAG,
+                            "🚫 Skipping redundant room emission; ids/title unchanged (roomId=${resolved.roomId}, serverId=${resolved.serverId})"
+                        )
+                    }
                 }
         }
 
@@ -219,6 +231,16 @@ class RoomDetailViewModel(
         )
     }
 
+    private fun shouldUpdateResolvedRoom(
+        current: OfflineRoomEntity?,
+        next: OfflineRoomEntity
+    ): Boolean {
+        if (current == null) return true
+        return current.roomId != next.roomId ||
+            current.serverId != next.serverId ||
+            current.title != next.title
+    }
+
     private fun OfflinePhotoEntity.toPhotoItem(formatter: SimpleDateFormat): RoomPhotoItem =
         RoomPhotoItem(
             id = photoId,
@@ -340,24 +362,24 @@ private fun OfflinePhotoEntity.hasRenderableAsset(): Boolean =
         localPath.isNotBlank()
 
 private fun OfflinePhotoEntity.preferredImageSource(): String =
-    when {
-        !cachedOriginalPath.isNullOrBlank() -> cachedOriginalPath
-        !remoteUrl.isNullOrBlank() -> remoteUrl
-        !localPath.isNullOrBlank() -> localPath
-        !cachedThumbnailPath.isNullOrBlank() -> cachedThumbnailPath
-        !thumbnailUrl.isNullOrBlank() -> thumbnailUrl!!
-        else -> ""
-    }
+    cachedOriginalPath.existingFilePath() ?:
+    remoteUrl?.takeIf { it.isNotBlank() } ?:
+    localPath.existingFilePath() ?:
+    cachedThumbnailPath.existingFilePath() ?:
+    thumbnailUrl?.takeIf { it.isNotBlank() } ?: ""
 
 private fun OfflinePhotoEntity.preferredThumbnailSource(): String =
-    when {
-        !cachedThumbnailPath.isNullOrBlank() -> cachedThumbnailPath
-        !thumbnailUrl.isNullOrBlank() -> thumbnailUrl
-        !cachedOriginalPath.isNullOrBlank() -> cachedOriginalPath
-        !remoteUrl.isNullOrBlank() -> remoteUrl
-        !localPath.isNullOrBlank() -> localPath
-        else -> ""
-    }
+    cachedThumbnailPath.existingFilePath() ?:
+    thumbnailUrl?.takeIf { it.isNotBlank() } ?:
+    cachedOriginalPath.existingFilePath() ?:
+    remoteUrl?.takeIf { it.isNotBlank() } ?:
+    localPath.existingFilePath() ?: ""
+
+private fun String?.existingFilePath(): String? {
+    if (this.isNullOrBlank()) return null
+    val file = File(this)
+    return file.takeIf { it.exists() }?.absolutePath
+}
 
 data class RoomAlbumItem(
     val id: Long,

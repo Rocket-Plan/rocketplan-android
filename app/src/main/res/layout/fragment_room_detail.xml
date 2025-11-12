@@ -276,6 +276,7 @@
                 android:id="@+id/roomPhotosRecyclerView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:minHeight="@dimen/room_photos_min_height"
                 android:layout_marginTop="16dp"
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_room_photo" />

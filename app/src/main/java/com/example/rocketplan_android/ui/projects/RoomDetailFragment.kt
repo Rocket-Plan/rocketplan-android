@@ -205,7 +205,8 @@ class RoomDetailFragment : Fragment() {
         photosRecyclerView.apply {
             layoutManager = gridLayoutManager
             adapter = photoConcatAdapter
-            setHasFixedSize(true)
+            // Allow height to grow after data loads; otherwise the view may stay collapsed (e.g. 22px).
+            setHasFixedSize(false)
             (itemAnimator as? SimpleItemAnimator)?.apply {
                 supportsChangeAnimations = false
                 changeDuration = 0
@@ -297,12 +298,6 @@ class RoomDetailFragment : Fragment() {
             pendingPhotoFile = null
             Toast.makeText(context, getString(R.string.camera_launch_error), Toast.LENGTH_SHORT).show()
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        Log.d(TAG, "▶️ onResume -> refreshing photo adapter to force rebind")
-        photoAdapter.refresh()
     }
 
     private fun createTempPhotoFile(): File? {
@@ -466,18 +461,23 @@ class RoomDetailFragment : Fragment() {
             return
         }
 
-        // Show RecyclerView immediately if adapter has items, even if latestPhotoCount hasn't updated yet
-        val hasPhotos = photoAdapter.itemCount > 0 || latestPhotoCount > 0
-        val isLoading = loadState is LoadState.Loading && photoAdapter.itemCount == 0
+        val adapterItemCount = photoAdapter.itemCount
+        val hasPhotos = adapterItemCount > 0
+        val isLoading = loadState is LoadState.Loading && adapterItemCount == 0
         loadingOverlay.isVisible = isLoading
 
-        val showPlaceholder = photoAdapter.itemCount == 0 && latestPhotoCount == 0 && loadState !is LoadState.Loading
+        val showPlaceholder = adapterItemCount == 0 && latestPhotoCount == 0 && loadState !is LoadState.Loading
 
-        Log.d(TAG, "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=${photoAdapter.itemCount}, loadState=$loadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder")
+        Log.d(TAG, "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=$adapterItemCount, loadState=$loadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder")
 
         photosRecyclerView.isVisible = hasPhotos
         placeholderText.isVisible = showPlaceholder
         placeholderText.text = if (showPlaceholder) getString(R.string.rocket_scan_empty_state) else ""
+
+        // Log RecyclerView dimensions to debug layout issues
+        photosRecyclerView.post {
+            Log.d(TAG, "📐 RecyclerView dimensions: width=${photosRecyclerView.width}, height=${photosRecyclerView.height}, measuredHeight=${photosRecyclerView.measuredHeight}, childCount=${photosRecyclerView.childCount}")
+        }
     }
 
     companion object {
