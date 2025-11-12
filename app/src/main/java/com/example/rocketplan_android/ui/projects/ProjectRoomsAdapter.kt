@@ -86,8 +86,7 @@ class ProjectRoomsAdapter(
                 room.photoCount,
                 room.photoCount
             )
-            // Don't show spinner - room has been synced, it just has no photos
-            spinner.isVisible = false
+            spinner.isVisible = room.isLoadingPhotos
 
             thumbnail.load(room.thumbnailUrl) {
                 placeholder(R.drawable.bg_room_placeholder)

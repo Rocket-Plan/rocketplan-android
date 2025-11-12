@@ -51,6 +51,8 @@ class SyncQueueManager(
     private var foregroundProjectId: Long? = null
     // Track projects with pending photo sync jobs to avoid duplicates
     private val pendingPhotoSyncs = mutableSetOf<Long>()
+    private val _photoSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
+    val photoSyncingProjects: StateFlow<Set<Long>> = _photoSyncingProjects
 
     init {
         scope.launch { processLoop() }
@@ -100,6 +102,7 @@ class SyncQueueManager(
 
                 // Clear pending photo sync flag
                 pendingPhotoSyncs.remove(projectId)
+                updatePhotoSyncingProjectsLocked()
             }
         }
     }
@@ -110,6 +113,7 @@ class SyncQueueManager(
                 queue.clear()
                 taskIndex.clear()
                 pendingPhotoSyncs.clear()
+                updatePhotoSyncingProjectsLocked()
                 initialSyncStarted.set(false)
             }
             _isActive.value = false
@@ -229,6 +233,7 @@ class SyncQueueManager(
                             // Remove from pendingPhotoSyncs when full sync completes
                             if (!job.skipPhotos) {
                                 pendingPhotoSyncs.remove(job.projectId)
+                                updatePhotoSyncingProjectsLocked()
                             }
                         }
                         notifier.tryEmit(Unit)
@@ -256,12 +261,19 @@ class SyncQueueManager(
                                 taskIndex.remove(existing.key)
                             }
                             pendingPhotoSyncs.add(job.projectId)
+                            updatePhotoSyncingProjectsLocked()
                             true
                         }
                     }
                     if (shouldEnqueuePhotos) {
-                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority 1")
-                        enqueue(SyncJob.SyncProjectGraph(projectId = job.projectId, prio = 1, skipPhotos = false))
+                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority $FOREGROUND_PHOTO_PRIORITY")
+                        enqueue(
+                            SyncJob.SyncProjectGraph(
+                                projectId = job.projectId,
+                                prio = FOREGROUND_PHOTO_PRIORITY,
+                                skipPhotos = false
+                            )
+                        )
                     }
                 }
 
@@ -293,6 +305,7 @@ class SyncQueueManager(
     companion object {
         private const val TAG = "SyncQueueManager"
         private const val FOREGROUND_PRIORITY = -1
+        private const val FOREGROUND_PHOTO_PRIORITY = 0
     }
 
     private suspend fun focusProjectSync(projectId: Long) {
@@ -327,5 +340,9 @@ class SyncQueueManager(
         jobsToCancel.forEach { it.cancel() }
         Log.d(TAG, "🚀 Foreground sync for project $projectId (FAST mode - rooms only)")
         enqueue(SyncJob.SyncProjectGraph(projectId = projectId, prio = FOREGROUND_PRIORITY, skipPhotos = true))
+    }
+
+    private fun updatePhotoSyncingProjectsLocked() {
+        _photoSyncingProjects.value = pendingPhotoSyncs.toSet()
     }
 }

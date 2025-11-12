@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
@@ -44,21 +45,30 @@ class ProjectDetailViewModel(
                 localDataService.observeRooms(projectId),
                 localDataService.observePhotosForProject(projectId),
                 localDataService.observeNotes(projectId),
-                localDataService.observeAlbumsForProject(projectId)
-            ) { projects, rooms, photos, notes, albums ->
+                localDataService.observeAlbumsForProject(projectId),
+                syncQueueManager.photoSyncingProjects
+            ) { flows ->
+                val projects = flows[0] as List<*>
+                val rooms = flows[1] as List<*>
+                val photos = flows[2] as List<*>
+                val notes = flows[3] as List<*>
+                val albums = flows[4] as List<*>
+                val photoSyncingProjects = flows[5] as Set<*>
+
                 Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
-                val project = projects.firstOrNull { it.projectId == projectId }
+                val project = (projects as List<OfflineProjectEntity>).firstOrNull { it.projectId == projectId }
                 if (project == null) {
                     Log.d("ProjectDetailVM", "⚠️ Project $projectId not found in database")
                     ProjectDetailUiState.Loading
                 } else {
                     Log.d("ProjectDetailVM", "✅ Project found: ${project.title}")
-                    val header = project.toHeader(notes.size)
-                    val sections = rooms.toSections(photos)
+                    val header = project.toHeader((notes as List<OfflineNoteEntity>).size)
+                    val isProjectPhotoSyncing = (photoSyncingProjects as Set<Long>).contains(projectId)
+                    val sections = (rooms as List<OfflineRoomEntity>).toSections(photos as List<OfflinePhotoEntity>, isProjectPhotoSyncing)
                     ProjectDetailUiState.Ready(
                         header = header,
                         levelSections = sections,
-                        albums = albums.toAlbumSections(photos)
+                        albums = (albums as List<OfflineAlbumEntity>).toAlbumSections(photos as List<OfflinePhotoEntity>)
                     )
                 }
             }
@@ -67,12 +77,17 @@ class ProjectDetailViewModel(
             // Only emit when visible content meaningfully changes
             .distinctUntilChanged { old, new ->
                 when {
-                    old is ProjectDetailUiState.Ready && new is ProjectDetailUiState.Ready ->
+                    old is ProjectDetailUiState.Ready && new is ProjectDetailUiState.Ready -> {
+                        val oldPhotoTotal = old.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
+                        val newPhotoTotal = new.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
+                        val oldLoadingCount = old.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
+                        val newLoadingCount = new.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
+
                         old.levelSections.size == new.levelSections.size &&
                             old.albums.size == new.albums.size &&
-                            // Compare total photo counts across rooms to avoid noisy rebinds
-                            old.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } } ==
-                                new.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
+                            oldPhotoTotal == newPhotoTotal &&
+                            oldLoadingCount == newLoadingCount
+                    }
                     old is ProjectDetailUiState.Loading && new is ProjectDetailUiState.Loading -> true
                     else -> false
                 }
@@ -111,7 +126,8 @@ class ProjectDetailViewModel(
     }
 
     private fun List<OfflineRoomEntity>.toSections(
-        photos: List<OfflinePhotoEntity>
+        photos: List<OfflinePhotoEntity>,
+        isProjectPhotoSyncing: Boolean
     ): List<RoomLevelSection> {
         if (isEmpty()) {
             Log.d("ProjectDetailVM", "⚠️ No rooms found for project")
@@ -129,6 +145,7 @@ class ProjectDetailViewModel(
                     .map { room ->
                         val roomKey = room.serverId ?: room.roomId
                         val roomPhotos = photosByRoom[roomKey].orEmpty()
+                        val isLoadingPhotos = (isProjectPhotoSyncing && roomPhotos.isEmpty()) || room.serverId == null
                         RoomCard(
                             roomId = roomKey,
                             title = room.title,
@@ -137,7 +154,8 @@ class ProjectDetailViewModel(
                             thumbnailUrl = roomPhotos.firstNotNullOfOrNull { photo ->
                                 photo.thumbnailUrl.takeIf { !it.isNullOrBlank() }
                                     ?: photo.remoteUrl.takeIf { !it.isNullOrBlank() }
-                            }
+                            },
+                            isLoadingPhotos = isLoadingPhotos
                         )
                     }
                 RoomLevelSection(levelName = level, rooms = roomCards)
@@ -206,7 +224,8 @@ data class RoomCard(
     val title: String,
     val level: String,
     val photoCount: Int,
-    val thumbnailUrl: String?
+    val thumbnailUrl: String?,
+    val isLoadingPhotos: Boolean
 )
 
 data class AlbumSection(

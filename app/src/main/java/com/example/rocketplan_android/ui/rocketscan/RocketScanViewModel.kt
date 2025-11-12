@@ -56,10 +56,12 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
 
             combine(
                 localDataService.observeRooms(projectId),
-                localDataService.observeRoomPhotoSummaries(projectId)
-            ) { rooms, summaries ->
+                localDataService.observeRoomPhotoSummaries(projectId),
+                syncQueueManager.photoSyncingProjects
+            ) { rooms, summaries, photoSyncingProjects ->
                 android.util.Log.d("RocketScanVM", "📊 Received ${rooms.size} rooms, ${summaries.size} summaries for project $projectId")
-                buildRoomItems(rooms, summaries)
+                val isProjectPhotoSyncing = photoSyncingProjects.contains(projectId)
+                buildRoomItems(rooms, summaries, isProjectPhotoSyncing)
             }.collect { items ->
                 android.util.Log.d("RocketScanVM", "🏗️ Built ${items.size} room items")
 
@@ -96,7 +98,8 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
 
     private fun buildRoomItems(
         rooms: List<OfflineRoomEntity>,
-        photoSummaries: List<RoomPhotoSummary>
+        photoSummaries: List<RoomPhotoSummary>,
+        isProjectPhotoSyncing: Boolean
     ): List<RoomListItem> {
         if (rooms.isEmpty()) {
             return emptyList()
@@ -119,13 +122,17 @@ class RocketScanViewModel(application: Application) : AndroidViewModel(applicati
                     val photoLookupId = room.serverId ?: room.roomId
                     val summary = summariesByRoomId[photoLookupId]
                     val navigationId = room.serverId ?: room.roomId
+                    val latestThumbnail = summary?.latestThumbnailUrl?.takeIf { it.isNotBlank() }
+                    val photoCount = summary?.photoCount ?: 0
+                    val shouldShowSpinner = (isProjectPhotoSyncing && photoCount == 0 && latestThumbnail == null) || room.serverId == null
                     RoomListItem.Room(
                         RoomCard(
                             roomId = navigationId,
                             title = room.title,
                             level = level,
-                            photoCount = summary?.photoCount ?: 0,
-                            thumbnailUrl = summary?.latestThumbnailUrl?.takeIf { it.isNotBlank() }
+                            photoCount = photoCount,
+                            thumbnailUrl = latestThumbnail,
+                            isLoadingPhotos = shouldShowSpinner
                         )
                     )
                 }
