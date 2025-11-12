@@ -152,8 +152,7 @@ class ProjectDetailViewModel(
                             level = level,
                             photoCount = roomPhotos.size,
                             thumbnailUrl = roomPhotos.firstNotNullOfOrNull { photo ->
-                                photo.thumbnailUrl.takeIf { !it.isNullOrBlank() }
-                                    ?: photo.remoteUrl.takeIf { !it.isNullOrBlank() }
+                                photo.preferredThumbnailSourceForRoomCard()
                             },
                             isLoadingPhotos = isLoadingPhotos
                         )
@@ -218,6 +217,17 @@ data class RoomLevelSection(
     val levelName: String,
     val rooms: List<RoomCard>
 )
+
+private fun OfflinePhotoEntity.preferredThumbnailSourceForRoomCard(): String? {
+    return when {
+        !cachedThumbnailPath.isNullOrBlank() -> cachedThumbnailPath
+        !thumbnailUrl.isNullOrBlank() -> thumbnailUrl
+        !cachedOriginalPath.isNullOrBlank() -> cachedOriginalPath
+        !remoteUrl.isNullOrBlank() -> remoteUrl
+        localPath.isNotBlank() -> localPath
+        else -> null
+    }
+}
 
 data class RoomCard(
     val roomId: Long,

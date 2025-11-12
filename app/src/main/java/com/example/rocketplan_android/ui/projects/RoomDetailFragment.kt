@@ -289,7 +289,7 @@ class RoomDetailFragment : Fragment() {
             "${BuildConfig.APPLICATION_ID}.fileprovider",
             photoFile
         )
-        pendingPhotoFile = photoFile
+            pendingPhotoFile = photoFile
         try {
             takePictureLauncher.launch(uri)
         } catch (error: ActivityNotFoundException) {
@@ -297,6 +297,12 @@ class RoomDetailFragment : Fragment() {
             pendingPhotoFile = null
             Toast.makeText(context, getString(R.string.camera_launch_error), Toast.LENGTH_SHORT).show()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        Log.d(TAG, "▶️ onResume -> refreshing photo adapter to force rebind")
+        photoAdapter.refresh()
     }
 
     private fun createTempPhotoFile(): File? {

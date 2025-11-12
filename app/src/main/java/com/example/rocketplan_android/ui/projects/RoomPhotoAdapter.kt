@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.ui.projects
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -49,6 +50,7 @@ class RoomPhotoPagingAdapter(
         private val dateLabel: TextView = view.findViewById(R.id.roomPhotoDate)
 
         fun bind(photo: RoomPhotoItem) {
+            Log.d(TAG, "🖼️ Binding photo: id=${photo.id}, thumbnailUrl=${photo.thumbnailUrl}, date=${photo.capturedOn}")
             preview.load(photo.thumbnailUrl) {
                 placeholder(R.drawable.bg_room_placeholder)
                 error(R.drawable.bg_room_placeholder)
@@ -56,6 +58,10 @@ class RoomPhotoPagingAdapter(
             }
             dateLabel.text = photo.capturedOn ?: ""
             itemView.setOnClickListener { onPhotoSelected(photo) }
+        }
+
+        companion object {
+            private const val TAG = "RoomPhotoViewHolder"
         }
     }
 }
