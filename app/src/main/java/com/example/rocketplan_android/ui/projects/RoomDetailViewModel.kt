@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.app.Application
+import android.net.Uri
 import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
@@ -58,6 +59,8 @@ class RoomDetailViewModel(
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
     private val remoteLogger = rocketPlanApp.remoteLogger
+    private val imageProcessorRepository = rocketPlanApp.imageProcessorRepository
+    private val imageProcessorQueueManager = rocketPlanApp.imageProcessorQueueManager
     private val dateFormatter: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
         SimpleDateFormat("MM/dd/yyyy", Locale.US)
     }
@@ -77,6 +80,9 @@ class RoomDetailViewModel(
     private val snapshotRefreshMutex = Mutex()
     private val _isSnapshotRefreshing = MutableStateFlow(false)
     val isSnapshotRefreshing: StateFlow<Boolean> = _isSnapshotRefreshing.asStateFlow()
+
+    private val _batchCaptureState = MutableStateFlow(BatchCaptureState())
+    val batchCaptureState: StateFlow<BatchCaptureState> = _batchCaptureState.asStateFlow()
 
     init {
         Log.d(TAG, "📦 init(projectId=$projectId, roomId=$roomId)")
@@ -358,6 +364,168 @@ class RoomDetailViewModel(
         }
     }
 
+    // Batch capture functions
+    fun startBatchCapture() {
+        _batchCaptureState.value = BatchCaptureState(
+            isActive = true,
+            photos = emptyList(),
+            groupUuid = UUID.randomUUID().toString(),
+            maxPhotos = 50
+        )
+        Log.d(TAG, "📸 Batch capture started with groupUuid=${_batchCaptureState.value.groupUuid}")
+    }
+
+    fun addPhotoToBatch(photoFile: File): Boolean {
+        val currentState = _batchCaptureState.value
+        if (!currentState.isActive) {
+            Log.w(TAG, "⚠️ Attempted to add photo to inactive batch")
+            return false
+        }
+        if (currentState.photos.size >= currentState.maxPhotos) {
+            Log.w(TAG, "⚠️ Batch is full (${currentState.maxPhotos} photos)")
+            return false
+        }
+
+        _batchCaptureState.update { state ->
+            state.copy(photos = state.photos + photoFile)
+        }
+        Log.d(TAG, "📸 Photo added to batch: ${currentState.photos.size + 1}/${currentState.maxPhotos}")
+        return true
+    }
+
+    fun clearBatch() {
+        // DON'T delete temp files here - they're needed for upload
+        // Files will be deleted by ImageProcessorQueueManager after successful upload
+        _batchCaptureState.value = BatchCaptureState()
+        Log.d(TAG, "📸 Batch cleared (temp files preserved for upload)")
+    }
+
+    fun processBatch() {
+        val batch = _batchCaptureState.value
+        if (!batch.isActive || batch.photos.isEmpty()) {
+            Log.w(TAG, "⚠️ Cannot process empty or inactive batch")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "📸 Processing batch: ${batch.photos.size} photos, groupUuid=${batch.groupUuid}")
+
+                val room = _resolvedRoom.value
+                if (room == null) {
+                    Log.e(TAG, "❌ Cannot process batch: room not resolved")
+                    remoteLogger.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "Batch processing failed: room not resolved",
+                        metadata = mapOf(
+                            "project_id_local" to projectId.toString(),
+                            "room_id_nav_arg" to roomId.toString(),
+                            "batch_size" to batch.photos.size.toString()
+                        )
+                    )
+                    return@launch
+                }
+
+                // Save photos to database
+                val photoEntities = batch.photos.mapIndexed { index, file ->
+                    OfflinePhotoEntity(
+                        uuid = UUID.randomUUID().toString(),
+                        uploadStatus = "local_pending",
+                        syncStatus = SyncStatus.PENDING,
+                        isDirty = true,
+                        roomId = room.roomId,
+                        projectId = projectId,
+                        localPath = file.absolutePath,
+                        fileName = file.name,
+                        mimeType = "image/jpeg",
+                        capturedAt = Date(),
+                        cacheStatus = PhotoCacheStatus.NONE
+                    )
+                }
+
+                localDataService.savePhotos(photoEntities)
+                Log.d(TAG, "✅ Saved ${photoEntities.size} photos to database")
+
+                // Create FileToUpload list from batch photos
+                val filesToUpload = batch.photos.map { file ->
+                    com.example.rocketplan_android.data.model.FileToUpload(
+                        uri = Uri.fromFile(file),
+                        filename = file.name,
+                        deleteOnCompletion = true // Delete temp files after upload
+                    )
+                }
+
+                // Create assembly
+                val result = imageProcessorRepository.createAssembly(
+                    roomId = room.roomId,
+                    projectId = projectId,
+                    filesToUpload = filesToUpload,
+                    templateId = "", // Empty string (unused, legacy from Transloadit)
+                    groupUuid = batch.groupUuid,
+                    albums = emptyMap(),
+                    irPhotos = emptyList(),
+                    order = emptyList(),
+                    notes = emptyMap(),
+                    entityType = "room",
+                    entityId = room.serverId
+                )
+
+                result.onSuccess { assemblyId ->
+                    Log.d(TAG, "✅ Assembly created: $assemblyId")
+
+                    remoteLogger.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "Batch assembly created successfully",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "project_id_local" to projectId.toString(),
+                            "room_id_local" to room.roomId.toString(),
+                            "batch_size" to batch.photos.size.toString(),
+                            "group_uuid" to batch.groupUuid
+                        )
+                    )
+
+                    // Trigger queue processing
+                    imageProcessorQueueManager.processNextQueuedAssembly()
+
+                    // Clear batch after successful assembly creation
+                    clearBatch()
+                }.onFailure { error ->
+                    Log.e(TAG, "❌ Failed to create assembly", error)
+
+                    remoteLogger.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "Batch assembly creation failed: ${error.message}",
+                        metadata = mapOf(
+                            "project_id_local" to projectId.toString(),
+                            "room_id_local" to room.roomId.toString(),
+                            "batch_size" to batch.photos.size.toString(),
+                            "error" to (error.message ?: "unknown")
+                        )
+                    )
+
+                    // Don't clear batch on failure so user can retry
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "❌ Batch processing failed", e)
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "Batch processing failed: ${e.message}",
+                    metadata = mapOf(
+                        "project_id_local" to projectId.toString(),
+                        "room_id_nav_arg" to roomId.toString(),
+                        "batch_size" to batch.photos.size.toString(),
+                        "error" to (e.message ?: "unknown")
+                    )
+                )
+            }
+        }
+    }
+
     companion object {
         private const val TAG = "RoomDetailVM"
         private const val ROOM_REFRESH_INTERVAL_MS = 10_000L
@@ -404,6 +572,13 @@ data class RoomAlbumItem(
     val name: String,
     val photoCount: Int,
     val thumbnailUrl: String?
+)
+
+data class BatchCaptureState(
+    val isActive: Boolean = false,
+    val photos: List<File> = emptyList(),
+    val groupUuid: String = UUID.randomUUID().toString(),
+    val maxPhotos: Int = 50
 )
 
 enum class RoomDetailTab {

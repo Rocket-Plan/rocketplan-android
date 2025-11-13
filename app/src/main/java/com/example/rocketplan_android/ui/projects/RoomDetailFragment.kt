@@ -73,6 +73,11 @@ class RoomDetailFragment : Fragment() {
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var placeholderText: TextView
     private lateinit var loadingOverlay: View
+    private lateinit var batchCaptureBanner: View
+    private lateinit var batchCaptureCount: TextView
+    private lateinit var batchCaptureActions: View
+    private lateinit var batchCaptureClearButton: com.google.android.material.button.MaterialButton
+    private lateinit var batchCaptureProcessButton: com.google.android.material.button.MaterialButton
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
@@ -124,14 +129,29 @@ class RoomDetailFragment : Fragment() {
             registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
                 val photoFile = pendingPhotoFile
                 if (success && photoFile != null) {
-                    val mimeType = photoFile.guessMimeType()
-                    viewModel.onLocalPhotoCaptured(photoFile, mimeType)
-                    if (isAdded) {
-                        Toast.makeText(
-                            requireContext(),
-                            getString(R.string.photo_saved_to_room),
-                            Toast.LENGTH_SHORT
-                        ).show()
+                    val batchState = viewModel.batchCaptureState.value
+                    if (batchState.isActive) {
+                        // Batch mode: add to batch
+                        val added = viewModel.addPhotoToBatch(photoFile)
+                        if (!added && isAdded) {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.batch_capture_limit_reached),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            photoFile.delete()
+                        }
+                    } else {
+                        // Normal mode: save immediately
+                        val mimeType = photoFile.guessMimeType()
+                        viewModel.onLocalPhotoCaptured(photoFile, mimeType)
+                        if (isAdded) {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.photo_saved_to_room),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 } else {
                     photoFile?.delete()
@@ -179,6 +199,11 @@ class RoomDetailFragment : Fragment() {
         photosRecyclerView = root.findViewById(R.id.roomPhotosRecyclerView)
         placeholderText = root.findViewById(R.id.photosPlaceholder)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
+        batchCaptureBanner = root.findViewById(R.id.batchCaptureBanner)
+        batchCaptureCount = root.findViewById(R.id.batchCaptureCount)
+        batchCaptureActions = root.findViewById(R.id.batchCaptureActions)
+        batchCaptureClearButton = root.findViewById(R.id.batchCaptureClearButton)
+        batchCaptureProcessButton = root.findViewById(R.id.batchCaptureProcessButton)
 
         tabToggleGroup.check(R.id.roomPhotosTabButton)
         addPhotoChip.isChecked = true
@@ -269,9 +294,28 @@ class RoomDetailFragment : Fragment() {
         noteCard.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.add_note), Toast.LENGTH_SHORT).show()
         }
+        batchCaptureClearButton.setOnClickListener {
+            viewModel.clearBatch()
+            Toast.makeText(requireContext(), "Batch cleared", Toast.LENGTH_SHORT).show()
+        }
+        batchCaptureProcessButton.setOnClickListener {
+            viewModel.processBatch()
+            val count = viewModel.batchCaptureState.value.photos.size
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.batch_capture_processing, count),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     private fun handleAddPhotoClick() {
+        // Start batch capture mode on first photo
+        val batchState = viewModel.batchCaptureState.value
+        if (!batchState.isActive) {
+            viewModel.startBatchCapture()
+        }
+
         if (hasCameraPermission()) {
             launchCameraCapture()
         } else {
@@ -310,8 +354,11 @@ class RoomDetailFragment : Fragment() {
             return null
         }
         return try {
-            val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-            File.createTempFile("rocketplan_${timeStamp}_", ".jpg", storageDir)
+            // Match iOS filename format: Unix timestamp with decimal replaced by underscore
+            // Example: 1705159822_543.jpg (same format as iOS)
+            val timestamp = System.currentTimeMillis() / 1000.0
+            val fileName = timestamp.toString().replace(".", "_") + ".jpg"
+            File(storageDir, fileName)
         } catch (error: IOException) {
             Toast.makeText(context, getString(R.string.camera_file_error), Toast.LENGTH_SHORT).show()
             null
@@ -394,6 +441,19 @@ class RoomDetailFragment : Fragment() {
                         snapshotRefreshInProgress = refreshing
                         Log.d(TAG, if (refreshing) "🌀 Snapshot refresh started" else "✅ Snapshot refresh finished")
                         updatePhotoVisibility()
+                    }
+                }
+                launch {
+                    viewModel.batchCaptureState.collect { batchState ->
+                        // Update batch UI visibility and count
+                        batchCaptureBanner.isVisible = batchState.isActive
+                        batchCaptureActions.isVisible = batchState.isActive && batchState.photos.isNotEmpty()
+
+                        if (batchState.isActive) {
+                            batchCaptureCount.text = "${batchState.photos.size}/${batchState.maxPhotos}"
+                            batchCaptureProcessButton.isEnabled = batchState.photos.isNotEmpty()
+                            Log.d(TAG, "📸 Batch capture: ${batchState.photos.size}/${batchState.maxPhotos} photos")
+                        }
                     }
                 }
             }

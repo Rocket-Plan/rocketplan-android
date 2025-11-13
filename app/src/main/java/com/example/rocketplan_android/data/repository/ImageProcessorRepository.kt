@@ -19,6 +19,7 @@ import com.example.rocketplan_android.data.storage.StoredUploadData
 import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -37,6 +38,7 @@ class ImageProcessorRepository(
     private val configurationRepository: ImageProcessingConfigurationRepository,
     private val secureStorage: SecureStorage,
     private val remoteLogger: RemoteLogger?,
+    private val realtimeManager: ImageProcessorRealtimeManager? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
@@ -173,6 +175,8 @@ class ImageProcessorRepository(
             )
         )
 
+        realtimeManager?.trackAssembly(assemblyId)
+
         updateAssemblyStatus(assemblyId, AssemblyStatus.CREATING)
 
         val request = ImageProcessorAssemblyRequest(
@@ -229,6 +233,18 @@ class ImageProcessorRepository(
                 )
                 throw IllegalStateException(errorMessage)
             }
+        }.onFailure { error ->
+            // Handle network exceptions (timeout, TLS failure, etc.)
+            val errorMessage = error.message ?: "Network error during assembly creation"
+            updateAssemblyStatus(assemblyId, AssemblyStatus.FAILED, errorMessage)
+            logLifecycle(
+                event = "assembly_network_error",
+                assemblyId = assemblyId,
+                metadata = mapOf(
+                    "error" to errorMessage,
+                    "error_type" to error::class.simpleName.toString()
+                )
+            )
         }
     }
 
@@ -248,6 +264,9 @@ class ImageProcessorRepository(
 
     fun observeAssembliesByRoom(roomId: Long): Flow<List<ImageProcessorAssemblyEntity>> =
         dao.observeAssembliesByRoom(roomId)
+
+    fun observeAllAssemblies(): Flow<List<ImageProcessorAssemblyEntity>> =
+        dao.observeAllAssemblies()
 
     suspend fun cleanupOldAssemblies(daysOld: Int = 7) = withContext(ioDispatcher) {
         val cutoff = System.currentTimeMillis() - daysOld * 24 * 60 * 60 * 1000L

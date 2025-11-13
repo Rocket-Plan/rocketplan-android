@@ -41,6 +41,14 @@ interface ImageProcessorDao {
     @Query(
         """
         SELECT * FROM image_processor_assemblies
+        ORDER BY createdAt DESC
+        """
+    )
+    fun observeAllAssemblies(): Flow<List<ImageProcessorAssemblyEntity>>
+
+    @Query(
+        """
+        SELECT * FROM image_processor_assemblies
         WHERE status IN (:statuses)
         ORDER BY createdAt ASC
         """
@@ -119,6 +127,9 @@ interface ImageProcessorDao {
 
     @Query("SELECT * FROM image_processor_photos WHERE uploadTaskId = :taskId LIMIT 1")
     suspend fun getPhotoByUploadTaskId(taskId: String): ImageProcessorPhotoEntity?
+
+    @Query("SELECT * FROM image_processor_photos WHERE photoId = :photoId LIMIT 1")
+    suspend fun getPhotoByPhotoId(photoId: String): ImageProcessorPhotoEntity?
 
     @Query(
         """
