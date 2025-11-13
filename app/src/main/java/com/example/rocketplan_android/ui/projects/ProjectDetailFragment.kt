@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
@@ -19,6 +20,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -43,6 +45,7 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var albumsHeader: TextView
     private lateinit var albumsRecyclerView: RecyclerView
     private lateinit var roomsRecyclerView: RecyclerView
+    private lateinit var roomsProgressBar: ProgressBar
     private lateinit var roomsPlaceholder: TextView
     private lateinit var tabPlaceholder: TextView
     private lateinit var toggleGroup: MaterialButtonToggleGroup
@@ -67,6 +70,7 @@ class ProjectDetailFragment : Fragment() {
             }
         )
     }
+    private var roomsSectionIsLoading = true
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -95,6 +99,7 @@ class ProjectDetailFragment : Fragment() {
         albumsHeader = root.findViewById(R.id.albumsHeader)
         albumsRecyclerView = root.findViewById(R.id.albumsRecyclerView)
         roomsRecyclerView = root.findViewById(R.id.roomsRecyclerView)
+        roomsProgressBar = root.findViewById(R.id.roomsProgressBar)
         roomsPlaceholder = root.findViewById(R.id.roomsPlaceholder)
         tabPlaceholder = root.findViewById(R.id.tabPlaceholder)
         toggleGroup = root.findViewById(R.id.tabToggleGroup)
@@ -152,16 +157,19 @@ class ProjectDetailFragment : Fragment() {
             Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
         }
         addRoomCard.setOnClickListener {
-            navigateToRocketScan()
+            navigateToRoomTypePicker(RoomTypePickerMode.ROOM)
         }
         addExteriorCard.setOnClickListener {
-            navigateToRocketScan()
+            navigateToRoomTypePicker(RoomTypePickerMode.EXTERIOR)
         }
     }
 
-    private fun navigateToRocketScan() {
+    private fun navigateToRoomTypePicker(mode: RoomTypePickerMode) {
         val action = ProjectDetailFragmentDirections
-            .actionProjectDetailFragmentToRocketScanFragment(args.projectId)
+            .actionProjectDetailFragmentToRoomTypePickerFragment(
+                projectId = args.projectId,
+                mode = mode.name
+            )
         findNavController().navigate(action)
     }
 
@@ -211,9 +219,9 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private fun showLoadingState() {
-        roomsPlaceholder.isVisible = false
+        roomsSectionIsLoading = true
         tabPlaceholder.isVisible = false
-        roomsRecyclerView.isVisible = false
+        updateRoomsSectionVisibility()
     }
 
     private fun renderState(state: ProjectDetailUiState.Ready) {
@@ -239,8 +247,8 @@ class ProjectDetailFragment : Fragment() {
         }
         Log.d("ProjectDetailFrag", "🏠 Submitting ${flattenedItems.size} room items to roomsAdapter (${state.levelSections.size} sections)")
         roomsAdapter.submitList(flattenedItems)
-        roomsPlaceholder.isVisible = flattenedItems.isEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
-        roomsRecyclerView.isVisible = flattenedItems.isNotEmpty() && viewModel.selectedTab.value == ProjectDetailTab.PHOTOS
+        roomsSectionIsLoading = false
+        updateRoomsSectionVisibility()
     }
 
     private fun applyTabVisibility(tab: ProjectDetailTab) {
@@ -249,24 +257,48 @@ class ProjectDetailFragment : Fragment() {
                 tabPlaceholder.isVisible = false
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
                 albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
-                roomsRecyclerView.isVisible = roomsAdapter.currentList.isNotEmpty()
-                roomsPlaceholder.isVisible = roomsAdapter.currentList.isEmpty()
+                updateRoomsSectionVisibility(ProjectDetailTab.PHOTOS)
             }
             ProjectDetailTab.DAMAGES -> {
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
-                roomsRecyclerView.isVisible = false
-                roomsPlaceholder.isVisible = false
+                updateRoomsSectionVisibility(ProjectDetailTab.DAMAGES)
                 tabPlaceholder.isVisible = true
                 tabPlaceholder.text = getString(R.string.damages) + " coming soon"
             }
             ProjectDetailTab.SKETCH -> {
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
-                roomsRecyclerView.isVisible = false
-                roomsPlaceholder.isVisible = false
+                updateRoomsSectionVisibility(ProjectDetailTab.SKETCH)
                 tabPlaceholder.isVisible = true
                 tabPlaceholder.text = getString(R.string.sketch) + " coming soon"
+            }
+        }
+    }
+
+    private fun updateRoomsSectionVisibility(activeTab: ProjectDetailTab = viewModel.selectedTab.value) {
+        if (activeTab != ProjectDetailTab.PHOTOS) {
+            roomsProgressBar.isVisible = false
+            roomsRecyclerView.isVisible = false
+            roomsPlaceholder.isVisible = false
+            return
+        }
+
+        when {
+            roomsSectionIsLoading -> {
+                roomsProgressBar.isVisible = true
+                roomsRecyclerView.isVisible = false
+                roomsPlaceholder.isVisible = false
+            }
+            roomsAdapter.currentList.isEmpty() -> {
+                roomsProgressBar.isVisible = false
+                roomsRecyclerView.isVisible = false
+                roomsPlaceholder.isVisible = true
+            }
+            else -> {
+                roomsProgressBar.isVisible = false
+                roomsRecyclerView.isVisible = true
+                roomsPlaceholder.isVisible = false
             }
         }
     }

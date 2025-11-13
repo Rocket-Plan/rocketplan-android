@@ -68,7 +68,8 @@ class PusherService(
             binding.channel.unbind(eventName, existing)
         }
 
-        val listener = SubscriptionEventListener { _, _, data ->
+        val listener = SubscriptionEventListener { event ->
+            val data = event.data
             if (data.isNullOrBlank() || data == "[]") {
                 callback(null)
                 return@SubscriptionEventListener

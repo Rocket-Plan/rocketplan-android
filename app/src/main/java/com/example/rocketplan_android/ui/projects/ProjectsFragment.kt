@@ -106,6 +106,10 @@ class ProjectsFragment : Fragment() {
                         findNavController().navigate(R.id.syncStatusFragment)
                         true
                     }
+                    R.id.action_image_processor_assemblies -> {
+                        findNavController().navigate(R.id.imageProcessorAssembliesFragment)
+                        true
+                    }
                     R.id.action_reload_image_processor_config -> {
                         findNavController().navigate(R.id.imageProcessorConfigFragment)
                         true

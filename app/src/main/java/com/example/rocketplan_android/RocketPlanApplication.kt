@@ -24,6 +24,9 @@ import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
 import com.example.rocketplan_android.realtime.PusherService
 import com.example.rocketplan_android.work.PhotoCacheScheduler
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class RocketPlanApplication : Application() {
 
@@ -178,7 +181,7 @@ class RocketPlanApplication : Application() {
 
         // Cold-start recovery: Resume any existing assemblies that were interrupted
         // First, recover any assemblies left in UPLOADING state, then restart the queue
-        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             imageProcessorQueueManager.recoverStrandedAssemblies()
             imageProcessorQueueManager.processNextQueuedAssembly()
         }

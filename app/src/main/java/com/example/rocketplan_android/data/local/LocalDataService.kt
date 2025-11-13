@@ -24,6 +24,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
@@ -57,11 +58,31 @@ class LocalDataService private constructor(
         dao.getProjectsOnce()
     }
 
+    suspend fun getProject(projectId: Long): OfflineProjectEntity? =
+        withContext(ioDispatcher) { dao.getProject(projectId) }
+
     fun observeLocations(projectId: Long): Flow<List<OfflineLocationEntity>> =
         dao.observeLocationsForProject(projectId)
 
     fun observeRooms(projectId: Long): Flow<List<OfflineRoomEntity>> =
         dao.observeRoomsForProject(projectId)
+
+    fun observeRoomTypes(propertyServerId: Long, filterType: String): Flow<List<OfflineRoomTypeEntity>> =
+        dao.observeRoomTypes(propertyServerId, filterType)
+
+    suspend fun getRoomTypes(propertyServerId: Long, filterType: String): List<OfflineRoomTypeEntity> =
+        withContext(ioDispatcher) { dao.getRoomTypes(propertyServerId, filterType) }
+
+    suspend fun replaceRoomTypes(
+        propertyServerId: Long,
+        filterType: String,
+        types: List<OfflineRoomTypeEntity>
+    ) = withContext(ioDispatcher) {
+        dao.clearRoomTypes(propertyServerId, filterType)
+        if (types.isNotEmpty()) {
+            dao.upsertRoomTypes(types)
+        }
+    }
 
     suspend fun getProperty(propertyId: Long): OfflinePropertyEntity? =
         withContext(ioDispatcher) { dao.getProperty(propertyId) }

@@ -173,6 +173,23 @@ data class OfflineRoomEntity(
 )
 
 @Entity(
+    tableName = "offline_room_types",
+    primaryKeys = ["roomTypeId", "propertyServerId", "filterType"],
+    indices = [
+        Index(value = ["propertyServerId", "filterType"])
+    ]
+)
+data class OfflineRoomTypeEntity(
+    val roomTypeId: Long,
+    val propertyServerId: Long,
+    val filterType: String,
+    val name: String?,
+    val type: String?,
+    val isStandard: Boolean?,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
     tableName = "offline_room_photo_snapshots",
     primaryKeys = ["roomId", "orderIndex"],
     indices = [

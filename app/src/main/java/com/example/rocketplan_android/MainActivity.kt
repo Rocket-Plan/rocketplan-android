@@ -319,6 +319,14 @@ class MainActivity : AppCompatActivity() {
                         findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.syncStatusFragment)
                         true
                     }
+                    R.id.action_image_processor_assemblies -> {
+                        if (BuildConfig.ENABLE_LOGGING) {
+                            Log.d(TAG, "Navigating to Image Processor Assemblies")
+                        }
+                        findNavController(R.id.nav_host_fragment_content_main)
+                            .navigate(R.id.imageProcessorAssembliesFragment)
+                        true
+                    }
                     R.id.action_reload_image_processor_config -> {
                         Log.d(TAG, "📸 Menu item clicked: action_reload_image_processor_config")
                         try {

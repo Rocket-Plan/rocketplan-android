@@ -114,6 +114,7 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
     implementation(libs.okhttp.logging)
+    implementation(libs.pusher)
 
     // DataStore for secure storage
     implementation(libs.androidx.datastore.preferences)

@@ -24,6 +24,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
@@ -109,6 +110,38 @@ interface OfflineDao {
 
     @Query("UPDATE offline_rooms SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markRoomsDeleted(serverIds: List<Long>)
+    // endregion
+
+    // region Room types
+    @Upsert
+    suspend fun upsertRoomTypes(types: List<OfflineRoomTypeEntity>)
+
+    @Query(
+        """
+        SELECT * FROM offline_room_types
+        WHERE propertyServerId = :propertyServerId
+          AND filterType = :filterType
+        ORDER BY 
+            CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END,
+            name COLLATE NOCASE
+        """
+    )
+    suspend fun getRoomTypes(propertyServerId: Long, filterType: String): List<OfflineRoomTypeEntity>
+
+    @Query(
+        """
+        SELECT * FROM offline_room_types
+        WHERE propertyServerId = :propertyServerId
+          AND filterType = :filterType
+        ORDER BY 
+            CASE WHEN name IS NULL OR name = '' THEN 1 ELSE 0 END,
+            name COLLATE NOCASE
+        """
+    )
+    fun observeRoomTypes(propertyServerId: Long, filterType: String): Flow<List<OfflineRoomTypeEntity>>
+
+    @Query("DELETE FROM offline_room_types WHERE propertyServerId = :propertyServerId AND filterType = :filterType")
+    suspend fun clearRoomTypes(propertyServerId: Long, filterType: String)
     // endregion
 
     // region Atmospheric Logs

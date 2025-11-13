@@ -8,6 +8,7 @@
     <string name="action_settings">Settings</string>
     <string name="action_profile">Profile</string>
     <string name="action_sync_status">Sync Status</string>
+    <string name="action_image_processor_assemblies">Image Processor Assemblies</string>
     <string name="action_reload_image_processor_config">Reload Image Processor Config</string>
     <string name="action_sign_out">Sign Out</string>
     <string name="action_delete_project">Delete Project</string>
@@ -17,10 +18,25 @@
     <string name="project_delete_failed">Unable to delete this project right now.</string>
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
     <string name="delete_project_not_available">Open a project to delete it.</string>
     <string name="toast_image_processor_config_loaded">Image processor config ready (%1$s)</string>
     <string name="toast_image_processor_config_failed">Failed to load image processor config: %1$s</string>
     <string name="toast_image_processor_config_unknown_error">Unknown error</string>
+    <string name="image_processor_assemblies_title">Image Processor Assemblies</string>
+    <string name="image_processor_assemblies_description">Every upload we send to the image processor is tracked here until it completes.</string>
+    <string name="image_processor_assemblies_empty">No assemblies yet. Create one to see it show up.</string>
+    <string name="image_processor_assembly_id_format">Assembly %1$s</string>
+    <string name="image_processor_assembly_status_unknown">Unknown (%1$s)</string>
+    <string name="image_processor_assembly_files_format">Files: %1$d • %2$s</string>
+    <string name="image_processor_assembly_created_format">Created %1$s</string>
+    <string name="image_processor_assembly_updated_format">Updated %1$s</string>
+    <string name="image_processor_assembly_error_format">Failed: %1$s</string>
+    <string name="image_processor_assembly_target_entity">%1$s #%2$d</string>
+    <string name="image_processor_assembly_target_room">Room #%1$d</string>
+    <string name="image_processor_assembly_target_project">Project</string>
+    <string name="image_processor_assembly_destination_format">Project #%1$d • %2$s</string>
+    <string name="image_processor_assembly_date_format">%1$s • %2$s</string>
 
     <string name="menu_home">Home</string>
     <string name="menu_gallery">Gallery</string>
@@ -59,6 +75,14 @@
     <string name="add_room">Room</string>
     <string name="add_exterior_space">Exterior Space</string>
     <string name="exterior_space">Exterior Space</string>
+    <string name="select_room_type_title">Add a Room</string>
+    <string name="select_exterior_type_title">Add Exterior Space</string>
+    <string name="search_room_types_hint">Search room types</string>
+    <string name="room_type_empty_state">No room types match your search.</string>
+    <string name="room_type_selected_toast">%1$s selected. Room creation coming soon.</string>
+    <string name="room_type_error_generic">Unable to load room types. Try again.</string>
+    <string name="room_type_error_missing_property">Add property details to this project before creating rooms.</string>
+    <string name="room_type_fallback_name">Room Type %1$d</string>
     <string name="no_rooms_placeholder">Start building your project by adding rooms.</string>
     <string name="capture_photos">Capture Photos</string>
     <string name="project_home">Project Home</string>
@@ -151,4 +175,26 @@
     <string name="create_project_address_hint">ex. 123 Main Street</string>
     <string name="create_project_manual_entry">Enter address manually</string>
     <string name="create_project_manual_entry_toast">Manual address entry is coming soon.</string>
+    <string name="create_project_action">Create Project</string>
+    <string name="create_project_action_toast">Project creation coming soon.</string>
+
+    <!-- Manual Address Entry -->
+    <string name="manual_address_title">Enter Address Manually</string>
+    <string name="manual_address_instruction">Add the full property address.</string>
+    <string name="manual_address_street_label">Street Address</string>
+    <string name="manual_address_unit_label">Unit / Suite (optional)</string>
+    <string name="manual_address_city_label">City</string>
+    <string name="manual_address_state_label">State / Province</string>
+    <string name="manual_address_postal_label">ZIP / Postal Code</string>
+    <string name="manual_address_action">Save Address</string>
+    <string name="manual_address_toast">Manual address submission coming soon.</string>
+
+    <!-- Batch Photo Capture -->
+    <string name="batch_capture_active">Batch Capture Active</string>
+    <string name="batch_capture_clear">Clear</string>
+    <string name="batch_capture_process">Process Photos</string>
+    <string name="batch_capture_limit_reached">Maximum of 50 photos reached</string>
+    <string name="batch_capture_processing">Processing %d photos…</string>
+    <string name="batch_capture_success">Assembly created successfully</string>
+    <string name="batch_capture_error">Failed to create assembly: %s</string>
 </resources>

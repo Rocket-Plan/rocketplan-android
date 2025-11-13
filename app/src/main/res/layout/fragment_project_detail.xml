@@ -267,6 +267,15 @@
                 android:nestedScrollingEnabled="false"
                 tools:listitem="@layout/item_room_card" />
 
+            <ProgressBar
+                android:id="@+id/roomsProgressBar"
+                style="?attr/progressBarStyle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="24dp"
+                android:visibility="gone" />
+
             <TextView
                 android:id="@+id/roomsPlaceholder"
                 android:layout_width="match_parent"

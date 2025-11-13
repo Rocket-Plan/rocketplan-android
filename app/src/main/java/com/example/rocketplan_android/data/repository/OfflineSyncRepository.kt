@@ -38,6 +38,7 @@ import com.example.rocketplan_android.data.model.offline.PaginationMeta
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
+import com.example.rocketplan_android.data.repository.RoomTypeRepository.RequestType
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.work.PhotoCacheScheduler
@@ -86,6 +87,7 @@ class OfflineSyncRepository(
     private val localDataService: LocalDataService,
     private val photoCacheScheduler: PhotoCacheScheduler,
     private val syncCheckpointStore: SyncCheckpointStore,
+    private val roomTypeRepository: RoomTypeRepository,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
@@ -919,7 +921,22 @@ class OfflineSyncRepository(
             propertyId = resolvedId,
             propertyType = propertyTypeValue
         )
+        runCatching { primeRoomTypeCaches(projectId) }
+            .onFailure { Log.w("API", "⚠️ [syncProjectEssentials] Unable to prefetch room types for project $projectId", it) }
         return entity
+    }
+
+    private suspend fun primeRoomTypeCaches(projectId: Long) {
+        RequestType.entries.forEach { requestType ->
+            runCatching {
+                val types = roomTypeRepository
+                    .getRoomTypes(projectId, requestType, forceRefresh = true)
+                    .getOrThrow()
+                Log.d("API", "✅ [roomTypes] Prefetched ${types.size} ${requestType.name.lowercase()} room types for project $projectId")
+            }.onFailure { error ->
+                Log.w("API", "⚠️ [roomTypes] Prefetch failed for project $projectId (${requestType.name})", error)
+            }
+        }
     }
 
     private suspend fun fetchProjectProperty(projectId: Long): PropertyDto? {

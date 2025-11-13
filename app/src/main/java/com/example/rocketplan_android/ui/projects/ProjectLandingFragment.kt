@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Lightweight landing screen that presents the primary project actions before
- * drilling into deeper sections like RocketScan.
+ * drilling into deeper sections of a project.
  */
 class ProjectLandingFragment : Fragment() {
 
@@ -120,15 +120,9 @@ class ProjectLandingFragment : Fragment() {
                         .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
                     findNavController().navigate(action)
                 }
-                // Levels exist but there are no rooms yet; take user to project home
-                !summary.hasRooms -> {
-                    val action = ProjectLandingFragmentDirections
-                        .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
-                    findNavController().navigate(action)
-                }
                 else -> {
                     val action = ProjectLandingFragmentDirections
-                        .actionProjectLandingFragmentToRocketScanFragment(args.projectId)
+                        .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
                     findNavController().navigate(action)
                 }
             }

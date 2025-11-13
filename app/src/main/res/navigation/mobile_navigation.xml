@@ -114,10 +114,6 @@
             app:argType="long" />
 
         <action
-            android:id="@+id/action_projectLandingFragment_to_rocketScanFragment"
-            app:destination="@id/rocketScanFragment" />
-
-        <action
             android:id="@+id/action_projectLandingFragment_to_projectTypeSelectionFragment"
             app:destination="@id/projectTypeSelectionFragment" />
 
@@ -137,10 +133,6 @@
             app:argType="long" />
 
         <action
-            android:id="@+id/action_projectTypeSelectionFragment_to_rocketScanFragment"
-            app:destination="@id/rocketScanFragment" />
-
-        <action
             android:id="@+id/action_projectTypeSelectionFragment_to_projectDetailFragment"
             app:destination="@id/projectDetailFragment" />
     </fragment>
@@ -156,16 +148,16 @@
             app:argType="long" />
 
         <action
-            android:id="@+id/action_projectDetailFragment_to_rocketScanFragment"
-            app:destination="@id/rocketScanFragment" />
-
-        <action
             android:id="@+id/action_projectDetailFragment_to_rocketDryFragment"
             app:destination="@id/rocketDryFragment" />
 
         <action
             android:id="@+id/action_projectDetailFragment_to_roomDetailFragment"
             app:destination="@id/roomDetailFragment" />
+
+        <action
+            android:id="@+id/action_projectDetailFragment_to_roomTypePickerFragment"
+            app:destination="@id/roomTypePickerFragment" />
     </fragment>
 
     <fragment
@@ -199,6 +191,22 @@
     </fragment>
 
     <fragment
+        android:id="@+id/roomTypePickerFragment"
+        android:name="com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerFragment"
+        android:label="Room Types"
+        tools:layout="@layout/fragment_room_type_picker">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="mode"
+            app:argType="string"
+            android:defaultValue="ROOM" />
+    </fragment>
+
+    <fragment
         android:id="@+id/photoViewerFragment"
         android:name="com.example.rocketplan_android.ui.projects.PhotoViewerFragment"
         android:label="@string/photo_viewer_title"
@@ -213,7 +221,18 @@
         android:id="@+id/createProjectFragment"
         android:name="com.example.rocketplan_android.ui.projects.CreateProjectFragment"
         android:label="@string/create_project_title"
-        tools:layout="@layout/fragment_create_project" />
+        tools:layout="@layout/fragment_create_project">
+
+        <action
+            android:id="@+id/action_createProjectFragment_to_manualAddressEntryFragment"
+            app:destination="@id/manualAddressEntryFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/manualAddressEntryFragment"
+        android:name="com.example.rocketplan_android.ui.projects.ManualAddressEntryFragment"
+        android:label="@string/manual_address_title"
+        tools:layout="@layout/fragment_manual_address" />
 
     <fragment
         android:id="@+id/nav_gallery"
@@ -234,19 +253,10 @@
         tools:layout="@layout/fragment_image_processor_config" />
 
     <fragment
-        android:id="@+id/rocketScanFragment"
-        android:name="com.example.rocketplan_android.ui.rocketscan.RocketScanFragment"
-        android:label="@string/rocket_scan"
-        tools:layout="@layout/fragment_rocket_scan">
-
-        <argument
-            android:name="projectId"
-            app:argType="long" />
-
-        <action
-            android:id="@+id/action_rocketScanFragment_to_roomDetailFragment"
-            app:destination="@id/roomDetailFragment" />
-    </fragment>
+        android:id="@+id/imageProcessorAssembliesFragment"
+        android:name="com.example.rocketplan_android.ui.imageprocessor.ImageProcessorAssembliesFragment"
+        android:label="@string/image_processor_assemblies_title"
+        tools:layout="@layout/fragment_image_processor_assemblies" />
 
     <!-- Sync Status Fragment -->
     <fragment

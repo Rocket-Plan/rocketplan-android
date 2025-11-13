@@ -17,6 +17,7 @@ import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
+import com.example.rocketplan_android.data.model.offline.RoomTypeDto
 import com.google.gson.JsonObject
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
@@ -122,6 +123,12 @@ interface OfflineSyncApi {
     suspend fun getRoomDetail(
         @Path("roomId") roomId: Long
     ): RoomDto
+
+    @GET("/api/properties/{propertyId}/room-types")
+    suspend fun getPropertyRoomTypes(
+        @Path("propertyId") propertyId: Long,
+        @Query("filter[type]") filterType: String? = null
+    ): List<RoomTypeDto>
 
     // Photos & albums
     @GET("/api/projects/{projectId}/albums")

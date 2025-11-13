@@ -25,7 +25,6 @@ data class ProjectTypeSelectionViewState(
 )
 
 sealed interface ProjectTypeSelectionNavigation {
-    data class NavigateToRocketScan(val projectId: Long) : ProjectTypeSelectionNavigation
     data class NavigateToProjectDetail(val projectId: Long) : ProjectTypeSelectionNavigation
 }
 

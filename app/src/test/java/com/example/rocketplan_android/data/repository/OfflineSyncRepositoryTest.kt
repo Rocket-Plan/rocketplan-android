@@ -206,7 +206,8 @@ class OfflineSyncRepositoryTest {
             api = api,
             localDataService = localDataService,
             photoCacheScheduler = scheduler,
-            syncCheckpointStore = checkpointStore
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
         )
 
         repository.syncProjectGraph(projectId)
@@ -333,7 +334,8 @@ class OfflineSyncRepositoryTest {
             api = api,
             localDataService = localDataService,
             photoCacheScheduler = scheduler,
-            syncCheckpointStore = checkpointStore
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
         )
 
         repository.syncProjectGraph(projectId)
@@ -388,7 +390,8 @@ class OfflineSyncRepositoryTest {
             api = api,
             localDataService = localDataService,
             photoCacheScheduler = scheduler,
-            syncCheckpointStore = checkpointStore
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
         )
 
         repository.syncRoomPhotos(projectId, roomId)
@@ -413,7 +416,8 @@ class OfflineSyncRepositoryTest {
             api = api,
             localDataService = localDataService,
             photoCacheScheduler = scheduler,
-            syncCheckpointStore = checkpointStore
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
         )
 
         repository.syncRoomPhotos(projectId, roomId)
@@ -439,7 +443,8 @@ class OfflineSyncRepositoryTest {
             api = api,
             localDataService = localDataService,
             photoCacheScheduler = scheduler,
-            syncCheckpointStore = checkpointStore
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
         )
 
         repository.syncDeletedRecords()

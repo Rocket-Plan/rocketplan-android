@@ -95,11 +95,6 @@ class ProjectTypeSelectionFragment : Fragment() {
                 launch {
                     viewModel.navigationEvents.collect { event ->
                         when (event) {
-                            is ProjectTypeSelectionNavigation.NavigateToRocketScan -> {
-                                val action = ProjectTypeSelectionFragmentDirections
-                                    .actionProjectTypeSelectionFragmentToRocketScanFragment(event.projectId)
-                                findNavController().navigate(action)
-                            }
                             is ProjectTypeSelectionNavigation.NavigateToProjectDetail -> {
                                 val action = ProjectTypeSelectionFragmentDirections
                                     .actionProjectTypeSelectionFragmentToProjectDetailFragment(event.projectId)

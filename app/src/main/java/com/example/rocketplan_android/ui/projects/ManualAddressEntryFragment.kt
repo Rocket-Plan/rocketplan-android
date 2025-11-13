@@ -4,47 +4,41 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.R
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 
 /**
- * Initial screen in the Android create-project flow. Mirrors the iOS UI so users
- * can start by providing the loss address before moving deeper into project setup.
+ * Allows the user to manually type the full project address when search/lookup
+ * is not available or does not return the desired property.
  */
-class CreateProjectFragment : Fragment() {
+class ManualAddressEntryFragment : Fragment() {
 
     private lateinit var toolbar: MaterialToolbar
-    private lateinit var manualEntryLink: TextView
-    private lateinit var createProjectButton: View
+    private lateinit var saveButton: MaterialButton
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
-    ): View = inflater.inflate(R.layout.fragment_create_project, container, false)
+    ): View = inflater.inflate(R.layout.fragment_manual_address, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        toolbar = view.findViewById(R.id.createProjectToolbar)
-        manualEntryLink = view.findViewById(R.id.manualEntryLink)
-        createProjectButton = view.findViewById(R.id.createProjectButton)
+        toolbar = view.findViewById(R.id.manualAddressToolbar)
+        saveButton = view.findViewById(R.id.manualAddressSaveButton)
 
         toolbar.setNavigationOnClickListener {
             findNavController().navigateUp()
         }
 
-        manualEntryLink.setOnClickListener {
-            findNavController().navigate(R.id.action_createProjectFragment_to_manualAddressEntryFragment)
-        }
-
-        createProjectButton.setOnClickListener {
+        saveButton.setOnClickListener {
             Toast.makeText(
                 requireContext(),
-                R.string.create_project_action_toast,
+                R.string.manual_address_toast,
                 Toast.LENGTH_SHORT
             ).show()
         }
