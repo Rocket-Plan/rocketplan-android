@@ -143,4 +143,12 @@
     <string name="project_type_loading_project_name">Loading project...</string>
     <string name="project_type_error_generic">Unable to update the property. Please try again.</string>
     <string name="project_type_missing_project">Project unavailable.</string>
+
+    <!-- Create Project -->
+    <string name="create_project_title">Create New Project</string>
+    <string name="create_project_subtitle">Address of Property Loss</string>
+    <string name="create_project_address_label">Address</string>
+    <string name="create_project_address_hint">ex. 123 Main Street</string>
+    <string name="create_project_manual_entry">Enter address manually</string>
+    <string name="create_project_manual_entry_toast">Manual address entry is coming soon.</string>
 </resources>

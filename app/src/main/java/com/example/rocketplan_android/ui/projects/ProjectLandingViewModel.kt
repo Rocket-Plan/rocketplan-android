@@ -34,7 +34,8 @@ data class ProjectLandingSummary(
     val status: ProjectStatus?,
     val statusLabel: String?,
     val noteCount: Int,
-    val hasLevels: Boolean
+    val hasLevels: Boolean,
+    val hasRooms: Boolean
 )
 
 class ProjectLandingViewModel(
@@ -63,14 +64,19 @@ class ProjectLandingViewModel(
             combine(
                 localDataService.observeProjects(),
                 localDataService.observeNotes(projectId),
-                localDataService.observeLocations(projectId)
-            ) { projects, notes, locations ->
+                localDataService.observeLocations(projectId),
+                localDataService.observeRooms(projectId)
+            ) { projects, notes, locations, rooms ->
                 val project = projects.firstOrNull { it.projectId == projectId }
                 if (project == null) {
                     ProjectLandingUiState.Loading
                 } else {
                     ProjectLandingUiState.Ready(
-                        summary = project.toSummary(notes.size, locations.isNotEmpty())
+                        summary = project.toSummary(
+                            noteCount = notes.size,
+                            hasLevels = locations.isNotEmpty(),
+                            hasRooms = rooms.isNotEmpty()
+                        )
                     )
                 }
             }.collect { state ->
@@ -79,7 +85,11 @@ class ProjectLandingViewModel(
         }
     }
 
-    private fun OfflineProjectEntity.toSummary(noteCount: Int, hasLevels: Boolean): ProjectLandingSummary {
+    private fun OfflineProjectEntity.toSummary(
+        noteCount: Int,
+        hasLevels: Boolean,
+        hasRooms: Boolean
+    ): ProjectLandingSummary {
         val titleCandidates = listOfNotNull(
             addressLine1?.takeIf { it.isNotBlank() },
             title.takeIf { it.isNotBlank() },
@@ -107,7 +117,8 @@ class ProjectLandingViewModel(
             status = projectStatus,
             statusLabel = statusLabel,
             noteCount = noteCount,
-            hasLevels = hasLevels
+            hasLevels = hasLevels,
+            hasRooms = hasRooms
         )
     }
 

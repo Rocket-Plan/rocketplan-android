@@ -89,8 +89,7 @@ class ProjectsFragment : Fragment() {
         }
 
         fabNewProject.setOnClickListener {
-            // TODO: Navigate to create project screen
-            Toast.makeText(context, "Create New Project", Toast.LENGTH_SHORT).show()
+            findNavController().navigate(R.id.action_nav_projects_to_createProjectFragment)
         }
 
         userInitials.setOnClickListener {
@@ -105,6 +104,10 @@ class ProjectsFragment : Fragment() {
                 when (menuItem.itemId) {
                     R.id.action_sync_status -> {
                         findNavController().navigate(R.id.syncStatusFragment)
+                        true
+                    }
+                    R.id.action_reload_image_processor_config -> {
+                        findNavController().navigate(R.id.imageProcessorConfigFragment)
                         true
                     }
                     R.id.action_sign_out -> {

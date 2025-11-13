@@ -80,6 +80,7 @@ object RetrofitClient {
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
+        .addInterceptor(GzipRequestInterceptor())
         .connectTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
         .readTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
         .writeTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)

@@ -188,18 +188,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        Log.d(TAG, "🔵 onOptionsItemSelected: ${item.itemId}")
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "onOptionsItemSelected: ${item.itemId}")
         }
         return when (item.itemId) {
             R.id.action_profile -> {
+                Log.d(TAG, "🟢 Profile button clicked, showing menu")
                 if (BuildConfig.ENABLE_LOGGING) {
                     Log.d(TAG, "Profile button clicked, showing menu")
                 }
                 showProfileMenu()
                 true
             }
-            else -> super.onOptionsItemSelected(item)
+            else -> {
+                Log.d(TAG, "🔴 Item not handled: ${item.itemId}")
+                super.onOptionsItemSelected(item)
+            }
         }
     }
 
@@ -282,11 +287,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showProfileMenu() {
+        Log.d(TAG, "🟣 showProfileMenu() called")
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "showProfileMenu() called")
         }
         val toolbar = binding.appBarMain.toolbar
         val anchor = toolbar.findViewById<View>(R.id.action_profile) ?: toolbar
+        Log.d(TAG, "🟣 Creating PopupMenu with anchor: $anchor")
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "Creating PopupMenu with anchor: $anchor")
         }
@@ -295,10 +302,12 @@ class MainActivity : AppCompatActivity() {
             val navController = findNavController(R.id.nav_host_fragment_content_main)
             val isProjectDetail = navController.currentDestination?.id == R.id.projectDetailFragment
             menu.findItem(R.id.action_delete_project)?.isVisible = isProjectDetail
+            Log.d(TAG, "🟣 Profile menu inflated with ${menu.size()} items")
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "Profile menu inflated with ${menu.size()} items")
             }
             setOnMenuItemClickListener { menuItem ->
+                Log.d(TAG, "🟡 Profile menu item clicked: ${menuItem.itemId}")
                 if (BuildConfig.ENABLE_LOGGING) {
                     Log.d(TAG, "Profile menu item clicked: ${menuItem.itemId}")
                 }
@@ -311,7 +320,14 @@ class MainActivity : AppCompatActivity() {
                         true
                     }
                     R.id.action_reload_image_processor_config -> {
-                        reloadImageProcessorConfiguration()
+                        Log.d(TAG, "📸 Menu item clicked: action_reload_image_processor_config")
+                        try {
+                            findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.imageProcessorConfigFragment)
+                            Log.d(TAG, "📸 Navigation to imageProcessorConfigFragment succeeded")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "❌ Failed to navigate to imageProcessorConfigFragment", e)
+                            Toast.makeText(this@MainActivity, "Navigation failed: ${e.message}", Toast.LENGTH_LONG).show()
+                        }
                         true
                     }
                     R.id.action_delete_project -> handleDeleteProjectRequest()

@@ -176,20 +176,31 @@ class ProjectDetailViewModel(
     private fun List<OfflineAlbumEntity>.toAlbumSections(
         photos: List<OfflinePhotoEntity>
     ): List<AlbumSection> {
+        val photosByAlbumId = photos.filter { it.albumId != null }.groupBy { it.albumId }
+        val populatedAlbums = this.mapNotNull { album ->
+            val albumPhotos = photosByAlbumId[album.albumId]?.takeIf { it.isNotEmpty() }
+            val hasServerCount = album.photoCount > 0
+            if (albumPhotos == null && !hasServerCount) {
+                Log.d("ProjectDetailVM", "🗂️ Skipping empty album ${album.name}")
+                null
+            } else {
+                val resolvedCount = albumPhotos?.size ?: album.photoCount
+                val resolvedThumb = album.thumbnailUrl
+                    ?: albumPhotos?.firstNotNullOfOrNull { it.preferredThumbnailSourceForRoomCard() }
+                AlbumSection(
+                    albumId = album.albumId,
+                    name = album.name,
+                    photoCount = resolvedCount,
+                    thumbnailUrl = resolvedThumb
+                )
+            }
+        }
+
         Log.d(
             "ProjectDetailVM",
-            "📚 Loading ${this.size} albums: ${this.map { "[${it.albumId}] ${it.name} (${it.albumableType ?: "null"})" }}"
+            "📚 Showing ${populatedAlbums.size} populated albums (from ${this.size} total)"
         )
-
-        // Show all albums (both project-level and room-scoped)
-        return this.map { album ->
-            AlbumSection(
-                albumId = album.albumId,
-                name = album.name,
-                photoCount = album.photoCount,
-                thumbnailUrl = album.thumbnailUrl
-            )
-        }.sortedBy { it.name }
+        return populatedAlbums.sortedBy { it.name }
     }
 
     companion object {

@@ -1,6 +1,8 @@
 package com.example.rocketplan_android.data.repository
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import com.example.rocketplan_android.data.api.ImageProcessorApi
 import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
@@ -21,6 +23,9 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.util.UUID
 
 class ImageProcessorRepository(
@@ -37,6 +42,12 @@ class ImageProcessorRepository(
 
     companion object {
         private const val TAG = "ImageProcessorRepository"
+        private const val MAX_PHOTO_UPLOAD_BYTES = 6L * 1024L * 1024L
+        private const val JPEG_QUALITY_START = 95
+        private const val JPEG_QUALITY_MIN = 45
+        private const val JPEG_QUALITY_STEP = 5
+        private const val BITMAP_SCALE_FACTOR = 0.85f
+        private const val MAX_COMPRESSION_PASSES = 20
     }
 
     suspend fun createAssembly(
@@ -54,6 +65,10 @@ class ImageProcessorRepository(
     ): Result<String> = withContext(ioDispatcher) {
         if (filesToUpload.isEmpty()) {
             return@withContext Result.failure(IllegalArgumentException("No files to upload"))
+        }
+
+        val preparedFiles = ensureFilesWithinUploadLimit(filesToUpload).getOrElse { error ->
+            return@withContext Result.failure(error)
         }
 
         val project = offlineDao.getProject(projectId)
@@ -104,7 +119,7 @@ class ImageProcessorRepository(
 
         val assemblyId = UUID.randomUUID().toString().replace("-", "")
         val now = System.currentTimeMillis()
-        val totalBytes = filesToUpload.sumOf { getFileSize(it.uri) }
+        val totalBytes = preparedFiles.sumOf { getFileSize(it.uri) }
         val status = AssemblyStatus.QUEUED.value
 
         val assemblyEntity = ImageProcessorAssemblyEntity(
@@ -113,7 +128,7 @@ class ImageProcessorRepository(
             projectId = projectId,
             groupUuid = groupUuid,
             status = status,
-            totalFiles = filesToUpload.size,
+            totalFiles = preparedFiles.size,
             bytesReceived = totalBytes,
             createdAt = now,
             lastUpdatedAt = now,
@@ -123,7 +138,7 @@ class ImageProcessorRepository(
 
         val localId = dao.insertAssembly(assemblyEntity)
 
-        val photoEntities = filesToUpload.mapIndexed { index, file ->
+        val photoEntities = preparedFiles.mapIndexed { index, file ->
             ImageProcessorPhotoEntity(
                 photoId = UUID.randomUUID().toString(),
                 assemblyLocalId = localId,
@@ -162,12 +177,12 @@ class ImageProcessorRepository(
 
         val request = ImageProcessorAssemblyRequest(
             assemblyId = assemblyId,
-            totalFiles = filesToUpload.size,
+            totalFiles = preparedFiles.size,
             roomId = roomServerId,
             projectId = projectServerId,
             groupUuid = groupUuid,
             bytesReceived = totalBytes,
-            photoNames = filesToUpload.map { it.filename },
+            photoNames = preparedFiles.map { it.filename },
             albums = albums,
             irPhotos = irPhotos,
             order = order,
@@ -187,7 +202,7 @@ class ImageProcessorRepository(
             val telemetryData = mutableMapOf(
                 "project_id_server" to projectServerId.toString(),
                 "project_id_local" to projectId.toString(),
-                "total_files" to filesToUpload.size.toString(),
+                "total_files" to preparedFiles.size.toString(),
                 "bytes" to totalBytes.toString()
             )
             roomId?.let { telemetryData["room_id_local"] = it.toString() }
@@ -265,6 +280,145 @@ class ImageProcessorRepository(
             metadata = metadata
         )
         return Result.failure(IllegalStateException(message))
+    }
+
+    private fun ensureFilesWithinUploadLimit(files: List<FileToUpload>): Result<List<FileToUpload>> {
+        val processed = mutableListOf<FileToUpload>()
+        val resizedFiles = mutableListOf<FileToUpload>()
+
+        for (file in files) {
+            val currentSize = getFileSize(file.uri)
+            if (currentSize <= MAX_PHOTO_UPLOAD_BYTES) {
+                processed += file
+                continue
+            }
+
+            val resized = resizePhoto(file)
+            if (resized == null) {
+                cleanupTempFiles(resizedFiles)
+                val message = "Unable to resize ${file.filename} under 6MB"
+                remoteLogger?.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = message,
+                    metadata = mapOf(
+                        "filename" to file.filename,
+                        "size_bytes" to currentSize.toString()
+                    )
+                )
+                return Result.failure(IllegalStateException(message))
+            }
+
+            resizedFiles += resized
+            val resizedSize = getFileSize(resized.uri)
+            if (resizedSize > MAX_PHOTO_UPLOAD_BYTES) {
+                cleanupTempFiles(resizedFiles)
+                val message = "Unable to reduce ${file.filename} below 6MB after resizing"
+                remoteLogger?.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = message,
+                    metadata = mapOf(
+                        "filename" to file.filename,
+                        "size_bytes" to resizedSize.toString()
+                    )
+                )
+                return Result.failure(IllegalStateException(message))
+            }
+
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Resized photo for image processor upload",
+                metadata = mapOf(
+                    "filename" to file.filename,
+                    "original_bytes" to currentSize.toString(),
+                    "resized_bytes" to resizedSize.toString()
+                )
+            )
+
+            processed += resized
+        }
+
+        return Result.success(processed)
+    }
+
+    private fun cleanupTempFiles(files: List<FileToUpload>) {
+        files.forEach { file ->
+            if (!file.deleteOnCompletion) return@forEach
+            if (file.uri.scheme != "file") return@forEach
+            val path = file.uri.path ?: return@forEach
+            runCatching { File(path).delete() }
+        }
+    }
+
+    private fun resizePhoto(file: FileToUpload): FileToUpload? {
+        val bitmap = context.contentResolver.openInputStream(file.uri)?.use { input ->
+            BitmapFactory.decodeStream(input)
+        } ?: return null
+
+        return try {
+            val compressedBytes = compressBitmap(bitmap, MAX_PHOTO_UPLOAD_BYTES) ?: return null
+            val tempFile = File.createTempFile("rp_image_processor_", ".jpg", context.cacheDir)
+            FileOutputStream(tempFile).use { output -> output.write(compressedBytes) }
+            file.copy(
+                uri = Uri.fromFile(tempFile),
+                deleteOnCompletion = true
+            )
+        } catch (error: Exception) {
+            remoteLogger?.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "Error while resizing photo for upload",
+                metadata = mapOf(
+                    "filename" to file.filename,
+                    "reason" to (error.message ?: "unknown")
+                )
+            )
+            null
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
+    private fun compressBitmap(bitmap: Bitmap, maxBytes: Long): ByteArray? {
+        var currentBitmap = bitmap
+        var quality = JPEG_QUALITY_START
+        val outputStream = ByteArrayOutputStream()
+
+        for (attempt in 0 until MAX_COMPRESSION_PASSES) {
+            outputStream.reset()
+            currentBitmap.compress(Bitmap.CompressFormat.JPEG, quality, outputStream)
+            if (outputStream.size() <= maxBytes) {
+                val result = outputStream.toByteArray()
+                if (currentBitmap !== bitmap) {
+                    currentBitmap.recycle()
+                }
+                return result
+            }
+
+            if (quality > JPEG_QUALITY_MIN) {
+                quality -= JPEG_QUALITY_STEP
+            } else {
+                val newWidth = (currentBitmap.width * BITMAP_SCALE_FACTOR).toInt().coerceAtLeast(1)
+                val newHeight = (currentBitmap.height * BITMAP_SCALE_FACTOR).toInt().coerceAtLeast(1)
+                if (newWidth == currentBitmap.width && newHeight == currentBitmap.height) {
+                    break
+                }
+                val scaled = Bitmap.createScaledBitmap(currentBitmap, newWidth, newHeight, true)
+                if (scaled !== currentBitmap && currentBitmap !== bitmap) {
+                    currentBitmap.recycle()
+                }
+                currentBitmap = scaled
+                quality = JPEG_QUALITY_START
+            }
+        }
+
+        if (currentBitmap !== bitmap) {
+            currentBitmap.recycle()
+        }
+
+        return null
     }
 
     private fun getFileSize(uri: Uri): Long {

@@ -152,11 +152,17 @@ class ProjectDetailFragment : Fragment() {
             Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
         }
         addRoomCard.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.add_room), Toast.LENGTH_SHORT).show()
+            navigateToRocketScan()
         }
         addExteriorCard.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.add_exterior_space), Toast.LENGTH_SHORT).show()
+            navigateToRocketScan()
         }
+    }
+
+    private fun navigateToRocketScan() {
+        val action = ProjectDetailFragmentDirections
+            .actionProjectDetailFragmentToRocketScanFragment(args.projectId)
+        findNavController().navigate(action)
     }
 
     fun promptDeleteProject() {

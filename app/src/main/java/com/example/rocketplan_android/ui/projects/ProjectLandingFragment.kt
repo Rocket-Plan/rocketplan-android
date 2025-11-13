@@ -111,21 +111,26 @@ class ProjectLandingFragment : Fragment() {
             ).show()
         }
         rocketScanCard.setOnClickListener {
-            val summary = latestSummary
-            if (summary == null) {
-                return@setOnClickListener
-            }
+            val summary = latestSummary ?: return@setOnClickListener
 
-            // If project has no levels, navigate to project type selection first
-            if (!summary.hasLevels) {
-                val action = ProjectLandingFragmentDirections
-                    .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
-                findNavController().navigate(action)
-            } else {
-                // Project has levels, proceed to RocketScan
-                val action = ProjectLandingFragmentDirections
-                    .actionProjectLandingFragmentToRocketScanFragment(args.projectId)
-                findNavController().navigate(action)
+            when {
+                // No levels yet, continue onboarding via property type selection
+                !summary.hasLevels -> {
+                    val action = ProjectLandingFragmentDirections
+                        .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
+                    findNavController().navigate(action)
+                }
+                // Levels exist but there are no rooms yet; take user to project home
+                !summary.hasRooms -> {
+                    val action = ProjectLandingFragmentDirections
+                        .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
+                    findNavController().navigate(action)
+                }
+                else -> {
+                    val action = ProjectLandingFragmentDirections
+                        .actionProjectLandingFragmentToRocketScanFragment(args.projectId)
+                    findNavController().navigate(action)
+                }
             }
         }
         allNotesCard.setOnClickListener {

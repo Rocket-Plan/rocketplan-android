@@ -97,6 +97,10 @@
         <action
             android:id="@+id/action_nav_projects_to_projectLandingFragment"
             app:destination="@id/projectLandingFragment" />
+
+        <action
+            android:id="@+id/action_nav_projects_to_createProjectFragment"
+            app:destination="@id/createProjectFragment" />
     </fragment>
 
     <fragment
@@ -116,6 +120,10 @@
         <action
             android:id="@+id/action_projectLandingFragment_to_projectTypeSelectionFragment"
             app:destination="@id/projectTypeSelectionFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_projectDetailFragment"
+            app:destination="@id/projectDetailFragment" />
     </fragment>
 
     <fragment
@@ -202,6 +210,12 @@
     </fragment>
 
     <fragment
+        android:id="@+id/createProjectFragment"
+        android:name="com.example.rocketplan_android.ui.projects.CreateProjectFragment"
+        android:label="@string/create_project_title"
+        tools:layout="@layout/fragment_create_project" />
+
+    <fragment
         android:id="@+id/nav_gallery"
         android:name="com.example.rocketplan_android.ui.gallery.GalleryFragment"
         android:label="@string/menu_gallery"
@@ -212,6 +226,12 @@
         android:name="com.example.rocketplan_android.ui.slideshow.SlideshowFragment"
         android:label="@string/menu_slideshow"
         tools:layout="@layout/fragment_slideshow" />
+
+    <fragment
+        android:id="@+id/imageProcessorConfigFragment"
+        android:name="com.example.rocketplan_android.ui.debug.ImageProcessorConfigFragment"
+        android:label="Image Processor Config"
+        tools:layout="@layout/fragment_image_processor_config" />
 
     <fragment
         android:id="@+id/rocketScanFragment"
