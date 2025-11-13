@@ -177,6 +177,10 @@
     <string name="create_project_manual_entry_toast">Manual address entry is coming soon.</string>
     <string name="create_project_action">Create Project</string>
     <string name="create_project_action_toast">Project creation coming soon.</string>
+    <string name="create_project_address_required">Please enter an address.</string>
+    <string name="create_project_generic_error">Unable to create the project. Please try again.</string>
+    <string name="create_project_missing_company">Missing company context. Please refresh and try again.</string>
+    <string name="create_project_missing_address_id">Address could not be created. Please try again.</string>
 
     <!-- Manual Address Entry -->
     <string name="manual_address_title">Enter Address Manually</string>
@@ -188,6 +192,7 @@
     <string name="manual_address_postal_label">ZIP / Postal Code</string>
     <string name="manual_address_action">Save Address</string>
     <string name="manual_address_toast">Manual address submission coming soon.</string>
+    <string name="manual_address_street_error">Street address is required.</string>
 
     <!-- Batch Photo Capture -->
     <string name="batch_capture_active">Batch Capture Active</string>

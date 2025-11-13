@@ -225,7 +225,37 @@ class LocalDataService private constructor(
 
     // region Mutations
     suspend fun saveProjects(projects: List<OfflineProjectEntity>) = withContext(ioDispatcher) {
+        if (projects.isEmpty()) {
+            Log.d("LocalDataService", "💾 saveProjects(): no projects supplied")
+            return@withContext
+        }
+
+        val start = System.currentTimeMillis()
+        Log.d("LocalDataService", "💾 saveProjects(): upserting ${projects.size} projects")
+        projects.forEachIndexed { index, project ->
+            val anomalies = mutableListOf<String>()
+            when (project.serverId) {
+                null -> anomalies.add("serverId=null")
+                0L -> {
+                    anomalies.add("serverId=0")
+                    Log.e("LocalDataService", "🚨 BUG FOUND! Project with serverId=0 detected!", Exception("Stack trace for project 0 creation"))
+                }
+            }
+            if (project.uuid.equals("project-0", ignoreCase = true)) {
+                anomalies.add("uuid=project-0")
+            }
+            val suffix = if (anomalies.isEmpty()) {
+                ""
+            } else {
+                " ⚠️ ${anomalies.joinToString()}"
+            }
+            Log.d(
+                "LocalDataService",
+                "   [${index}] localId=${project.projectId}, serverId=${project.serverId ?: "null"}, uuid=${project.uuid}, title=${project.title}$suffix"
+            )
+        }
         dao.upsertProjects(projects)
+        Log.d("LocalDataService", "💾 saveProjects(): finished in ${System.currentTimeMillis() - start}ms")
     }
 
     suspend fun updateProjectStatus(projectId: Long, status: ProjectStatus) = withContext(ioDispatcher) {

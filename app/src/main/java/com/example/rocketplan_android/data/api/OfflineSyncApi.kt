@@ -14,6 +14,10 @@ import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
+import com.example.rocketplan_android.data.model.AddressResourceResponse
+import com.example.rocketplan_android.data.model.CreateAddressRequest
+import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
+import com.example.rocketplan_android.data.model.ProjectResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
@@ -75,6 +79,17 @@ interface OfflineSyncApi {
         @Path("projectId") projectId: Long,
         @Query("filter[updated_date]") updatedSince: String? = null
     ): List<NoteDto>
+
+    @POST("/api/addresses")
+    suspend fun createAddress(
+        @Body body: CreateAddressRequest
+    ): AddressResourceResponse
+
+    @POST("/api/companies/{companyId}/projects")
+    suspend fun createCompanyProject(
+        @Path("companyId") companyId: Long,
+        @Body body: CreateCompanyProjectRequest
+    ): ProjectResourceResponse
 
     // Property & locations
     @GET("/api/projects/{projectId}/properties")

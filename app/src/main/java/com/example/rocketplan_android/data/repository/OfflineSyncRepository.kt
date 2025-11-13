@@ -20,6 +20,8 @@ import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.model.CreateAddressRequest
+import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
@@ -305,6 +307,28 @@ class OfflineSyncRepository(
         Log.d("API", "✅ [syncProjectEssentials] Synced $itemCount items in ${duration}ms ($syncMode)")
         Log.d("API", "   Navigation chain: Property → ${locationIds.size} Levels → Rooms → Albums")
         SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, itemCount, duration)
+    }
+
+    suspend fun createAddress(
+        request: CreateAddressRequest
+    ) = withContext(ioDispatcher) {
+        runCatching {
+            Log.d("API", "🏠 [createAddress] Creating address for ${request.address}")
+            api.createAddress(request).data
+        }
+    }
+
+    suspend fun createCompanyProject(
+        companyId: Long,
+        request: CreateCompanyProjectRequest
+    ): Result<OfflineProjectEntity> = withContext(ioDispatcher) {
+        runCatching {
+            Log.d("API", "🚀 [createCompanyProject] Creating project for company=$companyId address=${request.addressId}")
+            val dto = api.createCompanyProject(companyId, request).data
+            val entity = dto.toEntity()
+            localDataService.saveProjects(listOf(entity))
+            entity
+        }
     }
 
     suspend fun createProjectProperty(
@@ -1018,6 +1042,10 @@ class OfflineSyncRepository(
 private fun now(): Date = Date()
 
 private fun ProjectDto.toEntity(): OfflineProjectEntity {
+    if (id == 0L) {
+        Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDto.toEntity() called with id=0", Exception("Stack trace"))
+        Log.e("OfflineSyncRepository", "   ProjectDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
+    }
     val timestamp = now()
     val addressLine1 = address?.address?.takeIf { it.isNotBlank() }
     val addressLine2 = address?.address2?.takeIf { it.isNotBlank() }
@@ -1058,6 +1086,10 @@ private fun ProjectDto.toEntity(): OfflineProjectEntity {
 }
 
 private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.toEntity(): OfflineProjectEntity {
+    if (id == 0L) {
+        Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDetailDto.toEntity() called with id=0", Exception("Stack trace"))
+        Log.e("OfflineSyncRepository", "   ProjectDetailDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
+    }
     val timestamp = now()
     val addressLine1 = address?.address?.takeIf { it.isNotBlank() }
     val addressLine2 = address?.address2?.takeIf { it.isNotBlank() }
