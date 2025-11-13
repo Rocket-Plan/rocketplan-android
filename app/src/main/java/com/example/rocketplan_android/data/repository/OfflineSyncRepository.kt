@@ -20,6 +20,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
@@ -111,6 +112,47 @@ class OfflineSyncRepository(
         localDataService.saveProjects(projects.map { it.toEntity() })
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
+    }
+
+    suspend fun deleteProject(localProjectId: Long) = withContext(ioDispatcher) {
+        Log.d("API", "🗑️ [deleteProject] Starting delete for local project ID: $localProjectId")
+
+        // Get the project to retrieve its server ID
+        val project = localDataService.getAllProjects().firstOrNull { it.projectId == localProjectId }
+            ?: run {
+                Log.e("API", "❌ [deleteProject] Project not found locally: $localProjectId")
+                throw Exception("Project not found locally")
+            }
+
+        Log.d("API", "🗑️ [deleteProject] Found project - title: ${project.title}, serverId: ${project.serverId}, uuid: ${project.uuid}")
+
+        val serverId = project.serverId
+
+        if (serverId != null) {
+            // Project has been synced to server - delete from server first
+            Log.d("API", "🗑️ [deleteProject] Project has serverId $serverId - calling API DELETE")
+            val requestBody = mapOf("project_id" to serverId)
+            Log.d("API", "🗑️ [deleteProject] Request: DELETE /api/projects/$serverId with body: $requestBody")
+
+            val response = api.deleteProject(serverId, requestBody)
+            Log.d("API", "🗑️ [deleteProject] API response code: ${response.code()}, success: ${response.isSuccessful}")
+
+            if (response.isSuccessful) {
+                Log.d("API", "🗑️ [deleteProject] Server delete successful, now deleting locally")
+                localDataService.deleteProject(localProjectId)
+                Log.d("API", "✅ [deleteProject] Successfully deleted project $serverId (local: $localProjectId) from server and locally")
+            } else {
+                val errorBody = response.errorBody()?.string() ?: "No error body"
+                val errorMsg = "Failed to delete project from server: HTTP ${response.code()}"
+                Log.e("API", "❌ [deleteProject] $errorMsg - Response: $errorBody")
+                throw Exception(errorMsg)
+            }
+        } else {
+            // Project is local-only (not synced) - just delete locally
+            Log.d("API", "🗑️ [deleteProject] Project has no serverId - local-only deletion")
+            localDataService.deleteProject(localProjectId)
+            Log.d("API", "✅ [deleteProject] Successfully deleted local-only project $localProjectId")
+        }
     }
 
     /**
@@ -261,6 +303,80 @@ class OfflineSyncRepository(
         Log.d("API", "✅ [syncProjectEssentials] Synced $itemCount items in ${duration}ms ($syncMode)")
         Log.d("API", "   Navigation chain: Property → ${locationIds.size} Levels → Rooms → Albums")
         SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, itemCount, duration)
+    }
+
+    suspend fun createProjectProperty(
+        projectId: Long,
+        request: PropertyMutationRequest,
+        propertyTypeValue: String?
+    ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
+        runCatching {
+            // Get the project to retrieve its server ID
+            val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
+                ?: throw Exception("Project not found locally")
+
+            val serverId = project.serverId
+                ?: throw Exception("Project has no server ID - cannot create property on server")
+
+            Log.d("API", "🏠 [createProjectProperty] Creating property for project serverId: $serverId (local: $projectId)")
+            val created = api.createProjectProperty(serverId, request)
+            Log.d("API", "🏠 [createProjectProperty] Property created with ID: ${created.id}")
+
+            val refreshed = runCatching { api.getProperty(created.id) }.getOrNull() ?: created
+            persistProperty(projectId, refreshed, propertyTypeValue)
+        }
+    }
+
+    suspend fun updateProjectProperty(
+        projectId: Long,
+        propertyId: Long,
+        request: PropertyMutationRequest,
+        propertyTypeValue: String?
+    ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
+        // Get the property to retrieve its server ID
+        var property = localDataService.getProperty(propertyId)
+
+        // If property doesn't exist locally, try to fetch from server first
+        if (property == null) {
+            Log.d("API", "🏠 [updateProjectProperty] Property $propertyId not found locally, attempting to sync from server")
+
+            // Get project to find its property on the server
+            val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
+            val projectServerId = project?.serverId
+
+            if (projectServerId != null) {
+                // Try to fetch properties from the server
+                val propertiesResponse = runCatching { api.getProjectProperties(projectServerId) }.getOrNull()
+                val properties = propertiesResponse?.data
+
+                if (!properties.isNullOrEmpty()) {
+                    Log.d("API", "🏠 [updateProjectProperty] Found ${properties.size} properties on server, persisting locally without new type")
+                    // Persist the first property WITHOUT the new type (preserve server state)
+                    // We'll apply the new type only after the update API call succeeds
+                    property = runCatching {
+                        persistProperty(projectId, properties.first(), propertyTypeValue = null)
+                    }.getOrNull()
+                }
+            }
+
+            // If still no property after sync attempt, fall back to creating new one
+            if (property == null) {
+                Log.d("API", "🏠 [updateProjectProperty] Property not found on server either, creating new property")
+                return@withContext createProjectProperty(projectId, request, propertyTypeValue)
+            }
+        }
+
+        runCatching {
+            val serverId = property.serverId
+                ?: throw Exception("Property has no server ID - cannot update property on server")
+
+            Log.d("API", "🏠 [updateProjectProperty] Updating property serverId: $serverId (local: $propertyId)")
+            val updated = api.updateProperty(serverId, request)
+            Log.d("API", "🏠 [updateProjectProperty] Property updated with ID: ${updated.id}")
+
+            val refreshed = runCatching { api.getProperty(updated.id) }.getOrNull() ?: updated
+            persistProperty(projectId, refreshed, propertyTypeValue)
+        }
     }
 
     /**
@@ -789,6 +905,22 @@ class OfflineSyncRepository(
         val hasMore: Boolean,
         val nextPage: Int?
     )
+
+    private suspend fun persistProperty(
+        projectId: Long,
+        property: PropertyDto,
+        propertyTypeValue: String?
+    ): OfflinePropertyEntity {
+        val entity = property.toEntity()
+        localDataService.saveProperty(entity)
+        val resolvedId = entity.serverId ?: entity.propertyId
+        localDataService.attachPropertyToProject(
+            projectId = projectId,
+            propertyId = resolvedId,
+            propertyType = propertyTypeValue
+        )
+        return entity
+    }
 
     private suspend fun fetchProjectProperty(projectId: Long): PropertyDto? {
         val response = runCatching { api.getProjectProperties(projectId) }.getOrNull()

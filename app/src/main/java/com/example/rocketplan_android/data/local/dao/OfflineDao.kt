@@ -55,6 +55,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_projects SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markProjectsDeleted(serverIds: List<Long>)
+
+    @Query("UPDATE offline_projects SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markProjectDeletedByLocalId(projectId: Long)
     // endregion
 
     // region Locations
@@ -77,6 +80,11 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_rooms WHERE projectId = :projectId AND isDeleted = 0 ORDER BY title")
     fun observeRoomsForProject(projectId: Long): Flow<List<OfflineRoomEntity>>
+    @Query("SELECT roomId FROM offline_rooms WHERE projectId = :projectId")
+    suspend fun getRoomIdsForProject(projectId: Long): List<Long>
+
+    @Query("UPDATE offline_rooms SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markRoomsDeletedByProject(projectId: Long)
 
     @Query("SELECT * FROM offline_rooms WHERE roomId = :roomId LIMIT 1")
     suspend fun getRoom(roomId: Long): OfflineRoomEntity?

@@ -3,10 +3,12 @@ package com.example.rocketplan_android.ui.projects
 import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -90,7 +92,7 @@ class ProjectLandingFragment : Fragment() {
 
     private fun bindListeners() {
         menuButton.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.menu), Toast.LENGTH_SHORT).show()
+            showProjectMenu(it)
         }
         aliasAction.setOnClickListener {
             if (aliasAction.isEnabled) {
@@ -109,9 +111,22 @@ class ProjectLandingFragment : Fragment() {
             ).show()
         }
         rocketScanCard.setOnClickListener {
-            val action = ProjectLandingFragmentDirections
-                .actionProjectLandingFragmentToRocketScanFragment(args.projectId)
-            findNavController().navigate(action)
+            val summary = latestSummary
+            if (summary == null) {
+                return@setOnClickListener
+            }
+
+            // If project has no levels, navigate to project type selection first
+            if (!summary.hasLevels) {
+                val action = ProjectLandingFragmentDirections
+                    .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
+                findNavController().navigate(action)
+            } else {
+                // Project has levels, proceed to RocketScan
+                val action = ProjectLandingFragmentDirections
+                    .actionProjectLandingFragmentToRocketScanFragment(args.projectId)
+                findNavController().navigate(action)
+            }
         }
         allNotesCard.setOnClickListener {
             Toast.makeText(
@@ -132,6 +147,31 @@ class ProjectLandingFragment : Fragment() {
                     when (state) {
                         ProjectLandingUiState.Loading -> showLoadingState()
                         is ProjectLandingUiState.Ready -> renderState(state.summary)
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        ProjectLandingEvent.ProjectDeleted -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.project_deleted),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            findNavController().navigateUp()
+                        }
+                        is ProjectLandingEvent.DeleteFailed -> {
+                            val errorMessage = "${getString(R.string.project_delete_failed)}: ${event.error}"
+                            Toast.makeText(
+                                requireContext(),
+                                errorMessage,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 }
             }
@@ -175,6 +215,36 @@ class ProjectLandingFragment : Fragment() {
             R.string.project_notes_subtitle_with_count,
             summary.noteCount
         )
+    }
+
+    private fun showProjectMenu(anchor: View) {
+        val popup = PopupMenu(requireContext(), anchor)
+        popup.menuInflater.inflate(R.menu.project_landing_menu, popup.menu)
+        popup.setOnMenuItemClickListener { item ->
+            handleMenuItemClick(item)
+        }
+        popup.show()
+    }
+
+    private fun handleMenuItemClick(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_delete_project -> {
+                showDeleteProjectDialog()
+                true
+            }
+            else -> false
+        }
+    }
+
+    private fun showDeleteProjectDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_project_title)
+            .setMessage(R.string.delete_project_message)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                viewModel.deleteProject()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun showStatusSelectionDialog() {

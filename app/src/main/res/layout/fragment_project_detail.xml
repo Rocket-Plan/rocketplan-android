@@ -44,14 +44,6 @@
                     android:textColor="@color/light_text_rp"
                     android:textSize="14sp" />
 
-                <ImageButton
-                    android:id="@+id/menuButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/menu"
-                    android:src="@drawable/ic_more_vert"
-                    app:tint="@color/icon_colour" />
             </LinearLayout>
 
             <LinearLayout

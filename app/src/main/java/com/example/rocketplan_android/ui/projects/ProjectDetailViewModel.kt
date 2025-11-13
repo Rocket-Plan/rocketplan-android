@@ -105,6 +105,16 @@ class ProjectDetailViewModel(
         }
     }
 
+    suspend fun deleteProject(): Boolean {
+        return try {
+            localDataService.deleteProject(projectId)
+            true
+        } catch (t: Throwable) {
+            Log.e("ProjectDetailVM", "Failed to delete project $projectId", t)
+            false
+        }
+    }
+
     private fun OfflineProjectEntity.toHeader(noteCount: Int): ProjectDetailHeader {
         val titleCandidates = listOfNotNull(
             addressLine1?.takeIf { it.isNotBlank() },

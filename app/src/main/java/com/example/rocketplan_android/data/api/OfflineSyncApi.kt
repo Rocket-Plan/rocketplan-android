@@ -14,13 +14,19 @@ import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
+import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.google.gson.JsonObject
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import retrofit2.Response
+import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.HTTP
+import retrofit2.http.POST
+import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -47,6 +53,12 @@ interface OfflineSyncApi {
         @Query("include") include: String? = "projectStatus,address,projectType,properties,notes,atmosphericLogs"
     ): ProjectDetailDto
 
+    @HTTP(method = "DELETE", path = "/api/projects/{projectId}", hasBody = true)
+    suspend fun deleteProject(
+        @Path("projectId") projectId: Long,
+        @Body body: Map<String, Long>
+    ): Response<Unit>
+
     @GET("/api/projects/{projectId}/users")
     suspend fun getProjectUsers(
         @Path("projectId") projectId: Long
@@ -68,6 +80,23 @@ interface OfflineSyncApi {
     suspend fun getProjectProperties(
         @Path("projectId") projectId: Long
     ): PaginatedResponse<PropertyDto>
+
+    @POST("/api/projects/{projectId}/properties")
+    suspend fun createProjectProperty(
+        @Path("projectId") projectId: Long,
+        @Body body: PropertyMutationRequest
+    ): PropertyDto
+
+    @PUT("/api/properties/{propertyId}")
+    suspend fun updateProperty(
+        @Path("propertyId") propertyId: Long,
+        @Body body: PropertyMutationRequest
+    ): PropertyDto
+
+    @GET("/api/properties/{propertyId}")
+    suspend fun getProperty(
+        @Path("propertyId") propertyId: Long
+    ): PropertyDto
 
     @GET("/api/properties/{propertyId}/levels")
     suspend fun getPropertyLevels(

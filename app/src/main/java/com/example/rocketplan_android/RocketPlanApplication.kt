@@ -4,11 +4,14 @@ import android.app.Application
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.OfflineDatabase
 import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
 import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.repository.ImageProcessorRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.storage.ImageProcessingConfigStore
+import com.example.rocketplan_android.data.storage.ImageProcessorUploadStore
 import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.sync.SyncQueueManager
@@ -45,6 +48,9 @@ class RocketPlanApplication : Application() {
         private set
 
     lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
+        private set
+
+    lateinit var imageProcessorRepository: ImageProcessorRepository
         private set
 
     private lateinit var imageProcessingConfigStore: ImageProcessingConfigStore
@@ -87,6 +93,22 @@ class RocketPlanApplication : Application() {
         imageProcessingConfigurationRepository = ImageProcessingConfigurationRepository(
             service = imageProcessorService,
             cacheStore = imageProcessingConfigStore,
+            remoteLogger = remoteLogger
+        )
+
+        val offlineDb = OfflineDatabase.getInstance(this)
+        val imageProcessorApi = RetrofitClient.imageProcessorApi
+        val imageProcessorDao = offlineDb.imageProcessorDao()
+        val offlineDao = offlineDb.offlineDao()
+        val uploadStore = ImageProcessorUploadStore.getInstance(this)
+        imageProcessorRepository = ImageProcessorRepository(
+            context = this,
+            api = imageProcessorApi,
+            dao = imageProcessorDao,
+            offlineDao = offlineDao,
+            uploadStore = uploadStore,
+            configurationRepository = imageProcessingConfigurationRepository,
+            secureStorage = secureStorage,
             remoteLogger = remoteLogger
         )
     }

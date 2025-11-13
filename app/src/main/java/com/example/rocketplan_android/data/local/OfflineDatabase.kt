@@ -5,6 +5,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
@@ -25,6 +26,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshot
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
+import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
 
 @Database(
     entities = [
@@ -46,15 +49,18 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
         OfflineWorkScopeEntity::class,
         OfflineSyncQueueEntity::class,
         OfflineConflictResolutionEntity::class,
-        OfflineRoomPhotoSnapshotEntity::class
+        OfflineRoomPhotoSnapshotEntity::class,
+        ImageProcessorAssemblyEntity::class,
+        ImageProcessorPhotoEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
 abstract class OfflineDatabase : RoomDatabase() {
 
     abstract fun offlineDao(): OfflineDao
+    abstract fun imageProcessorDao(): ImageProcessorDao
 
     companion object {
         private const val DATABASE_NAME = "rocketplan_offline.db"

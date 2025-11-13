@@ -63,6 +63,9 @@ class LocalDataService private constructor(
     fun observeRooms(projectId: Long): Flow<List<OfflineRoomEntity>> =
         dao.observeRoomsForProject(projectId)
 
+    suspend fun getProperty(propertyId: Long): OfflinePropertyEntity? =
+        withContext(ioDispatcher) { dao.getProperty(propertyId) }
+
     suspend fun getRoomByServerId(serverId: Long): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoomByServerId(serverId) }
 
@@ -218,6 +221,24 @@ class LocalDataService private constructor(
         dao.upsertProject(updatedProject)
     }
 
+    suspend fun attachPropertyToProject(
+        projectId: Long,
+        propertyId: Long,
+        propertyType: String?
+    ) = withContext(ioDispatcher) {
+        val existing = dao.getProject(projectId) ?: return@withContext
+        val timestamp = Date()
+        val updatedProject = existing.copy(
+            propertyId = propertyId,
+            propertyType = propertyType ?: existing.propertyType,
+            syncStatus = SyncStatus.SYNCED,
+            isDirty = false,
+            updatedAt = timestamp,
+            lastSyncedAt = timestamp
+        )
+        dao.upsertProject(updatedProject)
+    }
+
     suspend fun saveLocations(locations: List<OfflineLocationEntity>) = withContext(ioDispatcher) {
         dao.upsertLocations(locations)
     }
@@ -350,6 +371,17 @@ class LocalDataService private constructor(
     suspend fun markProjectsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
         dao.markProjectsDeleted(serverIds)
+    }
+
+    suspend fun deleteProject(projectId: Long) = withContext(ioDispatcher) {
+        database.withTransaction {
+            dao.markProjectDeletedByLocalId(projectId)
+            val roomIds = dao.getRoomIdsForProject(projectId)
+            if (roomIds.isNotEmpty()) {
+                dao.markRoomsDeletedByProject(projectId)
+                dao.clearRoomPhotoSnapshots(roomIds)
+            }
+        }
     }
 
     suspend fun markLocationsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {

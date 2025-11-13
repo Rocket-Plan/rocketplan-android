@@ -112,6 +112,29 @@
         <action
             android:id="@+id/action_projectLandingFragment_to_rocketScanFragment"
             app:destination="@id/rocketScanFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_projectTypeSelectionFragment"
+            app:destination="@id/projectTypeSelectionFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/projectTypeSelectionFragment"
+        android:name="com.example.rocketplan_android.ui.projects.ProjectTypeSelectionFragment"
+        android:label="@string/project_type_title"
+        tools:layout="@layout/fragment_project_type_selection">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/action_projectTypeSelectionFragment_to_rocketScanFragment"
+            app:destination="@id/rocketScanFragment" />
+
+        <action
+            android:id="@+id/action_projectTypeSelectionFragment_to_projectDetailFragment"
+            app:destination="@id/projectDetailFragment" />
     </fragment>
 
     <fragment

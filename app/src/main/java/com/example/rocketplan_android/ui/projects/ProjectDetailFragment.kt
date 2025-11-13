@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class ProjectDetailFragment : Fragment() {
@@ -32,7 +33,6 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private lateinit var backButton: ImageButton
-    private lateinit var menuButton: ImageButton
     private lateinit var editButton: ImageButton
     private lateinit var headerTitle: TextView
     private lateinit var projectTitle: TextView
@@ -85,7 +85,6 @@ class ProjectDetailFragment : Fragment() {
 
     private fun bindViews(root: View) {
         backButton = root.findViewById(R.id.backButton)
-        menuButton = root.findViewById(R.id.menuButton)
         editButton = root.findViewById(R.id.editProjectButton)
         headerTitle = root.findViewById(R.id.headerTitle)
         projectTitle = root.findViewById(R.id.projectTitle)
@@ -149,9 +148,6 @@ class ProjectDetailFragment : Fragment() {
 
     private fun bindListeners() {
         backButton.setOnClickListener { findNavController().navigateUp() }
-        menuButton.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.menu), Toast.LENGTH_SHORT).show()
-        }
         editButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
         }
@@ -160,6 +156,30 @@ class ProjectDetailFragment : Fragment() {
         }
         addExteriorCard.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.add_exterior_space), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun promptDeleteProject() {
+        if (!isAdded) return
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_project_title)
+            .setMessage(R.string.delete_project_message)
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                confirmDeleteProject()
+            }
+            .show()
+    }
+
+    private fun confirmDeleteProject() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val success = viewModel.deleteProject()
+            if (success) {
+                Toast.makeText(requireContext(), R.string.project_deleted, Toast.LENGTH_SHORT).show()
+                findNavController().navigateUp()
+            } else {
+                Toast.makeText(requireContext(), R.string.project_delete_failed, Toast.LENGTH_LONG).show()
+            }
         }
     }
 
