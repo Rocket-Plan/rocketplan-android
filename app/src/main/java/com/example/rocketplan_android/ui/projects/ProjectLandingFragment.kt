@@ -114,6 +114,11 @@ class ProjectLandingFragment : Fragment() {
             val summary = latestSummary ?: return@setOnClickListener
 
             when {
+                !summary.hasProperty -> {
+                    val action = ProjectLandingFragmentDirections
+                        .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
+                    findNavController().navigate(action)
+                }
                 // No levels yet, continue onboarding via property type selection
                 !summary.hasLevels -> {
                     val action = ProjectLandingFragmentDirections

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
@@ -66,10 +67,12 @@ class ProjectDetailViewModel(
                     val header = project.toHeader((notes as List<OfflineNoteEntity>).size)
                     val isProjectPhotoSyncing = (photoSyncingProjects as Set<Long>).contains(projectId)
                     val sections = (rooms as List<OfflineRoomEntity>).toSections(photos as List<OfflinePhotoEntity>, isProjectPhotoSyncing)
+                    val roomCreationStatus = project.resolveRoomCreationStatus(localDataService)
                     ProjectDetailUiState.Ready(
                         header = header,
                         levelSections = sections,
-                        albums = (albums as List<OfflineAlbumEntity>).toAlbumSections(photos as List<OfflinePhotoEntity>)
+                        albums = (albums as List<OfflineAlbumEntity>).toAlbumSections(photos as List<OfflinePhotoEntity>),
+                        roomCreationStatus = roomCreationStatus
                     )
                 }
             }
@@ -87,7 +90,8 @@ class ProjectDetailViewModel(
                         old.levelSections.size == new.levelSections.size &&
                             old.albums.size == new.albums.size &&
                             oldPhotoTotal == newPhotoTotal &&
-                            oldLoadingCount == newLoadingCount
+                            oldLoadingCount == newLoadingCount &&
+                            old.roomCreationStatus == new.roomCreationStatus
                     }
                     old is ProjectDetailUiState.Loading && new is ProjectDetailUiState.Loading -> true
                     else -> false
@@ -176,8 +180,23 @@ class ProjectDetailViewModel(
     private fun List<OfflineAlbumEntity>.toAlbumSections(
         photos: List<OfflinePhotoEntity>
     ): List<AlbumSection> {
+        // Category album names that should be filtered out (not true room albums)
+        val categoryAlbumNames = setOf(
+            "Damage Assessment",
+            "Betterments",
+            "Contents",
+            "Daily Progress",
+            "Pre-existing Damages"
+        )
+
         val photosByAlbumId = photos.filter { it.albumId != null }.groupBy { it.albumId }
         val populatedAlbums = this.mapNotNull { album ->
+            // Filter out project-scoped albums (roomId == null) or category albums by name
+            if (album.roomId == null || categoryAlbumNames.contains(album.name)) {
+                Log.d("ProjectDetailVM", "🚫 Filtering project-scoped album ${album.name} (${album.albumId})")
+                return@mapNotNull null
+            }
+
             val albumPhotos = photosByAlbumId[album.albumId]?.takeIf { it.isNotEmpty() }
             val hasServerCount = album.photoCount > 0
             if (albumPhotos == null && !hasServerCount) {
@@ -224,7 +243,8 @@ sealed class ProjectDetailUiState {
     data class Ready(
         val header: ProjectDetailHeader,
         val levelSections: List<RoomLevelSection>,
-        val albums: List<AlbumSection> = emptyList()
+        val albums: List<AlbumSection> = emptyList(),
+        val roomCreationStatus: RoomCreationStatus = RoomCreationStatus.UNKNOWN
     ) : ProjectDetailUiState()
 }
 
@@ -266,6 +286,25 @@ data class AlbumSection(
 
 enum class ProjectDetailTab {
     PHOTOS, DAMAGES, SKETCH
+}
+
+enum class RoomCreationStatus {
+    UNKNOWN,
+    AVAILABLE,
+    MISSING_PROPERTY,
+    UNSYNCED_PROPERTY
+}
+
+private suspend fun OfflineProjectEntity.resolveRoomCreationStatus(
+    localDataService: LocalDataService
+): RoomCreationStatus {
+    val propertyLocalId = propertyId ?: return RoomCreationStatus.MISSING_PROPERTY
+    val property = localDataService.getProperty(propertyLocalId) ?: return RoomCreationStatus.MISSING_PROPERTY
+    return if (property.serverId == null) {
+        RoomCreationStatus.UNSYNCED_PROPERTY
+    } else {
+        RoomCreationStatus.AVAILABLE
+    }
 }
 
 private fun String?.existingFilePath(): String? {

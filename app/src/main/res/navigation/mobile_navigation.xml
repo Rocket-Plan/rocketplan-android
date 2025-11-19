@@ -283,4 +283,10 @@
             app:destination="@id/projectLandingFragment" />
     </fragment>
 
+    <fragment
+        android:id="@+id/companyInfoFragment"
+        android:name="com.example.rocketplan_android.ui.company.CompanyInfoFragment"
+        android:label="@string/company_info_title"
+        tools:layout="@layout/fragment_company_info" />
+
 </navigation>

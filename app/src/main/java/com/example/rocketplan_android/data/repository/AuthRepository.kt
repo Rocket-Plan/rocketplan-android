@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.repository
 
+import android.util.Log
 import com.example.rocketplan_android.data.api.AuthService
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.model.ApiError
@@ -250,12 +251,20 @@ class AuthRepository(
             val currentUser = envelope?.data
 
             if (response.isSuccessful && currentUser != null) {
+                val primaryCompanyId = currentUser.getPrimaryCompanyId()
+                Log.d("AuthRepository", "refreshUserContext - userId=${currentUser.id}, companyId=${currentUser.companyId}, primaryCompanyId=$primaryCompanyId, companies=${currentUser.companies?.map { it.id }}, email=${currentUser.email}")
                 if (currentUser.id > 0L) {
                     secureStorage.saveUserId(currentUser.id)
                 } else {
                     secureStorage.clearUserId()
                 }
-                currentUser.companyId?.let { secureStorage.saveCompanyId(it) } ?: secureStorage.clearCompanyId()
+                if (primaryCompanyId != null) {
+                    Log.d("AuthRepository", "Saving primaryCompanyId=$primaryCompanyId")
+                    secureStorage.saveCompanyId(primaryCompanyId)
+                } else {
+                    Log.w("AuthRepository", "No company found in API response - clearing stored companyId")
+                    secureStorage.clearCompanyId()
+                }
                 Result.success(currentUser)
             } else {
                 val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())

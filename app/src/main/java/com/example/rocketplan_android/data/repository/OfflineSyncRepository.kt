@@ -226,7 +226,14 @@ class OfflineSyncRepository(
         // 1. Property
         val property = fetchProjectProperty(projectId)
         if (property != null) {
-            localDataService.saveProperty(property.toEntity())
+            val entity = property.toEntity()
+            localDataService.saveProperty(entity)
+            val resolvedId = entity.serverId ?: entity.propertyId
+            localDataService.attachPropertyToProject(
+                projectId = projectId,
+                propertyId = resolvedId,
+                propertyType = detail.propertyType ?: property.propertyType
+            )
             itemCount++
         }
         ensureActive()
@@ -1058,7 +1065,9 @@ private fun ProjectDto.toEntity(): OfflineProjectEntity {
     ).firstOrNull() ?: "Project $id"
     val resolvedUuid = uuid ?: uid ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
-    val resolvedPropertyId = propertyId ?: address?.id
+    val resolvedPropertyId = propertyId
+        ?: properties?.firstOrNull()?.id
+        ?: address?.id
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }
     return OfflineProjectEntity(
@@ -1102,7 +1111,11 @@ private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.t
     ).firstOrNull() ?: "Project $id"
     val resolvedUuid = uuid ?: uid ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
-    val resolvedPropertyId = propertyId ?: address?.id
+    val resolvedPropertyId = propertyId
+        ?: properties?.firstOrNull()?.id
+        ?: address?.id
+    val resolvedPropertyType = propertyType
+        ?: properties?.firstOrNull()?.propertyType
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }
     return OfflineProjectEntity(
@@ -1116,7 +1129,7 @@ private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.t
         addressLine1 = addressLine1,
         addressLine2 = addressLine2,
         status = resolvedStatus,
-        propertyType = propertyType,
+        propertyType = resolvedPropertyType,
         companyId = companyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,

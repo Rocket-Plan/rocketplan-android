@@ -43,6 +43,7 @@ data class ProjectDto(
     @SerializedName("property_id")
     val propertyId: Long? = null,
     val address: ProjectAddressDto? = null,
+    val properties: List<PropertyDto>? = null,
     @SerializedName("created_at")
     val createdAt: String? = null,
     @SerializedName("updated_at")
@@ -71,6 +72,7 @@ data class ProjectDetailDto(
     val users: List<UserDto>? = null,
     val locations: List<LocationDto>? = null,
     val rooms: List<RoomDto>? = null,
+    val properties: List<PropertyDto>? = null,
     val photos: List<PhotoDto>? = null,
     val atmosphericLogs: List<AtmosphericLogDto>? = null,
     val moistureLogs: List<MoistureLogDto>? = null,
@@ -146,6 +148,16 @@ data class PropertyDto(
     val postalCode: String?,
     val latitude: Double?,
     val longitude: Double?,
+    @SerializedName("is_residential")
+    val isResidential: Boolean? = null,
+    @SerializedName("is_commercial")
+    val isCommercial: Boolean? = null,
+    @SerializedName("is_multi_unit")
+    val isMultiUnit: Boolean? = null,
+    @SerializedName("property_type_id")
+    val propertyTypeId: Long? = null,
+    @SerializedName("property_type")
+    val propertyType: String? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")

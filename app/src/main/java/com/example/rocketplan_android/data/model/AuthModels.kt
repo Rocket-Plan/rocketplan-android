@@ -96,8 +96,18 @@ data class CurrentUserResponse(
     @SerializedName("company_id")
     val companyId: Long? = null,
     @SerializedName("company")
-    val company: Company? = null
-)
+    val company: Company? = null,
+    @SerializedName("companies")
+    val companies: List<Company>? = null
+) {
+    /**
+     * Get the primary company ID. Prefers the top-level company_id if available,
+     * otherwise takes the first company from the companies array.
+     */
+    fun getPrimaryCompanyId(): Long? {
+        return companyId ?: companies?.firstOrNull()?.id
+    }
+}
 
 /**
  * Wrapper for current user endpoint responses.

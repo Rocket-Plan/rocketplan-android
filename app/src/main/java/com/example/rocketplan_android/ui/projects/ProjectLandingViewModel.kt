@@ -35,7 +35,8 @@ data class ProjectLandingSummary(
     val statusLabel: String?,
     val noteCount: Int,
     val hasLevels: Boolean,
-    val hasRooms: Boolean
+    val hasRooms: Boolean,
+    val hasProperty: Boolean
 )
 
 class ProjectLandingViewModel(
@@ -118,7 +119,8 @@ class ProjectLandingViewModel(
             statusLabel = statusLabel,
             noteCount = noteCount,
             hasLevels = hasLevels,
-            hasRooms = hasRooms
+            hasRooms = hasRooms,
+            hasProperty = propertyId != null
         )
     }
 

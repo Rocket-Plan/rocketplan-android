@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -71,6 +72,7 @@ class ProjectDetailFragment : Fragment() {
         )
     }
     private var roomsSectionIsLoading = true
+    private var roomCreationStatus: RoomCreationStatus = RoomCreationStatus.UNKNOWN
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -157,10 +159,10 @@ class ProjectDetailFragment : Fragment() {
             Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
         }
         addRoomCard.setOnClickListener {
-            navigateToRoomTypePicker(RoomTypePickerMode.ROOM)
+            handleAddRoomClick(RoomTypePickerMode.ROOM)
         }
         addExteriorCard.setOnClickListener {
-            navigateToRoomTypePicker(RoomTypePickerMode.EXTERIOR)
+            handleAddRoomClick(RoomTypePickerMode.EXTERIOR)
         }
     }
 
@@ -220,11 +222,13 @@ class ProjectDetailFragment : Fragment() {
 
     private fun showLoadingState() {
         roomsSectionIsLoading = true
+        roomCreationStatus = RoomCreationStatus.UNKNOWN
         tabPlaceholder.isVisible = false
         updateRoomsSectionVisibility()
     }
 
     private fun renderState(state: ProjectDetailUiState.Ready) {
+        roomCreationStatus = state.roomCreationStatus
         projectTitle.text = state.header.projectTitle
         projectCode.isVisible = state.header.projectCode.isNotBlank()
         projectCode.text = state.header.projectCode
@@ -301,5 +305,22 @@ class ProjectDetailFragment : Fragment() {
                 roomsPlaceholder.isVisible = false
             }
         }
+    }
+
+    private fun handleAddRoomClick(mode: RoomTypePickerMode) {
+        when (roomCreationStatus) {
+            RoomCreationStatus.AVAILABLE -> navigateToRoomTypePicker(mode)
+            RoomCreationStatus.MISSING_PROPERTY ->
+                showRoomCreationWarning(R.string.room_type_error_missing_property)
+            RoomCreationStatus.UNSYNCED_PROPERTY ->
+                showRoomCreationWarning(R.string.room_creation_property_sync_pending)
+            RoomCreationStatus.UNKNOWN ->
+                showRoomCreationWarning(R.string.room_creation_loading_message)
+        }
+    }
+
+    private fun showRoomCreationWarning(@StringRes messageRes: Int) {
+        if (!isAdded) return
+        Toast.makeText(requireContext(), getString(messageRes), Toast.LENGTH_LONG).show()
     }
 }

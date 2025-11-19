@@ -338,6 +338,13 @@ class MainActivity : AppCompatActivity() {
                         }
                         true
                     }
+                    R.id.action_company_info -> {
+                        if (BuildConfig.ENABLE_LOGGING) {
+                            Log.d(TAG, "Navigating to Company Info screen")
+                        }
+                        findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.companyInfoFragment)
+                        true
+                    }
                     R.id.action_delete_project -> handleDeleteProjectRequest()
                     R.id.action_sign_out -> {
                         performSignOut()

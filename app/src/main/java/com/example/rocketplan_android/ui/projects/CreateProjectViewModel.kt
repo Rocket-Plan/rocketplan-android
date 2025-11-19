@@ -82,7 +82,15 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
             _uiState.value = CreateProjectUiState(isSubmitting = true, errorMessage = null)
             val result = runCatching {
                 val companyId = authRepository.getStoredCompanyId()
-                    ?: throw IllegalStateException(getApplication<Application>().getString(R.string.create_project_missing_company))
+                    ?: authRepository.refreshUserContext()
+                        .mapCatching { response ->
+                            response.companyId
+                                ?: authRepository.getStoredCompanyId()
+                        }
+                        .getOrElse { error ->
+                            throw error
+                        }
+                        ?: throw IllegalStateException(getApplication<Application>().getString(R.string.create_project_missing_company))
 
                 val address = offlineSyncRepository.createAddress(addressRequest).getOrElse { throw it }
                 val addressId = address.id
