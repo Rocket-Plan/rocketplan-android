@@ -143,7 +143,7 @@ interface OfflineSyncApi {
     suspend fun getPropertyRoomTypes(
         @Path("propertyId") propertyId: Long,
         @Query("filter[type]") filterType: String? = null
-    ): List<RoomTypeDto>
+    ): PaginatedResponse<RoomTypeDto>
 
     // Photos & albums
     @GET("/api/projects/{projectId}/albums")

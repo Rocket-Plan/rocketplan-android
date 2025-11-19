@@ -49,7 +49,8 @@ class RoomTypeRepository(
         }
 
         try {
-            val remote = api.getPropertyRoomTypes(context.propertyServerId, context.filterType)
+            val response = api.getPropertyRoomTypes(context.propertyServerId, context.filterType)
+            val remote = response.data
             val entities = remote.map { it.toEntity(context.propertyServerId, context.filterType, now) }
             localDataService.replaceRoomTypes(context.propertyServerId, context.filterType, entities)
             remote
