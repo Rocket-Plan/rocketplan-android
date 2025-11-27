@@ -68,6 +68,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0 ORDER BY title")
     fun observeLocationsForProject(projectId: Long): Flow<List<OfflineLocationEntity>>
 
+    @Query("SELECT * FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0 ORDER BY title")
+    suspend fun getLocationsForProject(projectId: Long): List<OfflineLocationEntity>
+
     @Query("SELECT MAX(updatedAt) FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0")
     suspend fun getLatestLocationUpdatedAt(projectId: Long): Date?
 

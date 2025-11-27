@@ -19,6 +19,7 @@ import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.ProjectResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
+import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
@@ -137,6 +138,12 @@ interface OfflineSyncApi {
     @GET("/api/rooms/{roomId}")
     suspend fun getRoomDetail(
         @Path("roomId") roomId: Long
+    ): RoomDto
+
+    @POST("/api/locations/{locationId}/rooms")
+    suspend fun createRoom(
+        @Path("locationId") locationId: Long,
+        @Body request: CreateRoomRequest
     ): RoomDto
 
     @GET("/api/properties/{propertyId}/room-types")

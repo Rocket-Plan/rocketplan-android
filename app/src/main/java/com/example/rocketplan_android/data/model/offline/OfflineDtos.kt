@@ -196,6 +196,8 @@ data class RoomDto(
     val locationId: Long?,
     val name: String?,  // Human-friendly room name from API
     val title: String?,  // Made nullable - API doesn't always return title
+    @SerializedName("type_occurrence")
+    val typeOccurrence: Int?,
     @SerializedName("room_type")
     val roomType: RoomTypeDto?,  // Changed from String? to RoomTypeDto? to handle eager-loaded relationship
     val level: LocationDto?,  // Changed from String? to LocationDto? to handle eager-loaded relationship

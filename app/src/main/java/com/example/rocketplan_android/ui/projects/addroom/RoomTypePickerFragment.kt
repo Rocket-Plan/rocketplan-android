@@ -61,6 +61,7 @@ class RoomTypePickerFragment : Fragment() {
         setupList()
         setupSearch()
         observeUiState()
+        observeEvents()
     }
 
     override fun onDestroyView() {
@@ -82,12 +83,7 @@ class RoomTypePickerFragment : Fragment() {
 
     private fun setupList() {
         adapter = RoomTypeAdapter { option ->
-            Toast.makeText(
-                requireContext(),
-                getString(R.string.room_type_selected_toast, option.displayName),
-                Toast.LENGTH_SHORT
-            ).show()
-            findNavController().navigateUp()
+            viewModel.createRoom(option)
         }
         binding.roomTypeRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.roomTypeRecyclerView.adapter = adapter
@@ -121,12 +117,44 @@ class RoomTypePickerFragment : Fragment() {
         }
     }
 
+    private fun observeEvents() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        is RoomTypePickerEvent.RoomCreated -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.room_type_selected_toast, event.roomName),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            findNavController().navigateUp()
+                        }
+                        is RoomTypePickerEvent.RoomCreationFailed -> {
+                            Toast.makeText(
+                                requireContext(),
+                                event.message ?: getString(R.string.room_type_error_generic),
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private fun renderState(state: RoomTypePickerUiState) {
-        binding.roomTypeLoadingIndicator.isVisible = state.isLoading && state.items.isEmpty()
-        binding.roomTypeErrorState.isVisible = state.errorMessage != null && state.items.isEmpty()
+        binding.roomTypeLoadingIndicator.isVisible =
+            (state.isLoading && state.items.isEmpty()) || state.isCreating
+        binding.roomTypeErrorState.isVisible =
+            state.errorMessage != null && state.items.isEmpty() && !state.isCreating
         binding.roomTypeErrorState.text = state.errorMessage
         binding.roomTypeRetryButton.isVisible = binding.roomTypeErrorState.isVisible
-        binding.roomTypeEmptyState.isVisible = !state.isLoading && state.items.isEmpty() && state.errorMessage == null
+        binding.roomTypeEmptyState.isVisible =
+            !state.isLoading && !state.isCreating && state.items.isEmpty() && state.errorMessage == null
+        binding.roomTypeSearchLayout.isEnabled = !state.isCreating
+        binding.roomTypeSearchInput.isEnabled = !state.isCreating
+        binding.roomTypeRecyclerView.isEnabled = !state.isCreating
         submitFilteredItems()
     }
 

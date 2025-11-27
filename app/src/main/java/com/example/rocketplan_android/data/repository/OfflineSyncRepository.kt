@@ -22,6 +22,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
+import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
@@ -40,6 +41,7 @@ import com.example.rocketplan_android.data.model.offline.PaginationMeta
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
+import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository.RequestType
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
@@ -409,6 +411,60 @@ class OfflineSyncRepository(
 
             val refreshed = runCatching { api.getProperty(updated.id) }.getOrNull() ?: updated
             persistProperty(projectId, refreshed, propertyTypeValue)
+        }
+    }
+
+    suspend fun createRoom(
+        projectId: Long,
+        roomName: String,
+        roomTypeId: Long,
+        isSource: Boolean = false
+    ): Result<OfflineRoomEntity> = withContext(ioDispatcher) {
+        runCatching {
+            val project = localDataService.getProject(projectId)
+                ?: throw IllegalStateException("Project not found locally")
+            val propertyLocalId = project.propertyId
+                ?: throw RoomTypeRepository.MissingPropertyException()
+            val property = localDataService.getProperty(propertyLocalId)
+                ?: throw RoomTypeRepository.MissingPropertyException()
+
+            if (property.serverId == null) {
+                throw RoomTypeRepository.UnsyncedPropertyException()
+            }
+
+            val locations = localDataService.getLocations(projectId)
+            if (locations.isEmpty()) {
+                throw IllegalStateException("No locations available for this project.")
+            }
+
+            val level = locations.firstOrNull { it.parentLocationId == null } ?: locations.first()
+            val levelServerId = level.serverId
+                ?: throw IllegalStateException("Level has not been synced yet.")
+
+            val location = locations.firstOrNull { it.parentLocationId == levelServerId } ?: level
+            val locationServerId = location.serverId
+                ?: throw IllegalStateException("Location has not been synced yet.")
+
+            Log.d(
+                "API",
+                "🆕 [createRoom] Creating room '$roomName' (type=$roomTypeId) levelId=$levelServerId locationId=$locationServerId for project $projectId"
+            )
+           val request = CreateRoomRequest(
+                name = roomName,
+                roomTypeId = roomTypeId,
+                levelId = levelServerId,
+                isSource = isSource
+            )
+
+            val dto = api.createRoom(locationServerId, request)
+            val existing = localDataService.getRoomByServerId(dto.id)
+            val entity = dto.toEntity(
+                existing = existing,
+                projectId = projectId,
+                locationId = locationServerId
+            )
+            localDataService.saveRooms(listOf(entity))
+            entity
         }
     }
 
@@ -1242,11 +1298,20 @@ private fun RoomDto.toEntity(
         lastSyncedAt = timestamp
     )
 
+    val resolvedTitle = when {
+        !roomType?.name.isNullOrBlank() && (typeOccurrence ?: 1) > 1 ->
+            "${roomType.name} $typeOccurrence"
+        !title.isNullOrBlank() -> title
+        !name.isNullOrBlank() -> name
+        !roomType?.name.isNullOrBlank() -> roomType.name
+        else -> base.title.ifBlank { "Room $id" }
+    }
+
     return base.copy(
         serverId = id,
         projectId = projectId,
         locationId = locationId,
-        title = title ?: name ?: roomType?.name ?: base.title.ifBlank { "Room $id" },
+        title = resolvedTitle,
         roomType = roomType?.name,
         level = level?.name ?: level?.title,
         squareFootage = squareFootage,

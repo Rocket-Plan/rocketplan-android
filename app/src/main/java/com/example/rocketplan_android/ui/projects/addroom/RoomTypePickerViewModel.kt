@@ -9,7 +9,9 @@ import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -29,8 +31,14 @@ data class RoomTypeUiModel(
 data class RoomTypePickerUiState(
     val isLoading: Boolean = true,
     val items: List<RoomTypeUiModel> = emptyList(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isCreating: Boolean = false
 )
+
+sealed interface RoomTypePickerEvent {
+    data class RoomCreated(val roomName: String) : RoomTypePickerEvent
+    data class RoomCreationFailed(val message: String?) : RoomTypePickerEvent
+}
 
 class RoomTypePickerViewModel(
     application: Application,
@@ -39,6 +47,7 @@ class RoomTypePickerViewModel(
 ) : AndroidViewModel(application) {
 
     private val repository = (application as RocketPlanApplication).roomTypeRepository
+    private val syncRepository = (application as RocketPlanApplication).offlineSyncRepository
     private val requestType = if (mode == RoomTypePickerMode.EXTERIOR) {
         RoomTypeRepository.RequestType.EXTERIOR
     } else {
@@ -47,6 +56,9 @@ class RoomTypePickerViewModel(
 
     private val _uiState = MutableStateFlow(RoomTypePickerUiState())
     val uiState: StateFlow<RoomTypePickerUiState> = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<RoomTypePickerEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<RoomTypePickerEvent> = _events
 
     init {
         if (projectId <= 0L) {
@@ -61,7 +73,7 @@ class RoomTypePickerViewModel(
     }
 
     fun refresh(force: Boolean = false) {
-        if (projectId <= 0L) return
+        if (projectId <= 0L || _uiState.value.isCreating) return
         viewModelScope.launch {
             val cachedResult = repository.getCachedRoomTypes(projectId, requestType)
             val cachedItems = cachedResult.getOrElse { emptyList() }
@@ -119,6 +131,41 @@ class RoomTypePickerViewModel(
                             current.copy(isLoading = false, errorMessage = message)
                         }
                     }
+                }
+            }
+    }
+
+    fun createRoom(roomType: RoomTypeUiModel) {
+        if (projectId <= 0L || _uiState.value.isCreating) return
+        val roomName = roomType.displayName.ifBlank { "Room ${roomType.id}" }
+        _uiState.update { it.copy(isCreating = true, errorMessage = null) }
+
+        viewModelScope.launch {
+            syncRepository.createRoom(
+                projectId = projectId,
+                roomName = roomName,
+                roomTypeId = roomType.id,
+                isSource = false
+            )
+                .onSuccess { _ ->
+                    _uiState.update { state -> state.copy(isCreating = false) }
+                    _events.emit(RoomTypePickerEvent.RoomCreated(roomName))
+                }
+                .onFailure { throwable: Throwable ->
+                    val message = when (throwable) {
+                        is RoomTypeRepository.MissingPropertyException ->
+                            getApplication<Application>().getString(R.string.room_type_error_missing_property)
+                        is RoomTypeRepository.UnsyncedPropertyException ->
+                            getApplication<Application>().getString(R.string.room_creation_property_sync_pending)
+                        else -> throwable.message ?: getApplication<Application>().getString(R.string.room_type_error_generic)
+                    }
+                    _uiState.update { state ->
+                        state.copy(
+                            isCreating = false,
+                            errorMessage = if (state.items.isEmpty()) message else state.errorMessage
+                        )
+                    }
+                    _events.emit(RoomTypePickerEvent.RoomCreationFailed(message))
                 }
         }
     }
