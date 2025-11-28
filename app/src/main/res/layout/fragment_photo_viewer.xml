@@ -17,39 +17,24 @@
         app:title="@string/photo_viewer_title"
         app:titleTextColor="@android:color/white" />
 
-    <FrameLayout
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/photoPager"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="center"
-        android:layout_marginTop="?attr/actionBarSize">
+        android:layout_marginTop="?attr/actionBarSize" />
 
-        <com.github.chrisbanes.photoview.PhotoView
-            android:id="@+id/photoView"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:adjustViewBounds="true"
-            android:contentDescription="@string/photos"
-            android:scaleType="fitCenter"
-            android:transitionName="photo"
-            tools:src="@drawable/bg_room_placeholder" />
-
-        <ProgressBar
-            android:id="@+id/loadingIndicator"
-            style="?android:attr/progressBarStyleLarge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:indeterminate="true"
-            android:visibility="gone" />
-
-        <TextView
-            android:id="@+id/errorLabel"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:text="@string/rocket_scan_photo_preview_placeholder"
-            android:textColor="@android:color/white"
-            android:visibility="gone" />
-    </FrameLayout>
+    <!-- Photo counter indicator -->
+    <TextView
+        android:id="@+id/photoCounter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="24dp"
+        android:background="@drawable/bg_circle_semi_transparent"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:textColor="@android:color/white"
+        android:textSize="14sp"
+        tools:text="1 / 10" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

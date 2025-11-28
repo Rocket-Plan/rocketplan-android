@@ -232,8 +232,13 @@
         tools:layout="@layout/fragment_photo_viewer">
 
         <argument
-            android:name="photoId"
-            app:argType="long" />
+            android:name="photoIds"
+            app:argType="long[]" />
+
+        <argument
+            android:name="startIndex"
+            app:argType="integer"
+            android:defaultValue="0" />
     </fragment>
 
     <fragment

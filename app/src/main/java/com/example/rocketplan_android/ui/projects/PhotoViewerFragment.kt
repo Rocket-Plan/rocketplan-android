@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -14,6 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.RecyclerView
+import androidx.viewpager2.widget.ViewPager2
 import coil.load
 import com.example.rocketplan_android.R
 import com.github.chrisbanes.photoview.PhotoView
@@ -25,13 +28,16 @@ class PhotoViewerFragment : Fragment() {
 
     private val args: PhotoViewerFragmentArgs by navArgs()
     private val viewModel: PhotoViewerViewModel by viewModels {
-        PhotoViewerViewModel.provideFactory(requireActivity().application, args.photoId)
+        PhotoViewerViewModel.provideFactory(
+            requireActivity().application,
+            args.photoIds.toList()
+        )
     }
 
     private lateinit var toolbar: MaterialToolbar
-    private lateinit var photoView: PhotoView
-    private lateinit var loadingIndicator: ProgressBar
-    private lateinit var errorLabel: TextView
+    private lateinit var photoPager: ViewPager2
+    private lateinit var photoCounter: TextView
+    private lateinit var pagerAdapter: PhotoPagerAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -42,73 +48,130 @@ class PhotoViewerFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         toolbar = view.findViewById(R.id.photoToolbar)
-        photoView = view.findViewById(R.id.photoView)
-        loadingIndicator = view.findViewById(R.id.loadingIndicator)
-        errorLabel = view.findViewById(R.id.errorLabel)
+        photoPager = view.findViewById(R.id.photoPager)
+        photoCounter = view.findViewById(R.id.photoCounter)
 
         toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
+        setupPager()
+        observeViewModel()
+    }
+
+    private fun setupPager() {
+        pagerAdapter = PhotoPagerAdapter()
+        photoPager.adapter = pagerAdapter
+
+        photoPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+                viewModel.onPageSelected(position)
+            }
+        })
+    }
+
+    private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    when (state) {
-                        PhotoViewerUiState.Loading -> showLoading()
-                        is PhotoViewerUiState.Ready -> renderPhoto(state.content)
-                        is PhotoViewerUiState.Error -> showError(state.message)
+                launch {
+                    viewModel.photos.collect { photos ->
+                        pagerAdapter.submitList(photos)
+
+                        // Set initial position after photos load
+                        if (photos.isNotEmpty() && photoPager.currentItem == 0 && args.startIndex > 0) {
+                            photoPager.setCurrentItem(args.startIndex, false)
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.currentPhotoInfo.collect { info ->
+                        if (info != null) {
+                            toolbar.title = info.title
+                            toolbar.subtitle = info.subtitle
+                            photoCounter.text = "${info.currentIndex + 1} / ${info.totalCount}"
+                            photoCounter.isVisible = info.totalCount > 1
+                        }
                     }
                 }
             }
         }
     }
+}
 
-    private fun showLoading() {
-        loadingIndicator.isVisible = true
-        errorLabel.isVisible = false
+// Adapter for ViewPager2
+class PhotoPagerAdapter : RecyclerView.Adapter<PhotoPagerAdapter.PhotoPageViewHolder>() {
+
+    private var photos: List<PhotoPageItem> = emptyList()
+
+    fun submitList(newPhotos: List<PhotoPageItem>) {
+        photos = newPhotos
+        notifyDataSetChanged()
     }
 
-    private fun showError(message: String) {
-        loadingIndicator.isVisible = false
-        errorLabel.isVisible = true
-        errorLabel.text = message
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoPageViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_photo_page, parent, false)
+        return PhotoPageViewHolder(view)
     }
 
-    private fun renderPhoto(content: PhotoViewerContent) {
-        loadingIndicator.isVisible = true
-        errorLabel.isVisible = false
+    override fun onBindViewHolder(holder: PhotoPageViewHolder, position: Int) {
+        holder.bind(photos[position])
+    }
 
-        toolbar.title = content.title
-        toolbar.subtitle = content.capturedLabel
+    override fun getItemCount(): Int = photos.size
 
-        val displaySource = resolveDisplaySource(content)
-        if (displaySource == null) {
-            viewModel.reportError("No display source available for photo ${content.photoId}")
-            showError(getString(R.string.rocket_scan_photo_preview_placeholder))
-            return
+    class PhotoPageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val photoView: PhotoView = itemView.findViewById(R.id.photoView)
+        private val loadingIndicator: ProgressBar = itemView.findViewById(R.id.loadingIndicator)
+        private val errorLabel: TextView = itemView.findViewById(R.id.errorLabel)
+
+        fun bind(item: PhotoPageItem) {
+            loadingIndicator.isVisible = true
+            errorLabel.isVisible = false
+
+            val displaySource = resolveDisplaySource(item)
+            if (displaySource == null) {
+                loadingIndicator.isVisible = false
+                errorLabel.isVisible = true
+                return
+            }
+
+            photoView.load(displaySource) {
+                placeholder(R.drawable.bg_room_placeholder)
+                error(R.drawable.bg_room_placeholder)
+                listener(
+                    onSuccess = { _, _ ->
+                        loadingIndicator.isVisible = false
+                    },
+                    onError = { _, _ ->
+                        loadingIndicator.isVisible = false
+                        errorLabel.isVisible = true
+                        Log.e("PhotoPager", "Failed to load photo ${item.photoId}")
+                    }
+                )
+            }
         }
 
-        photoView.load(displaySource) {
-            placeholder(R.drawable.bg_room_placeholder)
-            error(R.drawable.bg_room_placeholder)
-            listener(
-                onSuccess = { _, _ -> loadingIndicator.isVisible = false },
-                onError = { _, _ ->
-                    loadingIndicator.isVisible = false
-                    viewModel.reportError("Failed to load photo ${content.photoId}")
-                    showError(getString(R.string.rocket_scan_photo_preview_placeholder))
-                }
-            )
+        private fun resolveDisplaySource(item: PhotoPageItem): Any? {
+            item.localPath?.let { path ->
+                val file = File(path)
+                if (file.exists()) return file
+            }
+
+            item.cachedOriginalPath?.let { path ->
+                val file = File(path)
+                if (file.exists()) return file
+            }
+
+            item.cachedThumbnailPath?.let { path ->
+                val file = File(path)
+                if (file.exists()) return file
+            }
+
+            if (!item.remoteUrl.isNullOrBlank()) return item.remoteUrl
+            if (!item.thumbnailUrl.isNullOrBlank()) return item.thumbnailUrl
+
+            return null
         }
-    }
-
-    private fun resolveDisplaySource(content: PhotoViewerContent): Any? {
-        val localOriginal = content.localOriginalPath?.let(::File)?.takeIf { it.exists() }
-        if (localOriginal != null) return localOriginal
-
-        val localThumb = content.localThumbnailPath?.let(::File)?.takeIf { it.exists() }
-        if (localThumb != null) return localThumb
-
-        if (!content.remoteUrl.isNullOrBlank()) return content.remoteUrl
-        if (!content.thumbnailUrl.isNullOrBlank()) return content.thumbnailUrl
-        return null
     }
 }

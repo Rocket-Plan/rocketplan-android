@@ -362,8 +362,20 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun openPhotoViewer(photo: RoomPhotoItem) {
+        // Get all photo IDs from the adapter
+        val photoIds = mutableListOf<Long>()
+        for (i in 0 until photoAdapter.itemCount) {
+            photoAdapter.peek(i)?.let { photoIds.add(it.id) }
+        }
+
+        // Find the index of the clicked photo
+        val startIndex = photoIds.indexOf(photo.id).coerceAtLeast(0)
+
         val action = RoomDetailFragmentDirections
-            .actionRoomDetailFragmentToPhotoViewerFragment(photo.id)
+            .actionRoomDetailFragmentToPhotoViewerFragment(
+                photoIds = photoIds.toLongArray(),
+                startIndex = startIndex
+            )
         findNavController().navigate(action)
     }
 
