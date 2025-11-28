@@ -15,6 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.AsyncListDiffer
+import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import androidx.viewpager2.widget.ViewPager2
 import coil.load
@@ -98,15 +100,20 @@ class PhotoViewerFragment : Fragment() {
     }
 }
 
-// Adapter for ViewPager2
+// Adapter for ViewPager2 with DiffUtil for efficient updates
 class PhotoPagerAdapter : RecyclerView.Adapter<PhotoPagerAdapter.PhotoPageViewHolder>() {
 
-    private var photos: List<PhotoPageItem> = emptyList()
+    private val asyncDiffer = AsyncListDiffer(this, DIFF_CALLBACK)
+
+    init {
+        setHasStableIds(true)
+    }
 
     fun submitList(newPhotos: List<PhotoPageItem>) {
-        photos = newPhotos
-        notifyDataSetChanged()
+        asyncDiffer.submitList(newPhotos)
     }
+
+    override fun getItemId(position: Int): Long = asyncDiffer.currentList[position].photoId
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PhotoPageViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -115,17 +122,23 @@ class PhotoPagerAdapter : RecyclerView.Adapter<PhotoPagerAdapter.PhotoPageViewHo
     }
 
     override fun onBindViewHolder(holder: PhotoPageViewHolder, position: Int) {
-        holder.bind(photos[position])
+        holder.bind(asyncDiffer.currentList[position])
     }
 
-    override fun getItemCount(): Int = photos.size
+    override fun getItemCount(): Int = asyncDiffer.currentList.size
 
     class PhotoPageViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val photoView: PhotoView = itemView.findViewById(R.id.photoView)
         private val loadingIndicator: ProgressBar = itemView.findViewById(R.id.loadingIndicator)
         private val errorLabel: TextView = itemView.findViewById(R.id.errorLabel)
 
+        private var currentPhotoId: Long? = null
+
         fun bind(item: PhotoPageItem) {
+            // Skip rebinding if same photo
+            if (currentPhotoId == item.photoId) return
+            currentPhotoId = item.photoId
+
             loadingIndicator.isVisible = true
             errorLabel.isVisible = false
 
@@ -136,9 +149,12 @@ class PhotoPagerAdapter : RecyclerView.Adapter<PhotoPagerAdapter.PhotoPageViewHo
                 return
             }
 
+            // Use photoId as stable cache key to avoid reloads from URL changes
+            val cacheKey = "photo_${item.photoId}"
+
             photoView.load(displaySource) {
-                placeholder(R.drawable.bg_room_placeholder)
-                error(R.drawable.bg_room_placeholder)
+                memoryCacheKey(cacheKey)
+                placeholderMemoryCacheKey(cacheKey)
                 listener(
                     onSuccess = { _, _ ->
                         loadingIndicator.isVisible = false
@@ -172,6 +188,16 @@ class PhotoPagerAdapter : RecyclerView.Adapter<PhotoPagerAdapter.PhotoPageViewHo
             if (!item.thumbnailUrl.isNullOrBlank()) return item.thumbnailUrl
 
             return null
+        }
+    }
+
+    companion object {
+        private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<PhotoPageItem>() {
+            override fun areItemsTheSame(oldItem: PhotoPageItem, newItem: PhotoPageItem): Boolean =
+                oldItem.photoId == newItem.photoId
+
+            override fun areContentsTheSame(oldItem: PhotoPageItem, newItem: PhotoPageItem): Boolean =
+                oldItem == newItem
         }
     }
 }
