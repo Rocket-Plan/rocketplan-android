@@ -1,0 +1,477 @@
+package com.example.rocketplan_android.ui.projects.batchcapture
+
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.TextView
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import coil.load
+import com.example.rocketplan_android.R
+import com.google.android.material.button.MaterialButton
+import kotlinx.coroutines.launch
+import java.io.File
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+
+class BatchCaptureFragment : Fragment() {
+
+    private val args: BatchCaptureFragmentArgs by navArgs()
+
+    private val viewModel: BatchCaptureViewModel by viewModels {
+        BatchCaptureViewModel.provideFactory(
+            requireActivity().application,
+            args.projectId,
+            args.roomId
+        )
+    }
+
+    // Views
+    private lateinit var cameraPreview: PreviewView
+    private lateinit var closeButton: ImageButton
+    private lateinit var titleText: TextView
+    private lateinit var photoCountText: TextView
+    private lateinit var flashButton: ImageButton
+    private lateinit var thumbnailStrip: RecyclerView
+    private lateinit var lastPhotoPreview: ImageView
+    private lateinit var shutterButton: FrameLayout
+    private lateinit var shutterInner: View
+    private lateinit var switchCameraButton: ImageButton
+    private lateinit var doneButton: MaterialButton
+    private lateinit var loadingOverlay: View
+    private lateinit var loadingText: TextView
+
+    private lateinit var thumbnailAdapter: ThumbnailStripAdapter
+
+    // Camera
+    private var imageCapture: ImageCapture? = null
+    private var cameraProvider: ProcessCameraProvider? = null
+    private lateinit var cameraExecutor: ExecutorService
+    private var lensFacing = CameraSelector.LENS_FACING_BACK
+    private var flashMode = ImageCapture.FLASH_MODE_OFF
+
+    private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
+    private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+
+        cameraExecutor = Executors.newSingleThreadExecutor()
+
+        cameraPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+                val granted = permissions.entries.all { it.value }
+                if (granted) {
+                    startCamera()
+                } else if (isAdded) {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.camera_permission_required),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    findNavController().navigateUp()
+                }
+            }
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View = inflater.inflate(R.layout.fragment_batch_capture, container, false)
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        Log.d(TAG, "onViewCreated: projectId=${args.projectId}, roomId=${args.roomId}")
+
+        bindViews(view)
+        setupThumbnailStrip()
+        setupListeners()
+        observeViewModel()
+
+        if (hasCameraPermission()) {
+            startCamera()
+        } else {
+            cameraPermissionLauncher.launch(cameraPermissions)
+        }
+    }
+
+    private fun bindViews(view: View) {
+        cameraPreview = view.findViewById(R.id.cameraPreview)
+        closeButton = view.findViewById(R.id.closeButton)
+        titleText = view.findViewById(R.id.titleText)
+        photoCountText = view.findViewById(R.id.photoCountText)
+        flashButton = view.findViewById(R.id.flashButton)
+        thumbnailStrip = view.findViewById(R.id.thumbnailStrip)
+        lastPhotoPreview = view.findViewById(R.id.lastPhotoPreview)
+        shutterButton = view.findViewById(R.id.shutterButton)
+        shutterInner = view.findViewById(R.id.shutterInner)
+        switchCameraButton = view.findViewById(R.id.switchCameraButton)
+        doneButton = view.findViewById(R.id.doneButton)
+        loadingOverlay = view.findViewById(R.id.loadingOverlay)
+        loadingText = view.findViewById(R.id.loadingText)
+    }
+
+    private fun setupThumbnailStrip() {
+        thumbnailAdapter = ThumbnailStripAdapter { photoId ->
+            viewModel.removePhoto(photoId)
+        }
+
+        thumbnailStrip.apply {
+            layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+            adapter = thumbnailAdapter
+        }
+    }
+
+    private fun setupListeners() {
+        closeButton.setOnClickListener {
+            handleBackPress()
+        }
+
+        shutterButton.setOnClickListener {
+            capturePhoto()
+        }
+
+        flashButton.setOnClickListener {
+            toggleFlash()
+        }
+
+        switchCameraButton.setOnClickListener {
+            switchCamera()
+        }
+
+        doneButton.setOnClickListener {
+            viewModel.commitPhotos()
+        }
+
+        lastPhotoPreview.setOnClickListener {
+            // Could open photo gallery/review screen
+        }
+    }
+
+    private fun handleBackPress() {
+        val state = viewModel.uiState.value
+        if (state.hasPhotos) {
+            viewModel.clearBatch()
+        }
+        findNavController().navigateUp()
+    }
+
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    viewModel.uiState.collect { state ->
+                        renderState(state)
+                    }
+                }
+
+                launch {
+                    viewModel.events.collect { event ->
+                        handleEvent(event)
+                    }
+                }
+            }
+        }
+    }
+
+    private fun renderState(state: BatchCaptureUiState) {
+        photoCountText.text = "${state.photoCount}/${state.maxPhotos}"
+
+        thumbnailAdapter.submitList(state.photos)
+
+        thumbnailStrip.isVisible = state.hasPhotos
+        doneButton.isVisible = state.hasPhotos
+
+        // Update last photo preview
+        val lastPhoto = state.photos.lastOrNull()
+        if (lastPhoto != null) {
+            lastPhotoPreview.visibility = View.VISIBLE
+            lastPhotoPreview.load(lastPhoto.file) {
+                crossfade(true)
+            }
+        } else {
+            lastPhotoPreview.visibility = View.INVISIBLE
+        }
+
+        // Disable shutter when processing or at limit
+        shutterButton.isEnabled = state.canTakeMore && !state.isProcessing
+        shutterInner.alpha = if (state.canTakeMore && !state.isProcessing) 1f else 0.5f
+
+        doneButton.isEnabled = state.hasPhotos && !state.isProcessing
+
+        loadingOverlay.isVisible = state.isProcessing
+        if (state.isProcessing) {
+            loadingText.text = getString(R.string.batch_capture_processing, state.photoCount)
+        }
+
+        if (state.roomTitle.isNotEmpty()) {
+            titleText.text = state.roomTitle
+        }
+    }
+
+    private fun handleEvent(event: BatchCaptureEvent) {
+        when (event) {
+            is BatchCaptureEvent.PhotosCommitted -> {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.batch_capture_success),
+                    Toast.LENGTH_SHORT
+                ).show()
+                findNavController().navigateUp()
+            }
+            is BatchCaptureEvent.Error -> {
+                Toast.makeText(
+                    requireContext(),
+                    event.message,
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+            is BatchCaptureEvent.LimitReached -> {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.batch_capture_limit_reached),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            is BatchCaptureEvent.BatchCleared -> {
+                // No toast needed
+            }
+        }
+    }
+
+    private fun hasCameraPermission(): Boolean =
+        cameraPermissions.all {
+            ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
+        }
+
+    private fun startCamera() {
+        val context = context ?: return
+
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        cameraProviderFuture.addListener({
+            try {
+                cameraProvider = cameraProviderFuture.get()
+                bindCameraUseCases()
+            } catch (e: Exception) {
+                Log.e(TAG, "Camera initialization failed", e)
+                Toast.makeText(
+                    context,
+                    getString(R.string.camera_error, e.message),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    private fun bindCameraUseCases() {
+        val context = context ?: return
+        val cameraProvider = cameraProvider ?: return
+
+        val cameraSelector = CameraSelector.Builder()
+            .requireLensFacing(lensFacing)
+            .build()
+
+        val preview = Preview.Builder()
+            .build()
+            .also {
+                it.surfaceProvider = cameraPreview.surfaceProvider
+            }
+
+        imageCapture = ImageCapture.Builder()
+            .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+            .setFlashMode(flashMode)
+            .build()
+
+        try {
+            cameraProvider.unbindAll()
+            cameraProvider.bindToLifecycle(
+                viewLifecycleOwner,
+                cameraSelector,
+                preview,
+                imageCapture
+            )
+            Log.d(TAG, "Camera bound successfully")
+        } catch (e: Exception) {
+            Log.e(TAG, "Camera binding failed", e)
+            Toast.makeText(
+                context,
+                getString(R.string.camera_error, e.message),
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun capturePhoto() {
+        val imageCapture = imageCapture ?: return
+        val context = context ?: return
+
+        val photoFile = createTempPhotoFile() ?: return
+
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+        // Visual feedback - shrink the shutter button
+        shutterInner.animate()
+            .scaleX(0.85f)
+            .scaleY(0.85f)
+            .setDuration(100)
+            .withEndAction {
+                shutterInner.animate()
+                    .scaleX(1f)
+                    .scaleY(1f)
+                    .setDuration(100)
+                    .start()
+            }
+            .start()
+
+        imageCapture.takePicture(
+            outputOptions,
+            ContextCompat.getMainExecutor(context),
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    Log.d(TAG, "Photo captured: ${photoFile.absolutePath}")
+                    val added = viewModel.addPhoto(photoFile)
+                    if (!added) {
+                        photoFile.delete()
+                    }
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e(TAG, "Photo capture failed", exception)
+                    photoFile.delete()
+                    Toast.makeText(
+                        context,
+                        getString(R.string.camera_error, exception.message),
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        )
+    }
+
+    private fun toggleFlash() {
+        flashMode = when (flashMode) {
+            ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
+            ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
+            else -> ImageCapture.FLASH_MODE_OFF
+        }
+
+        updateFlashIcon()
+        imageCapture?.flashMode = flashMode
+    }
+
+    private fun updateFlashIcon() {
+        val iconRes = when (flashMode) {
+            ImageCapture.FLASH_MODE_ON -> R.drawable.ic_flash_on
+            ImageCapture.FLASH_MODE_AUTO -> R.drawable.ic_flash_auto
+            else -> R.drawable.ic_flash_off
+        }
+        flashButton.setImageResource(iconRes)
+    }
+
+    private fun switchCamera() {
+        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+            CameraSelector.LENS_FACING_FRONT
+        } else {
+            CameraSelector.LENS_FACING_BACK
+        }
+        bindCameraUseCases()
+    }
+
+    private fun createTempPhotoFile(): File? {
+        val context = context ?: return null
+        val storageDir = File(context.cacheDir, "captured_photos")
+        if (!storageDir.exists() && !storageDir.mkdirs()) {
+            Toast.makeText(context, getString(R.string.camera_file_error), Toast.LENGTH_SHORT).show()
+            return null
+        }
+        val timestamp = System.currentTimeMillis()
+        val fileName = "photo_${timestamp}.jpg"
+        return File(storageDir, fileName)
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        cameraProvider?.unbindAll()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        cameraExecutor.shutdown()
+    }
+
+    companion object {
+        private const val TAG = "BatchCaptureFrag"
+    }
+}
+
+// Adapter for the horizontal thumbnail strip
+class ThumbnailStripAdapter(
+    private val onDeleteClick: (String) -> Unit
+) : ListAdapter<BatchPhotoItem, ThumbnailStripAdapter.ViewHolder>(DIFF_CALLBACK) {
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_batch_thumbnail, parent, false)
+        return ViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+        holder.bind(getItem(position))
+    }
+
+    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val thumbnailImage: ImageView = itemView.findViewById(R.id.thumbnailImage)
+        private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
+        private val photoNumberBadge: TextView = itemView.findViewById(R.id.photoNumberBadge)
+
+        fun bind(item: BatchPhotoItem) {
+            thumbnailImage.load(item.file) {
+                crossfade(true)
+            }
+
+            photoNumberBadge.text = item.number.toString()
+
+            deleteButton.setOnClickListener {
+                onDeleteClick(item.id)
+            }
+        }
+    }
+
+    companion object {
+        private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<BatchPhotoItem>() {
+            override fun areItemsTheSame(oldItem: BatchPhotoItem, newItem: BatchPhotoItem): Boolean =
+                oldItem.id == newItem.id
+
+            override fun areContentsTheSame(oldItem: BatchPhotoItem, newItem: BatchPhotoItem): Boolean =
+                oldItem == newItem
+        }
+    }
+}

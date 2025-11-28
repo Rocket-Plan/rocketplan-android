@@ -188,6 +188,25 @@
         <action
             android:id="@+id/action_roomDetailFragment_to_photoViewerFragment"
             app:destination="@id/photoViewerFragment" />
+
+        <action
+            android:id="@+id/action_roomDetailFragment_to_batchCaptureFragment"
+            app:destination="@id/batchCaptureFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/batchCaptureFragment"
+        android:name="com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureFragment"
+        android:label="Capture Photos"
+        tools:layout="@layout/fragment_batch_capture">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
     </fragment>
 
     <fragment

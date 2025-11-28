@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@android:color/black">
+
+    <!-- Camera Preview (Full Screen) -->
+    <androidx.camera.view.PreviewView
+        android:id="@+id/cameraPreview"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomContainer"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Top Controls Overlay -->
+    <LinearLayout
+        android:id="@+id/topControls"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_gradient_top"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageButton
+            android:id="@+id/closeButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="@drawable/bg_circle_semi_transparent"
+            android:contentDescription="@string/close"
+            android:padding="10dp"
+            android:src="@drawable/ic_close"
+            app:tint="@android:color/white" />
+
+        <TextView
+            android:id="@+id/titleText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="12dp"
+            android:layout_weight="1"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="@string/batch_capture_title"
+            android:textColor="@android:color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/photoCountText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_circle_semi_transparent"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="6dp"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="0/50" />
+    </LinearLayout>
+
+    <!-- Flash Toggle -->
+    <ImageButton
+        android:id="@+id/flashButton"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/bg_circle_semi_transparent"
+        android:contentDescription="@string/flash_toggle"
+        android:padding="10dp"
+        android:src="@drawable/ic_flash_off"
+        app:layout_constraintBottom_toBottomOf="@id/topControls"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/topControls"
+        app:tint="@android:color/white" />
+
+    <!-- Bottom Container -->
+    <LinearLayout
+        android:id="@+id/bottomContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/black"
+        android:orientation="vertical"
+        android:paddingBottom="24dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- Thumbnail Strip -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/thumbnailStrip"
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginBottom="16dp"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:visibility="gone"
+            tools:listitem="@layout/item_batch_photo"
+            tools:visibility="visible" />
+
+        <!-- Camera Controls Row -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="32dp">
+
+            <!-- Gallery / Last Photo Preview -->
+            <FrameLayout
+                android:id="@+id/lastPhotoContainer"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_weight="1">
+
+                <ImageView
+                    android:id="@+id/lastPhotoPreview"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_thumbnail_border"
+                    android:scaleType="centerCrop"
+                    android:visibility="invisible" />
+            </FrameLayout>
+
+            <!-- Shutter Button -->
+            <FrameLayout
+                android:id="@+id/shutterButton"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
+                android:contentDescription="@string/batch_capture_take_photo">
+
+                <View
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_shutter_outer" />
+
+                <View
+                    android:id="@+id/shutterInner"
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_shutter_inner" />
+            </FrameLayout>
+
+            <!-- Camera Switch Button -->
+            <FrameLayout
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_weight="1">
+
+                <ImageButton
+                    android:id="@+id/switchCameraButton"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:background="@drawable/bg_circle_semi_transparent"
+                    android:contentDescription="@string/switch_camera"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_switch_camera"
+                    app:tint="@android:color/white" />
+            </FrameLayout>
+        </LinearLayout>
+
+        <!-- Done Button (shown when photos exist) -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/doneButton"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="@color/main_purple"
+            android:text="@string/batch_capture_commit"
+            android:textColor="@android:color/white"
+            android:visibility="gone"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+    <!-- Loading Overlay -->
+    <FrameLayout
+        android:id="@+id/loadingOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#CC000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ProgressBar
+                style="?android:attr/progressBarStyleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:indeterminateTint="@android:color/white" />
+
+            <TextView
+                android:id="@+id/loadingText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/batch_capture_processing"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+        </LinearLayout>
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

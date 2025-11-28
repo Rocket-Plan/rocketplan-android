@@ -142,6 +142,12 @@ dependencies {
     implementation(libs.androidx.paging.runtime)
     implementation("com.github.chrisbanes:PhotoView:2.3.0")
 
+    // CameraX
+    implementation(libs.camerax.core)
+    implementation(libs.camerax.camera2)
+    implementation(libs.camerax.lifecycle)
+    implementation(libs.camerax.view)
+
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)

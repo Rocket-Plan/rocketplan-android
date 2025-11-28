@@ -222,4 +222,15 @@
     <string name="batch_capture_processing">Processing %d photos…</string>
     <string name="batch_capture_success">Assembly created successfully</string>
     <string name="batch_capture_error">Failed to create assembly: %s</string>
+    <string name="batch_capture_title">Capture Photos</string>
+    <string name="batch_capture_take_photo">Take Photo</string>
+    <string name="batch_capture_commit">Add to Album</string>
+    <string name="batch_capture_empty_hint">Tap the button below to take photos</string>
+    <string name="flash_toggle">Toggle flash</string>
+    <string name="switch_camera">Switch camera</string>
+    <string name="flash_on">Flash on</string>
+    <string name="flash_off">Flash off</string>
+    <string name="flash_auto">Flash auto</string>
+    <string name="camera_error">Camera error: %s</string>
+    <string name="camera_not_available">Camera is not available on this device</string>
 </resources>

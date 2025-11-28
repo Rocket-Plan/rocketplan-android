@@ -1,0 +1,281 @@
+package com.example.rocketplan_android.ui.projects.batchcapture
+
+import android.app.Application
+import android.net.Uri
+import android.util.Log
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.PhotoCacheStatus
+import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.logging.LogLevel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.io.File
+import java.util.Date
+import java.util.UUID
+
+data class BatchCaptureUiState(
+    val photos: List<BatchPhotoItem> = emptyList(),
+    val maxPhotos: Int = 50,
+    val isProcessing: Boolean = false,
+    val roomTitle: String = ""
+) {
+    val photoCount: Int get() = photos.size
+    val canTakeMore: Boolean get() = photos.size < maxPhotos
+    val hasPhotos: Boolean get() = photos.isNotEmpty()
+}
+
+data class BatchPhotoItem(
+    val id: String,
+    val file: File,
+    val number: Int
+)
+
+sealed interface BatchCaptureEvent {
+    data class PhotosCommitted(val count: Int) : BatchCaptureEvent
+    data class Error(val message: String) : BatchCaptureEvent
+    object BatchCleared : BatchCaptureEvent
+    object LimitReached : BatchCaptureEvent
+}
+
+class BatchCaptureViewModel(
+    application: Application,
+    private val projectId: Long,
+    private val roomId: Long
+) : AndroidViewModel(application) {
+
+    private val rocketPlanApp = application as RocketPlanApplication
+    private val localDataService = rocketPlanApp.localDataService
+    private val remoteLogger = rocketPlanApp.remoteLogger
+    private val imageProcessorRepository = rocketPlanApp.imageProcessorRepository
+    private val imageProcessorQueueManager = rocketPlanApp.imageProcessorQueueManager
+
+    private val _uiState = MutableStateFlow(BatchCaptureUiState())
+    val uiState: StateFlow<BatchCaptureUiState> = _uiState.asStateFlow()
+
+    private val _events = MutableSharedFlow<BatchCaptureEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<BatchCaptureEvent> = _events.asSharedFlow()
+
+    private var resolvedRoom: OfflineRoomEntity? = null
+    private val groupUuid = UUID.randomUUID().toString()
+
+    init {
+        Log.d(TAG, "BatchCaptureViewModel init: projectId=$projectId, roomId=$roomId, groupUuid=$groupUuid")
+        loadRoom()
+    }
+
+    private fun loadRoom() {
+        viewModelScope.launch {
+            localDataService.observeRooms(projectId).collect { rooms ->
+                resolvedRoom = rooms.firstOrNull { it.roomId == roomId || it.serverId == roomId }
+                resolvedRoom?.let { room ->
+                    _uiState.update { it.copy(roomTitle = room.title) }
+                    Log.d(TAG, "Room resolved: ${room.title} (localId=${room.roomId}, serverId=${room.serverId})")
+                }
+            }
+        }
+    }
+
+    fun addPhoto(photoFile: File): Boolean {
+        val currentState = _uiState.value
+        if (currentState.photos.size >= currentState.maxPhotos) {
+            Log.w(TAG, "Cannot add photo: limit reached (${currentState.maxPhotos})")
+            _events.tryEmit(BatchCaptureEvent.LimitReached)
+            return false
+        }
+
+        val newPhoto = BatchPhotoItem(
+            id = UUID.randomUUID().toString(),
+            file = photoFile,
+            number = currentState.photos.size + 1
+        )
+
+        _uiState.update { state ->
+            state.copy(photos = state.photos + newPhoto)
+        }
+
+        Log.d(TAG, "Photo added: ${newPhoto.number}/${currentState.maxPhotos}")
+        return true
+    }
+
+    fun removePhoto(photoId: String) {
+        _uiState.update { state ->
+            val updatedPhotos = state.photos
+                .filter { it.id != photoId }
+                .also { filtered ->
+                    // Find the removed photo and delete its file
+                    state.photos.find { it.id == photoId }?.file?.delete()
+                }
+                .mapIndexed { index, photo ->
+                    photo.copy(number = index + 1)
+                }
+            state.copy(photos = updatedPhotos)
+        }
+        Log.d(TAG, "Photo removed: $photoId, remaining: ${_uiState.value.photos.size}")
+    }
+
+    fun clearBatch() {
+        // Delete all temp files
+        _uiState.value.photos.forEach { photo ->
+            photo.file.delete()
+        }
+        _uiState.update { it.copy(photos = emptyList()) }
+        _events.tryEmit(BatchCaptureEvent.BatchCleared)
+        Log.d(TAG, "Batch cleared")
+    }
+
+    fun commitPhotos() {
+        val currentState = _uiState.value
+        if (currentState.photos.isEmpty()) {
+            Log.w(TAG, "Cannot commit: no photos")
+            return
+        }
+
+        val room = resolvedRoom
+        if (room == null) {
+            Log.e(TAG, "Cannot commit: room not resolved")
+            _events.tryEmit(BatchCaptureEvent.Error("Room not available"))
+            return
+        }
+
+        _uiState.update { it.copy(isProcessing = true) }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                Log.d(TAG, "Committing ${currentState.photos.size} photos for room ${room.roomId}")
+
+                val lookupRoomId = room.serverId ?: room.roomId
+
+                // Save photos to database
+                val photoEntities = currentState.photos.map { batchPhoto ->
+                    OfflinePhotoEntity(
+                        uuid = UUID.randomUUID().toString(),
+                        uploadStatus = "local_pending",
+                        syncStatus = SyncStatus.PENDING,
+                        isDirty = true,
+                        roomId = lookupRoomId,
+                        projectId = projectId,
+                        localPath = batchPhoto.file.absolutePath,
+                        fileName = batchPhoto.file.name,
+                        mimeType = "image/jpeg",
+                        capturedAt = Date(),
+                        cacheStatus = PhotoCacheStatus.NONE
+                    )
+                }
+
+                localDataService.savePhotos(photoEntities)
+                Log.d(TAG, "Saved ${photoEntities.size} photos to database")
+
+                // Create FileToUpload list
+                val filesToUpload = currentState.photos.map { batchPhoto ->
+                    com.example.rocketplan_android.data.model.FileToUpload(
+                        uri = Uri.fromFile(batchPhoto.file),
+                        filename = batchPhoto.file.name,
+                        deleteOnCompletion = true
+                    )
+                }
+
+                // Create assembly
+                val result = imageProcessorRepository.createAssembly(
+                    roomId = room.roomId,
+                    projectId = projectId,
+                    filesToUpload = filesToUpload,
+                    templateId = "",
+                    groupUuid = groupUuid,
+                    albums = emptyMap(),
+                    irPhotos = emptyList(),
+                    order = emptyList(),
+                    notes = emptyMap(),
+                    entityType = "room",
+                    entityId = room.serverId
+                )
+
+                result.onSuccess { assemblyId ->
+                    Log.d(TAG, "Assembly created: $assemblyId")
+
+                    remoteLogger.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "Batch photos committed successfully",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "project_id" to projectId.toString(),
+                            "room_id" to room.roomId.toString(),
+                            "photo_count" to currentState.photos.size.toString(),
+                            "group_uuid" to groupUuid
+                        )
+                    )
+
+                    // Trigger queue processing
+                    imageProcessorQueueManager.processNextQueuedAssembly()
+
+                    // Refresh snapshot so photos appear in grid
+                    localDataService.refreshRoomPhotoSnapshot(lookupRoomId)
+
+                    _uiState.update { it.copy(isProcessing = false, photos = emptyList()) }
+                    _events.emit(BatchCaptureEvent.PhotosCommitted(currentState.photos.size))
+
+                }.onFailure { error ->
+                    Log.e(TAG, "Failed to create assembly", error)
+
+                    remoteLogger.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "Batch commit failed: ${error.message}",
+                        metadata = mapOf(
+                            "project_id" to projectId.toString(),
+                            "room_id" to room.roomId.toString(),
+                            "photo_count" to currentState.photos.size.toString(),
+                            "error" to (error.message ?: "unknown")
+                        )
+                    )
+
+                    _uiState.update { it.copy(isProcessing = false) }
+                    _events.emit(BatchCaptureEvent.Error(error.message ?: "Failed to process photos"))
+                }
+
+            } catch (e: Exception) {
+                Log.e(TAG, "Commit failed", e)
+                _uiState.update { it.copy(isProcessing = false) }
+                _events.emit(BatchCaptureEvent.Error(e.message ?: "Unknown error"))
+            }
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Don't delete files here - they may still be needed for upload
+        // Files will be deleted by ImageProcessorQueueManager after successful upload
+        Log.d(TAG, "ViewModel cleared, photos preserved for upload")
+    }
+
+    companion object {
+        private const val TAG = "BatchCaptureVM"
+
+        fun provideFactory(
+            application: Application,
+            projectId: Long,
+            roomId: Long
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                require(modelClass.isAssignableFrom(BatchCaptureViewModel::class.java)) {
+                    "Unknown ViewModel class"
+                }
+                return BatchCaptureViewModel(application, projectId, roomId) as T
+            }
+        }
+    }
+}
