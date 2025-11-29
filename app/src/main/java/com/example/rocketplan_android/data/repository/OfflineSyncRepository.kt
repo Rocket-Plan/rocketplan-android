@@ -102,10 +102,13 @@ class OfflineSyncRepository(
     suspend fun syncCompanyProjects(companyId: Long) = withContext(ioDispatcher) {
         val checkpointKey = companyProjectsKey(companyId)
         val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
+        val existingProjects = localDataService.getAllProjects().associateBy { it.projectId }
         val projects = fetchAllPages { page ->
             api.getCompanyProjects(companyId = companyId, page = page, updatedSince = updatedSince)
         }
-        localDataService.saveProjects(projects.map { it.toEntity() })
+        localDataService.saveProjects(
+            projects.map { it.toEntity(existing = existingProjects[it.id]) }
+        )
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
     }
@@ -113,10 +116,13 @@ class OfflineSyncRepository(
     suspend fun syncUserProjects(userId: Long) = withContext(ioDispatcher) {
         val checkpointKey = userProjectsKey(userId)
         val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
+        val existingProjects = localDataService.getAllProjects().associateBy { it.projectId }
         val projects = fetchAllPages { page ->
             api.getUserProjects(userId = userId, page = page, updatedSince = updatedSince)
         }
-        localDataService.saveProjects(projects.map { it.toEntity() })
+        localDataService.saveProjects(
+            projects.map { it.toEntity(existing = existingProjects[it.id]) }
+        )
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
     }
@@ -189,8 +195,9 @@ class OfflineSyncRepository(
 
         var itemCount = 0
 
-        // Save project entity
-        localDataService.saveProjects(listOf(detail.toEntity()))
+        // Save project entity (preserve property link if list sync already populated it)
+        val existingProject = localDataService.getProject(detail.id)
+        localDataService.saveProjects(listOf(detail.toEntity(existing = existingProject)))
         itemCount++
         ensureActive()
 
@@ -472,7 +479,8 @@ class OfflineSyncRepository(
     suspend fun createNote(
         projectId: Long,
         content: String,
-        roomId: Long? = null
+        roomId: Long? = null,
+        categoryId: Long? = null
     ): OfflineNoteEntity = withContext(ioDispatcher) {
         val timestamp = now()
         val pending = OfflineNoteEntity(
@@ -480,6 +488,7 @@ class OfflineSyncRepository(
             projectId = projectId,
             roomId = roomId,
             content = content,
+            categoryId = categoryId,
             createdAt = timestamp,
             updatedAt = timestamp,
             lastSyncedAt = null,
@@ -494,7 +503,8 @@ class OfflineSyncRepository(
             val request = CreateNoteRequest(
                 projectId = projectId,
                 roomId = roomId,
-                content = content
+                body = content,
+                categoryId = categoryId
             )
             val dto = api.createProjectNote(projectId, request)
             dto.toEntity()?.copy(uuid = pending.uuid, isDirty = false, syncStatus = SyncStatus.SYNCED)
@@ -1091,7 +1101,8 @@ class OfflineSyncRepository(
                     val request = CreateNoteRequest(
                         projectId = note.projectId,
                         roomId = note.roomId,
-                        content = note.content
+                        body = note.content,
+                        categoryId = note.categoryId
                     )
                     val dto = if (note.serverId == null) {
                         api.createProjectNote(projectId, request)
@@ -1229,7 +1240,7 @@ class OfflineSyncRepository(
 // region Mappers
 private fun now(): Date = Date()
 
-private fun ProjectDto.toEntity(): OfflineProjectEntity {
+private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null): OfflineProjectEntity {
     if (id == 0L) {
         Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDto.toEntity() called with id=0", Exception("Stack trace"))
         Log.e("OfflineSyncRepository", "   ProjectDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
@@ -1249,6 +1260,8 @@ private fun ProjectDto.toEntity(): OfflineProjectEntity {
     val resolvedPropertyId = propertyId
         ?: properties?.firstOrNull()?.id
         ?: address?.id
+        ?: existing?.propertyId
+    val resolvedPropertyType = propertyType ?: existing?.propertyType
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }
     return OfflineProjectEntity(
@@ -1262,7 +1275,7 @@ private fun ProjectDto.toEntity(): OfflineProjectEntity {
         addressLine1 = addressLine1,
         addressLine2 = addressLine2,
         status = resolvedStatus,
-        propertyType = propertyType,
+        propertyType = resolvedPropertyType,
         companyId = companyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
@@ -1275,7 +1288,9 @@ private fun ProjectDto.toEntity(): OfflineProjectEntity {
     )
 }
 
-private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.toEntity(): OfflineProjectEntity {
+private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.toEntity(
+    existing: OfflineProjectEntity? = null
+): OfflineProjectEntity {
     if (id == 0L) {
         Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDetailDto.toEntity() called with id=0", Exception("Stack trace"))
         Log.e("OfflineSyncRepository", "   ProjectDetailDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
@@ -1295,8 +1310,10 @@ private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.t
     val resolvedPropertyId = propertyId
         ?: properties?.firstOrNull()?.id
         ?: address?.id
+        ?: existing?.propertyId
     val resolvedPropertyType = propertyType
         ?: properties?.firstOrNull()?.propertyType
+        ?: existing?.propertyType
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }
     return OfflineProjectEntity(
@@ -1414,6 +1431,8 @@ private fun RoomDto.toEntity(
         level = null,
         squareFootage = null,
         isAccessible = isAccessible ?: true,
+        photoCount = photosCount,
+        thumbnailUrl = thumbnailUrl ?: thumbnail?.thumbnailUrl ?: thumbnail?.remoteUrl,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         isDirty = false,
@@ -1441,6 +1460,11 @@ private fun RoomDto.toEntity(
         level = level?.name ?: level?.title,
         squareFootage = squareFootage,
         isAccessible = isAccessible ?: true,
+        photoCount = photosCount ?: existing?.photoCount,
+        thumbnailUrl = thumbnailUrl
+            ?: thumbnail?.thumbnailUrl
+            ?: thumbnail?.remoteUrl
+            ?: existing?.thumbnailUrl,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
@@ -1684,7 +1708,8 @@ private fun NoteDto.toEntity(): OfflineNoteEntity? {
         projectId = projectId,
         roomId = roomId,
         userId = userId,
-        content = content,
+        content = body,
+        categoryId = categoryId,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,

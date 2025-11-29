@@ -138,6 +138,7 @@ class RoomTypePickerViewModel(
     fun createRoom(roomType: RoomTypeUiModel) {
         if (projectId <= 0L || _uiState.value.isCreating) return
         val roomName = roomType.displayName.ifBlank { "Room ${roomType.id}" }
+        android.util.Log.d("RoomTypePicker", "🆕 createRoom: id=${roomType.id}, displayName='${roomType.displayName}', roomName='$roomName'")
         _uiState.update { it.copy(isCreating = true, errorMessage = null) }
 
         viewModelScope.launch {

@@ -4,7 +4,7 @@
     <selectionStates>
       <SelectionState runConfigName="Rocketplan">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2025-11-04T22:44:52.779942Z">
+        <DropdownSelection timestamp="2025-11-29T06:30:47.742854Z">
           <Target type="DEFAULT_BOOT">
             <handle>
               <DeviceId pluginId="LocalEmulator" identifier="path=/Users/kilka/.android/avd/Medium_Phone.avd" />

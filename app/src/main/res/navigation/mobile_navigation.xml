@@ -271,6 +271,11 @@
             android:name="roomId"
             app:argType="long"
             android:defaultValue="0L" />
+
+        <argument
+            android:name="categoryId"
+            app:argType="long"
+            android:defaultValue="0L" />
     </fragment>
 
     <fragment

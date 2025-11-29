@@ -58,6 +58,7 @@ class RoomDetailFragment : Fragment() {
     private lateinit var damageAssessmentChip: Chip
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var placeholderText: TextView
+    private lateinit var photosLoadingSpinner: View
     private lateinit var loadingOverlay: View
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
@@ -126,6 +127,7 @@ class RoomDetailFragment : Fragment() {
         damageAssessmentChip = root.findViewById(R.id.damageAssessmentChip)
         photosRecyclerView = root.findViewById(R.id.roomPhotosRecyclerView)
         placeholderText = root.findViewById(R.id.photosPlaceholder)
+        photosLoadingSpinner = root.findViewById(R.id.photosLoadingSpinner)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
 
         tabToggleGroup.check(R.id.roomPhotosTabButton)
@@ -215,12 +217,21 @@ class RoomDetailFragment : Fragment() {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
         }
         noteCard.setOnClickListener {
+            val categoryId = resolveNoteCategoryId()
             val action = RoomDetailFragmentDirections
                 .actionRoomDetailFragmentToProjectNotesFragment(
                     projectId = args.projectId,
-                    roomId = args.roomId
+                    roomId = args.roomId,
+                    categoryId = categoryId
                 )
             findNavController().navigate(action)
+        }
+    }
+
+    private fun resolveNoteCategoryId(): Long {
+        return when (viewModel.selectedTab.value) {
+            RoomDetailTab.DAMAGES -> 1L // Matches iOS Category.roomDamage raw value
+            RoomDetailTab.PHOTOS -> 2L // Matches iOS Category.roomPhoto raw value
         }
     }
 
@@ -315,6 +326,7 @@ class RoomDetailFragment : Fragment() {
         noteSummary.text = ""
         photosRecyclerView.isVisible = false
         placeholderText.isVisible = false
+        photosLoadingSpinner.isVisible = false
     }
 
     private fun renderState(state: RoomDetailUiState.Ready) {
@@ -362,6 +374,7 @@ class RoomDetailFragment : Fragment() {
                 filterChipGroup.isVisible = false
                 gridSectionTitle.isVisible = false
                 loadingOverlay.isVisible = false
+                photosLoadingSpinner.isVisible = false
             }
         }
     }
@@ -390,6 +403,7 @@ class RoomDetailFragment : Fragment() {
         if (activeTab != RoomDetailTab.PHOTOS) {
             photosRecyclerView.isVisible = false
             placeholderText.isVisible = false
+            photosLoadingSpinner.isVisible = false
             loadingOverlay.isVisible = snapshotRefreshInProgress
             return
         }
@@ -398,6 +412,7 @@ class RoomDetailFragment : Fragment() {
             loadingOverlay.isVisible = true
             photosRecyclerView.isVisible = false
             placeholderText.isVisible = false
+            photosLoadingSpinner.isVisible = false
             return
         }
 
@@ -405,18 +420,21 @@ class RoomDetailFragment : Fragment() {
         val hasPhotos = adapterItemCount > 0
         val effectiveLoadState = latestLoadState
         val isLoading = effectiveLoadState is LoadState.Loading && adapterItemCount == 0
-        loadingOverlay.isVisible = isLoading
+        // Hide full-screen overlay, use inline spinner instead
+        loadingOverlay.isVisible = false
 
         val showPlaceholder = adapterItemCount == 0 && latestPhotoCount == 0 && effectiveLoadState !is LoadState.Loading
+        val showSpinner = isLoading || (adapterItemCount == 0 && latestPhotoCount > 0 && effectiveLoadState !is LoadState.Error)
 
         Log.d(
             TAG,
-            "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=$adapterItemCount, loadState=$effectiveLoadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder, snapshotRefreshing=$snapshotRefreshInProgress"
+            "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=$adapterItemCount, loadState=$effectiveLoadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder, showSpinner=$showSpinner, snapshotRefreshing=$snapshotRefreshInProgress"
         )
 
         photosRecyclerView.isVisible = hasPhotos
         placeholderText.isVisible = showPlaceholder
         placeholderText.text = if (showPlaceholder) getString(R.string.rocket_scan_empty_state) else ""
+        photosLoadingSpinner.isVisible = showSpinner
 
         // Log RecyclerView dimensions to debug layout issues
         photosRecyclerView.post {

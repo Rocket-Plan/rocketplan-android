@@ -126,7 +126,9 @@ data class NoteDto(
     val roomId: Long?,
     @SerializedName("user_id")
     val userId: Long?,
-    val content: String,
+    val body: String,
+    @SerializedName("category_id")
+    val categoryId: Long? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
@@ -138,7 +140,9 @@ data class CreateNoteRequest(
     val projectId: Long,
     @SerializedName("room_id")
     val roomId: Long? = null,
-    val content: String
+    val body: String,
+    @SerializedName("category_id")
+    val categoryId: Long? = null
 )
 
 data class NoteableDto(
@@ -244,6 +248,11 @@ data class RoomDto(
     val squareFootage: Double?,
     @SerializedName("is_accessible")
     val isAccessible: Boolean?,
+    @SerializedName("photos_count")
+    val photosCount: Int? = null,
+    @SerializedName("thumbnail_url")
+    val thumbnailUrl: String? = null,
+    val thumbnail: PhotoDto? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")

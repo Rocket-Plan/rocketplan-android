@@ -25,7 +25,8 @@ data class ProjectNotesUiState(
 class ProjectNotesViewModel(
     application: Application,
     private val projectId: Long,
-    private val roomId: Long?
+    private val roomId: Long?,
+    private val categoryId: Long?
 ) : AndroidViewModel(application) {
 
     private val rocketPlanApp = application as RocketPlanApplication
@@ -82,7 +83,12 @@ class ProjectNotesViewModel(
 
     fun addNote(content: String) {
         viewModelScope.launch {
-            offlineSyncRepository.createNote(projectId, content, roomId)
+            offlineSyncRepository.createNote(
+                projectId = projectId,
+                content = content,
+                roomId = roomId,
+                categoryId = categoryId?.takeIf { it != 0L }
+            )
         }
     }
 
@@ -107,14 +113,15 @@ class ProjectNotesViewModel(
         fun provideFactory(
             application: Application,
             projectId: Long,
-            roomId: Long?
+            roomId: Long?,
+            categoryId: Long?
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 require(modelClass.isAssignableFrom(ProjectNotesViewModel::class.java)) {
                     "Unknown ViewModel class"
                 }
-                return ProjectNotesViewModel(application, projectId, roomId) as T
+                return ProjectNotesViewModel(application, projectId, roomId, categoryId) as T
             }
         }
     }

@@ -55,7 +55,7 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         ImageProcessorAssemblyEntity::class,
         ImageProcessorPhotoEntity::class
     ],
-    version = 7,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)

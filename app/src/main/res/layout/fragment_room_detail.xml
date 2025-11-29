@@ -272,25 +272,41 @@
                     android:textAlignment="center" />
             </com.google.android.material.chip.ChipGroup>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/roomPhotosRecyclerView"
+            <FrameLayout
+                android:id="@+id/photosContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:minHeight="@dimen/room_photos_min_height"
                 android:layout_marginTop="16dp"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_room_photo" />
+                android:minHeight="@dimen/room_photos_min_height">
 
-            <TextView
-                android:id="@+id/photosPlaceholder"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="40dp"
-                android:gravity="center"
-                android:textColor="@color/light_text_rp"
-                android:textSize="16sp"
-                android:visibility="gone"
-                tools:text="No photos yet" />
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/roomPhotosRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_room_photo" />
+
+                <TextView
+                    android:id="@+id/photosPlaceholder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="40dp"
+                    android:gravity="center"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="16sp"
+                    android:visibility="gone"
+                    tools:text="No photos yet" />
+
+                <ProgressBar
+                    android:id="@+id/photosLoadingSpinner"
+                    style="?android:attr/progressBarStyle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="40dp"
+                    android:indeterminateTint="@color/main_purple"
+                    android:visibility="gone" />
+            </FrameLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

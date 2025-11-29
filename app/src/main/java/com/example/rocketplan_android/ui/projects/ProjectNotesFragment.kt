@@ -29,7 +29,8 @@ class ProjectNotesFragment : Fragment() {
         ProjectNotesViewModel.provideFactory(
             requireActivity().application,
             args.projectId,
-            args.roomId.takeIf { it != 0L }
+            args.roomId.takeIf { it != 0L },
+            args.categoryId.takeIf { it != 0L }
         )
     }
 

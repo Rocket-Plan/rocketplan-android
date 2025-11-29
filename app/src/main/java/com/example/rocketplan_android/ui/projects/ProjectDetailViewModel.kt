@@ -160,15 +160,20 @@ class ProjectDetailViewModel(
                     .map { room ->
                         val roomKey = room.serverId ?: room.roomId
                         val roomPhotos = photosByRoom[roomKey].orEmpty()
-                        val isLoadingPhotos = (isProjectPhotoSyncing && roomPhotos.isEmpty()) || room.serverId == null
+                        val resolvedPhotoCount = room.photoCount ?: roomPhotos.size
+                        val resolvedThumbnail = room.thumbnailUrl
+                            ?: roomPhotos.firstNotNullOfOrNull { photo ->
+                                photo.preferredThumbnailSourceForRoomCard()
+                            }
+                        val isLoadingPhotos = room.serverId == null ||
+                            (isProjectPhotoSyncing && resolvedPhotoCount > roomPhotos.size) ||
+                            (isProjectPhotoSyncing && roomPhotos.isEmpty())
                         RoomCard(
                             roomId = roomKey,
                             title = room.title,
                             level = level,
-                            photoCount = roomPhotos.size,
-                            thumbnailUrl = roomPhotos.firstNotNullOfOrNull { photo ->
-                                photo.preferredThumbnailSourceForRoomCard()
-                            },
+                            photoCount = resolvedPhotoCount,
+                            thumbnailUrl = resolvedThumbnail,
                             isLoadingPhotos = isLoadingPhotos
                         )
                     }
