@@ -48,6 +48,8 @@ class RoomPhotoPagingAdapter(
 
         private val preview: ImageView = view.findViewById(R.id.roomPhotoPreview)
         private val dateLabel: TextView = view.findViewById(R.id.roomPhotoDate)
+        private val noteBadge: View = view.findViewById(R.id.roomPhotoNoteBadge)
+        private val noteCountLabel: TextView = view.findViewById(R.id.roomPhotoNoteCount)
 
         fun bind(photo: RoomPhotoItem) {
             val previousPhoto = preview.getTag(R.id.tag_room_photo_id) as? RoomPhotoItem
@@ -71,12 +73,15 @@ class RoomPhotoPagingAdapter(
 
             dateLabel.text = photo.capturedOn ?: ""
             itemView.setOnClickListener { onPhotoSelected(photo) }
+            noteBadge.isVisible = photo.noteCount > 0
+            noteCountLabel.text = photo.noteCount.toString()
         }
 
         private fun hasVisualDifferences(old: RoomPhotoItem, new: RoomPhotoItem): Boolean {
             return old.id != new.id ||
                 old.thumbnailUrl != new.thumbnailUrl ||
-                old.imageUrl != new.imageUrl
+                old.imageUrl != new.imageUrl ||
+                old.noteCount != new.noteCount
         }
 
         companion object {

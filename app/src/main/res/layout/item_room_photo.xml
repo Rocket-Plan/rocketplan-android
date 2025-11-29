@@ -40,6 +40,38 @@
             android:textColor="@android:color/white"
             android:textSize="12sp"
             tools:text="10/25/2025" />
+
+        <LinearLayout
+            android:id="@+id/roomPhotoNoteBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|start"
+            android:layout_margin="8dp"
+            android:background="@drawable/bg_photo_note_badge"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="8dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="4dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="16dp"
+                android:layout_height="16dp"
+                android:layout_marginEnd="6dp"
+                android:contentDescription="@string/notes_for_project"
+                app:srcCompat="@drawable/icon_has_notes" />
+
+            <TextView
+                android:id="@+id/roomPhotoNoteCount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@android:color/white"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="2" />
+        </LinearLayout>
     </FrameLayout>
 
 </com.google.android.material.card.MaterialCardView>

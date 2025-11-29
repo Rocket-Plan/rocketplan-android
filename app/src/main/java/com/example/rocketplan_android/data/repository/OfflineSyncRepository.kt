@@ -480,13 +480,15 @@ class OfflineSyncRepository(
         projectId: Long,
         content: String,
         roomId: Long? = null,
-        categoryId: Long? = null
+        categoryId: Long? = null,
+        photoId: Long? = null
     ): OfflineNoteEntity = withContext(ioDispatcher) {
         val timestamp = now()
         val pending = OfflineNoteEntity(
             uuid = UUID.randomUUID().toString(),
             projectId = projectId,
             roomId = roomId,
+            photoId = photoId,
             content = content,
             categoryId = categoryId,
             createdAt = timestamp,
@@ -504,6 +506,7 @@ class OfflineSyncRepository(
                 projectId = projectId,
                 roomId = roomId,
                 body = content,
+                photoId = photoId,
                 categoryId = categoryId
             )
             val dto = api.createProjectNote(projectId, request)
@@ -1102,6 +1105,7 @@ class OfflineSyncRepository(
                         projectId = note.projectId,
                         roomId = note.roomId,
                         body = note.content,
+                        photoId = note.photoId,
                         categoryId = note.categoryId
                     )
                     val dto = if (note.serverId == null) {
@@ -1709,6 +1713,7 @@ private fun NoteDto.toEntity(): OfflineNoteEntity? {
         roomId = roomId,
         userId = userId,
         content = body,
+        photoId = photoId,
         categoryId = categoryId,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,

@@ -127,6 +127,8 @@ data class NoteDto(
     @SerializedName("user_id")
     val userId: Long?,
     val body: String,
+    @SerializedName("photo_id")
+    val photoId: Long? = null,
     @SerializedName("category_id")
     val categoryId: Long? = null,
     @SerializedName("created_at")
@@ -141,6 +143,8 @@ data class CreateNoteRequest(
     @SerializedName("room_id")
     val roomId: Long? = null,
     val body: String,
+    @SerializedName("photo_id")
+    val photoId: Long? = null,
     @SerializedName("category_id")
     val categoryId: Long? = null
 )

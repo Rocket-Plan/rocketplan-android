@@ -30,17 +30,26 @@ data class BatchCaptureUiState(
     val photos: List<BatchPhotoItem> = emptyList(),
     val maxPhotos: Int = 50,
     val isProcessing: Boolean = false,
-    val roomTitle: String = ""
+    val roomTitle: String = "",
+    val categories: List<PhotoCategoryOption> = emptyList(),
+    val selectedCategoryId: Long? = null
 ) {
     val photoCount: Int get() = photos.size
     val canTakeMore: Boolean get() = photos.size < maxPhotos
     val hasPhotos: Boolean get() = photos.isNotEmpty()
 }
 
+data class PhotoCategoryOption(
+    val albumId: Long,
+    val name: String
+)
+
 data class BatchPhotoItem(
     val id: String,
     val file: File,
-    val number: Int
+    val number: Int,
+    val categoryAlbumId: Long?,
+    val categoryName: String?
 )
 
 sealed interface BatchCaptureEvent {
@@ -74,6 +83,7 @@ class BatchCaptureViewModel(
     init {
         Log.d(TAG, "BatchCaptureViewModel init: projectId=$projectId, roomId=$roomId, groupUuid=$groupUuid")
         loadRoom()
+        observeCategoryAlbums()
     }
 
     private fun loadRoom() {
@@ -88,6 +98,43 @@ class BatchCaptureViewModel(
         }
     }
 
+    private fun observeCategoryAlbums() {
+        viewModelScope.launch {
+            localDataService.observeAlbumsForProject(projectId).collect { albums ->
+                val categoryAlbums = albums
+                    .filter { album ->
+                        album.roomId == null && CATEGORY_ALBUM_NAMES.contains(album.name)
+                    }
+                    .sortedBy { album ->
+                        CATEGORY_ORDER.indexOf(album.name).takeIf { it >= 0 } ?: Int.MAX_VALUE
+                    }
+                    .map { album ->
+                        PhotoCategoryOption(
+                            albumId = album.albumId,
+                            name = album.name
+                        )
+                    }
+
+                _uiState.update { state ->
+                    val currentSelection = state.selectedCategoryId
+                    val resolvedSelection = when {
+                        currentSelection != null && categoryAlbums.any { it.albumId == currentSelection } -> currentSelection
+                        categoryAlbums.isNotEmpty() -> categoryAlbums.first().albumId
+                        else -> null
+                    }
+                    state.copy(
+                        categories = categoryAlbums,
+                        selectedCategoryId = resolvedSelection
+                    )
+                }
+            }
+        }
+    }
+
+    fun selectCategory(albumId: Long) {
+        _uiState.update { it.copy(selectedCategoryId = albumId) }
+    }
+
     fun addPhoto(photoFile: File): Boolean {
         val currentState = _uiState.value
         if (currentState.photos.size >= currentState.maxPhotos) {
@@ -99,7 +146,11 @@ class BatchCaptureViewModel(
         val newPhoto = BatchPhotoItem(
             id = UUID.randomUUID().toString(),
             file = photoFile,
-            number = currentState.photos.size + 1
+            number = currentState.photos.size + 1,
+            categoryAlbumId = currentState.selectedCategoryId,
+            categoryName = currentState.categories.firstOrNull { option ->
+                option.albumId == currentState.selectedCategoryId
+            }?.name
         )
 
         _uiState.update { state ->
@@ -167,6 +218,7 @@ class BatchCaptureViewModel(
                         isDirty = true,
                         roomId = lookupRoomId,
                         projectId = projectId,
+                        albumId = batchPhoto.categoryAlbumId,
                         localPath = batchPhoto.file.absolutePath,
                         fileName = batchPhoto.file.name,
                         mimeType = "image/jpeg",
@@ -177,6 +229,12 @@ class BatchCaptureViewModel(
 
                 localDataService.savePhotos(photoEntities)
                 Log.d(TAG, "Saved ${photoEntities.size} photos to database")
+
+                val albumAssignments = mutableMapOf<String, MutableList<String>>()
+                currentState.photos.forEach { batchPhoto ->
+                    val category = batchPhoto.categoryName ?: return@forEach
+                    albumAssignments.getOrPut(category) { mutableListOf() }.add(batchPhoto.file.name)
+                }
 
                 // Create FileToUpload list
                 val filesToUpload = currentState.photos.map { batchPhoto ->
@@ -194,7 +252,7 @@ class BatchCaptureViewModel(
                     filesToUpload = filesToUpload,
                     templateId = "",
                     groupUuid = groupUuid,
-                    albums = emptyMap(),
+                    albums = albumAssignments.mapValues { it.value.toList() },
                     irPhotos = emptyList(),
                     order = emptyList(),
                     notes = emptyMap(),
@@ -263,6 +321,20 @@ class BatchCaptureViewModel(
 
     companion object {
         private const val TAG = "BatchCaptureVM"
+        private val CATEGORY_ALBUM_NAMES = setOf(
+            "Damage Assessment",
+            "Betterments",
+            "Contents",
+            "Daily Progress",
+            "Pre-existing Damages"
+        )
+        private val CATEGORY_ORDER = listOf(
+            "Damage Assessment",
+            "Daily Progress",
+            "Pre-existing Damages",
+            "Betterments",
+            "Contents"
+        )
 
         fun provideFactory(
             application: Application,

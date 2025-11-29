@@ -437,6 +437,7 @@ data class OfflineMoistureLogEntity(
         Index(value = ["uuid"], unique = true),
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
+        Index(value = ["photoId"]),
         Index(value = ["serverId"])
     ]
 )
@@ -450,6 +451,7 @@ data class OfflineNoteEntity(
     val userId: Long? = null,
     val content: String,
     val categoryId: Long? = null,
+    val photoId: Long? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
     val lastSyncedAt: Date? = null,

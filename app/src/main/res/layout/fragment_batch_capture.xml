@@ -99,6 +99,19 @@
             tools:listitem="@layout/item_batch_photo"
             tools:visibility="visible" />
 
+        <!-- Category Chips -->
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/categoryChipGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="16dp"
+            app:chipSpacingHorizontal="8dp"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
         <!-- Camera Controls Row -->
         <LinearLayout
             android:layout_width="match_parent"

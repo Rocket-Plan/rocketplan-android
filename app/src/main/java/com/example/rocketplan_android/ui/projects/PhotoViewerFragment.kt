@@ -5,8 +5,11 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.view.Gravity
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -23,6 +26,9 @@ import coil.load
 import com.example.rocketplan_android.R
 import com.github.chrisbanes.photoview.PhotoView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -39,6 +45,7 @@ class PhotoViewerFragment : Fragment() {
     private lateinit var toolbar: MaterialToolbar
     private lateinit var photoPager: ViewPager2
     private lateinit var photoCounter: TextView
+    private lateinit var addNoteFab: FloatingActionButton
     private lateinit var pagerAdapter: PhotoPagerAdapter
 
     override fun onCreateView(
@@ -52,8 +59,10 @@ class PhotoViewerFragment : Fragment() {
         toolbar = view.findViewById(R.id.photoToolbar)
         photoPager = view.findViewById(R.id.photoPager)
         photoCounter = view.findViewById(R.id.photoCounter)
+        addNoteFab = view.findViewById(R.id.addPhotoNoteFab)
 
         toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        addNoteFab.setOnClickListener { showAddNoteDialog() }
 
         setupPager()
         observeViewModel()
@@ -95,8 +104,72 @@ class PhotoViewerFragment : Fragment() {
                         }
                     }
                 }
+
+                launch {
+                    viewModel.currentPhoto.collect { current ->
+                        val hasPhoto = current != null
+                        addNoteFab.isVisible = hasPhoto
+                        addNoteFab.isEnabled = hasPhoto && !viewModel.isSavingNote.value
+                        addNoteFab.alpha = if (addNoteFab.isEnabled) 1f else 0.5f
+                    }
+                }
+
+                launch {
+                    viewModel.isSavingNote.collect { saving ->
+                        addNoteFab.isEnabled = !saving && viewModel.currentPhoto.value != null
+                        addNoteFab.alpha = if (addNoteFab.isEnabled) 1f else 0.5f
+                    }
+                }
+
+                launch {
+                    viewModel.events.collect { event ->
+                        when (event) {
+                            is PhotoViewerEvent.NoteSaved -> {
+                                Snackbar.make(
+                                    requireView(),
+                                    "Note added to photo",
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
+                            }
+                            is PhotoViewerEvent.Error -> {
+                                Snackbar.make(
+                                    requireView(),
+                                    event.message,
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private fun showAddNoteDialog() {
+        val context = requireContext()
+        val input = EditText(context).apply {
+            hint = getString(R.string.add_note)
+            minLines = 3
+            gravity = Gravity.TOP or Gravity.START
+        }
+        val container = FrameLayout(context).apply {
+            val padding = (16 * resources.displayMetrics.density).toInt()
+            setPadding(padding, 0, padding, 0)
+            addView(input)
+        }
+
+        MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.add_note)
+            .setView(container)
+            .setPositiveButton(android.R.string.ok) { dialog, _ ->
+                val text = input.text.toString().trim()
+                if (text.isNotEmpty()) {
+                    viewModel.addNoteForCurrentPhoto(text)
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 }
 

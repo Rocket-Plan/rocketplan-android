@@ -40,6 +40,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.text.SimpleDateFormat
 import kotlin.collections.buildSet
+import kotlin.collections.eachCount
 
 import com.example.rocketplan_android.data.local.entity.preferredImageSource
 import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
@@ -76,6 +77,14 @@ class RoomDetailViewModel(
     private val snapshotRefreshMutex = Mutex()
     private val _isSnapshotRefreshing = MutableStateFlow(false)
     val isSnapshotRefreshing: StateFlow<Boolean> = _isSnapshotRefreshing.asStateFlow()
+    private val photoNoteCounts: Flow<Map<Long, Int>> =
+        localDataService.observeNotes(projectId)
+            .map { notes ->
+                notes
+                    .mapNotNull { it.photoId }
+                    .groupingBy { it }
+                    .eachCount()
+            }
 
     init {
         Log.d(TAG, "📦 init(projectId=$projectId, roomId=$roomId)")
@@ -230,12 +239,18 @@ class RoomDetailViewModel(
                     flowOf(PagingData.empty())
                 } else {
                     Log.d(TAG, "📸 Setting up snapshot paging for room: localId=$localId, snapshotRoomId=$lookupId")
-                    localDataService
+                    val formatter = requireNotNull(dateFormatter.get())
+                    val snapshotFlow = localDataService
                         .pagedPhotoSnapshotsForRoom(lookupId)
                         .map { pagingData ->
-                            val formatter = requireNotNull(dateFormatter.get())
                             pagingData.map { snapshot -> snapshot.toPhotoItem(formatter) }
                         }
+
+                    combine(snapshotFlow, photoNoteCounts) { pagingData, noteCounts ->
+                        pagingData.map { item ->
+                            item.copy(noteCount = noteCounts[item.id] ?: 0)
+                        }
+                    }
                 }
             }
             .cachedIn(viewModelScope)
@@ -395,7 +410,8 @@ data class RoomPhotoItem(
     val id: Long,
     val imageUrl: String,
     val thumbnailUrl: String,
-    val capturedOn: String?
+    val capturedOn: String?,
+    val noteCount: Int = 0
 )
 
 data class RoomAlbumItem(

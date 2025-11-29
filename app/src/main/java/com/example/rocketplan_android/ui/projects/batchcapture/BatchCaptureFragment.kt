@@ -35,6 +35,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.rocketplan_android.R
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
 import kotlinx.coroutines.launch
 import java.io.File
@@ -65,10 +67,12 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var shutterInner: View
     private lateinit var switchCameraButton: ImageButton
     private lateinit var doneButton: MaterialButton
+    private lateinit var categoryChipGroup: ChipGroup
     private lateinit var loadingOverlay: View
     private lateinit var loadingText: TextView
 
     private lateinit var thumbnailAdapter: ThumbnailStripAdapter
+    private var lastRenderedCategories: List<PhotoCategoryOption> = emptyList()
 
     // Camera
     private var imageCapture: ImageCapture? = null
@@ -135,6 +139,7 @@ class BatchCaptureFragment : Fragment() {
         shutterInner = view.findViewById(R.id.shutterInner)
         switchCameraButton = view.findViewById(R.id.switchCameraButton)
         doneButton = view.findViewById(R.id.doneButton)
+        categoryChipGroup = view.findViewById(R.id.categoryChipGroup)
         loadingOverlay = view.findViewById(R.id.loadingOverlay)
         loadingText = view.findViewById(R.id.loadingText)
     }
@@ -207,6 +212,8 @@ class BatchCaptureFragment : Fragment() {
 
         thumbnailAdapter.submitList(state.photos)
 
+        renderCategories(state)
+
         thumbnailStrip.isVisible = state.hasPhotos
         doneButton.isVisible = state.hasPhotos
 
@@ -235,6 +242,47 @@ class BatchCaptureFragment : Fragment() {
         if (state.roomTitle.isNotEmpty()) {
             titleText.text = state.roomTitle
         }
+    }
+
+    private fun renderCategories(state: BatchCaptureUiState) {
+        val categoriesChanged = state.categories != lastRenderedCategories
+        if (categoriesChanged) {
+            categoryChipGroup.setOnCheckedStateChangeListener(null)
+            categoryChipGroup.removeAllViews()
+
+            val context = categoryChipGroup.context
+            state.categories.forEach { option ->
+                val chip = Chip(context).apply {
+                    id = View.generateViewId()
+                    tag = option.albumId
+                    text = option.name
+                    isCheckable = true
+                    isChecked = option.albumId == state.selectedCategoryId
+                    isClickable = true
+                    isFocusable = true
+                    chipBackgroundColor = ContextCompat.getColorStateList(context, R.color.chip_background_selector)
+                    setTextColor(ContextCompat.getColorStateList(context, R.color.chip_text_selector))
+                    isCheckedIconVisible = false
+                    rippleColor = ContextCompat.getColorStateList(context, android.R.color.transparent)
+                }
+                categoryChipGroup.addView(chip)
+            }
+
+            categoryChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+                val checkedChipId = checkedIds.firstOrNull()
+                val checkedChip = checkedChipId?.let { id -> group.findViewById<Chip>(id) }
+                val albumId = checkedChip?.tag as? Long
+                albumId?.let { viewModel.selectCategory(it) }
+            }
+            lastRenderedCategories = state.categories
+        } else {
+            for (i in 0 until categoryChipGroup.childCount) {
+                val chip = categoryChipGroup.getChildAt(i) as? Chip ?: continue
+                chip.isChecked = chip.tag == state.selectedCategoryId
+            }
+        }
+
+        categoryChipGroup.isVisible = state.categories.isNotEmpty()
     }
 
     private fun handleEvent(event: BatchCaptureEvent) {
