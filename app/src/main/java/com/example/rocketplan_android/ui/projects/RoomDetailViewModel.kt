@@ -13,6 +13,7 @@ import androidx.paging.map
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
@@ -38,6 +39,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.Job
 import java.text.SimpleDateFormat
 import kotlin.collections.buildSet
 import kotlin.collections.eachCount
@@ -68,6 +70,9 @@ class RoomDetailViewModel(
     private val _selectedTab = MutableStateFlow(RoomDetailTab.PHOTOS)
     val selectedTab: StateFlow<RoomDetailTab> = _selectedTab
 
+    private val _isAwaitingRealtimePhotos = MutableStateFlow(false)
+    val isAwaitingRealtimePhotos: StateFlow<Boolean> = _isAwaitingRealtimePhotos.asStateFlow()
+
     private var lastRefreshAt = 0L
     private var isRefreshing = false
     private var lastSyncedServerRoomId: Long? = null
@@ -77,6 +82,9 @@ class RoomDetailViewModel(
     private val snapshotRefreshMutex = Mutex()
     private val _isSnapshotRefreshing = MutableStateFlow(false)
     val isSnapshotRefreshing: StateFlow<Boolean> = _isSnapshotRefreshing.asStateFlow()
+    private val pendingAssemblyIds = mutableSetOf<String>()
+    private val processedAssemblyIds = mutableSetOf<String>()
+    private var assemblyWatcherJob: Job? = null
     private val photoNoteCounts: Flow<Map<Long, Int>> =
         localDataService.observeNotes(projectId)
             .map { notes ->
@@ -132,6 +140,13 @@ class RoomDetailViewModel(
                 // Photos and albums are persisted with server room ID when available
                 val photoLookupRoomId = room.serverId ?: room.roomId
                 currentPhotoLookupRoomId = photoLookupRoomId
+                pendingAssemblyIds.clear()
+                processedAssemblyIds.clear()
+                _isAwaitingRealtimePhotos.value = false
+                assemblyWatcherJob?.cancel()
+                assemblyWatcherJob = viewModelScope.launch {
+                    observeAssembliesForRoom(localRoomId, photoLookupRoomId)
+                }
                 if (lastSnapshotRoomId != photoLookupRoomId) {
                     Log.d(TAG, "🗂 Refreshing photo snapshot for roomId=$photoLookupRoomId")
                     refreshSnapshot(photoLookupRoomId)
@@ -313,6 +328,51 @@ class RoomDetailViewModel(
                 name = album.name,
                 photoCount = album.photoCount,
                 thumbnailUrl = album.thumbnailUrl
+            )
+        }
+    }
+
+    fun onPhotosAdded(result: PhotosAddedResult?) {
+        if (result == null) return
+        result.assemblyId?.let { pendingAssemblyIds.add(it) }
+        _isAwaitingRealtimePhotos.value = true
+        Log.d(TAG, "🪢 Photos added: count=${result.addedCount}, assembly=${result.assemblyId}")
+    }
+
+    private suspend fun observeAssembliesForRoom(localRoomId: Long, snapshotRoomId: Long) {
+        val terminalStatuses = setOf(
+            AssemblyStatus.COMPLETED.value,
+            AssemblyStatus.FAILED.value,
+            AssemblyStatus.CANCELLED.value
+        )
+
+        imageProcessorRepository.observeAssembliesByRoom(localRoomId).collectLatest { assemblies ->
+            val statusById = assemblies.associateBy { it.assemblyId }
+            val activeAssemblies = assemblies.filterNot { terminalStatuses.contains(it.status) }
+
+            val newlyCompleted = assemblies
+                .filter { it.status == AssemblyStatus.COMPLETED.value }
+                .filter { processedAssemblyIds.add(it.assemblyId) }
+
+            val finishedPending = pendingAssemblyIds.filter { id ->
+                val status = statusById[id]?.status
+                status != null && terminalStatuses.contains(status)
+            }
+            pendingAssemblyIds.removeAll(finishedPending.toSet())
+
+            if (newlyCompleted.isNotEmpty()) {
+                Log.d(
+                    TAG,
+                    "✅ Assemblies completed for room $localRoomId: ${newlyCompleted.map { it.assemblyId }}, refreshing snapshot"
+                )
+                refreshSnapshot(snapshotRoomId)
+            }
+
+            val awaiting = activeAssemblies.isNotEmpty() || pendingAssemblyIds.isNotEmpty()
+            _isAwaitingRealtimePhotos.value = awaiting
+            Log.d(
+                TAG,
+                "⏱️ Assembly watch: active=${activeAssemblies.size}, pendingIds=${pendingAssemblyIds.size}, awaiting=$awaiting"
             )
         }
     }

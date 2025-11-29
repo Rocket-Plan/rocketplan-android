@@ -35,7 +35,6 @@ class ProjectDetailFragment : Fragment() {
         ProjectDetailViewModel.provideFactory(requireActivity().application, args.projectId)
     }
 
-    private lateinit var backButton: ImageButton
     private lateinit var editButton: ImageButton
     private lateinit var headerTitle: TextView
     private lateinit var projectTitle: TextView
@@ -91,7 +90,6 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private fun bindViews(root: View) {
-        backButton = root.findViewById(R.id.backButton)
         editButton = root.findViewById(R.id.editProjectButton)
         headerTitle = root.findViewById(R.id.headerTitle)
         projectTitle = root.findViewById(R.id.projectTitle)
@@ -156,7 +154,6 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private fun bindListeners() {
-        backButton.setOnClickListener { findNavController().navigateUp() }
         editButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
         }

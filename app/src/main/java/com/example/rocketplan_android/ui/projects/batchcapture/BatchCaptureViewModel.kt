@@ -53,7 +53,7 @@ data class BatchPhotoItem(
 )
 
 sealed interface BatchCaptureEvent {
-    data class PhotosCommitted(val count: Int) : BatchCaptureEvent
+    data class PhotosCommitted(val count: Int, val assemblyId: String?) : BatchCaptureEvent
     data class Error(val message: String) : BatchCaptureEvent
     object BatchCleared : BatchCaptureEvent
     object LimitReached : BatchCaptureEvent
@@ -206,9 +206,7 @@ class BatchCaptureViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 Log.d(TAG, "Committing ${currentState.photos.size} photos for room ${room.roomId}")
-
                 val lookupRoomId = room.serverId ?: room.roomId
-
                 // Save photos to database
                 val photoEntities = currentState.photos.map { batchPhoto ->
                     OfflinePhotoEntity(
@@ -279,11 +277,8 @@ class BatchCaptureViewModel(
                     // Trigger queue processing
                     imageProcessorQueueManager.processNextQueuedAssembly()
 
-                    // Refresh snapshot so photos appear in grid
-                    localDataService.refreshRoomPhotoSnapshot(lookupRoomId)
-
                     _uiState.update { it.copy(isProcessing = false, photos = emptyList()) }
-                    _events.emit(BatchCaptureEvent.PhotosCommitted(currentState.photos.size))
+                    _events.emit(BatchCaptureEvent.PhotosCommitted(currentState.photos.size, assemblyId))
 
                 }.onFailure { error ->
                     Log.e(TAG, "Failed to create assembly", error)

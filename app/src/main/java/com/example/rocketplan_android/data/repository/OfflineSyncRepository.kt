@@ -195,6 +195,17 @@ class OfflineSyncRepository(
 
         var itemCount = 0
 
+        // Guard against phantom project 0 - API sometimes returns empty/default DTOs
+        if (detail.id == 0L) {
+            Log.e("API", "❌ [syncProjectEssentials] API returned project with id=0, skipping save")
+            val duration = System.currentTimeMillis() - startTime
+            return@withContext SyncResult.failure(
+                SyncSegment.PROJECT_ESSENTIALS,
+                Exception("API returned invalid project with id=0"),
+                duration
+            )
+        }
+
         // Save project entity (preserve property link if list sync already populated it)
         val existingProject = localDataService.getProject(detail.id)
         localDataService.saveProjects(listOf(detail.toEntity(existing = existingProject)))

@@ -42,6 +42,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import com.example.rocketplan_android.ui.projects.PhotosAddedResult
 
 class BatchCaptureFragment : Fragment() {
 
@@ -199,11 +200,11 @@ class BatchCaptureFragment : Fragment() {
                 }
 
                 launch {
-                    viewModel.events.collect { event ->
-                        handleEvent(event)
-                    }
-                }
+            viewModel.events.collect { event ->
+                handleEvent(event)
             }
+        }
+    }
         }
     }
 
@@ -288,6 +289,11 @@ class BatchCaptureFragment : Fragment() {
     private fun handleEvent(event: BatchCaptureEvent) {
         when (event) {
             is BatchCaptureEvent.PhotosCommitted -> {
+                findNavController().previousBackStackEntry?.savedStateHandle
+                    ?.set(
+                        com.example.rocketplan_android.ui.projects.RoomDetailFragment.PHOTOS_ADDED_RESULT_KEY,
+                        PhotosAddedResult(event.count, event.assemblyId)
+                    )
                 Toast.makeText(
                     requireContext(),
                     getString(R.string.batch_capture_success),

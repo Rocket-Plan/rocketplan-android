@@ -5,8 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.rocketplan_android.R
@@ -17,9 +17,16 @@ import kotlinx.coroutines.launch
 
 class LossInfoFragment : Fragment() {
 
-    private val viewModel: ProjectLossInfoViewModel by lazy {
-        ViewModelProvider(requireParentFragment())[ProjectLossInfoViewModel::class.java]
+    private val projectId: Long by lazy {
+        requireArguments().getLong(ARG_PROJECT_ID)
     }
+
+    private val viewModel: ProjectLossInfoViewModel by viewModels(
+        ownerProducer = { requireParentFragment() },
+        factoryProducer = {
+            ProjectLossInfoViewModel.provideFactory(requireActivity().application, projectId)
+        }
+    )
 
     private lateinit var damageTypesGroup: ChipGroup
     private lateinit var damageCauseValue: MaterialTextView

@@ -29,6 +29,7 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import com.example.rocketplan_android.ui.projects.PhotosAddedResult
 
 class RoomDetailFragment : Fragment() {
 
@@ -65,6 +66,7 @@ class RoomDetailFragment : Fragment() {
     private var photoLoadStartTime: Long = 0L
     private var latestLoadState: LoadState? = null
     private var snapshotRefreshInProgress: Boolean = false
+    private var awaitingRealtimePhotos: Boolean = false
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -102,6 +104,7 @@ class RoomDetailFragment : Fragment() {
         configureRecycler()
         configureToggleGroup()
         bindListeners()
+        observeNavigationResults()
         observeViewModel()
     }
 
@@ -244,6 +247,15 @@ class RoomDetailFragment : Fragment() {
         findNavController().navigate(action)
     }
 
+    private fun observeNavigationResults() {
+        val handle = findNavController().currentBackStackEntry?.savedStateHandle ?: return
+        handle.getLiveData<PhotosAddedResult>(PHOTOS_ADDED_RESULT_KEY).observe(viewLifecycleOwner) { result ->
+            handle.remove<PhotosAddedResult>(PHOTOS_ADDED_RESULT_KEY)
+            Log.d(TAG, "📥 Photos added result received: $result")
+            viewModel.onPhotosAdded(result)
+        }
+    }
+
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -315,6 +327,13 @@ class RoomDetailFragment : Fragment() {
                         updatePhotoVisibility()
                     }
                 }
+                launch {
+                    viewModel.isAwaitingRealtimePhotos.collect { awaiting ->
+                        awaitingRealtimePhotos = awaiting
+                        Log.d(TAG, if (awaiting) "⏳ Awaiting realtime photo completion" else "✅ Realtime photo processing done")
+                        updatePhotoVisibility()
+                    }
+                }
             }
         }
     }
@@ -373,7 +392,7 @@ class RoomDetailFragment : Fragment() {
                 placeholderText.text = getString(R.string.damages) + " coming soon"
                 filterChipGroup.isVisible = false
                 gridSectionTitle.isVisible = false
-                loadingOverlay.isVisible = false
+                loadingOverlay.isVisible = snapshotRefreshInProgress || awaitingRealtimePhotos
                 photosLoadingSpinner.isVisible = false
             }
         }
@@ -404,11 +423,13 @@ class RoomDetailFragment : Fragment() {
             photosRecyclerView.isVisible = false
             placeholderText.isVisible = false
             photosLoadingSpinner.isVisible = false
-            loadingOverlay.isVisible = snapshotRefreshInProgress
+            loadingOverlay.isVisible = snapshotRefreshInProgress || awaitingRealtimePhotos
             return
         }
 
-        if (snapshotRefreshInProgress) {
+        val waitingForRealtime = awaitingRealtimePhotos
+
+        if (snapshotRefreshInProgress || waitingForRealtime) {
             loadingOverlay.isVisible = true
             photosRecyclerView.isVisible = false
             placeholderText.isVisible = false
@@ -444,5 +465,6 @@ class RoomDetailFragment : Fragment() {
 
     companion object {
         private const val TAG = "RoomDetailFrag"
+        const val PHOTOS_ADDED_RESULT_KEY = "room_detail_photos_added"
     }
 }

@@ -25,21 +25,11 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <ImageButton
-                    android:id="@+id/backButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/back"
-                    android:src="@drawable/ic_arrow_back"
-                    app:tint="@color/icon_colour" />
-
                 <TextView
                     android:id="@+id/headerTitle"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
+                    android:layout_marginStart="4dp"
                     android:text="@string/project_home"
                     android:textColor="@color/light_text_rp"
                     android:textSize="14sp" />

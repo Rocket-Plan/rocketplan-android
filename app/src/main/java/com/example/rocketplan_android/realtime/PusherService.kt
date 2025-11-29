@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.realtime
 
+import android.util.Log
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.google.gson.Gson
@@ -26,7 +27,8 @@ class PusherService(
 
     private val connectionListener = object : ConnectionEventListener {
         override fun onConnectionStateChange(change: ConnectionStateChange?) {
-            // Connection churn is expected; debug logging is noisy so it's omitted for now.
+            // TODO: Remove temporary debug logging
+            Log.d(TAG, "🔌 Connection state: ${change?.previousState} -> ${change?.currentState}")
         }
 
         override fun onError(message: String?, code: String?, e: Exception?) {
@@ -56,7 +58,11 @@ class PusherService(
         eventName: String,
         callback: (ImageProcessorUpdate?) -> Unit
     ) {
+        // TODO: Remove temporary debug logging
+        Log.d(TAG, "🔔 Binding event: channel=$channelName event=$eventName")
+
         val binding = channelBindings.getOrPut(channelName) {
+            Log.d(TAG, "📡 Subscribing to new channel: $channelName")
             ChannelBinding(
                 channel = pusher.subscribe(channelName),
                 listeners = ConcurrentHashMap()
@@ -69,20 +75,28 @@ class PusherService(
         }
 
         val listener = SubscriptionEventListener { event ->
+            // TODO: Remove temporary debug logging
+            Log.d(TAG, "📨 Event received: channel=$channelName event=${event.eventName}")
+            Log.d(TAG, "📦 Payload: ${event.data?.take(500)}")
+
             val data = event.data
             if (data.isNullOrBlank() || data == "[]") {
+                Log.d(TAG, "⚠️ Empty payload, calling callback with null")
                 callback(null)
                 return@SubscriptionEventListener
             }
 
             val update = parseUpdate(data)
             if (update == null) {
+                Log.w(TAG, "❌ Failed to parse payload")
                 remoteLogger?.log(
                     level = LogLevel.WARN,
                     tag = TAG,
                     message = "Failed to parse Pusher payload for $eventName",
                     metadata = mapOf("channel" to channelName)
                 )
+            } else {
+                Log.d(TAG, "✅ Parsed update: status=${update.status}, assemblyId=${update.assemblyId}")
             }
             callback(update)
         }
@@ -93,6 +107,9 @@ class PusherService(
     }
 
     fun unsubscribe(channelName: String) {
+        // TODO: Remove temporary debug logging
+        Log.d(TAG, "🔕 Unsubscribing from channel: $channelName")
+
         val binding = channelBindings.remove(channelName) ?: return
         binding.listeners.forEach { (event, listener) ->
             binding.channel.unbind(event, listener)
