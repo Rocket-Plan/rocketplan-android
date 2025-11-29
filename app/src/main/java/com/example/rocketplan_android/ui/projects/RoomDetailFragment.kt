@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -212,10 +213,8 @@ class RoomDetailFragment : Fragment() {
         menuButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.menu), Toast.LENGTH_SHORT).show()
         }
-        addPhotoCard.setOnClickListener { navigateToBatchCapture() }
-        addPhotoChip.setOnClickListener {
-            navigateToBatchCapture()
-        }
+        addPhotoCard.setOnClickListener { showAddPhotoOptions(it) }
+        addPhotoChip.setOnClickListener { showAddPhotoOptions(it) }
         damageAssessmentChip.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
         }
@@ -245,6 +244,37 @@ class RoomDetailFragment : Fragment() {
                 roomId = args.roomId
             )
         findNavController().navigate(action)
+    }
+
+    private fun navigateToFlirCapture() {
+        val action = RoomDetailFragmentDirections
+            .actionRoomDetailFragmentToBatchCaptureFragment(
+                projectId = args.projectId,
+                roomId = args.roomId,
+                captureMode = "ir"
+            )
+        findNavController().navigate(action)
+    }
+
+    private fun showAddPhotoOptions(anchor: View) {
+        val popup = PopupMenu(requireContext(), anchor)
+        popup.menuInflater.inflate(R.menu.menu_add_photo_options, popup.menu)
+        popup.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.menu_add_photo_standard -> {
+                    navigateToBatchCapture()
+                    true
+                }
+
+                R.id.menu_add_photo_flir -> {
+                    navigateToFlirCapture()
+                    true
+                }
+
+                else -> false
+            }
+        }
+        popup.show()
     }
 
     private fun observeNavigationResults() {

@@ -49,7 +49,8 @@ data class BatchPhotoItem(
     val file: File,
     val number: Int,
     val categoryAlbumId: Long?,
-    val categoryName: String?
+    val categoryName: String?,
+    val isIr: Boolean = false
 )
 
 sealed interface BatchCaptureEvent {
@@ -135,7 +136,7 @@ class BatchCaptureViewModel(
         _uiState.update { it.copy(selectedCategoryId = albumId) }
     }
 
-    fun addPhoto(photoFile: File): Boolean {
+    fun addPhoto(photoFile: File, isIr: Boolean = false): Boolean {
         val currentState = _uiState.value
         if (currentState.photos.size >= currentState.maxPhotos) {
             Log.w(TAG, "Cannot add photo: limit reached (${currentState.maxPhotos})")
@@ -150,7 +151,8 @@ class BatchCaptureViewModel(
             categoryAlbumId = currentState.selectedCategoryId,
             categoryName = currentState.categories.firstOrNull { option ->
                 option.albumId == currentState.selectedCategoryId
-            }?.name
+            }?.name,
+            isIr = isIr
         )
 
         _uiState.update { state ->

@@ -19,6 +19,10 @@
         <action
             android:id="@+id/action_emailCheckFragment_to_signUpFragment"
             app:destination="@id/signUpFragment" />
+
+        <action
+            android:id="@+id/action_emailCheckFragment_to_oauthWebViewFragment"
+            app:destination="@id/oauthWebViewFragment" />
     </fragment>
 
     <!-- Login Fragment -->
@@ -42,6 +46,10 @@
         <action
             android:id="@+id/action_loginFragment_to_forgotPasswordFragment"
             app:destination="@id/forgotPasswordFragment" />
+
+        <action
+            android:id="@+id/action_loginFragment_to_oauthWebViewFragment"
+            app:destination="@id/oauthWebViewFragment" />
     </fragment>
 
     <!-- Sign Up Fragment -->
@@ -72,6 +80,20 @@
 
         <argument
             android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/oauthWebViewFragment"
+        android:name="com.example.rocketplan_android.ui.auth.OAuthWebViewFragment"
+        android:label="OAuth"
+        tools:layout="@layout/fragment_oauth_webview">
+        <argument
+            android:name="url"
+            app:argType="string" />
+        <argument
+            android:name="title"
             app:argType="string"
             android:defaultValue="" />
     </fragment>
@@ -206,6 +228,10 @@
             app:destination="@id/batchCaptureFragment" />
 
         <action
+            android:id="@+id/action_roomDetailFragment_to_flirCaptureFragment"
+            app:destination="@id/flirCaptureFragment" />
+
+        <action
             android:id="@+id/action_roomDetailFragment_to_projectNotesFragment"
             app:destination="@id/projectNotesFragment" />
     </fragment>
@@ -215,6 +241,26 @@
         android:name="com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureFragment"
         android:label="Capture Photos"
         tools:layout="@layout/fragment_batch_capture">
+
+        <argument
+            android:name="captureMode"
+            app:argType="string"
+            android:defaultValue="regular" />
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/flirCaptureFragment"
+        android:name="com.example.rocketplan_android.ui.projects.flir.FlirCaptureFragment"
+        android:label="Thermal Capture"
+        tools:layout="@layout/fragment_flir_capture">
 
         <argument
             android:name="projectId"

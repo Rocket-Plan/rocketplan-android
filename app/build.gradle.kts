@@ -83,16 +83,41 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
         isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "21"
     }
     buildFeatures {
         viewBinding = true
         buildConfig = true  // Enable BuildConfig generation
+    }
+
+    packaging {
+        jniLibs {
+            // Keep legacy packaging so the FLIR native binaries load correctly
+            useLegacyPackaging = true
+        }
+        dex {
+            useLegacyPackaging = true
+        }
+        resources {
+            // Exclude duplicate SLF4J files bundled in FLIR SDK
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            pickFirsts += "META-INF/DEPENDENCIES"
+        }
+    }
+
+    splits {
+        abi {
+            // Keep builds lean; FLIR SDK ships arm64 binaries by default
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
     }
 }
 
@@ -114,7 +139,9 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
     implementation(libs.okhttp.logging)
-    implementation(libs.pusher)
+    implementation(libs.pusher) {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
 
     // DataStore for secure storage
     implementation(libs.androidx.datastore.preferences)
@@ -147,6 +174,10 @@ dependencies {
     implementation(libs.camerax.camera2)
     implementation(libs.camerax.lifecycle)
     implementation(libs.camerax.view)
+
+    // FLIR Atlas Android SDK (local AARs; place in app/libs)
+    implementation(files("libs/androidsdk-release.aar"))
+    implementation(files("libs/thermalsdk-release.aar"))
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

@@ -17,6 +17,10 @@ dependencyResolutionManagement {
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
+        // Local FLIR AARs (drop androidsdk-release.aar and thermalsdk-release.aar into app/libs)
+        flatDir {
+            dirs(file("app/libs"))
+        }
     }
 }
 

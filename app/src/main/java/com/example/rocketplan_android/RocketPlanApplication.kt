@@ -27,6 +27,7 @@ import com.example.rocketplan_android.work.PhotoCacheScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import com.example.rocketplan_android.thermal.FlirSdkManager
 
 class RocketPlanApplication : Application() {
 
@@ -84,6 +85,9 @@ class RocketPlanApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Initialize FLIR SDK early so discovery is ready when users enter thermal capture
+        FlirSdkManager.init(this)
 
         // Removed debug-time database purge to preserve cached data across launches
         localDataService = LocalDataService.initialize(this)

@@ -63,6 +63,24 @@
     <string name="message_passwords_match">Passwords match</string>
     <string name="action_create_account">Create Account</string>
     <string name="message_sign_up_agreement">By signing up, you agree to receive updates and special offers about RocketPlan products. You may unsubscribe at any time.</string>
+    <string name="google_sign_in_title">Google Sign-In</string>
+    <string name="apple_sign_in_title">Apple Sign-In</string>
+    <string name="facebook_sign_in_title">Facebook Sign-In</string>
+    <string name="oauth_sign_in_title">Sign in with %1$s</string>
+    <string name="error_opening_google_sign_in">Failed to open Google Sign-In: %1$s</string>
+    <string name="error_opening_provider_sign_in">Unable to start %1$s sign-in. Please try again.</string>
+    <string name="oauth_webview_default_title">Secure Sign-In</string>
+    <string name="external_browser_blocked">Opening links outside the app is not allowed on this device.</string>
+    <string name="library_permission_needed">Grant access to DCIM so we can show the allowed media library (JPEG and MP4 only).</string>
+    <string name="library_request_permission">Allow Library Access</string>
+    <string name="library_filter_hint">Showing only JPEG images and MP4 videos from DCIM.</string>
+    <string name="library_empty_state">No JPEG or MP4 files found in DCIM.</string>
+    <string name="library_load_error">Unable to load library content.</string>
+    <string name="library_retry">Retry</string>
+    <string name="library_unknown_file">Unknown file</string>
+    <string name="library_thumbnail_content_description">Library thumbnail</string>
+    <string name="media_type_image">Image</string>
+    <string name="media_type_video">Video</string>
 
     <!-- Company Info -->
     <string name="company_info_title">Company Info</string>
@@ -183,6 +201,9 @@
     <string name="notes_for_project">Notes for this project</string>
     <string name="loading_project">Loading project…</string>
     <string name="add_photo_card_subtitle">Capture new photos for this room.</string>
+    <string name="add_photo_flir">Thermal photo (FLIR)</string>
+    <string name="regular">Regular</string>
+    <string name="ir">IR</string>
     <string name="camera_permission_required">Camera permission is required to capture photos.</string>
     <string name="camera_file_error">Could not prepare storage for the new photo.</string>
     <string name="camera_launch_error">Unable to open the camera on this device.</string>
@@ -200,6 +221,26 @@
     <string name="albums">Albums</string>
     <string name="daily_progress">Daily Progress</string>
     <string name="pre_existing_damages">Pre-Existing Damages</string>
+
+    <!-- FLIR thermal capture -->
+    <string name="flir_start">Start FLIR</string>
+    <string name="flir_snapshot">Snapshot</string>
+    <string name="flir_palette">Palette</string>
+    <string name="flir_fusion">Fusion</string>
+    <string name="flir_measurements">Measurements</string>
+    <string name="flir_upload">Save photos</string>
+    <string name="flir_status_idle">Idle \u2013 tap Start to discover FLIR device</string>
+    <string name="flir_status_discovering">Discovering FLIR device\u2026</string>
+    <string name="flir_status_connecting">Connecting to %1$s\u2026</string>
+    <string name="flir_status_streaming">Streaming from %1$s</string>
+    <string name="flir_snapshot_saved">Thermal snapshot captured</string>
+    <string name="flir_snapshot_failed">Unable to capture thermal snapshot</string>
+    <string name="flir_permission_required">Camera permission is required for FLIR capture.</string>
+    <string name="flir_upload_in_progress">Uploading %1$d photos\u2026</string>
+    <string name="flir_upload_ready">Ready to upload %1$d photos</string>
+    <string name="flir_upload_success">Thermal photos queued for upload</string>
+    <string name="flir_upload_error">Unable to upload thermal photos</string>
+    <string name="flash_ir_unavailable">Flash not available in IR mode</string>
     <string name="refreshing">Refreshing…</string>
 
     <!-- Project Status -->

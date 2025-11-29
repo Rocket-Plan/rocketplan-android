@@ -112,7 +112,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             when (destination.id) {
-                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment, R.id.nav_projects -> {
+                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment, R.id.oauthWebViewFragment, R.id.nav_projects -> {
                     // Hide toolbar and drawer on auth screens and projects screen
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
@@ -222,77 +222,87 @@ class MainActivity : AppCompatActivity() {
      * Expected format: rocketplan-dev://?token={JWT_TOKEN}&status=200
      */
     private fun handleOAuthCallback(intent: Intent?) {
-        intent?.data?.let { uri ->
-            if (BuildConfig.ENABLE_LOGGING) {
-                Log.d(TAG, "Deep link received: $uri")
-            }
+        intent?.data?.let { handleOAuthRedirect(it) }
+    }
 
-            val allowedSchemes = setOf(
-                "rocketplan",
-                "rocketplan-staging",
-                "rocketplan-dev",
-                "rocketplan-local"
-            )
-
-            val isOAuthCallback = uri.scheme in allowedSchemes &&
-                uri.host == "oauth2" &&
-                uri.path == "/redirect"
-
-            if (!isOAuthCallback) {
-                if (BuildConfig.ENABLE_LOGGING) {
-                    Log.d(TAG, "Ignoring deep link (not OAuth callback): $uri")
-                }
-                return
-            }
-
-            val token = uri.getQueryParameter("token")
-            val status = uri.getQueryParameter("status")?.toIntOrNull()
-
-            if (BuildConfig.ENABLE_LOGGING) {
-                Log.d(TAG, "OAuth callback - Status: $status, Token present: ${token != null}")
-            }
-
-            if (status == 200 && !token.isNullOrEmpty()) {
-                // Save token and navigate to home
-                lifecycleScope.launch {
-                    try {
-                        authRepository.saveAuthToken(token)
-                        if (BuildConfig.ENABLE_LOGGING) {
-                            Log.d(TAG, "OAuth token saved successfully")
-                        }
-                        authRepository.refreshUserContext().onFailure { error ->
-                            Log.w(TAG, "Failed to refresh user context after OAuth", error)
-                        }
-                        syncQueueManager.clear()
-                        syncQueueManager.ensureInitialSync()
-
-                        // Navigate to projects screen
-                        val navController = findNavController(R.id.nav_host_fragment_content_main)
-                        navController.navigate(R.id.nav_projects)
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Sign in successful!",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error saving OAuth token", e)
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Sign in failed: ${e.message}",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            } else {
-                Log.e(TAG, "OAuth callback failed - Status: $status")
-                Toast.makeText(
-                    this,
-                    "Sign in failed",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
+    /**
+     * Processes OAuth redirect URIs coming from WebView or deep links.
+     * Returns true if the URI was handled.
+     */
+    fun handleOAuthRedirect(uri: Uri): Boolean {
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "Deep link received: $uri")
         }
+
+        val allowedSchemes = setOf(
+            "rocketplan",
+            "rocketplan-staging",
+            "rocketplan-dev",
+            "rocketplan-local"
+        )
+
+        val isOAuthCallback = uri.scheme in allowedSchemes &&
+            uri.host == "oauth2" &&
+            uri.path == "/redirect"
+
+        if (!isOAuthCallback) {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Ignoring deep link (not OAuth callback): $uri")
+            }
+            return false
+        }
+
+        val token = uri.getQueryParameter("token")
+        val status = uri.getQueryParameter("status")?.toIntOrNull()
+
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "OAuth callback - Status: $status, Token present: ${token != null}")
+        }
+
+        if (status == 200 && !token.isNullOrEmpty()) {
+            // Save token and navigate to home
+            lifecycleScope.launch {
+                try {
+                    authRepository.saveAuthToken(token)
+                    if (BuildConfig.ENABLE_LOGGING) {
+                        Log.d(TAG, "OAuth token saved successfully")
+                    }
+                    authRepository.refreshUserContext().onFailure { error ->
+                        Log.w(TAG, "Failed to refresh user context after OAuth", error)
+                    }
+                    syncQueueManager.clear()
+                    syncQueueManager.ensureInitialSync()
+
+                    // Navigate to projects screen and clear auth stack
+                    val navController = findNavController(R.id.nav_host_fragment_content_main)
+                    val navOptions = NavOptions.Builder()
+                        .setPopUpTo(R.id.emailCheckFragment, true)
+                        .build()
+                    navController.navigate(R.id.nav_projects, null, navOptions)
+
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Sign in successful!",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error saving OAuth token", e)
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Sign in failed: ${e.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+        } else {
+            Log.e(TAG, "OAuth callback failed - Status: $status")
+            Toast.makeText(
+                this,
+                "Sign in failed",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+        return true
     }
 
     override fun onSupportNavigateUp(): Boolean {

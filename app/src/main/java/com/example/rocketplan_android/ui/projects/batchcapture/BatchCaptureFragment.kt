@@ -3,6 +3,7 @@ package com.example.rocketplan_android.ui.projects.batchcapture
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.opengl.GLSurfaceView
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -35,9 +36,13 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.thermal.FlirCameraController
+import com.example.rocketplan_android.thermal.FlirState
+import com.flir.thermalsdk.image.fusion.FusionMode
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.button.MaterialButtonToggleGroup
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.concurrent.ExecutorService
@@ -45,6 +50,8 @@ import java.util.concurrent.Executors
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
 
 class BatchCaptureFragment : Fragment() {
+
+    private enum class CaptureMode { REGULAR, IR }
 
     private val args: BatchCaptureFragmentArgs by navArgs()
 
@@ -58,6 +65,15 @@ class BatchCaptureFragment : Fragment() {
 
     // Views
     private lateinit var cameraPreview: PreviewView
+    private lateinit var flirSurface: GLSurfaceView
+    private lateinit var modeToggle: MaterialButtonToggleGroup
+    private lateinit var regularModeButton: MaterialButton
+    private lateinit var irModeButton: MaterialButton
+    private lateinit var flirControls: View
+    private lateinit var flirStatusText: TextView
+    private lateinit var flirPaletteSwitch: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var flirFusionSwitch: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var flirMeasurementsSwitch: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var closeButton: ImageButton
     private lateinit var titleText: TextView
     private lateinit var photoCountText: TextView
@@ -74,13 +90,16 @@ class BatchCaptureFragment : Fragment() {
 
     private lateinit var thumbnailAdapter: ThumbnailStripAdapter
     private var lastRenderedCategories: List<PhotoCategoryOption> = emptyList()
+    private var flirReady = false
 
     // Camera
+    private var captureMode: CaptureMode = CaptureMode.REGULAR
     private var imageCapture: ImageCapture? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var cameraExecutor: ExecutorService
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var flashMode = ImageCapture.FLASH_MODE_OFF
+    private lateinit var flirController: FlirCameraController
 
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
@@ -88,13 +107,20 @@ class BatchCaptureFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        captureMode = if (args.captureMode.equals("ir", ignoreCase = true)) {
+            CaptureMode.IR
+        } else {
+            CaptureMode.REGULAR
+        }
+
+        flirController = FlirCameraController(requireContext())
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         cameraPermissionLauncher =
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
                 val granted = permissions.entries.all { it.value }
                 if (granted) {
-                    startCamera()
+                    startActiveMode()
                 } else if (isAdded) {
                     Toast.makeText(
                         requireContext(),
@@ -117,12 +143,17 @@ class BatchCaptureFragment : Fragment() {
         Log.d(TAG, "onViewCreated: projectId=${args.projectId}, roomId=${args.roomId}")
 
         bindViews(view)
+        flirController.attachSurface(flirSurface)
         setupThumbnailStrip()
         setupListeners()
         observeViewModel()
 
+        // Apply initial mode selection and start appropriate pipeline
+        modeToggle.check(if (captureMode == CaptureMode.IR) R.id.irModeButton else R.id.regularModeButton)
+        updateModeUi()
+
         if (hasCameraPermission()) {
-            startCamera()
+            startActiveMode()
         } else {
             cameraPermissionLauncher.launch(cameraPermissions)
         }
@@ -130,6 +161,15 @@ class BatchCaptureFragment : Fragment() {
 
     private fun bindViews(view: View) {
         cameraPreview = view.findViewById(R.id.cameraPreview)
+        flirSurface = view.findViewById(R.id.flirSurface)
+        modeToggle = view.findViewById(R.id.modeToggle)
+        regularModeButton = view.findViewById(R.id.regularModeButton)
+        irModeButton = view.findViewById(R.id.irModeButton)
+        flirControls = view.findViewById(R.id.flirControls)
+        flirStatusText = view.findViewById(R.id.flirStatusText)
+        flirPaletteSwitch = view.findViewById(R.id.flirPaletteSwitch)
+        flirFusionSwitch = view.findViewById(R.id.flirFusionSwitch)
+        flirMeasurementsSwitch = view.findViewById(R.id.flirMeasurementsSwitch)
         closeButton = view.findViewById(R.id.closeButton)
         titleText = view.findViewById(R.id.titleText)
         photoCountText = view.findViewById(R.id.photoCountText)
@@ -143,6 +183,7 @@ class BatchCaptureFragment : Fragment() {
         categoryChipGroup = view.findViewById(R.id.categoryChipGroup)
         loadingOverlay = view.findViewById(R.id.loadingOverlay)
         loadingText = view.findViewById(R.id.loadingText)
+        flirStatusText.text = getString(R.string.flir_status_idle)
     }
 
     private fun setupThumbnailStrip() {
@@ -162,7 +203,11 @@ class BatchCaptureFragment : Fragment() {
         }
 
         shutterButton.setOnClickListener {
-            capturePhoto()
+            if (captureMode == CaptureMode.REGULAR) {
+                capturePhoto()
+            } else {
+                flirController.requestSnapshot()
+            }
         }
 
         flashButton.setOnClickListener {
@@ -175,6 +220,27 @@ class BatchCaptureFragment : Fragment() {
 
         doneButton.setOnClickListener {
             viewModel.commitPhotos()
+        }
+
+        modeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            val newMode = when (checkedId) {
+                R.id.irModeButton -> CaptureMode.IR
+                else -> CaptureMode.REGULAR
+            }
+            switchMode(newMode)
+        }
+
+        flirPaletteSwitch.setOnCheckedChangeListener { _, isChecked ->
+            flirController.setPalette(if (isChecked) 1 else 0)
+        }
+
+        flirFusionSwitch.setOnCheckedChangeListener { _, isChecked ->
+            flirController.setFusionMode(if (isChecked) FusionMode.VISUAL_ONLY else FusionMode.THERMAL_ONLY)
+        }
+
+        flirMeasurementsSwitch.setOnCheckedChangeListener { _, isChecked ->
+            flirController.setMeasurementsEnabled(isChecked)
         }
 
         lastPhotoPreview.setOnClickListener {
@@ -193,18 +259,69 @@ class BatchCaptureFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch { viewModel.uiState.collect { state -> renderState(state) } }
+
                 launch {
-                    viewModel.uiState.collect { state ->
-                        renderState(state)
+                    flirController.state.collect { state ->
+                        when (state) {
+                            FlirState.Idle -> {
+                                flirStatusText.text = getString(R.string.flir_status_idle)
+                                flirReady = false
+                            }
+                            FlirState.Discovering -> {
+                                flirStatusText.text = getString(R.string.flir_status_discovering)
+                                flirReady = false
+                            }
+                            is FlirState.Connecting -> {
+                                flirStatusText.text =
+                                    getString(R.string.flir_status_connecting, state.identity.deviceId)
+                                flirReady = false
+                            }
+                            is FlirState.Streaming -> {
+                                flirStatusText.text =
+                                    getString(R.string.flir_status_streaming, state.identity.deviceId)
+                                flirReady = true
+                            }
+                            is FlirState.Error -> {
+                                flirStatusText.text = state.message
+                                flirReady = false
+                            }
+                        }
                     }
                 }
 
                 launch {
-            viewModel.events.collect { event ->
-                handleEvent(event)
+                    flirController.errors.collect { message ->
+                        Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
+                    }
+                }
+
+                launch {
+                    flirController.snapshots.collect { file ->
+                        val added = viewModel.addPhoto(file, isIr = true)
+                        if (!added) {
+                            file.delete()
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.flir_snapshot_failed),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        } else {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.flir_snapshot_saved),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
+
+                launch {
+                    viewModel.events.collect { event ->
+                        handleEvent(event)
+                    }
+                }
             }
-        }
-    }
         }
     }
 
@@ -229,9 +346,11 @@ class BatchCaptureFragment : Fragment() {
             lastPhotoPreview.visibility = View.INVISIBLE
         }
 
-        // Disable shutter when processing or at limit
-        shutterButton.isEnabled = state.canTakeMore && !state.isProcessing
-        shutterInner.alpha = if (state.canTakeMore && !state.isProcessing) 1f else 0.5f
+        val shutterEnabled = state.canTakeMore &&
+            !state.isProcessing &&
+            (captureMode == CaptureMode.REGULAR || flirReady)
+        shutterButton.isEnabled = shutterEnabled
+        shutterInner.alpha = if (shutterEnabled) 1f else 0.5f
 
         doneButton.isEnabled = state.hasPhotos && !state.isProcessing
 
@@ -325,6 +444,47 @@ class BatchCaptureFragment : Fragment() {
         cameraPermissions.all {
             ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
         }
+
+    private fun switchMode(newMode: CaptureMode) {
+        if (captureMode == newMode) return
+        captureMode = newMode
+        updateModeUi()
+        if (hasCameraPermission()) {
+            startActiveMode()
+        } else {
+            cameraPermissionLauncher.launch(cameraPermissions)
+        }
+    }
+
+    private fun updateModeUi() {
+        val isIr = captureMode == CaptureMode.IR
+        flirControls.isVisible = isIr
+        flirSurface.isVisible = isIr
+        cameraPreview.isVisible = !isIr
+        flashButton.isEnabled = !isIr
+        switchCameraButton.isEnabled = !isIr
+        flashButton.alpha = if (isIr) 0.4f else 1f
+        switchCameraButton.alpha = if (isIr) 0.4f else 1f
+    }
+
+    private fun startActiveMode() {
+        when (captureMode) {
+            CaptureMode.REGULAR -> {
+                flirReady = false
+                flirController.disconnect()
+                startCamera()
+            }
+            CaptureMode.IR -> {
+                stopRegularCamera()
+                flirController.startDiscovery()
+            }
+        }
+    }
+
+    private fun stopRegularCamera() {
+        cameraProvider?.unbindAll()
+        imageCapture = null
+    }
 
     private fun startCamera() {
         val context = context ?: return
@@ -432,6 +592,10 @@ class BatchCaptureFragment : Fragment() {
     }
 
     private fun toggleFlash() {
+        if (captureMode != CaptureMode.REGULAR) {
+            Toast.makeText(requireContext(), getString(R.string.flash_ir_unavailable), Toast.LENGTH_SHORT).show()
+            return
+        }
         flashMode = when (flashMode) {
             ImageCapture.FLASH_MODE_OFF -> ImageCapture.FLASH_MODE_ON
             ImageCapture.FLASH_MODE_ON -> ImageCapture.FLASH_MODE_AUTO
@@ -452,6 +616,7 @@ class BatchCaptureFragment : Fragment() {
     }
 
     private fun switchCamera() {
+        if (captureMode != CaptureMode.REGULAR) return
         lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
             CameraSelector.LENS_FACING_FRONT
         } else {
@@ -475,11 +640,22 @@ class BatchCaptureFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         cameraProvider?.unbindAll()
+        flirController.disconnect()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         cameraExecutor.shutdown()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        flirController.onResume()
+    }
+
+    override fun onPause() {
+        flirController.onPause()
+        super.onPause()
     }
 
     companion object {

@@ -1,6 +1,5 @@
 package com.example.rocketplan_android.ui.login
 
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,7 +8,6 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.getSystemService
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
@@ -195,21 +193,18 @@ class LoginFragment : Fragment() {
             Log.d(TAG, "Callback schema: $schema")
         }
 
-        try {
-            val customTabsIntent = CustomTabsIntent.Builder()
-                .setShowTitle(true)
-                .build()
-
-            customTabsIntent.launchUrl(requireContext(), Uri.parse(oauthUrl))
-
-            if (BuildConfig.ENABLE_LOGGING) {
-                Log.d(TAG, "Chrome Custom Tab launched for OAuth")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error launching OAuth flow", e)
+        runCatching {
+            val action =
+                LoginFragmentDirections.actionLoginFragmentToOauthWebViewFragment(
+                    url = oauthUrl,
+                    title = getString(R.string.google_sign_in_title)
+                )
+            findNavController().navigate(action)
+        }.onFailure { error ->
+            Log.e(TAG, "Error launching OAuth flow", error)
             Toast.makeText(
                 requireContext(),
-                "Failed to open Google Sign-In: ${e.message}",
+                getString(R.string.error_opening_google_sign_in, error.message),
                 Toast.LENGTH_LONG
             ).show()
         }

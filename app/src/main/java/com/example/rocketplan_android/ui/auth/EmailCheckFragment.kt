@@ -1,6 +1,5 @@
 package com.example.rocketplan_android.ui.auth
 
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,13 +8,13 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
-import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.getSystemService
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.BuildConfig
+import com.example.rocketplan_android.R
 import com.example.rocketplan_android.databinding.FragmentEmailCheckBinding
 
 /**
@@ -148,15 +147,23 @@ class EmailCheckFragment : Fragment() {
         }
 
         runCatching {
-            val customTabsIntent = CustomTabsIntent.Builder()
-                .setShowTitle(true)
-                .build()
-            customTabsIntent.launchUrl(requireContext(), Uri.parse(oauthUrl))
+            val title = when (provider) {
+                PROVIDER_GOOGLE -> getString(R.string.google_sign_in_title)
+                PROVIDER_APPLE -> getString(R.string.apple_sign_in_title)
+                PROVIDER_FACEBOOK -> getString(R.string.facebook_sign_in_title)
+                else -> getString(R.string.oauth_sign_in_title, provider.replaceFirstChar { it.uppercase() })
+            }
+            val action =
+                EmailCheckFragmentDirections.actionEmailCheckFragmentToOauthWebViewFragment(
+                    url = oauthUrl,
+                    title = title
+                )
+            findNavController().navigate(action)
         }.onFailure { throwable ->
             Log.e(TAG, "Failed to launch $provider OAuth flow", throwable)
             Toast.makeText(
                 requireContext(),
-                "Unable to start $provider sign-in. Please try again.",
+                getString(R.string.error_opening_provider_sign_in, provider.replaceFirstChar { it.uppercase() }),
                 Toast.LENGTH_LONG
             ).show()
         }
