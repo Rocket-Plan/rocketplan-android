@@ -1,5 +1,7 @@
 package com.example.rocketplan_android.ui.login
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -9,6 +11,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.content.getSystemService
+import androidx.core.view.doOnNextLayout
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -49,6 +52,10 @@ class LoginFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Force black text color programmatically for FLIR device dark mode
+        forceTextColors()
+
         setupInputFields()
         setupButtons()
         observeViewModel()
@@ -56,6 +63,30 @@ class LoginFragment : Fragment() {
         val emailArg = args.email
         if (!emailArg.isNullOrBlank()) {
             viewModel.setEmail(emailArg)
+        }
+    }
+
+    /**
+     * Force text colors to black for FLIR device compatibility.
+     * The device runs in dark mode which overrides XML color attributes.
+     */
+    private fun forceTextColors() {
+        binding.root.doOnNextLayout {
+            val black = Color.BLACK
+            val gray = Color.GRAY
+
+            binding.emailInput.setTextColor(black)
+            binding.emailInput.setHintTextColor(gray)
+            binding.emailInputLayout.editText?.setTextColor(black)
+            binding.emailInputLayout.defaultHintTextColor = ColorStateList.valueOf(gray)
+
+            binding.passwordInput.setTextColor(black)
+            binding.passwordInput.setHintTextColor(gray)
+            binding.passwordInputLayout.editText?.setTextColor(black)
+            binding.passwordInputLayout.defaultHintTextColor = ColorStateList.valueOf(gray)
+
+            binding.rememberMeCheckbox.setTextColor(black)
+            binding.titleText.setTextColor(black)
         }
     }
 

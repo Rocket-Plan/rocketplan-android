@@ -5,6 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
+    android:theme="@style/Theme.Rocketplan_android.Light"
     tools:context=".ui.login.LoginFragment">
 
     <ScrollView
@@ -52,7 +53,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
                 android:hint="@string/label_email_address"
+                android:textColorHint="@color/dark_gray"
+                app:hintTextColor="@color/dark_gray"
                 app:boxStrokeColor="@color/main_purple"
+                app:boxBackgroundColor="@color/white"
                 app:boxStrokeWidthFocused="2dp">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -62,7 +66,8 @@
                     android:imeOptions="actionNext"
                     android:inputType="textEmailAddress"
                     android:maxLines="1"
-                    android:textColor="@color/black" />
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/dark_gray" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -72,9 +77,13 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:hint="@string/label_password"
+                android:textColorHint="@color/dark_gray"
+                app:hintTextColor="@color/dark_gray"
                 app:boxStrokeColor="@color/main_purple"
+                app:boxBackgroundColor="@color/white"
                 app:boxStrokeWidthFocused="2dp"
-                app:endIconMode="password_toggle">
+                app:endIconMode="password_toggle"
+                app:endIconTint="@color/dark_gray">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/passwordInput"
@@ -83,7 +92,8 @@
                     android:imeOptions="actionDone"
                     android:inputType="textPassword"
                     android:maxLines="1"
-                    android:textColor="@color/black" />
+                    android:textColor="@color/black"
+                    android:textColorHint="@color/dark_gray" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <CheckBox
@@ -91,7 +101,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:text="@string/checkbox_remember_me" />
+                android:text="@string/checkbox_remember_me"
+                android:textColor="@color/black"
+                android:buttonTint="@color/main_purple" />
 
             <TextView
                 android:id="@+id/forgotPasswordButton"

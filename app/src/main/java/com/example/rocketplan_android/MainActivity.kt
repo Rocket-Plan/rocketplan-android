@@ -23,6 +23,7 @@ import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.PopupMenu
 import androidx.navigation.NavOptions
+import androidx.appcompat.app.AppCompatDelegate
 import com.example.rocketplan_android.databinding.ActivityMainBinding
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
@@ -44,6 +45,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         super.onCreate(savedInstanceState)
 
         // Debug logging for app launch (only when ENABLE_LOGGING is true)

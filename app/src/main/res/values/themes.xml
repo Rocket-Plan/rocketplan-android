@@ -5,6 +5,7 @@
         <item name="colorPrimary">@color/main_purple</item>
         <item name="colorPrimaryVariant">@color/secondary_purple</item>
         <item name="colorOnPrimary">@color/white</item>
+        <item name="android:forceDarkAllowed">false</item>
 
         <!-- Secondary brand color -->
         <item name="colorSecondary">@color/light_purple</item>
@@ -33,4 +34,21 @@
     <style name="Theme.Rocketplan_android.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="Theme.Rocketplan_android.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <!-- Light theme overlay for screens that should always be light (e.g., login) -->
+    <style name="Theme.Rocketplan_android.Light" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/main_purple</item>
+        <item name="colorPrimaryVariant">@color/secondary_purple</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorSecondary">@color/light_purple</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:colorBackground">@color/white</item>
+        <item name="colorSurface">@color/white</item>
+        <item name="colorOnBackground">@color/black</item>
+        <item name="colorOnSurface">@color/black</item>
+        <item name="android:textColor">@color/black</item>
+        <item name="android:textColorPrimary">@color/black</item>
+        <item name="android:textColorSecondary">@color/dark_gray</item>
+    </style>
 </resources>

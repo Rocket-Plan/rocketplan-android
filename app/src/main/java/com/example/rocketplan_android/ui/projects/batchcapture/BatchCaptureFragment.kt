@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.opengl.GLSurfaceView
 import android.util.Log
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -146,6 +147,7 @@ class BatchCaptureFragment : Fragment() {
         flirController.attachSurface(flirSurface)
         setupThumbnailStrip()
         setupListeners()
+        setupHardwareButtons(view)
         observeViewModel()
 
         // Apply initial mode selection and start appropriate pipeline
@@ -203,11 +205,7 @@ class BatchCaptureFragment : Fragment() {
         }
 
         shutterButton.setOnClickListener {
-            if (captureMode == CaptureMode.REGULAR) {
-                capturePhoto()
-            } else {
-                flirController.requestSnapshot()
-            }
+            triggerCapture()
         }
 
         flashButton.setOnClickListener {
@@ -245,6 +243,47 @@ class BatchCaptureFragment : Fragment() {
 
         lastPhotoPreview.setOnClickListener {
             // Could open photo gallery/review screen
+        }
+    }
+
+    /**
+     * Set up hardware button support for ACE platform.
+     * Key.F1 = Trigger button (capture photo)
+     * Key.Back = Back button (handled by system)
+     */
+    private fun setupHardwareButtons(view: View) {
+        // Make the view focusable to receive key events
+        view.isFocusableInTouchMode = true
+        view.requestFocus()
+
+        view.setOnKeyListener { _, keyCode, event ->
+            if (event.action == KeyEvent.ACTION_DOWN) {
+                when (keyCode) {
+                    KeyEvent.KEYCODE_F1 -> {
+                        // Trigger button pressed - capture photo
+                        Log.d(TAG, "Hardware trigger button (F1) pressed")
+                        if (shutterButton.isEnabled) {
+                            triggerCapture()
+                        }
+                        true
+                    }
+                    else -> false
+                }
+            } else {
+                false
+            }
+        }
+    }
+
+    /**
+     * Trigger photo capture based on current mode.
+     * Called by both UI shutter button and hardware trigger button.
+     */
+    private fun triggerCapture() {
+        if (captureMode == CaptureMode.REGULAR) {
+            capturePhoto()
+        } else {
+            flirController.requestSnapshot()
         }
     }
 
@@ -651,6 +690,8 @@ class BatchCaptureFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         flirController.onResume()
+        // Re-request focus for hardware button support
+        view?.requestFocus()
     }
 
     override fun onPause() {

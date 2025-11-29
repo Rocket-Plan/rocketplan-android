@@ -42,4 +42,5 @@
     <color name="warning_red">#E82828</color>
     <color name="dark_text_rp">#2C2736</color>
     <color name="light_gray_rp">#E8E7ED</color>
+    <color name="dark_gray">#666666</color>
 </resources>
