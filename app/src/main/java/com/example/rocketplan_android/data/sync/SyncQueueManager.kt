@@ -207,8 +207,9 @@ class SyncQueueManager(
                     throw IllegalStateException("Please log in again.")
                 }
 
+                // Only sync user-assigned projects (matching iOS default behavior)
+                // iOS uses getUserProjects() by default, not getCompanyProjects()
                 userId?.let { syncRepository.syncUserProjects(it) }
-                companyId?.let { syncRepository.syncCompanyProjects(it) }
 
                 val projects = localDataService.getAllProjects()
                 if (projects.isEmpty()) {

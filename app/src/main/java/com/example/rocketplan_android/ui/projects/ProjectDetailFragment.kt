@@ -41,6 +41,7 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var projectTitle: TextView
     private lateinit var projectCode: TextView
     private lateinit var noteSummary: TextView
+    private lateinit var noteCard: View
     private lateinit var addRoomCard: View
     private lateinit var addExteriorCard: View
     private lateinit var albumsHeader: TextView
@@ -96,6 +97,7 @@ class ProjectDetailFragment : Fragment() {
         projectTitle = root.findViewById(R.id.projectTitle)
         projectCode = root.findViewById(R.id.projectCode)
         noteSummary = root.findViewById(R.id.noteSummary)
+        noteCard = root.findViewById(R.id.noteCard)
         addRoomCard = root.findViewById(R.id.addRoomCard)
         addExteriorCard = root.findViewById(R.id.addExteriorCard)
         albumsHeader = root.findViewById(R.id.albumsHeader)
@@ -157,6 +159,11 @@ class ProjectDetailFragment : Fragment() {
         backButton.setOnClickListener { findNavController().navigateUp() }
         editButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
+        }
+        noteCard.setOnClickListener {
+            val action = ProjectDetailFragmentDirections
+                .actionProjectDetailFragmentToProjectNotesFragment(args.projectId)
+            findNavController().navigate(action)
         }
         addRoomCard.setOnClickListener {
             handleAddRoomClick(RoomTypePickerMode.ROOM)

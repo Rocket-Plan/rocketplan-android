@@ -26,6 +26,7 @@ import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
+import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
@@ -468,6 +469,61 @@ class OfflineSyncRepository(
         }
     }
 
+    suspend fun createNote(
+        projectId: Long,
+        content: String,
+        roomId: Long? = null
+    ): OfflineNoteEntity = withContext(ioDispatcher) {
+        val timestamp = now()
+        val pending = OfflineNoteEntity(
+            uuid = UUID.randomUUID().toString(),
+            projectId = projectId,
+            roomId = roomId,
+            content = content,
+            createdAt = timestamp,
+            updatedAt = timestamp,
+            lastSyncedAt = null,
+            syncStatus = SyncStatus.PENDING,
+            syncVersion = 0,
+            isDirty = true,
+            isDeleted = false
+        )
+        localDataService.saveNotes(listOf(pending))
+
+        runCatching {
+            val request = CreateNoteRequest(
+                projectId = projectId,
+                roomId = roomId,
+                content = content
+            )
+            val dto = api.createProjectNote(projectId, request)
+            dto.toEntity()?.copy(uuid = pending.uuid, isDirty = false, syncStatus = SyncStatus.SYNCED)
+        }.onSuccess { synced ->
+            synced?.let { localDataService.saveNote(it) }
+        }.onFailure { error ->
+            Log.w("API", "⚠️ [createNote] Failed to push note to server, keeping pending", error)
+        }
+
+        localDataService.getPendingNotes(projectId).firstOrNull { it.uuid == pending.uuid } ?: pending
+    }
+
+    suspend fun deleteNote(projectId: Long, note: OfflineNoteEntity) = withContext(ioDispatcher) {
+        localDataService.saveNote(
+            note.copy(
+                isDeleted = true,
+                isDirty = true,
+                syncStatus = SyncStatus.PENDING,
+                updatedAt = now()
+            )
+        )
+
+        val serverId = note.serverId
+        if (serverId != null) {
+            runCatching { api.deleteNote(serverId) }
+                .onFailure { Log.w("API", "⚠️ [deleteNote] Failed to delete server note $serverId", it) }
+        }
+    }
+
     /**
      * Full project sync: syncs essentials + metadata + all photos.
      * Uses modular functions to avoid duplication.
@@ -529,6 +585,9 @@ class OfflineSyncRepository(
         val startTime = System.currentTimeMillis()
         Log.d("API", "🔄 [syncProjectMetadata] Starting for project $projectId")
         var itemCount = 0
+
+        runCatching { syncPendingNotes(projectId) }
+            .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending notes", it) }
 
         val notesCheckpointKey = projectNotesKey(projectId)
         val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
@@ -928,20 +987,42 @@ class OfflineSyncRepository(
         }
 
         val entities = mutableListOf<OfflinePhotoEntity>()
+        var mismatchCount = 0
         for (photo in photos) {
             val existing = localDataService.getPhotoByServerId(photo.id)
             val preservedRoom = existing?.roomId
+
+            // Always use provided defaults to maintain sync context integrity
             val resolvedRoomId = defaultRoomId ?: photo.roomId ?: preservedRoom
-            entities += photo.toEntity(defaultRoomId = resolvedRoomId)
+            val resolvedProjectId = defaultProjectId ?: photo.projectId
+
+            // Log mismatches for debugging data integrity issues
+            if (defaultProjectId != null && photo.projectId != defaultProjectId) {
+                mismatchCount++
+                Log.w("API", "⚠️ [persistPhotos] Photo ${photo.id} has projectId=${photo.projectId} but syncing for project $defaultProjectId - using $defaultProjectId")
+            }
+            if (defaultRoomId != null && photo.roomId != null && photo.roomId != defaultRoomId) {
+                Log.w("API", "⚠️ [persistPhotos] Photo ${photo.id} has roomId=${photo.roomId} but syncing for room $defaultRoomId - using $defaultRoomId")
+            }
+
+            entities += photo.toEntity(
+                defaultRoomId = resolvedRoomId,
+                defaultProjectId = resolvedProjectId
+            )
         }
+
+        if (mismatchCount > 0) {
+            Log.w("API", "⚠️ [persistPhotos] Fixed $mismatchCount photos with mismatched projectId")
+        }
+
         localDataService.savePhotos(entities)
 
         // Extract and save albums from photos
         val albums = buildList<OfflineAlbumEntity> {
             photos.forEach { photo ->
                 photo.albums?.forEach { album ->
-                    // Use photo's projectId, fall back to defaultProjectId
-                    val projectId = photo.projectId ?: defaultProjectId ?: 0L
+                    // Always use defaultProjectId when provided (sync context) over DTO value
+                    val projectId = defaultProjectId ?: photo.projectId ?: 0L
                     // Prioritize defaultRoomId (canonical server ID) when available
                     val roomId = defaultRoomId ?: photo.roomId
                     add(album.toEntity(defaultProjectId = projectId, defaultRoomId = roomId))
@@ -987,6 +1068,50 @@ class OfflineSyncRepository(
         localDataService.markDamagesDeleted(response.damageMaterials)
         localDataService.markAtmosphericLogsDeleted(response.atmosphericLogs)
         localDataService.markWorkScopesDeleted(response.workScopeActions)
+    }
+
+    private suspend fun syncPendingNotes(projectId: Long) {
+        val pending = localDataService.getPendingNotes(projectId)
+        if (pending.isEmpty()) return
+
+        Log.d("API", "📝 [syncPendingNotes] Pushing ${pending.size} pending notes for project $projectId")
+        pending.forEach { note ->
+            runCatching {
+                if (note.isDeleted) {
+                    // If serverId is null, nothing to delete remotely; just mark synced locally
+                    note.serverId?.let { api.deleteNote(it) }
+                    localDataService.saveNote(
+                        note.copy(
+                            isDirty = false,
+                            syncStatus = SyncStatus.SYNCED,
+                            lastSyncedAt = now()
+                        )
+                    )
+                } else {
+                    val request = CreateNoteRequest(
+                        projectId = note.projectId,
+                        roomId = note.roomId,
+                        content = note.content
+                    )
+                    val dto = if (note.serverId == null) {
+                        api.createProjectNote(projectId, request)
+                    } else {
+                        api.updateNote(note.serverId, request)
+                    }
+                    dto.toEntity()?.let { entity ->
+                        val resolved = entity.copy(
+                            uuid = note.uuid,
+                            isDirty = false,
+                            syncStatus = SyncStatus.SYNCED,
+                            isDeleted = false
+                        )
+                        localDataService.saveNote(resolved)
+                    }
+                }
+            }.onFailure { error ->
+                Log.w("API", "⚠️ [syncPendingNotes] Failed to push note ${note.uuid}", error)
+            }
+        }
     }
 
     private data class RoomPhotoPageResult(
@@ -1328,8 +1453,10 @@ private fun RoomDto.toEntity(
 
 private fun RoomPhotoDto.toPhotoDto(defaultProjectId: Long, defaultRoomId: Long): PhotoDto {
     val nested = photo
-    val resolvedProjectId = nested?.projectId ?: defaultProjectId
-    val resolvedRoomId = nested?.roomId ?: photoableId ?: defaultRoomId
+    // IMPORTANT: Always use defaults (sync context) over nested values to prevent
+    // photos from being assigned to wrong project/room when API returns stale data
+    val resolvedProjectId = defaultProjectId
+    val resolvedRoomId = defaultRoomId
     val resolvedRemoteUrl = nested?.remoteUrl
         ?: sizes?.raw
         ?: sizes?.gallery
@@ -1367,7 +1494,10 @@ private fun RoomPhotoDto.toPhotoDto(defaultProjectId: Long, defaultRoomId: Long)
     )
 }
 
-private fun PhotoDto.toEntity(defaultRoomId: Long? = this.roomId): OfflinePhotoEntity {
+private fun PhotoDto.toEntity(
+    defaultRoomId: Long? = this.roomId,
+    defaultProjectId: Long? = this.projectId
+): OfflinePhotoEntity {
     val timestamp = now()
     val hasRemote = !remoteUrl.isNullOrBlank()
     val localCachePath = localPath?.takeIf { it.isNotBlank() }
@@ -1377,11 +1507,14 @@ private fun PhotoDto.toEntity(defaultRoomId: Long? = this.roomId): OfflinePhotoE
     val parsedCreatedAt = DateUtils.parseApiDate(createdAt) ?: timestamp
     val normalizedCapturedAt = parsedCapturedAt ?: parsedCreatedAt
 
+    // Use provided defaults over DTO values to ensure consistency with sync context
+    val resolvedProjectId = defaultProjectId ?: projectId
+
     return OfflinePhotoEntity(
         photoId = id,
         serverId = id,
         uuid = uuid ?: UUID.randomUUID().toString(),
-        projectId = projectId,
+        projectId = resolvedProjectId,
         roomId = defaultRoomId,
         logId = logId,
         moistureLogId = moistureLogId,

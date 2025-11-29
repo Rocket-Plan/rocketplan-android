@@ -35,14 +35,29 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <!-- Dev environment -->
-                <data android:scheme="rocketplan-dev" />
+                <!-- Dev/local environment -->
+                <data
+                    android:scheme="rocketplan-local"
+                    android:host="oauth2"
+                    android:path="/redirect" />
+
+                <!-- Dev environment (legacy) -->
+                <data
+                    android:scheme="rocketplan-dev"
+                    android:host="oauth2"
+                    android:path="/redirect" />
 
                 <!-- Staging environment -->
-                <data android:scheme="rocketplan-staging" />
+                <data
+                    android:scheme="rocketplan-staging"
+                    android:host="oauth2"
+                    android:path="/redirect" />
 
                 <!-- Production environment -->
-                <data android:scheme="rocketplan" />
+                <data
+                    android:scheme="rocketplan"
+                    android:host="oauth2"
+                    android:path="/redirect" />
             </intent-filter>
         </activity>
 

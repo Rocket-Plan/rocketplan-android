@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.ui.projects
 
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -80,6 +81,11 @@ class ProjectRoomsAdapter(
         private val spinner: View = view.findViewById(R.id.loadingSpinner)
 
         fun bind(room: RoomCard) {
+            val previousRoom = thumbnail.getTag(R.id.tag_room_photo_id) as? RoomCard
+            val needsReload = previousRoom?.let { hasVisualDifferences(it, room) } ?: true
+
+            thumbnail.setTag(R.id.tag_room_photo_id, room)
+
             title.text = room.title
             photoCount.text = itemView.resources.getQuantityString(
                 R.plurals.photo_count,
@@ -88,13 +94,29 @@ class ProjectRoomsAdapter(
             )
             spinner.isVisible = room.isLoadingPhotos
 
-            thumbnail.load(room.thumbnailUrl) {
-                placeholder(R.drawable.bg_room_placeholder)
-                error(R.drawable.bg_room_placeholder)
-                crossfade(true)
+            if (needsReload) {
+                Log.d(TAG, "🔄 Loading thumbnail for room id=${room.roomId}, prev=${previousRoom?.roomId}")
+                // Include URL in cache key so image updates get fresh load
+                val cacheKey = "room_card_${room.roomId}_${room.thumbnailUrl.hashCode()}"
+                thumbnail.load(room.thumbnailUrl) {
+                    memoryCacheKey(cacheKey)
+                    placeholder(R.drawable.bg_room_placeholder)
+                    error(R.drawable.bg_room_placeholder)
+                    crossfade(previousRoom == null)
+                }
+            } else {
+                Log.v(TAG, "✅ Skipping reload for room id=${room.roomId} (same as previous)")
             }
             thumbnail.isVisible = true
             itemView.setOnClickListener { onRoomClick(room) }
+        }
+
+        private fun hasVisualDifferences(old: RoomCard, new: RoomCard): Boolean {
+            return old.roomId != new.roomId || old.thumbnailUrl != new.thumbnailUrl
+        }
+
+        companion object {
+            private const val TAG = "RoomViewHolder"
         }
     }
 

@@ -206,6 +206,45 @@ interface OfflineDao {
     @Query("UPDATE offline_photos SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migratePhotoRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
+    /**
+     * Find photos where the roomId references a room that doesn't exist in the photo's project.
+     * These are orphaned/mismatched photos that need cleanup.
+     */
+    @Query(
+        """
+        SELECT p.* FROM offline_photos p
+        WHERE p.isDeleted = 0
+          AND p.roomId IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM offline_rooms r
+            WHERE r.isDeleted = 0
+              AND (r.roomId = p.roomId OR r.serverId = p.roomId)
+              AND r.projectId = p.projectId
+          )
+        """
+    )
+    suspend fun getPhotosWithMismatchedRoomIds(): List<OfflinePhotoEntity>
+
+    /**
+     * Delete photos where the roomId references a room in a different project.
+     * Returns the count of deleted photos.
+     */
+    @Query(
+        """
+        DELETE FROM offline_photos
+        WHERE isDeleted = 0
+          AND isDirty = 0
+          AND roomId IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM offline_rooms r
+            WHERE r.isDeleted = 0
+              AND (r.roomId = offline_photos.roomId OR r.serverId = offline_photos.roomId)
+              AND r.projectId = offline_photos.projectId
+          )
+        """
+    )
+    suspend fun deleteMismatchedPhotos(): Int
+
     @Query(
         """
         SELECT * FROM offline_photos 
@@ -409,6 +448,12 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeNotesForProject(projectId: Long): Flow<List<OfflineNoteEntity>>
+
+    @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND roomId = :roomId AND isDeleted = 0 ORDER BY updatedAt DESC")
+    fun observeNotesForRoom(projectId: Long, roomId: Long): Flow<List<OfflineNoteEntity>>
+
+    @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND (isDirty = 1 OR syncStatus != :synced)")
+    suspend fun getPendingNotes(projectId: Long, synced: SyncStatus = SyncStatus.SYNCED): List<OfflineNoteEntity>
 
     @Query("UPDATE offline_notes SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateNoteRoomIds(oldRoomId: Long, newRoomId: Long): Int

@@ -366,9 +366,10 @@ class BatchCaptureFragment : Fragment() {
                 override fun onError(exception: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed", exception)
                     photoFile.delete()
+                    val ctx = context ?: return
                     Toast.makeText(
-                        context,
-                        getString(R.string.camera_error, exception.message),
+                        ctx,
+                        ctx.getString(R.string.camera_error, exception.message),
                         Toast.LENGTH_SHORT
                     ).show()
                 }

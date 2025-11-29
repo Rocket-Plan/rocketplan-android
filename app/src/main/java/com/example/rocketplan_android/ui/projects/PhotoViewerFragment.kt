@@ -132,40 +132,59 @@ class PhotoPagerAdapter : RecyclerView.Adapter<PhotoPagerAdapter.PhotoPageViewHo
         private val loadingIndicator: ProgressBar = itemView.findViewById(R.id.loadingIndicator)
         private val errorLabel: TextView = itemView.findViewById(R.id.errorLabel)
 
-        private var currentPhotoId: Long? = null
-
         fun bind(item: PhotoPageItem) {
-            // Skip rebinding if same photo
-            if (currentPhotoId == item.photoId) return
-            currentPhotoId = item.photoId
+            // Use tag to track what's currently displayed and detect visual changes
+            val previousItem = photoView.getTag(R.id.tag_room_photo_id) as? PhotoPageItem
+            val needsReload = previousItem?.let { hasVisualDifferences(it, item) } ?: true
 
-            loadingIndicator.isVisible = true
-            errorLabel.isVisible = false
+            photoView.setTag(R.id.tag_room_photo_id, item)
 
             val displaySource = resolveDisplaySource(item)
             if (displaySource == null) {
                 loadingIndicator.isVisible = false
+                photoView.setImageResource(R.drawable.bg_room_placeholder)
                 errorLabel.isVisible = true
                 return
             }
 
-            // Use photoId as stable cache key to avoid reloads from URL changes
-            val cacheKey = "photo_${item.photoId}"
+            if (needsReload) {
+                loadingIndicator.isVisible = true
+                errorLabel.isVisible = false
 
-            photoView.load(displaySource) {
-                memoryCacheKey(cacheKey)
-                placeholderMemoryCacheKey(cacheKey)
-                listener(
-                    onSuccess = { _, _ ->
-                        loadingIndicator.isVisible = false
-                    },
-                    onError = { _, _ ->
-                        loadingIndicator.isVisible = false
-                        errorLabel.isVisible = true
-                        Log.e("PhotoPager", "Failed to load photo ${item.photoId}")
-                    }
-                )
+                // Include source path/URL hash in cache key so content updates get fresh load
+                val cacheKey = "photo_${item.photoId}_${displaySource.hashCode()}"
+
+                photoView.load(displaySource) {
+                    memoryCacheKey(cacheKey)
+                    placeholder(R.drawable.bg_room_placeholder)
+                    error(R.drawable.bg_room_placeholder)
+                    crossfade(previousItem == null)
+                    listener(
+                        onSuccess = { _, _ ->
+                            loadingIndicator.isVisible = false
+                            errorLabel.isVisible = false
+                        },
+                        onError = { _, _ ->
+                            loadingIndicator.isVisible = false
+                            errorLabel.isVisible = true
+                            Log.e("PhotoPager", "Failed to load photo ${item.photoId}")
+                        }
+                    )
+                }
+            } else {
+                // Same visual content, just ensure UI state is correct
+                loadingIndicator.isVisible = false
+                errorLabel.isVisible = false
             }
+        }
+
+        private fun hasVisualDifferences(old: PhotoPageItem, new: PhotoPageItem): Boolean {
+            return old.photoId != new.photoId ||
+                old.localPath != new.localPath ||
+                old.cachedOriginalPath != new.cachedOriginalPath ||
+                old.cachedThumbnailPath != new.cachedThumbnailPath ||
+                old.remoteUrl != new.remoteUrl ||
+                old.thumbnailUrl != new.thumbnailUrl
         }
 
         private fun resolveDisplaySource(item: PhotoPageItem): Any? {

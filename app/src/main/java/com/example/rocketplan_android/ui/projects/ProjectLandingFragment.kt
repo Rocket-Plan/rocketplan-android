@@ -104,11 +104,9 @@ class ProjectLandingFragment : Fragment() {
             }
         }
         addProjectInfoCard.setOnClickListener {
-            Toast.makeText(
-                requireContext(),
-                getString(R.string.add_project_info_coming_soon),
-                Toast.LENGTH_SHORT
-            ).show()
+            val action = ProjectLandingFragmentDirections
+                .actionProjectLandingFragmentToProjectLossInfoFragment(args.projectId)
+            findNavController().navigate(action)
         }
         rocketScanCard.setOnClickListener {
             val summary = latestSummary ?: return@setOnClickListener
@@ -133,11 +131,9 @@ class ProjectLandingFragment : Fragment() {
             }
         }
         allNotesCard.setOnClickListener {
-            Toast.makeText(
-                requireContext(),
-                getString(R.string.all_notes_coming_soon),
-                Toast.LENGTH_SHORT
-            ).show()
+            val action = ProjectLandingFragmentDirections
+                .actionProjectLandingFragmentToProjectNotesFragment(args.projectId)
+            findNavController().navigate(action)
         }
         statusContainer.setOnClickListener {
             showStatusSelectionDialog()

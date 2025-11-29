@@ -1,5 +1,7 @@
 package com.example.rocketplan_android.data.model.offline
 
+import com.example.rocketplan_android.data.model.DamageCauseDto
+import com.example.rocketplan_android.data.model.DamageTypeDto
 import com.google.gson.annotations.SerializedName
 
 data class PaginatedResponse<T>(
@@ -131,6 +133,14 @@ data class NoteDto(
     val updatedAt: String?
 )
 
+data class CreateNoteRequest(
+    @SerializedName("project_id")
+    val projectId: Long,
+    @SerializedName("room_id")
+    val roomId: Long? = null,
+    val content: String
+)
+
 data class NoteableDto(
     val id: Long,
     val uuid: String?,
@@ -154,6 +164,35 @@ data class PropertyDto(
     val isCommercial: Boolean? = null,
     @SerializedName("is_multi_unit")
     val isMultiUnit: Boolean? = null,
+    @SerializedName("year_built")
+    val yearBuilt: Int? = null,
+    val name: String? = null,
+    @SerializedName("referred_by_name")
+    val referredByName: String? = null,
+    @SerializedName("referred_by_phone")
+    val referredByPhone: String? = null,
+    @SerializedName("is_platinum_agent")
+    val isPlatinumAgent: Boolean? = null,
+    @SerializedName("asbestos_status_id")
+    val asbestosStatusId: Long? = null,
+    @SerializedName("asbestos_status")
+    val asbestosStatus: PropertyDataDto? = null,
+    @SerializedName("damage_category")
+    val damageCategory: Int? = null,
+    @SerializedName("loss_class")
+    val lossClass: Int? = null,
+    @SerializedName("loss_date")
+    val lossDate: String? = null,
+    @SerializedName("call_received")
+    val callReceived: String? = null,
+    @SerializedName("crew_dispatched")
+    val crewDispatched: String? = null,
+    @SerializedName("arrived_on_site")
+    val arrivedOnSite: String? = null,
+    @SerializedName("damage_cause")
+    val damageCause: DamageCauseDto? = null,
+    @SerializedName("property_damage_types")
+    val propertyDamageTypes: List<DamageTypeDto>? = null,
     @SerializedName("property_type_id")
     val propertyTypeId: Long? = null,
     @SerializedName("property_type")
@@ -217,6 +256,12 @@ data class RoomTypeDto(
     val type: String?,
     @SerializedName("is_standard")
     val isStandard: Boolean?
+)
+
+data class PropertyDataDto(
+    val id: Long? = null,
+    val name: String? = null,
+    val title: String? = null
 )
 
 data class AlbumDto(

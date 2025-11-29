@@ -217,6 +217,13 @@ class LocalDataService private constructor(
 
     fun observeNotes(projectId: Long): Flow<List<OfflineNoteEntity>> = dao.observeNotesForProject(projectId)
 
+    fun observeNotesForRoom(projectId: Long, roomId: Long): Flow<List<OfflineNoteEntity>> =
+        dao.observeNotesForRoom(projectId, roomId)
+
+    suspend fun getPendingNotes(projectId: Long): List<OfflineNoteEntity> = withContext(ioDispatcher) {
+        dao.getPendingNotes(projectId)
+    }
+
     fun observeDamages(projectId: Long): Flow<List<OfflineDamageEntity>> =
         dao.observeDamagesForProject(projectId)
 
@@ -414,6 +421,10 @@ class LocalDataService private constructor(
         dao.upsertNotes(notes)
     }
 
+    suspend fun saveNote(note: OfflineNoteEntity) = withContext(ioDispatcher) {
+        dao.upsertNotes(listOf(note))
+    }
+
     suspend fun saveDamages(damages: List<OfflineDamageEntity>) = withContext(ioDispatcher) {
         dao.upsertDamages(damages)
     }
@@ -454,6 +465,31 @@ class LocalDataService private constructor(
     suspend fun markPhotosDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
         dao.markPhotosDeleted(serverIds)
+    }
+
+    /**
+     * Removes photos where the roomId references a room that doesn't exist in the photo's project.
+     * This repairs data integrity issues where photos were synced with incorrect roomId values.
+     * @return The count of photos cleaned up
+     */
+    suspend fun repairMismatchedPhotoRoomIds(): Int = withContext(ioDispatcher) {
+        val mismatched = dao.getPhotosWithMismatchedRoomIds()
+        if (mismatched.isEmpty()) {
+            Log.d("LocalDataService", "✅ No mismatched photo roomIds found")
+            return@withContext 0
+        }
+
+        Log.w("LocalDataService", "🔧 Found ${mismatched.size} photos with mismatched roomIds:")
+        mismatched.take(10).forEach { photo ->
+            Log.w("LocalDataService", "  Photo ${photo.photoId}: projectId=${photo.projectId}, roomId=${photo.roomId}")
+        }
+        if (mismatched.size > 10) {
+            Log.w("LocalDataService", "  ... and ${mismatched.size - 10} more")
+        }
+
+        val deleted = dao.deleteMismatchedPhotos()
+        Log.w("LocalDataService", "🗑️ Cleaned up $deleted mismatched photos")
+        return@withContext deleted
     }
 
     suspend fun markNotesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {

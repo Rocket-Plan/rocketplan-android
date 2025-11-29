@@ -215,7 +215,12 @@ class RoomDetailFragment : Fragment() {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
         }
         noteCard.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.add_note), Toast.LENGTH_SHORT).show()
+            val action = RoomDetailFragmentDirections
+                .actionRoomDetailFragmentToProjectNotesFragment(
+                    projectId = args.projectId,
+                    roomId = args.roomId
+                )
+            findNavController().navigate(action)
         }
     }
 

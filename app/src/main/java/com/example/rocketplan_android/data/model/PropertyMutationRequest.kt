@@ -17,6 +17,20 @@ data class PropertyMutationRequest(
     @SerializedName("year_built")
     val yearBuilt: Int? = null,
     val name: String? = null,
+    @SerializedName("damage_category")
+    val damageCategory: Int? = null,
+    @SerializedName("loss_class")
+    val lossClass: Int? = null,
+    @SerializedName("loss_date")
+    val lossDate: String? = null,
+    @SerializedName("call_received")
+    val callReceived: String? = null,
+    @SerializedName("crew_dispatched")
+    val crewDispatched: String? = null,
+    @SerializedName("arrived_on_site")
+    val arrivedOnSite: String? = null,
+    @SerializedName("damage_cause_id")
+    val damageCauseId: Int? = null,
     @SerializedName("referred_by_name")
     val referredByName: String? = null,
     @SerializedName("referred_by_phone")

@@ -185,5 +185,10 @@ class RocketPlanApplication : Application() {
             imageProcessorQueueManager.recoverStrandedAssemblies()
             imageProcessorQueueManager.processNextQueuedAssembly()
         }
+
+        // One-time data repair: Fix photos with mismatched roomIds from previous sync bugs
+        CoroutineScope(Dispatchers.IO).launch {
+            localDataService.repairMismatchedPhotoRoomIds()
+        }
     }
 }

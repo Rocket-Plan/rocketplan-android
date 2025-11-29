@@ -57,11 +57,11 @@ class RoomPhotoPagingAdapter(
 
             if (needsReload) {
                 Log.d(TAG, "🔄 Loading image for photo id=${photo.id}, prev=${previousPhoto?.id}")
-                // Use stable cache key based on photoId to avoid reloads when URL changes
-                val cacheKey = "room_thumb_${photo.id}"
+                // Include URL in cache key so image updates get fresh load
+                val cacheKey = "room_thumb_${photo.id}_${photo.thumbnailUrl.hashCode()}"
                 preview.load(photo.thumbnailUrl) {
                     memoryCacheKey(cacheKey)
-                    placeholderMemoryCacheKey(cacheKey)
+                    placeholder(R.drawable.bg_room_placeholder)
                     error(R.drawable.bg_room_placeholder)
                     crossfade(previousPhoto == null)
                 }

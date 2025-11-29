@@ -100,9 +100,6 @@ class LoginFragment : Fragment() {
             hideKeyboard()
             signInWithGoogle()
         }
-
-        binding.googleSignInButton.visibility = View.GONE
-        binding.orDivider.visibility = View.GONE
     }
 
     private fun observeViewModel() {
@@ -185,10 +182,10 @@ class LoginFragment : Fragment() {
         }
 
         val schema = when (BuildConfig.ENVIRONMENT) {
-            "DEV" -> "rocketplan-dev"
+            "DEV" -> "rocketplan-local"
             "STAGING" -> "rocketplan-staging"
             "PROD" -> "rocketplan"
-            else -> "rocketplan-dev"
+            else -> "rocketplan-local"
         }
 
         val oauthUrl = "${BuildConfig.API_BASE_URL}/oauth2/redirect/google?schema=$schema"

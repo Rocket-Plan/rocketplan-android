@@ -1,7 +1,13 @@
 package com.example.rocketplan_android.data.api
 
+import com.example.rocketplan_android.data.model.ClaimDto
+import com.example.rocketplan_android.data.model.ClaimMutationRequest
+import com.example.rocketplan_android.data.model.DamageCauseDto
+import com.example.rocketplan_android.data.model.DamageTypeDto
+import com.example.rocketplan_android.data.model.FeatureFlagResponse
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
+import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
@@ -81,6 +87,23 @@ interface OfflineSyncApi {
         @Query("filter[updated_date]") updatedSince: String? = null
     ): List<NoteDto>
 
+    @POST("/api/projects/{projectId}/notes")
+    suspend fun createProjectNote(
+        @Path("projectId") projectId: Long,
+        @Body body: CreateNoteRequest
+    ): NoteDto
+
+    @PUT("/api/notes/{noteId}")
+    suspend fun updateNote(
+        @Path("noteId") noteId: Long,
+        @Body body: CreateNoteRequest
+    ): NoteDto
+
+    @DELETE("/api/notes/{noteId}")
+    suspend fun deleteNote(
+        @Path("noteId") noteId: Long
+    ): Response<Unit>
+
     @POST("/api/addresses")
     suspend fun createAddress(
         @Body body: CreateAddressRequest
@@ -91,6 +114,10 @@ interface OfflineSyncApi {
         @Path("companyId") companyId: Long,
         @Body body: CreateCompanyProjectRequest
     ): ProjectResourceResponse
+
+    // Feature flags
+    @GET("/api/auth/user/feature-flags")
+    suspend fun getFeatureFlags(): FeatureFlagResponse
 
     // Property & locations
     @GET("/api/projects/{projectId}/properties")
@@ -125,6 +152,32 @@ interface OfflineSyncApi {
         @Path("propertyId") propertyId: Long,
         @Query("filter[updated_date]") updatedSince: String? = null
     ): PaginatedResponse<LocationDto>
+
+    // Damage types / causes (Project Loss Info)
+    @GET("/api/projects/{projectId}/property-damage-types")
+    suspend fun getProjectDamageTypes(
+        @Path("projectId") projectId: Long
+    ): List<DamageTypeDto>
+
+    @GET("/api/projects/{projectId}/damage-causes")
+    suspend fun getDamageCauses(
+        @Path("projectId") projectId: Long,
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = 100,
+        @Query("include") include: String? = "propertyDamageType"
+    ): PaginatedResponse<DamageCauseDto>
+
+    @POST("/api/properties/{propertyId}/property-damage-types/{damageTypeId}")
+    suspend fun addPropertyDamageType(
+        @Path("propertyId") propertyId: Long,
+        @Path("damageTypeId") damageTypeId: Long
+    )
+
+    @DELETE("/api/properties/{propertyId}/property-damage-types/{damageTypeId}")
+    suspend fun removePropertyDamageType(
+        @Path("propertyId") propertyId: Long,
+        @Path("damageTypeId") damageTypeId: Long
+    )
 
     // Rooms
     @GET("/api/locations/{locationId}/rooms")
@@ -235,6 +288,37 @@ interface OfflineSyncApi {
     suspend fun getRoomEquipment(
         @Path("roomId") roomId: Long
     ): List<EquipmentDto>
+
+    // Claims
+    @GET("/api/projects/{projectId}/claims")
+    suspend fun getProjectClaims(
+        @Path("projectId") projectId: Long,
+        @Query("include") include: String? = "project,claimType"
+    ): PaginatedResponse<ClaimDto>
+
+    @GET("/api/locations/{locationId}/claims")
+    suspend fun getLocationClaims(
+        @Path("locationId") locationId: Long,
+        @Query("include") include: String? = "project,claimType"
+    ): PaginatedResponse<ClaimDto>
+
+    @POST("/api/projects/{projectId}/claims")
+    suspend fun createProjectClaim(
+        @Path("projectId") projectId: Long,
+        @Body body: ClaimMutationRequest
+    ): ClaimDto
+
+    @POST("/api/locations/{locationId}/claims")
+    suspend fun createLocationClaim(
+        @Path("locationId") locationId: Long,
+        @Body body: ClaimMutationRequest
+    ): ClaimDto
+
+    @PUT("/api/claims/{claimId}")
+    suspend fun updateClaim(
+        @Path("claimId") claimId: Long,
+        @Body body: ClaimMutationRequest
+    ): ClaimDto
 
     @GET("/api/sync/deleted")
     suspend fun getDeletedRecords(

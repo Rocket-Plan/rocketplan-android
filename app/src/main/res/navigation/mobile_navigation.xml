@@ -120,6 +120,14 @@
         <action
             android:id="@+id/action_projectLandingFragment_to_projectDetailFragment"
             app:destination="@id/projectDetailFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_projectNotesFragment"
+            app:destination="@id/projectNotesFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_projectLossInfoFragment"
+            app:destination="@id/projectLossInfoFragment" />
     </fragment>
 
     <fragment
@@ -158,6 +166,10 @@
         <action
             android:id="@+id/action_projectDetailFragment_to_roomTypePickerFragment"
             app:destination="@id/roomTypePickerFragment" />
+
+        <action
+            android:id="@+id/action_projectDetailFragment_to_projectNotesFragment"
+            app:destination="@id/projectNotesFragment" />
     </fragment>
 
     <fragment
@@ -192,6 +204,10 @@
         <action
             android:id="@+id/action_roomDetailFragment_to_batchCaptureFragment"
             app:destination="@id/batchCaptureFragment" />
+
+        <action
+            android:id="@+id/action_roomDetailFragment_to_projectNotesFragment"
+            app:destination="@id/projectNotesFragment" />
     </fragment>
 
     <fragment
@@ -239,6 +255,22 @@
             android:name="startIndex"
             app:argType="integer"
             android:defaultValue="0" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/projectNotesFragment"
+        android:name="com.example.rocketplan_android.ui.projects.ProjectNotesFragment"
+        android:label="@string/all_project_notes_title"
+        tools:layout="@layout/fragment_project_notes">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long"
+            android:defaultValue="0L" />
     </fragment>
 
     <fragment
@@ -312,5 +344,16 @@
         android:name="com.example.rocketplan_android.ui.company.CompanyInfoFragment"
         android:label="@string/company_info_title"
         tools:layout="@layout/fragment_company_info" />
+
+    <fragment
+        android:id="@+id/projectLossInfoFragment"
+        android:name="com.example.rocketplan_android.ui.projects.lossinfo.ProjectLossInfoFragment"
+        android:label="@string/add_project_info_title"
+        tools:layout="@layout/fragment_project_loss_info">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+    </fragment>
 
 </navigation>
