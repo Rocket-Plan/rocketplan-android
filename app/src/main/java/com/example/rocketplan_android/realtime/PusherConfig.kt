@@ -12,9 +12,13 @@ object PusherConfig {
     const val CLUSTER = "us2"
     const val PHOTO_EVENT = "App\\Events\\ImageProcessorPhotoUpdated"
     const val ASSEMBLY_EVENT = "App\\Events\\ImageProcessorUpdated"
+    const val PHOTO_UPLOAD_COMPLETED_EVENT = "App\\Events\\Websockets\\PhotoUploadingCompletedAnnouncement"
 
     fun channelNameForAssembly(assemblyId: String): String =
         "imageprocessornotification.AssemblyId.$assemblyId"
+
+    fun channelNameForPhotoUploadCompleted(userId: Int): String =
+        "PhotoUploadingCompletedAnnouncement.User.$userId"
 
     fun appKey(): String = if (AppConfig.isProduction) PROD_KEY else NON_PROD_KEY
 }

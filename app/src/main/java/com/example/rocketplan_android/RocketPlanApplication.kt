@@ -22,6 +22,7 @@ import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
+import com.example.rocketplan_android.realtime.PhotoSyncRealtimeManager
 import com.example.rocketplan_android.realtime.PusherService
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import kotlinx.coroutines.CoroutineScope
@@ -79,6 +80,11 @@ class RocketPlanApplication : Application() {
     lateinit var roomTypeRepository: RoomTypeRepository
         private set
 
+    lateinit var photoSyncRealtimeManager: PhotoSyncRealtimeManager
+        private set
+
+    private lateinit var pusherService: PusherService
+
     private lateinit var imageProcessorNetworkMonitor: com.example.rocketplan_android.data.network.ImageProcessorNetworkMonitor
 
     private lateinit var imageProcessingConfigStore: ImageProcessingConfigStore
@@ -117,6 +123,8 @@ class RocketPlanApplication : Application() {
             roomTypeRepository = roomTypeRepository
         )
 
+        // Note: syncQueueManager is initialized here but photoSyncRealtimeManager
+        // will be connected later after Pusher is initialized
         syncQueueManager = SyncQueueManager(
             authRepository = authRepository,
             syncRepository = offlineSyncRepository,
@@ -137,12 +145,16 @@ class RocketPlanApplication : Application() {
         imageProcessorDao = offlineDb.imageProcessorDao()
         val offlineDao = offlineDb.offlineDao()
         imageProcessorUploadStore = ImageProcessorUploadStore.getInstance(this)
-        val pusherService = PusherService(remoteLogger = remoteLogger)
+        pusherService = PusherService(remoteLogger = remoteLogger)
         imageProcessorRealtimeManager = ImageProcessorRealtimeManager(
             dao = imageProcessorDao,
             pusherService = pusherService,
             remoteLogger = remoteLogger
         )
+        photoSyncRealtimeManager = PhotoSyncRealtimeManager(pusherService)
+        // Connect PhotoSyncRealtimeManager to SyncQueueManager to handle Pusher events
+        syncQueueManager.setPhotoSyncRealtimeManager(photoSyncRealtimeManager)
+
         imageProcessorRepository = ImageProcessorRepository(
             context = this,
             api = imageProcessorApi,

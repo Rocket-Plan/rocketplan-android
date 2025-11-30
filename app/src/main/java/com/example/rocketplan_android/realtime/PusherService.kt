@@ -117,6 +117,40 @@ class PusherService(
         pusher.unsubscribe(channelName)
     }
 
+    /**
+     * Binds a generic event listener that receives raw JSON payload.
+     * Used for simple notification events like PhotoUploadingCompletedAnnouncement.
+     */
+    fun bindGenericEvent(
+        channelName: String,
+        eventName: String,
+        callback: () -> Unit
+    ) {
+        Log.d(TAG, "🔔 Binding generic event: channel=$channelName event=$eventName")
+
+        val binding = channelBindings.getOrPut(channelName) {
+            Log.d(TAG, "📡 Subscribing to new channel: $channelName")
+            ChannelBinding(
+                channel = pusher.subscribe(channelName),
+                listeners = ConcurrentHashMap()
+            )
+        }
+
+        // Replace any previous listener for this event to avoid duplicate callbacks
+        binding.listeners.remove(eventName)?.let { existing ->
+            binding.channel.unbind(eventName, existing)
+        }
+
+        val listener = SubscriptionEventListener { event ->
+            Log.d(TAG, "📨 Generic event received: channel=$channelName event=${event.eventName}")
+            callback()
+        }
+
+        binding.listeners[eventName] = listener
+        binding.channel.bind(eventName, listener)
+        ensureConnected()
+    }
+
     fun disconnect() {
         channelBindings.keys.toList().forEach { unsubscribe(it) }
         pusher.disconnect()

@@ -5,6 +5,7 @@ import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import com.example.rocketplan_android.realtime.PhotoSyncRealtimeManager
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import java.util.PriorityQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -32,6 +33,8 @@ class SyncQueueManager(
     private val remoteLogger: RemoteLogger
 ) {
 
+    private var photoSyncRealtimeManager: PhotoSyncRealtimeManager? = null
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
     private val queue = PriorityQueue<QueuedTask>(
@@ -58,6 +61,20 @@ class SyncQueueManager(
         scope.launch { processLoop() }
     }
 
+    /**
+     * Sets up the photo sync realtime manager and starts listening for Pusher events.
+     * Call this after both SyncQueueManager and PhotoSyncRealtimeManager are initialized.
+     */
+    fun setPhotoSyncRealtimeManager(manager: PhotoSyncRealtimeManager) {
+        this.photoSyncRealtimeManager = manager
+        scope.launch {
+            manager.photoUploadCompleted.collect {
+                Log.d(TAG, "📷 Received photo upload completed event from Pusher")
+                refreshCurrentProjectPhotos()
+            }
+        }
+    }
+
     suspend fun ensureInitialSync() {
         if (initialSyncStarted.compareAndSet(false, true)) {
             enqueue(SyncJob.EnsureUserContext)
@@ -75,6 +92,43 @@ class SyncQueueManager(
     fun prioritizeProject(projectId: Long) {
         scope.launch {
             focusProjectSync(projectId)
+        }
+    }
+
+    /**
+     * Triggers a photo sync for the currently viewed project.
+     * Called when we receive a Pusher notification that photos were uploaded by another device.
+     */
+    fun refreshCurrentProjectPhotos() {
+        scope.launch {
+            val projectId = mutex.withLock { foregroundProjectId } ?: run {
+                Log.d(TAG, "📷 No foreground project to refresh photos for")
+                return@launch
+            }
+
+            Log.d(TAG, "📷 Refreshing photos for current project $projectId (triggered by Pusher)")
+
+            // Queue a full sync (with photos) at high priority
+            val shouldEnqueue = mutex.withLock {
+                if (pendingPhotoSyncs.contains(projectId)) {
+                    Log.d(TAG, "⏭️ Photo sync already pending for project $projectId, skipping duplicate")
+                    false
+                } else {
+                    pendingPhotoSyncs.add(projectId)
+                    updatePhotoSyncingProjectsLocked()
+                    true
+                }
+            }
+
+            if (shouldEnqueue) {
+                enqueue(
+                    SyncJob.SyncProjectGraph(
+                        projectId = projectId,
+                        prio = FOREGROUND_PHOTO_PRIORITY,
+                        skipPhotos = false
+                    )
+                )
+            }
         }
     }
 
@@ -178,9 +232,15 @@ class SyncQueueManager(
         when (job) {
             SyncJob.EnsureUserContext -> {
                 authRepository.ensureUserContext()
-                val userId = authRepository.getStoredUserId()
+                var userId = authRepository.getStoredUserId()
                 if (userId == null) {
                     authRepository.refreshUserContext().getOrElse { error -> throw error }
+                    userId = authRepository.getStoredUserId()
+                }
+                // Subscribe to Pusher for photo upload notifications
+                userId?.let { id ->
+                    Log.d(TAG, "📷 Setting up Pusher subscription for user $id")
+                    photoSyncRealtimeManager?.subscribeForUser(id.toInt())
                 }
                 Unit
             }

@@ -75,9 +75,9 @@ class FlirCameraController(
     private var camera: Camera? = null
     private var activeStream: Stream? = null
     private var glSurfaceView: GLSurfaceView? = null
-    private var delayedSetSurface = false
-    private var delayedSurfaceWidth = 0
-    private var delayedSurfaceHeight = 0
+    @Volatile private var delayedSetSurface = false
+    @Volatile private var delayedSurfaceWidth = 0
+    @Volatile private var delayedSurfaceHeight = 0
 
     private var currentPalette: Palette = PaletteManager.getDefaultPalettes().first()
     private var currentFusionMode: FusionMode = FusionMode.THERMAL_ONLY
@@ -94,7 +94,7 @@ class FlirCameraController(
 
     fun attachSurface(glSurfaceView: GLSurfaceView) {
         this.glSurfaceView = glSurfaceView
-        glSurfaceView.setEGLContextClientVersion(3)
+        glSurfaceView.setEGLContextClientVersion(2)
         glSurfaceView.setPreserveEGLContextOnPause(false)
         glSurfaceView.setRenderer(renderer)
         glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
@@ -179,10 +179,26 @@ class FlirCameraController(
     private fun startStream(identity: Identity, info: CameraInformation?) {
         val cam = camera ?: return
         ThermalLog.d(TAG, "Preparing stream...")
-        activeStream = cam.streams.firstOrNull()
-        val stream = activeStream ?: return
+        activeStream = cam.streams.firstOrNull { it.isThermal } ?: cam.streams.firstOrNull()
+        val stream = activeStream
+        if (stream == null) {
+            val message = "No FLIR stream available from camera"
+            ThermalLog.e(TAG, message)
+            _state.value = FlirState.Error(message)
+            _errors.tryEmit(message)
+            return
+        }
+        if (!stream.isThermal) {
+            ThermalLog.w(TAG, "Selected stream is not thermal; falling back to first available")
+        }
 
-        cam.glSetupPipeline(stream, true)
+        runOnGlThread {
+            cam.glSetupPipeline(stream, true)
+            if (delayedSetSurface) {
+                cam.glOnSurfaceChanged(delayedSurfaceWidth, delayedSurfaceHeight)
+                delayedSetSurface = false
+            }
+        }
         _state.value = FlirState.Streaming(identity, info)
 
         stream.start(
@@ -195,13 +211,14 @@ class FlirCameraController(
                 _errors.tryEmit(message)
             }
         )
+        glSurfaceView?.requestRender()
     }
 
     fun disconnect() {
         scope.launch {
             ThermalLog.d(TAG, "disconnect()")
             activeStream?.stop()
-            camera?.glTeardownPipeline()
+            runOnGlThread { camera?.glTeardownPipeline() }
             camera?.disconnect()
             camera = null
             activeStream = null
@@ -295,5 +312,14 @@ class FlirCameraController(
 
             cam.glOnDrawFrame()
         }
+    }
+
+    private fun runOnGlThread(block: () -> Unit) {
+        val surface = glSurfaceView
+        if (surface == null) {
+            ThermalLog.w(TAG, "GLSurfaceView not attached; dropping GL action")
+            return
+        }
+        surface.queueEvent(block)
     }
 }
