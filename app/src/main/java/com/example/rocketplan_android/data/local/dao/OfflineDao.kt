@@ -108,8 +108,14 @@ interface OfflineDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoom(room: OfflineRoomEntity): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertRooms(rooms: List<OfflineRoomEntity>): List<Long>
+
     @Query("DELETE FROM offline_rooms WHERE roomId = :roomId")
     suspend fun deleteRoomById(roomId: Long)
+
+    @Query("DELETE FROM offline_rooms WHERE roomId = 0")
+    suspend fun deletePhantomRoom(): Int
 
     @Query("UPDATE offline_rooms SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markRoomsDeleted(serverIds: List<Long>)
@@ -162,6 +168,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_atmospheric_logs SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markAtmosphericLogsDeleted(serverIds: List<Long>)
+
+    @Query("DELETE FROM offline_atmospheric_logs WHERE roomId = :roomId")
+    suspend fun deleteAtmosphericLogsByRoomId(roomId: Long): Int
     // endregion
 
     // region Photos
@@ -205,6 +214,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_photos SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migratePhotoRoomIds(oldRoomId: Long, newRoomId: Long): Int
+
+    @Query("DELETE FROM offline_photos WHERE roomId = :roomId")
+    suspend fun deletePhotosByRoomId(roomId: Long): Int
 
     /**
      * Find photos where the roomId references a room that doesn't exist in the photo's project.
@@ -315,10 +327,10 @@ interface OfflineDao {
 
     // region Room photo snapshots
     @Query("DELETE FROM offline_room_photo_snapshots WHERE roomId = :roomId")
-    suspend fun clearRoomPhotoSnapshots(roomId: Long)
+    suspend fun clearRoomPhotoSnapshots(roomId: Long): Int
 
     @Query("DELETE FROM offline_room_photo_snapshots WHERE roomId IN (:roomIds)")
-    suspend fun clearRoomPhotoSnapshots(roomIds: List<Long>)
+    suspend fun clearRoomPhotoSnapshots(roomIds: List<Long>): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoomPhotoSnapshots(snapshots: List<OfflineRoomPhotoSnapshotEntity>)
@@ -409,6 +421,12 @@ interface OfflineDao {
 
     @Query("UPDATE offline_albums SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateAlbumRoomIds(oldRoomId: Long, newRoomId: Long): Int
+
+    @Query("DELETE FROM offline_album_photos WHERE albumId IN (SELECT albumId FROM offline_albums WHERE roomId = :roomId)")
+    suspend fun deleteAlbumPhotosByRoomId(roomId: Long): Int
+
+    @Query("DELETE FROM offline_albums WHERE roomId = :roomId")
+    suspend fun deleteAlbumsByRoomId(roomId: Long): Int
     // endregion
 
     // region Equipment
@@ -428,6 +446,9 @@ interface OfflineDao {
     suspend fun markEquipmentDeleted(serverIds: List<Long>)
     // endregion
 
+    @Query("DELETE FROM offline_equipment WHERE roomId = :roomId")
+    suspend fun deleteEquipmentByRoomId(roomId: Long): Int
+
     // region Moisture Logs
     @Upsert
     suspend fun upsertMoistureLogs(logs: List<OfflineMoistureLogEntity>)
@@ -440,6 +461,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_moisture_logs SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int
+
+    @Query("DELETE FROM offline_moisture_logs WHERE roomId = :roomId")
+    suspend fun deleteMoistureLogsByRoomId(roomId: Long): Int
     // endregion
 
     // region Notes & Damages & Work Scopes
@@ -461,6 +485,9 @@ interface OfflineDao {
     @Query("UPDATE offline_notes SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markNotesDeleted(serverIds: List<Long>)
 
+    @Query("DELETE FROM offline_notes WHERE roomId = :roomId")
+    suspend fun deleteNotesByRoomId(roomId: Long): Int
+
     @Upsert
     suspend fun upsertDamages(damages: List<OfflineDamageEntity>)
 
@@ -473,6 +500,9 @@ interface OfflineDao {
     @Query("UPDATE offline_damages SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markDamagesDeleted(serverIds: List<Long>)
 
+    @Query("DELETE FROM offline_damages WHERE roomId = :roomId")
+    suspend fun deleteDamagesByRoomId(roomId: Long): Int
+
     @Upsert
     suspend fun upsertWorkScopes(scopes: List<OfflineWorkScopeEntity>)
 
@@ -481,6 +511,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_work_scopes SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markWorkScopesDeleted(serverIds: List<Long>)
+
+    @Query("DELETE FROM offline_work_scopes WHERE roomId = :roomId")
+    suspend fun deleteWorkScopesByRoomId(roomId: Long): Int
     // endregion
 
     // region Materials

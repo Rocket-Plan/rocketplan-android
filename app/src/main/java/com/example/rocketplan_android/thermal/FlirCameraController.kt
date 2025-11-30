@@ -114,6 +114,7 @@ class FlirCameraController(
     }
 
     fun requestSnapshot() {
+        ThermalLog.d(TAG, "requestSnapshot() called, setting snapshotRequested=true")
         snapshotRequested.set(true)
     }
 
@@ -271,16 +272,19 @@ class FlirCameraController(
                 }
 
                 if (snapshotRequested.compareAndSet(true, false)) {
+                    ThermalLog.d(TAG, "Processing snapshot request in onDrawFrame")
                     thermalImage.temperatureUnit = TemperatureUnit.CELSIUS
                     val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
                     ThermalLog.d(TAG, "glGetScaleRange when storing image: ${range.first} - ${range.second}")
                     thermalImage.scale.setRange(range.first, range.second)
 
                     val snapshotPath = FileUtils.prepareUniqueFileName(imagesRoot, "ACE_", "jpg")
+                    ThermalLog.d(TAG, "Saving snapshot to: $snapshotPath")
                     try {
                         thermalImage.saveAs(snapshotPath)
                         ThermalLog.d(TAG, "Snapshot stored under: $snapshotPath")
-                        _snapshots.tryEmit(File(snapshotPath))
+                        val emitted = _snapshots.tryEmit(File(snapshotPath))
+                        ThermalLog.d(TAG, "Snapshot emitted to flow: $emitted")
                     } catch (e: IOException) {
                         val message = "Unable to take snapshot: ${e.message}"
                         ThermalLog.e(TAG, message)

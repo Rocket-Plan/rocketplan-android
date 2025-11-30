@@ -280,9 +280,11 @@ class BatchCaptureFragment : Fragment() {
      * Called by both UI shutter button and hardware trigger button.
      */
     private fun triggerCapture() {
+        Log.d(TAG, "triggerCapture() called, captureMode=$captureMode")
         if (captureMode == CaptureMode.REGULAR) {
             capturePhoto()
         } else {
+            Log.d(TAG, "Requesting FLIR snapshot...")
             flirController.requestSnapshot()
         }
     }
@@ -320,6 +322,7 @@ class BatchCaptureFragment : Fragment() {
                                 flirStatusText.text =
                                     getString(R.string.flir_status_streaming, state.identity.deviceId)
                                 flirReady = true
+                                renderState(viewModel.uiState.value) // Update shutter button
                             }
                             is FlirState.Error -> {
                                 flirStatusText.text = state.message
@@ -340,17 +343,9 @@ class BatchCaptureFragment : Fragment() {
                         val added = viewModel.addPhoto(file, isIr = true)
                         if (!added) {
                             file.delete()
-                            Toast.makeText(
-                                requireContext(),
-                                getString(R.string.flir_snapshot_failed),
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Log.w(TAG, "Failed to add FLIR snapshot: limit reached")
                         } else {
-                            Toast.makeText(
-                                requireContext(),
-                                getString(R.string.flir_snapshot_saved),
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            Log.d(TAG, "FLIR snapshot added: ${file.name}")
                         }
                     }
                 }
@@ -388,6 +383,7 @@ class BatchCaptureFragment : Fragment() {
         val shutterEnabled = state.canTakeMore &&
             !state.isProcessing &&
             (captureMode == CaptureMode.REGULAR || flirReady)
+        Log.d(TAG, "Shutter enabled: $shutterEnabled (canTakeMore=${state.canTakeMore}, isProcessing=${state.isProcessing}, captureMode=$captureMode, flirReady=$flirReady)")
         shutterButton.isEnabled = shutterEnabled
         shutterInner.alpha = if (shutterEnabled) 1f else 0.5f
 

@@ -390,7 +390,40 @@ class LocalDataService private constructor(
     }
 
     suspend fun saveRooms(rooms: List<OfflineRoomEntity>) = withContext(ioDispatcher) {
-        dao.upsertRooms(rooms)
+        // Split into new rooms (roomId = 0) and existing rooms (roomId > 0)
+        // This ensures auto-generated IDs work correctly for new rooms
+        val (newRooms, existingRooms) = rooms.partition { it.roomId == 0L }
+        if (newRooms.isNotEmpty()) {
+            dao.insertRooms(newRooms)
+        }
+        if (existingRooms.isNotEmpty()) {
+            dao.upsertRooms(existingRooms)
+        }
+    }
+
+    suspend fun deletePhantomRoom() = withContext(ioDispatcher) {
+        val phantomRoomId = 0L
+        database.withTransaction {
+            val albumPhotos = dao.deleteAlbumPhotosByRoomId(phantomRoomId)
+            val albums = dao.deleteAlbumsByRoomId(phantomRoomId)
+            val snapshots = dao.clearRoomPhotoSnapshots(phantomRoomId)
+            val photos = dao.deletePhotosByRoomId(phantomRoomId)
+            val notes = dao.deleteNotesByRoomId(phantomRoomId)
+            val damages = dao.deleteDamagesByRoomId(phantomRoomId)
+            val equipment = dao.deleteEquipmentByRoomId(phantomRoomId)
+            val moistureLogs = dao.deleteMoistureLogsByRoomId(phantomRoomId)
+            val atmosphericLogs = dao.deleteAtmosphericLogsByRoomId(phantomRoomId)
+            val workScopes = dao.deleteWorkScopesByRoomId(phantomRoomId)
+            val rooms = dao.deletePhantomRoom()
+
+            Log.w(
+                "LocalDataService",
+                "🧹 Deleted phantom roomId=$phantomRoomId and cleaned refs " +
+                    "(rooms=$rooms, photos=$photos, notes=$notes, damages=$damages, equipment=$equipment, " +
+                    "moistureLogs=$moistureLogs, atmosphericLogs=$atmosphericLogs, workScopes=$workScopes, " +
+                    "albums=$albums, albumPhotos=$albumPhotos, snapshots=$snapshots)"
+            )
+        }
     }
 
     suspend fun saveAtmosphericLogs(logs: List<OfflineAtmosphericLogEntity>) = withContext(ioDispatcher) {

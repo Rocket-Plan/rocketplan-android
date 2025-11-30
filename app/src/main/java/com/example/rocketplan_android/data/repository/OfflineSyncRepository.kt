@@ -178,7 +178,7 @@ class OfflineSyncRepository(
         val startTime = System.currentTimeMillis()
         Log.d("API", "🔄 [syncProjectEssentials] Starting navigation chain for project $projectId")
 
-        val detail = runCatching { api.getProjectDetail(projectId) }
+        val detail = runCatching { api.getProjectDetail(projectId).data }
             .onFailure {
                 Log.e("API", "❌ [syncProjectEssentials] Failed", it)
                 val duration = System.currentTimeMillis() - startTime
@@ -205,6 +205,9 @@ class OfflineSyncRepository(
                 duration
             )
         }
+
+        // Clean up any phantom room with ID 0 (legacy bug)
+        localDataService.deletePhantomRoom()
 
         // Save project entity (preserve property link if list sync already populated it)
         val existingProject = localDataService.getProject(detail.id)

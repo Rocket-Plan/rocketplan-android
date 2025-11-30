@@ -12,7 +12,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintBottom_toTopOf="@id/bottomContainer"
-        app:layout_constraintTop_toBottomOf="@id/flirControls" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- FLIR GL Surface (shown in IR mode) -->
     <android.opengl.GLSurfaceView
@@ -23,7 +23,7 @@
         android:background="@android:color/black"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/bottomContainer"
-        app:layout_constraintTop_toBottomOf="@id/flirControls" />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Top Controls Overlay -->
     <LinearLayout
@@ -72,77 +72,94 @@
             tools:text="0/50" />
     </LinearLayout>
 
-    <!-- Mode toggle -->
-    <com.google.android.material.button.MaterialButtonToggleGroup
-        android:id="@+id/modeToggle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="12dp"
-        app:selectionRequired="true"
-        app:singleSelection="true"
-        app:layout_constraintTop_toBottomOf="@id/topControls"
-        app:layout_constraintStart_toStartOf="parent">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/regularModeButton"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/regular"
-            android:textAllCaps="false" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/irModeButton"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/ir"
-            android:textAllCaps="false" />
-    </com.google.android.material.button.MaterialButtonToggleGroup>
-
-    <!-- FLIR controls (IR mode only) -->
+    <!-- Mode + FLIR controls overlay -->
     <LinearLayout
-        android:id="@+id/flirControls"
+        android:id="@+id/flirControlsContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="12dp"
-        android:layout_marginBottom="8dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/modeToggle"
+        android:background="@drawable/bg_gradient_top"
+        android:orientation="vertical"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="12dp"
+        app:layout_constraintTop_toBottomOf="@id/topControls"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
-        <TextView
-            android:id="@+id/flirStatusText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textColor="@android:color/white"
-            android:textSize="12sp"
-            tools:text="@string/flir_status_discovering" />
-
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/flirPaletteSwitch"
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/modeToggle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/flir_palette"
-            android:textColor="@android:color/white" />
+            app:selectionRequired="true"
+            app:singleSelection="true">
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/flirFusionSwitch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/flir_fusion"
-            android:textColor="@android:color/white" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/regularModeButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/regular"
+                android:textAllCaps="false" />
 
-        <com.google.android.material.switchmaterial.SwitchMaterial
-            android:id="@+id/flirMeasurementsSwitch"
-            android:layout_width="wrap_content"
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/irModeButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/ir"
+                android:textAllCaps="false" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/flir_measurements"
-            android:textColor="@android:color/white" />
+            android:layout_marginTop="8dp"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/flirControls"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/flirStatusText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@android:color/white"
+                    android:textSize="12sp"
+                    tools:text="@string/flir_status_discovering" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/flirPaletteSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:text="@string/flir_palette"
+                    android:textColor="@android:color/white" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/flirFusionSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="12dp"
+                    android:text="@string/flir_fusion"
+                    android:textColor="@android:color/white" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/flirMeasurementsSwitch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/flir_measurements"
+                    android:textColor="@android:color/white" />
+            </LinearLayout>
+        </HorizontalScrollView>
     </LinearLayout>
 
     <!-- Flash Toggle -->
@@ -157,7 +174,7 @@
         android:src="@drawable/ic_flash_off"
         app:layout_constraintBottom_toBottomOf="@id/topControls"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/topControls"
+        app:layout_constraintTop_toTopOf="@id/topControls"
         app:tint="@android:color/white" />
 
     <!-- Bottom Container -->

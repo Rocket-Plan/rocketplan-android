@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.model
 
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
+import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.google.gson.annotations.SerializedName
 
@@ -29,3 +30,4 @@ data class SingleResourceResponse<T>(
 
 typealias AddressResourceResponse = SingleResourceResponse<ProjectAddressDto>
 typealias ProjectResourceResponse = SingleResourceResponse<ProjectDto>
+typealias ProjectDetailResourceResponse = SingleResourceResponse<ProjectDetailDto>

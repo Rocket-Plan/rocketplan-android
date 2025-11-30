@@ -245,6 +245,22 @@ class BatchCaptureViewModel(
                     )
                 }
 
+                // Collect IR photo data - for standalone thermal photos, use same file for both thermal and visual
+                val irPhotoData = currentState.photos
+                    .filter { it.isIr }
+                    .map { photo ->
+                        val uuid = UUID.randomUUID().toString()
+                        Log.d(TAG, "Adding IR photo: ${photo.file.name} with uuid=$uuid")
+                        mapOf(uuid to com.example.rocketplan_android.data.model.IRPhotoData(
+                            thermalFileName = photo.file.name,
+                            visualFileName = photo.file.name
+                        ))
+                    }
+                Log.d(TAG, "IR photo count: ${irPhotoData.size} of ${currentState.photos.size} total photos")
+                currentState.photos.forEach { photo ->
+                    Log.d(TAG, "Photo ${photo.file.name}: isIr=${photo.isIr}")
+                }
+
                 // Create assembly
                 val result = imageProcessorRepository.createAssembly(
                     roomId = room.roomId,
@@ -253,7 +269,7 @@ class BatchCaptureViewModel(
                     templateId = "",
                     groupUuid = groupUuid,
                     albums = albumAssignments.mapValues { it.value.toList() },
-                    irPhotos = emptyList(),
+                    irPhotos = irPhotoData,
                     order = emptyList(),
                     notes = emptyMap(),
                     entityType = "room",

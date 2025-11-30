@@ -17,8 +17,8 @@ import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.NoteableDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.PhotoDto
-import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
+import com.example.rocketplan_android.data.model.ProjectDetailResourceResponse
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.AddressResourceResponse
 import com.example.rocketplan_android.data.model.CreateAddressRequest
@@ -63,7 +63,7 @@ interface OfflineSyncApi {
     suspend fun getProjectDetail(
         @Path("projectId") projectId: Long,
         @Query("include") include: String? = "projectStatus,address,projectType,properties,notes,atmosphericLogs"
-    ): ProjectDetailDto
+    ): ProjectDetailResourceResponse
 
     @HTTP(method = "DELETE", path = "/api/projects/{projectId}", hasBody = true)
     suspend fun deleteProject(

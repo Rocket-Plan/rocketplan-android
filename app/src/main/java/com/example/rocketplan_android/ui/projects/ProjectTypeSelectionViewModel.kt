@@ -48,10 +48,13 @@ class ProjectTypeSelectionViewModel(
     val navigationEvents: SharedFlow<ProjectTypeSelectionNavigation> = _navigationEvents
 
     private var latestProject: OfflineProjectEntity? = null
+    private var hasAttemptedPropertyRecovery: Boolean = false
+    private var hasNavigatedToDetail: Boolean = false
 
     init {
         viewModelScope.launch {
             localDataService.observeProjects().collectLatest { projects ->
+                val previousProject = latestProject
                 val project = projects.firstOrNull { it.projectId == projectId }
                 latestProject = project
 
@@ -69,6 +72,7 @@ class ProjectTypeSelectionViewModel(
                         isSelectionInProgress = false,
                         errorMessage = null
                     )
+                    maybeRecoverMissingProperty(previousProject, project)
                 }
             }
         }
@@ -113,6 +117,7 @@ class ProjectTypeSelectionViewModel(
                 onSuccess = {
                     _uiState.update { it.copy(isSelectionInProgress = false) }
                     syncQueueManager.prioritizeProject(projectId)
+                    hasNavigatedToDetail = true
                     _navigationEvents.emit(
                         ProjectTypeSelectionNavigation.NavigateToProjectDetail(projectId)
                     )
@@ -126,6 +131,44 @@ class ProjectTypeSelectionViewModel(
                     }
                 }
             )
+        }
+    }
+
+    private fun maybeRecoverMissingProperty(
+        previousProject: OfflineProjectEntity?,
+        project: OfflineProjectEntity
+    ) {
+        val propertyJustAppeared =
+            project.propertyId != null && previousProject != null && previousProject.propertyId == null
+
+        // If property just became available, navigate directly to detail to avoid looping
+        if (propertyJustAppeared && !hasNavigatedToDetail) {
+            hasNavigatedToDetail = true
+            viewModelScope.launch {
+                _navigationEvents.emit(
+                    ProjectTypeSelectionNavigation.NavigateToProjectDetail(projectId)
+                )
+            }
+            return
+        }
+
+        // If property is missing but the project exists on server, try to pull it down once
+        if (project.propertyId == null && project.serverId != null && !hasAttemptedPropertyRecovery) {
+            hasAttemptedPropertyRecovery = true
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+                val result = offlineSyncRepository.syncProjectEssentials(project.serverId)
+                if (!result.success) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = result.error?.message ?: genericErrorMessage
+                        )
+                    }
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
+                }
+            }
         }
     }
 
