@@ -9,15 +9,12 @@ import com.flir.thermalsdk.image.PaletteManager
 import com.flir.thermalsdk.image.TemperatureUnit
 import com.flir.thermalsdk.image.ThermalValue
 import com.flir.thermalsdk.image.fusion.Fusion
-import com.flir.thermalsdk.image.fusion.FusionMode
 import com.flir.thermalsdk.image.measurements.MeasurementShapeCollection
 import com.flir.thermalsdk.image.measurements.MeasurementSpot
 import com.flir.thermalsdk.live.Camera
-import com.flir.thermalsdk.live.CameraInformation
 import com.flir.thermalsdk.live.CameraType
 import com.flir.thermalsdk.live.CommunicationInterface
 import com.flir.thermalsdk.live.ConnectParameters
-import com.flir.thermalsdk.live.Identity
 import com.flir.thermalsdk.live.discovery.DiscoveredCamera
 import com.flir.thermalsdk.live.discovery.DiscoveryEventListener
 import com.flir.thermalsdk.live.discovery.DiscoveryFactory
@@ -42,14 +39,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-sealed class FlirState {
-    object Idle : FlirState()
-    object Discovering : FlirState()
-    data class Connecting(val identity: Identity) : FlirState()
-    data class Streaming(val identity: Identity, val info: CameraInformation?) : FlirState()
-    data class Error(val message: String) : FlirState()
-}
 
 /**
  * Handles discovery, connection, streaming, and snapshot capture for FLIR ACE cameras.
@@ -167,7 +156,7 @@ class FlirCameraController(
         }, communicationInterface)
     }
 
-    private fun connect(identity: Identity) {
+    private fun connect(identity: FlirIdentity) {
         _state.value = FlirState.Connecting(identity)
         scope.launch {
             try {
@@ -186,7 +175,7 @@ class FlirCameraController(
                     ConnectParameters()
                 )
 
-                val info = camera?.remoteControl?.cameraInformation()?.sync
+                val info: FlirCameraInformation? = camera?.remoteControl?.cameraInformation()?.sync
                 ThermalLog.d(TAG, "Camera connected: $info")
                 startStream(identity, info)
             } catch (io: IOException) {
@@ -198,7 +187,7 @@ class FlirCameraController(
         }
     }
 
-    private fun startStream(identity: Identity, info: CameraInformation?) {
+    private fun startStream(identity: FlirIdentity, info: FlirCameraInformation?) {
         val cam = camera ?: return
         val surface = glSurfaceView
         if (surface == null) {

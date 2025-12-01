@@ -19,9 +19,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // Product Flavors for different environments
-    flavorDimensions += "environment"
+    // Product Flavors for different environments and device types
+    flavorDimensions += listOf("environment", "device")
     productFlavors {
+        // Environment flavors
         create("dev") {
             dimension = "environment"
             applicationIdSuffix = ".dev"
@@ -60,6 +61,25 @@ android {
 
             // Custom resources for production
             resValue("string", "app_name", "RocketPlan")
+        }
+
+        // Device flavors
+        create("flir") {
+            dimension = "device"
+            // FLIR devices have thermal camera support
+            buildConfigField("Boolean", "HAS_FLIR_SUPPORT", "true")
+            ndk {
+                abiFilters += "arm64-v8a"
+            }
+        }
+
+        create("standard") {
+            dimension = "device"
+            // Standard Android devices without thermal camera
+            buildConfigField("Boolean", "HAS_FLIR_SUPPORT", "false")
+            ndk {
+                abiFilters += "armeabi-v7a"
+            }
         }
     }
 
@@ -112,11 +132,8 @@ android {
 
     splits {
         abi {
-            // Keep builds lean; FLIR SDK ships arm64 binaries by default
-            isEnable = true
-            reset()
-            include("arm64-v8a")
-            isUniversalApk = false
+            // ABI filtering is now handled via product flavors (flir vs standard)
+            isEnable = false
         }
     }
 }
@@ -176,8 +193,9 @@ dependencies {
     implementation(libs.camerax.view)
 
     // FLIR Atlas Android SDK (local AARs; place in app/libs)
-    implementation(files("libs/androidsdk-release.aar"))
-    implementation(files("libs/thermalsdk-release.aar"))
+    // Only include for FLIR device flavor (arm64)
+    "flirImplementation"(files("libs/androidsdk-release.aar"))
+    "flirImplementation"(files("libs/thermalsdk-release.aar"))
 
     testImplementation(libs.junit)
     testImplementation(libs.mockk)

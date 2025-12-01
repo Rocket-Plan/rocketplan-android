@@ -22,13 +22,13 @@ import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
+import com.example.rocketplan_android.thermal.FusionMode
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
 import com.example.rocketplan_android.ui.projects.RoomDetailFragment
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureEvent
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureViewModel
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.flir.thermalsdk.image.fusion.FusionMode
 import kotlinx.coroutines.launch
 
 class FlirCaptureFragment : Fragment() {

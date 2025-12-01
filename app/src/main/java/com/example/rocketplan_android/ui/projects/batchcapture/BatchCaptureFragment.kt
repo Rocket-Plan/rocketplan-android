@@ -39,7 +39,7 @@ import coil.load
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
-import com.flir.thermalsdk.image.fusion.FusionMode
+import com.example.rocketplan_android.thermal.FusionMode
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
