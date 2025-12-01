@@ -493,6 +493,7 @@ class BatchCaptureFragment : Fragment() {
 
     private fun updateModeUi() {
         val isIr = captureMode == CaptureMode.IR
+        Log.d(TAG, "updateModeUi: isIr=$isIr")
         flirControls.isVisible = isIr
         flirSurface.isVisible = isIr
         cameraPreview.isVisible = !isIr
@@ -500,6 +501,7 @@ class BatchCaptureFragment : Fragment() {
         switchCameraButton.isEnabled = !isIr
         flashButton.alpha = if (isIr) 0.4f else 1f
         switchCameraButton.alpha = if (isIr) 0.4f else 1f
+        Log.d(TAG, "updateModeUi: flirSurface.visibility=${flirSurface.visibility}, cameraPreview.visibility=${cameraPreview.visibility}")
     }
 
     private fun startActiveMode() {

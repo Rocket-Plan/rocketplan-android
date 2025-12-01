@@ -9,20 +9,24 @@
     <!-- Camera Preview (Full Screen) -->
     <androidx.camera.view.PreviewView
         android:id="@+id/cameraPreview"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toTopOf="@id/bottomContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- FLIR GL Surface (shown in IR mode) -->
     <android.opengl.GLSurfaceView
         android:id="@+id/flirSurface"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginHorizontal="8dp"
         android:background="@android:color/black"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/bottomContainer"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
     <!-- Top Controls Overlay -->

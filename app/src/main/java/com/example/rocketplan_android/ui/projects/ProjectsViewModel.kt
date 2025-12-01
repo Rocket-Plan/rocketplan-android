@@ -11,6 +11,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.logging.LogLevel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class ProjectsViewModel(application: Application) : AndroidViewModel(application) {
@@ -19,6 +20,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     private val localDataService = rocketPlanApp.localDataService
     private val syncQueueManager = rocketPlanApp.syncQueueManager
     private val remoteLogger = rocketPlanApp.remoteLogger
+    private val authRepository = rocketPlanApp.authRepository
 
     private val _uiState = MutableStateFlow<ProjectsUiState>(ProjectsUiState.Loading)
     val uiState: StateFlow<ProjectsUiState> = _uiState
@@ -46,25 +48,35 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         }
 
         viewModelScope.launch {
-            localDataService.observeProjects().collect { projects ->
-                Log.d(TAG, "📊 Received ${projects.size} projects from database")
+            combine(
+                localDataService.observeProjects(),
+                authRepository.observeCompanyId(),
+                syncQueueManager.assignedProjects
+            ) { projects, companyId, assignedIds ->
+                val filteredProjects = companyId?.let { id ->
+                    projects.filter { it.companyId == id }
+                } ?: projects
+                Triple(filteredProjects, companyId, assignedIds)
+            }.collect { (projects, companyId, assignedIds) ->
+                Log.d(TAG, "📊 Received ${projects.size} projects from database for company ${companyId ?: "unknown"} (assigned=${assignedIds.size})")
 
                 val mappedProjects = projects.map { it.toListItem() }
+                val myProjects = mappedProjects.filter { assignedIds.contains(it.projectId) }
                 val wipProjects = mappedProjects.filter {
                     it.status.equals("wip", ignoreCase = true) ||
                         it.status.equals("draft", ignoreCase = true)
                 }
 
-                Log.d(TAG, "✅ Projects - My Projects: ${mappedProjects.size}, WIP: ${wipProjects.size}")
+                Log.d(TAG, "✅ Projects - My Projects: ${myProjects.size}, WIP: ${wipProjects.size}")
 
                 remoteLogger.log(
                     level = LogLevel.DEBUG,
                     tag = TAG,
-                    message = "Projects updated: my=${mappedProjects.size}, wip=${wipProjects.size}",
+                    message = "Projects updated: my=${myProjects.size}, wip=${wipProjects.size}",
                     metadata = mapOf("source" to "room_update")
                 )
 
-                _uiState.value = ProjectsUiState.Success(mappedProjects, wipProjects)
+                _uiState.value = ProjectsUiState.Success(myProjects, wipProjects)
                 _isRefreshing.value = false
             }
         }

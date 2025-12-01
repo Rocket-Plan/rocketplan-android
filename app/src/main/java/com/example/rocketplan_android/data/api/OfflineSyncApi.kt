@@ -49,7 +49,8 @@ interface OfflineSyncApi {
     suspend fun getCompanyProjects(
         @Path("companyId") companyId: Long,
         @Query("page") page: Int? = null,
-        @Query("filter[updated_date]") updatedSince: String? = null
+        @Query("filter[updated_date]") updatedSince: String? = null,
+        @Query("filter[assigned_to_me]") assignedToMe: String? = null
     ): PaginatedResponse<ProjectDto>
 
     @GET("/api/users/{userId}/projects")
@@ -122,7 +123,8 @@ interface OfflineSyncApi {
     // Property & locations
     @GET("/api/projects/{projectId}/properties")
     suspend fun getProjectProperties(
-        @Path("projectId") projectId: Long
+        @Path("projectId") projectId: Long,
+        @Query("include") include: String? = null
     ): PaginatedResponse<PropertyDto>
 
     @POST("/api/projects/{projectId}/properties")

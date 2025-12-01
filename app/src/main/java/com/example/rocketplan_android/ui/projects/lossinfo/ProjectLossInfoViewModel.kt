@@ -16,6 +16,7 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.model.ClaimDto
 import com.example.rocketplan_android.data.model.DamageCauseDto
 import com.example.rocketplan_android.data.model.DamageTypeDto
+import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.util.DateUtils
 import kotlinx.coroutines.CoroutineDispatcher
@@ -28,6 +29,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import android.util.Log
 
 data class ClaimListItem(
     val claim: ClaimDto,
@@ -76,8 +78,9 @@ private class ProjectLossInfoRepository(
             ?: throw IllegalStateException("Project $projectId not found locally")
         val projectServerId = project.serverId ?: project.projectId
 
+        val projectDetail = runCatching { api.getProjectDetail(projectServerId).data }.getOrNull()
         val locations = localDataService.getLocations(projectId)
-        val propertyId = resolvePropertyId(projectId, project, projectServerId)
+        val propertyId = resolvePropertyId(projectId, project, projectServerId, projectDetail?.address)
         val property = api.getProperty(propertyId)
         val damageTypes = api.getProjectDamageTypes(projectServerId)
         val damageCauses = api.getDamageCauses(projectServerId).data
@@ -106,7 +109,8 @@ private class ProjectLossInfoRepository(
     private suspend fun resolvePropertyId(
         projectId: Long,
         project: OfflineProjectEntity,
-        projectServerId: Long
+        projectServerId: Long,
+        projectAddress: ProjectAddressDto?
     ): Long {
         // Check if we have a cached property with a valid serverId
         project.propertyId?.let { localPropertyId ->
@@ -119,7 +123,9 @@ private class ProjectLossInfoRepository(
         val propertyDto = properties.firstOrNull()
             ?: throw IllegalStateException("No property found for project $projectServerId")
 
-        val entity = propertyDto.toEntity()
+        Log.d("API", "🏠 [LossInfo] Property DTO from API: id=${propertyDto.id}, address=${propertyDto.address}, city=${propertyDto.city}, state=${propertyDto.state}, zip=${propertyDto.postalCode}")
+        val entity = propertyDto.toEntity(projectAddress = projectAddress, project = project)
+        Log.d("API", "🏠 [LossInfo] Property Entity to save: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
         localDataService.saveProperty(entity)
         localDataService.attachPropertyToProject(
             projectId = projectId,
@@ -129,18 +135,33 @@ private class ProjectLossInfoRepository(
         return entity.serverId ?: entity.propertyId
     }
 
-    private fun PropertyDto.toEntity(): OfflinePropertyEntity {
+    private fun PropertyDto.toEntity(
+        projectAddress: ProjectAddressDto? = null,
+        project: OfflineProjectEntity? = null
+    ): OfflinePropertyEntity {
         val timestamp = Date()
+        val resolvedAddress = listOfNotNull(
+            address?.takeIf { it.isNotBlank() },
+            projectAddress?.address?.takeIf { it.isNotBlank() },
+            projectAddress?.address2?.takeIf { it.isNotBlank() },
+            project?.addressLine1?.takeIf { it.isNotBlank() },
+            project?.addressLine2?.takeIf { it.isNotBlank() }
+        ).firstOrNull() ?: ""
+        val resolvedCity = city ?: projectAddress?.city
+        val resolvedState = state ?: projectAddress?.state
+        val resolvedZip = postalCode ?: projectAddress?.zip
+        val resolvedLat = latitude ?: projectAddress?.latitude?.toDoubleOrNull()
+        val resolvedLng = longitude ?: projectAddress?.longitude?.toDoubleOrNull()
         return OfflinePropertyEntity(
             propertyId = id,
             serverId = id,
             uuid = uuid ?: UUID.randomUUID().toString(),
-            address = address ?: "",
-            city = city,
-            state = state,
-            zipCode = postalCode,
-            latitude = latitude,
-            longitude = longitude,
+            address = resolvedAddress,
+            city = resolvedCity,
+            state = resolvedState,
+            zipCode = resolvedZip,
+            latitude = resolvedLat,
+            longitude = resolvedLng,
             syncStatus = SyncStatus.SYNCED,
             syncVersion = 1,
             createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,

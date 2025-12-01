@@ -1,6 +1,5 @@
 package com.example.rocketplan_android.realtime
 
-import android.util.Log
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.google.gson.Gson
@@ -13,6 +12,12 @@ import com.pusher.client.channel.SubscriptionEventListener
 import com.pusher.client.connection.ConnectionEventListener
 import com.pusher.client.connection.ConnectionState
 import com.pusher.client.connection.ConnectionStateChange
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
 class PusherService(
@@ -20,6 +25,7 @@ class PusherService(
     private val remoteLogger: RemoteLogger? = null
 ) {
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val pusher: Pusher = Pusher(
         PusherConfig.appKey(),
         PusherOptions().setCluster(PusherConfig.CLUSTER)
@@ -27,8 +33,18 @@ class PusherService(
 
     private val connectionListener = object : ConnectionEventListener {
         override fun onConnectionStateChange(change: ConnectionStateChange?) {
-            // TODO: Remove temporary debug logging
-            Log.d(TAG, "🔌 Connection state: ${change?.previousState} -> ${change?.currentState}")
+            val newState = change?.currentState ?: return
+            when (newState) {
+                ConnectionState.CONNECTED -> {
+                    reconnectAttempts = 0
+                    reconnectJob?.cancel()
+                }
+
+                ConnectionState.DISCONNECTED,
+                ConnectionState.RECONNECTING -> scheduleReconnect()
+
+                else -> Unit
+            }
         }
 
         override fun onError(message: String?, code: String?, e: Exception?) {
@@ -41,33 +57,34 @@ class PusherService(
                     e?.message?.let { put("exception", it) }
                 }
             )
+            scheduleReconnect()
         }
     }
 
     private data class ChannelBinding(
         val channel: Channel,
-        val listeners: MutableMap<String, SubscriptionEventListener>
+        val listeners: MutableMap<String, SubscriptionEventListener>,
+        var lifecycleBound: Boolean = false
     )
 
     private val channelBindings = ConcurrentHashMap<String, ChannelBinding>()
     private val envelopeType = object : TypeToken<PusherEnvelope>() {}.type
     private val updateType = object : TypeToken<ImageProcessorUpdate>() {}.type
+    private var reconnectJob: Job? = null
+    private var reconnectAttempts = 0
 
     fun bindImageProcessorEvent(
         channelName: String,
         eventName: String,
         callback: (ImageProcessorUpdate?) -> Unit
     ) {
-        // TODO: Remove temporary debug logging
-        Log.d(TAG, "🔔 Binding event: channel=$channelName event=$eventName")
-
         val binding = channelBindings.getOrPut(channelName) {
-            Log.d(TAG, "📡 Subscribing to new channel: $channelName")
             ChannelBinding(
                 channel = pusher.subscribe(channelName),
                 listeners = ConcurrentHashMap()
             )
         }
+        attachSubscriptionLifecycle(channelName, binding)
 
         // Replace any previous listener for this event to avoid duplicate callbacks
         binding.listeners.remove(eventName)?.let { existing ->
@@ -75,28 +92,20 @@ class PusherService(
         }
 
         val listener = SubscriptionEventListener { event ->
-            // TODO: Remove temporary debug logging
-            Log.d(TAG, "📨 Event received: channel=$channelName event=${event.eventName}")
-            Log.d(TAG, "📦 Payload: ${event.data?.take(500)}")
-
             val data = event.data
             if (data.isNullOrBlank() || data == "[]") {
-                Log.d(TAG, "⚠️ Empty payload, calling callback with null")
                 callback(null)
                 return@SubscriptionEventListener
             }
 
             val update = parseUpdate(data)
             if (update == null) {
-                Log.w(TAG, "❌ Failed to parse payload")
                 remoteLogger?.log(
                     level = LogLevel.WARN,
                     tag = TAG,
                     message = "Failed to parse Pusher payload for $eventName",
                     metadata = mapOf("channel" to channelName)
                 )
-            } else {
-                Log.d(TAG, "✅ Parsed update: status=${update.status}, assemblyId=${update.assemblyId}")
             }
             callback(update)
         }
@@ -107,14 +116,12 @@ class PusherService(
     }
 
     fun unsubscribe(channelName: String) {
-        // TODO: Remove temporary debug logging
-        Log.d(TAG, "🔕 Unsubscribing from channel: $channelName")
-
         val binding = channelBindings.remove(channelName) ?: return
         binding.listeners.forEach { (event, listener) ->
             binding.channel.unbind(event, listener)
         }
         pusher.unsubscribe(channelName)
+        disconnectIfIdle()
     }
 
     /**
@@ -126,15 +133,13 @@ class PusherService(
         eventName: String,
         callback: () -> Unit
     ) {
-        Log.d(TAG, "🔔 Binding generic event: channel=$channelName event=$eventName")
-
         val binding = channelBindings.getOrPut(channelName) {
-            Log.d(TAG, "📡 Subscribing to new channel: $channelName")
             ChannelBinding(
                 channel = pusher.subscribe(channelName),
                 listeners = ConcurrentHashMap()
             )
         }
+        attachSubscriptionLifecycle(channelName, binding)
 
         // Replace any previous listener for this event to avoid duplicate callbacks
         binding.listeners.remove(eventName)?.let { existing ->
@@ -142,7 +147,6 @@ class PusherService(
         }
 
         val listener = SubscriptionEventListener { event ->
-            Log.d(TAG, "📨 Generic event received: channel=$channelName event=${event.eventName}")
             callback()
         }
 
@@ -153,6 +157,7 @@ class PusherService(
 
     fun disconnect() {
         channelBindings.keys.toList().forEach { unsubscribe(it) }
+        reconnectJob?.cancel()
         pusher.disconnect()
     }
 
@@ -160,12 +165,73 @@ class PusherService(
         ensureConnected()
     }
 
+    fun isConnected(): Boolean = pusher.connection.state == ConnectionState.CONNECTED
+
     private fun ensureConnected() {
         val state = pusher.connection.state
         if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING) {
             return
         }
         pusher.connect(connectionListener, ConnectionState.ALL)
+    }
+
+    private fun attachSubscriptionLifecycle(channelName: String, binding: ChannelBinding) {
+        if (binding.lifecycleBound) return
+        binding.lifecycleBound = true
+
+        val successListener = SubscriptionEventListener {
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Pusher subscription succeeded",
+                metadata = mapOf("channel" to channelName)
+            )
+        }
+        val errorListener = SubscriptionEventListener { event ->
+            remoteLogger?.log(
+                level = LogLevel.ERROR,
+                tag = TAG,
+                message = "Pusher subscription error",
+                metadata = mapOf(
+                    "channel" to channelName,
+                    "payload" to (event.data ?: "none")
+                )
+            )
+            scheduleReconnect()
+        }
+
+        binding.listeners[SUBSCRIPTION_SUCCEEDED] = successListener
+        binding.listeners[SUBSCRIPTION_ERROR] = errorListener
+        binding.channel.bind(SUBSCRIPTION_SUCCEEDED, successListener)
+        binding.channel.bind(SUBSCRIPTION_ERROR, errorListener)
+    }
+
+    private fun scheduleReconnect() {
+        if (channelBindings.isEmpty()) return
+        if (pusher.connection.state == ConnectionState.CONNECTING || pusher.connection.state == ConnectionState.CONNECTED) {
+            return
+        }
+        if (reconnectJob?.isActive == true) return
+
+        val attempt = reconnectAttempts++
+        val delayMs = backoffDelayMs(attempt)
+        reconnectJob = scope.launch {
+            delay(delayMs)
+            ensureConnected()
+        }
+    }
+
+    private fun backoffDelayMs(attempt: Int): Long {
+        val clampedAttempt = attempt.coerceIn(0, 6)
+        val backoff = (1 shl clampedAttempt) * BASE_BACKOFF_MS
+        return backoff.coerceAtMost(MAX_BACKOFF_MS)
+    }
+
+    private fun disconnectIfIdle() {
+        if (channelBindings.isEmpty()) {
+            reconnectJob?.cancel()
+            pusher.disconnect()
+        }
     }
 
     private fun parseUpdate(raw: String): ImageProcessorUpdate? {
@@ -176,18 +242,22 @@ class PusherService(
             val envelope = gson.fromJson<PusherEnvelope>(trimmed, envelopeType)
             envelope.imageProcessorUpdate ?: gson.fromJson(trimmed, updateType)
         }.onFailure { error ->
-            if (error !is JsonSyntaxException) {
-                remoteLogger?.log(
-                    level = LogLevel.ERROR,
-                    tag = TAG,
-                    message = "Unexpected error decoding Pusher payload",
-                    metadata = mapOf("reason" to (error.message ?: "unknown"))
-                )
-            }
+            val reason = error.message ?: "unknown"
+            val level = if (error is JsonSyntaxException) LogLevel.DEBUG else LogLevel.ERROR
+            remoteLogger?.log(
+                level = level,
+                tag = TAG,
+                message = "Error decoding Pusher payload",
+                metadata = mapOf("reason" to reason)
+            )
         }.getOrNull()
     }
 
     companion object {
         private const val TAG = "PusherService"
+        private const val SUBSCRIPTION_SUCCEEDED = "pusher:subscription_succeeded"
+        private const val SUBSCRIPTION_ERROR = "pusher:subscription_error"
+        private const val BASE_BACKOFF_MS = 1_000L
+        private const val MAX_BACKOFF_MS = 30_000L
     }
 }

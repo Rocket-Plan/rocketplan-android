@@ -77,7 +77,8 @@ private val DEFAULT_DELETION_TYPES = listOf(
     "work_scope_actions"
 )
 private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
-private fun companyProjectsKey(companyId: Long) = "company_projects_$companyId"
+private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
+    if (assignedOnly) "company_projects_${companyId}_assigned" else "company_projects_$companyId"
 private fun userProjectsKey(userId: Long) = "user_projects_$userId"
 private fun roomPhotosKey(roomId: Long) = "room_photos_$roomId"
 private fun floorPhotosKey(projectId: Long) = "project_floor_photos_$projectId"
@@ -99,18 +100,24 @@ class OfflineSyncRepository(
     private val gson = Gson()
     private val roomPhotoListType = object : TypeToken<List<RoomPhotoDto>>() {}.type
 
-    suspend fun syncCompanyProjects(companyId: Long) = withContext(ioDispatcher) {
-        val checkpointKey = companyProjectsKey(companyId)
+    suspend fun syncCompanyProjects(companyId: Long, assignedToMe: Boolean = false): Set<Long> = withContext(ioDispatcher) {
+        val checkpointKey = companyProjectsKey(companyId, assignedToMe)
         val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
         val existingProjects = localDataService.getAllProjects().associateBy { it.projectId }
         val projects = fetchAllPages { page ->
-            api.getCompanyProjects(companyId = companyId, page = page, updatedSince = updatedSince)
+            api.getCompanyProjects(
+                companyId = companyId,
+                page = page,
+                updatedSince = updatedSince,
+                assignedToMe = if (assignedToMe) "1" else null
+            )
         }
         localDataService.saveProjects(
-            projects.map { it.toEntity(existing = existingProjects[it.id]) }
+            projects.map { it.toEntity(existing = existingProjects[it.id], fallbackCompanyId = companyId) }
         )
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
+        projects.map { it.id }.toSet()
     }
 
     suspend fun syncUserProjects(userId: Long) = withContext(ioDispatcher) {
@@ -250,13 +257,21 @@ class OfflineSyncRepository(
         // 1. Property
         val property = fetchProjectProperty(projectId)
         if (property != null) {
-            val entity = property.toEntity()
+            Log.d("API", "🏠 [syncProjectEssentials] Property DTO received: id=${property.id}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}, lat=${property.latitude}, lng=${property.longitude}")
+            Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail.address?.address}, city=${detail.address?.city}, state=${detail.address?.state}, zip=${detail.address?.zip}")
+            // Pass project address as fallback for missing property address fields
+            val entity = property.toEntity(projectAddress = detail.address)
+            Log.d("API", "🏠 [syncProjectEssentials] Property Entity created: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
             localDataService.saveProperty(entity)
             val resolvedId = entity.serverId ?: entity.propertyId
+            // Try to get propertyType from: detail.propertyType, property.propertyType, or embedded properties list
+            val embeddedPropertyType = detail.properties?.firstOrNull()?.propertyType
+            val resolvedPropertyType = detail.propertyType ?: property.propertyType ?: embeddedPropertyType
+            Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.propertyType}, embeddedPropertyType=$embeddedPropertyType)")
             localDataService.attachPropertyToProject(
                 projectId = projectId,
                 propertyId = resolvedId,
-                propertyType = detail.propertyType ?: property.propertyType
+                propertyType = resolvedPropertyType
             )
             itemCount++
         }
@@ -1154,7 +1169,11 @@ class OfflineSyncRepository(
         property: PropertyDto,
         propertyTypeValue: String?
     ): OfflinePropertyEntity {
-        val entity = property.toEntity()
+        // Fetch project address for fallback if property doesn't have address data
+        val projectAddress = if (property.address.isNullOrBlank() || property.city.isNullOrBlank()) {
+            runCatching { api.getProjectDetail(projectId).data.address }.getOrNull()
+        } else null
+        val entity = property.toEntity(projectAddress = projectAddress)
         localDataService.saveProperty(entity)
         val resolvedId = entity.serverId ?: entity.propertyId
         localDataService.attachPropertyToProject(
@@ -1181,8 +1200,21 @@ class OfflineSyncRepository(
     }
 
     private suspend fun fetchProjectProperty(projectId: Long): PropertyDto? {
-        val response = runCatching { api.getProjectProperties(projectId) }.getOrNull()
-        return response?.data?.firstOrNull()
+        // Note: iOS uses include=propertyType,asbestosStatus,propertyDamageTypes,damageCause
+        // but QA backend doesn't support it - returns empty array. Use project detail for propertyType instead.
+        val result = runCatching { api.getProjectProperties(projectId) }
+        result.onFailure { error ->
+            Log.e("API", "❌ [fetchProjectProperty] API call failed for project $projectId", error)
+        }
+        val response = result.getOrNull()
+        Log.d("API", "🔍 [fetchProjectProperty] Response for project $projectId: ${response?.data?.size ?: 0} properties returned")
+        val property = response?.data?.firstOrNull()
+        if (property != null) {
+            Log.d("API", "🔍 [fetchProjectProperty] PropertyDto for project $projectId: id=${property.id}, propertyTypeId=${property.propertyTypeId}, propertyType=${property.propertyType}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}")
+        } else {
+            Log.d("API", "⚠️ [fetchProjectProperty] No property in response for project $projectId")
+        }
+        return property
     }
 
     private suspend fun fetchRoomsForLocation(locationId: Long): List<RoomDto> {
@@ -1258,7 +1290,7 @@ class OfflineSyncRepository(
 // region Mappers
 private fun now(): Date = Date()
 
-private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null): OfflineProjectEntity {
+private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallbackCompanyId: Long? = null): OfflineProjectEntity {
     if (id == 0L) {
         Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDto.toEntity() called with id=0", Exception("Stack trace"))
         Log.e("OfflineSyncRepository", "   ProjectDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
@@ -1294,7 +1326,7 @@ private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null): Offline
         addressLine2 = addressLine2,
         status = resolvedStatus,
         propertyType = resolvedPropertyType,
-        companyId = companyId,
+        companyId = companyId ?: fallbackCompanyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
@@ -1307,7 +1339,8 @@ private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null): Offline
 }
 
 private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.toEntity(
-    existing: OfflineProjectEntity? = null
+    existing: OfflineProjectEntity? = null,
+    fallbackCompanyId: Long? = null
 ): OfflineProjectEntity {
     if (id == 0L) {
         Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDetailDto.toEntity() called with id=0", Exception("Stack trace"))
@@ -1346,7 +1379,7 @@ private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.t
         addressLine2 = addressLine2,
         status = resolvedStatus,
         propertyType = resolvedPropertyType,
-        companyId = companyId,
+        companyId = companyId ?: fallbackCompanyId ?: existing?.companyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
@@ -1377,18 +1410,28 @@ private fun UserDto.toEntity(): OfflineUserEntity {
     )
 }
 
-private fun PropertyDto.toEntity(): OfflinePropertyEntity {
+private fun PropertyDto.toEntity(
+    projectAddress: com.example.rocketplan_android.data.model.offline.ProjectAddressDto? = null
+): OfflinePropertyEntity {
     val timestamp = now()
+    // Use property address fields if available, otherwise fall back to project address
+    val resolvedAddress = address?.takeIf { it.isNotBlank() } ?: projectAddress?.address ?: ""
+    val resolvedCity = city?.takeIf { it.isNotBlank() } ?: projectAddress?.city
+    val resolvedState = state?.takeIf { it.isNotBlank() } ?: projectAddress?.state
+    val resolvedZip = postalCode?.takeIf { it.isNotBlank() } ?: projectAddress?.zip
+    val resolvedLat = latitude ?: projectAddress?.latitude?.toDoubleOrNull()
+    val resolvedLng = longitude ?: projectAddress?.longitude?.toDoubleOrNull()
+
     return OfflinePropertyEntity(
         propertyId = id,
         serverId = id,
         uuid = uuid ?: UUID.randomUUID().toString(),
-        address = address ?: "",
-        city = city,
-        state = state,
-        zipCode = postalCode,
-        latitude = latitude,
-        longitude = longitude,
+        address = resolvedAddress,
+        city = resolvedCity,
+        state = resolvedState,
+        zipCode = resolvedZip,
+        latitude = resolvedLat,
+        longitude = resolvedLng,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,

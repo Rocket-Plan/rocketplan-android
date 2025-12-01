@@ -13,6 +13,7 @@ import com.example.rocketplan_android.data.model.LoginResponse
 import com.example.rocketplan_android.data.model.RegisterRequest
 import com.example.rocketplan_android.data.model.AuthSession
 import com.example.rocketplan_android.data.model.CurrentUserResponse
+import com.example.rocketplan_android.data.model.Company
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
 
@@ -286,6 +287,32 @@ class AuthRepository(
     suspend fun getStoredUserId(): Long? = secureStorage.getUserIdSync()?.takeIf { it > 0L }
 
     suspend fun getStoredCompanyId(): Long? = secureStorage.getCompanyIdSync()
+
+    fun observeCompanyId(): Flow<Long?> = secureStorage.getCompanyId()
+
+    suspend fun setActiveCompany(companyId: Long) {
+        secureStorage.saveCompanyId(companyId)
+    }
+
+    /**
+     * Fetch the current user's companies from the API.
+     */
+    suspend fun getUserCompanies(): Result<List<Company>> {
+        return try {
+            val response = authService.getCurrentUser()
+            val envelope = response.body()
+            val currentUser = envelope?.data
+            if (response.isSuccessful && currentUser != null) {
+                Result.success(currentUser.companies.orEmpty())
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
 
     // ==================== Remember Me ====================
 

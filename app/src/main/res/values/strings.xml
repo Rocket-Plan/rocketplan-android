@@ -11,6 +11,7 @@
     <string name="action_sync_status">Sync Status</string>
     <string name="action_image_processor_assemblies">Image Processor Assemblies</string>
     <string name="action_reload_image_processor_config">Reload Image Processor Config</string>
+    <string name="action_switch_company">Switch Company</string>
     <string name="action_sign_out">Sign Out</string>
     <string name="action_delete_project">Delete Project</string>
     <string name="delete_project_title">Delete project</string>
@@ -308,4 +309,9 @@
     <string name="flash_auto">Flash auto</string>
     <string name="camera_error">Camera error: %s</string>
     <string name="camera_not_available">Camera is not available on this device</string>
+    <string name="switch_company_title">Switch Company</string>
+    <string name="error_loading_companies">Unable to load companies</string>
+    <string name="error_no_companies_found">No companies available for this user</string>
+    <string name="switched_company_to">Switched to %1$s</string>
+    <string name="unknown_company">Company %1$d</string>
 </resources>

@@ -25,14 +25,17 @@ class PhotoSyncRealtimeManager(
      * Subscribes to photo upload completed events for the given user.
      * When another device/user uploads photos, this will emit an event.
      */
+    @Synchronized
     fun subscribeForUser(userId: Int) {
         if (subscribedUserId == userId) {
             Log.d(TAG, "Already subscribed to photo sync for user $userId")
             return
         }
 
-        // Unsubscribe from previous user if any
-        unsubscribe()
+        val previousUserId = subscribedUserId
+        if (previousUserId != null) {
+            unsubscribeFromUser(previousUserId)
+        }
 
         val channelName = PusherConfig.channelNameForPhotoUploadCompleted(userId)
         Log.d(TAG, "📷 Subscribing to photo sync notifications: $channelName")
@@ -51,13 +54,16 @@ class PhotoSyncRealtimeManager(
     /**
      * Unsubscribes from photo upload notifications.
      */
+    @Synchronized
     fun unsubscribe() {
-        subscribedUserId?.let { userId ->
-            val channelName = PusherConfig.channelNameForPhotoUploadCompleted(userId)
-            Log.d(TAG, "📷 Unsubscribing from photo sync notifications: $channelName")
-            pusherService.unsubscribe(channelName)
-        }
+        subscribedUserId?.let { unsubscribeFromUser(it) }
         subscribedUserId = null
+    }
+
+    private fun unsubscribeFromUser(userId: Int) {
+        val channelName = PusherConfig.channelNameForPhotoUploadCompleted(userId)
+        Log.d(TAG, "📷 Unsubscribing from photo sync notifications: $channelName")
+        pusherService.unsubscribe(channelName)
     }
 
     companion object {

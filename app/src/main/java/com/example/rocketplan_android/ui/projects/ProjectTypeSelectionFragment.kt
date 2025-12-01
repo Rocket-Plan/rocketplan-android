@@ -4,7 +4,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -29,7 +28,6 @@ class ProjectTypeSelectionFragment : Fragment() {
         ProjectTypeSelectionViewModel.provideFactory(requireActivity().application, args.projectId)
     }
 
-    private lateinit var backButton: ImageButton
     private lateinit var projectName: TextView
     private lateinit var loadingIndicator: ProgressBar
     private lateinit var errorText: TextView
@@ -52,7 +50,6 @@ class ProjectTypeSelectionFragment : Fragment() {
     }
 
     private fun bindViews(root: View) {
-        backButton = root.findViewById(R.id.backButton)
         projectName = root.findViewById(R.id.projectName)
         loadingIndicator = root.findViewById(R.id.loadingIndicator)
         errorText = root.findViewById(R.id.errorText)
@@ -63,10 +60,6 @@ class ProjectTypeSelectionFragment : Fragment() {
     }
 
     private fun setupListeners() {
-        backButton.setOnClickListener {
-            findNavController().navigateUp()
-        }
-
         singleUnitCard.setOnClickListener {
             handlePropertyTypeSelection(PropertyType.SINGLE_UNIT)
         }
@@ -110,7 +103,6 @@ class ProjectTypeSelectionFragment : Fragment() {
     private fun renderState(state: ProjectTypeSelectionViewState) {
         val isBusy = state.isLoading || state.isSelectionInProgress
         loadingIndicator.visibility = if (isBusy) View.VISIBLE else View.GONE
-        backButton.isEnabled = !state.isSelectionInProgress
         val displayName = if (state.projectName.isNotBlank()) {
             state.projectName
         } else {

@@ -47,6 +47,8 @@ class SyncQueueManager(
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val errors: SharedFlow<String> = _errors
     private val initialSyncStarted = AtomicBoolean(false)
+    private val assignedProjectIds = MutableStateFlow<Set<Long>>(emptySet())
+    val assignedProjects: StateFlow<Set<Long>> = assignedProjectIds
 
     // Track active project sync jobs for cancellation
     private val activeProjectSyncJobs = mutableMapOf<Long, Job>()
@@ -258,20 +260,28 @@ class SyncQueueManager(
                     authRepository.ensureUserContext()
                 }
 
-                val userId = authRepository.getStoredUserId()
-                val companyId = authRepository.getStoredCompanyId()
+                var companyId = authRepository.getStoredCompanyId()
+                if (companyId == null) {
+                    Log.w(TAG, "⚠️ Missing companyId in storage, refreshing user context before sync")
+                    authRepository.refreshUserContext().getOrElse { error -> throw error }
+                    companyId = authRepository.getStoredCompanyId()
+                }
 
-                if (userId == null && companyId == null) {
-                    val message = "Missing user/company context during sync. Prompting relogin."
+                if (companyId == null) {
+                    val message = "Missing company context during sync. Prompting relogin."
                     remoteLogger.log(LogLevel.ERROR, TAG, message)
                     throw IllegalStateException("Please log in again.")
                 }
 
-                // Only sync user-assigned projects (matching iOS default behavior)
-                // iOS uses getUserProjects() by default, not getCompanyProjects()
-                userId?.let { syncRepository.syncUserProjects(it) }
+                // First, sync projects assigned to the current user (used for My Projects tab)
+                val assignedIds = syncRepository.syncCompanyProjects(companyId, assignedToMe = true)
+                assignedProjectIds.value = assignedIds
+
+                // Then sync all projects for the active company (used for WIP/all)
+                syncRepository.syncCompanyProjects(companyId, assignedToMe = false)
 
                 val projects = localDataService.getAllProjects()
+                    .filter { it.companyId == companyId }
                 if (projects.isEmpty()) {
                     remoteLogger.log(LogLevel.INFO, TAG, "Sync returned no projects.")
                 }

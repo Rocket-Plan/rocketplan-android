@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -114,6 +115,10 @@ class ProjectsFragment : Fragment() {
                         findNavController().navigate(R.id.imageProcessorConfigFragment)
                         true
                     }
+                    R.id.action_switch_company -> {
+                        showCompanyPicker()
+                        true
+                    }
                     R.id.action_sign_out -> {
                         performSignOut()
                         true
@@ -122,6 +127,51 @@ class ProjectsFragment : Fragment() {
                 }
             }
             show()
+        }
+    }
+
+    private fun showCompanyPicker() {
+        lifecycleScope.launch {
+            val result = authRepository.getUserCompanies()
+            result.onFailure { error ->
+                Toast.makeText(
+                    requireContext(),
+                    error.message ?: getString(R.string.error_loading_companies),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            val companies = result.getOrDefault(emptyList())
+            if (companies.isEmpty()) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.error_no_companies_found),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            val names = companies.map { it.name?.takeIf { name -> name.isNotBlank() } ?: getString(R.string.unknown_company, it.id) }
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.switch_company_title)
+                .setItems(names.toTypedArray()) { dialog, which ->
+                    val company = companies[which]
+                    dialog.dismiss()
+                    switchCompany(company.id, names[which])
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun switchCompany(companyId: Long, name: String) {
+        lifecycleScope.launch {
+            authRepository.setActiveCompany(companyId)
+            viewModel.refreshProjects()
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.switched_company_to, name),
+                Toast.LENGTH_SHORT
+            ).show()
         }
     }
 

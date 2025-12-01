@@ -16,6 +16,9 @@
         android:id="@+id/action_company_info"
         android:title="@string/action_company_info" />
     <item
+        android:id="@+id/action_switch_company"
+        android:title="@string/action_switch_company" />
+    <item
         android:id="@+id/action_sign_out"
         android:title="@string/action_sign_out" />
 </menu>
