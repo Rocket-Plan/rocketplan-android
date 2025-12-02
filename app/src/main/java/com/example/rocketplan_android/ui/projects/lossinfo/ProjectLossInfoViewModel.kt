@@ -58,6 +58,18 @@ data class LossInfoFormInput(
     val arrivedOnSite: Date?
 )
 
+data class PropertyInfoFormInput(
+    val propertyType: PropertyType?,
+    val referredByName: String?,
+    val referredByPhone: String?,
+    val isPlatinumAgent: Boolean?,
+    val isResidential: Boolean?,
+    val isCommercial: Boolean?,
+    val asbestosStatusId: Int?,
+    val yearBuilt: Int?,
+    val buildingName: String?
+)
+
 sealed interface ProjectLossInfoEvent {
     data object SaveSuccess : ProjectLossInfoEvent
     data class SaveFailed(val message: String) : ProjectLossInfoEvent
@@ -308,6 +320,28 @@ class ProjectLossInfoViewModel(
         }
     }
 
+    fun savePropertyInfo(form: PropertyInfoFormInput) {
+        viewModelScope.launch {
+            if (_uiState.value.isSaving) return@launch
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+
+            val result = runCatching { savePropertyInfoInternal(form) }
+            result.onSuccess { property ->
+                _uiState.update { state ->
+                    state.copy(
+                        isSaving = false,
+                        property = property
+                    )
+                }
+                _events.emit(ProjectLossInfoEvent.SaveSuccess)
+            }.onFailure { error ->
+                val message = error.message ?: rocketPlanApp.getString(R.string.loss_info_save_failed)
+                _uiState.update { it.copy(isSaving = false, errorMessage = message) }
+                _events.emit(ProjectLossInfoEvent.SaveFailed(message))
+            }
+        }
+    }
+
     fun saveLossInfo(form: LossInfoFormInput) {
         viewModelScope.launch {
             if (_uiState.value.isSaving) return@launch
@@ -422,6 +456,45 @@ class ProjectLossInfoViewModel(
         toAdd.forEach { api.addPropertyDamageType(propertyServerId, it) }
         toRemove.forEach { api.removePropertyDamageType(propertyServerId, it) }
     }
+
+    private suspend fun savePropertyInfoInternal(form: PropertyInfoFormInput): PropertyDto =
+        withContext(Dispatchers.IO) {
+            val project = localDataService.getProject(projectId)
+                ?: throw IllegalStateException("Project $projectId not found locally")
+            val propertyId = project.propertyId
+                ?: throw IllegalStateException("Property still syncing, please try again.")
+
+            val propertyTypeId = form.propertyType?.propertyTypeId ?: resolvePropertyTypeId(project)
+            val propertyTypeValue = form.propertyType?.apiValue
+                ?: project.propertyType
+                ?: _uiState.value.property?.propertyType
+                ?: PropertyType.fromApiValue(_uiState.value.property?.propertyType)?.apiValue
+
+            val request = PropertyMutationRequest(
+                propertyTypeId = propertyTypeId,
+                isCommercial = form.isCommercial,
+                isResidential = form.isResidential,
+                yearBuilt = form.yearBuilt,
+                name = form.buildingName,
+                referredByName = form.referredByName,
+                referredByPhone = form.referredByPhone,
+                isPlatinumAgent = form.isPlatinumAgent,
+                asbestosStatusId = form.asbestosStatusId
+            )
+
+            offlineSyncRepository.updateProjectProperty(
+                projectId = projectId,
+                propertyId = propertyId,
+                request = request,
+                propertyTypeValue = propertyTypeValue
+            ).getOrThrow()
+
+            val propertyServerId = localDataService.getProperty(propertyId)?.serverId
+                ?: _uiState.value.property?.id
+                ?: throw IllegalStateException("Unable to resolve property for update")
+
+            api.getProperty(propertyServerId)
+        }
 
     private fun resolvePropertyTypeId(project: OfflineProjectEntity): Int {
         _uiState.value.property?.propertyTypeId?.toInt()?.let { return it }

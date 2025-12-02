@@ -103,6 +103,10 @@ class ProjectsFragment : Fragment() {
             menuInflater.inflate(R.menu.profile_menu, menu)
             setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
+                    R.id.action_company_info -> {
+                        findNavController().navigate(R.id.companyInfoFragment)
+                        true
+                    }
                     R.id.action_sync_status -> {
                         findNavController().navigate(R.id.syncStatusFragment)
                         true

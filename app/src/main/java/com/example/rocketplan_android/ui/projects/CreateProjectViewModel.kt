@@ -25,6 +25,7 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
     private val authRepository = rocketPlanApp.authRepository
     private val syncQueueManager = rocketPlanApp.syncQueueManager
+    private val localDataService = rocketPlanApp.localDataService
 
     private val _uiState = MutableStateFlow(CreateProjectUiState())
     val uiState: StateFlow<CreateProjectUiState> = _uiState
@@ -34,6 +35,10 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
 
     private val _validationEvents = MutableSharedFlow<CreateProjectValidation>(extraBufferCapacity = 1)
     val validationEvents: SharedFlow<CreateProjectValidation> = _validationEvents
+
+    init {
+        loadRecentAddresses()
+    }
 
     fun createProjectFromQuickAddress(address: String?) {
         val cleanedAddress = address?.trim().orEmpty()
@@ -53,17 +58,36 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
         postalCode: String?
     ) {
         val cleanedStreet = street?.trim().orEmpty()
+        val cleanedCity = city?.trim().orEmpty()
+        val cleanedState = state?.trim().orEmpty()
+        val cleanedPostal = postalCode?.trim().orEmpty()
+
+        var hasError = false
         if (cleanedStreet.isEmpty()) {
             _validationEvents.tryEmit(CreateProjectValidation.StreetRequired)
-            return
+            hasError = true
         }
+        if (cleanedCity.isEmpty()) {
+            _validationEvents.tryEmit(CreateProjectValidation.CityRequired)
+            hasError = true
+        }
+        if (cleanedState.isEmpty()) {
+            _validationEvents.tryEmit(CreateProjectValidation.StateRequired)
+            hasError = true
+        }
+        if (cleanedPostal.isEmpty()) {
+            _validationEvents.tryEmit(CreateProjectValidation.PostalRequired)
+            hasError = true
+        }
+
+        if (hasError) return
 
         val addressRequest = CreateAddressRequest(
             address = cleanedStreet,
             address2 = unit?.trim().takeIf { !it.isNullOrBlank() },
-            city = city?.trim().takeIf { !it.isNullOrBlank() },
-            state = state?.trim().takeIf { !it.isNullOrBlank() },
-            zip = postalCode?.trim().takeIf { !it.isNullOrBlank() }
+            city = cleanedCity,
+            state = cleanedState,
+            zip = cleanedPostal
         )
 
         submitProject(addressRequest)
@@ -79,7 +103,7 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
         }
 
         viewModelScope.launch {
-            _uiState.value = CreateProjectUiState(isSubmitting = true, errorMessage = null)
+            _uiState.update { it.copy(isSubmitting = true, errorMessage = null) }
             val result = runCatching {
                 val companyId = authRepository.getStoredCompanyId()
                     ?: authRepository.refreshUserContext()
@@ -112,30 +136,72 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
             result.fold(
                 onSuccess = { project ->
                     Log.d("CreateProjectVM", "Project created with id=${project.projectId}")
+                    addRecentAddress(formatAddressForCache(addressRequest) ?: addressRequest.address)
                     syncQueueManager.prioritizeProject(project.projectId)
-                    _uiState.value = CreateProjectUiState(isSubmitting = false, errorMessage = null)
+                    _uiState.update { it.copy(isSubmitting = false, errorMessage = null) }
                     _events.emit(CreateProjectEvent.ProjectCreated(project.projectId))
                 },
                 onFailure = { error ->
                     Log.e("CreateProjectVM", "Failed to create project", error)
                     val fallbackMessage = getApplication<Application>().getString(R.string.create_project_generic_error)
-                    _uiState.value = CreateProjectUiState(
-                        isSubmitting = false,
-                        errorMessage = error.message ?: fallbackMessage
-                    )
+                    _uiState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            errorMessage = error.message ?: fallbackMessage
+                        )
+                    }
                 }
             )
         }
     }
 
+    private fun loadRecentAddresses() {
+        viewModelScope.launch {
+            val addresses = runCatching {
+                localDataService.getRecentAddresses(RECENT_ADDRESS_LIMIT)
+            }.onFailure { error ->
+                Log.w("CreateProjectVM", "Failed to load recent addresses", error)
+            }.getOrDefault(emptyList())
+
+            _uiState.update { it.copy(recentAddresses = addresses) }
+        }
+    }
+
+    private fun addRecentAddress(address: String?) {
+        val normalized = address?.trim().orEmpty()
+        if (normalized.isEmpty()) return
+
+        _uiState.update { state ->
+            val merged = listOf(normalized) + state.recentAddresses
+            state.copy(recentAddresses = merged.distinct().take(RECENT_ADDRESS_LIMIT))
+        }
+    }
+
+    private fun formatAddressForCache(request: CreateAddressRequest): String? {
+        val line1 = request.address?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+        val parts = mutableListOf(line1)
+        request.address2?.trim()?.takeIf { it.isNotEmpty() }?.let { parts.add(it) }
+        val cityStateZip = listOfNotNull(
+            request.city?.trim()?.takeIf { it.isNotEmpty() },
+            request.state?.trim()?.takeIf { it.isNotEmpty() },
+            request.zip?.trim()?.takeIf { it.isNotEmpty() }
+        ).joinToString(" ")
+        if (cityStateZip.isNotEmpty()) {
+            parts.add(cityStateZip)
+        }
+        return parts.joinToString(", ")
+    }
+
     companion object {
         private const val DEFAULT_PROJECT_STATUS_ID = 1
+        private const val RECENT_ADDRESS_LIMIT = 10
     }
 }
 
 data class CreateProjectUiState(
     val isSubmitting: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val recentAddresses: List<String> = emptyList()
 )
 
 sealed interface CreateProjectEvent {
@@ -145,4 +211,7 @@ sealed interface CreateProjectEvent {
 sealed interface CreateProjectValidation {
     data object AddressRequired : CreateProjectValidation
     data object StreetRequired : CreateProjectValidation
+    data object CityRequired : CreateProjectValidation
+    data object StateRequired : CreateProjectValidation
+    data object PostalRequired : CreateProjectValidation
 }

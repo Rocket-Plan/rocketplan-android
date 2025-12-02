@@ -610,11 +610,15 @@ class LocalDataService private constructor(
         dao.updatePhotoCacheStatus(photoId, PhotoCacheStatus.READY, Date())
     }
 
+    suspend fun getRecentAddresses(limit: Int = DEFAULT_RECENT_ADDRESS_COUNT): List<String> =
+        withContext(ioDispatcher) { dao.getRecentAddresses(limit) }
+
     companion object {
         @Volatile
         private var instance: LocalDataService? = null
         private const val DEFAULT_ROOM_PHOTO_PAGE_SIZE = 30
         private const val MAX_ROOM_PHOTO_PAGES = 5
+        private const val DEFAULT_RECENT_ADDRESS_COUNT = 10
 
         fun initialize(context: Context): LocalDataService =
             instance ?: synchronized(this) {

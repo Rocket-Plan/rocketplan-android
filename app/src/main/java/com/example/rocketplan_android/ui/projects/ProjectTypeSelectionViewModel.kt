@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -60,6 +61,7 @@ class ProjectTypeSelectionViewModel(
                 latestProject = project
 
                 if (project == null) {
+                    Log.d(TAG, "[ProjectType] Project $projectId missing locally; showing error state")
                     _uiState.value = ProjectTypeSelectionViewState(
                         isLoading = false,
                         projectName = "",
@@ -67,6 +69,11 @@ class ProjectTypeSelectionViewModel(
                         errorMessage = missingProjectMessage
                     )
                 } else {
+                    val syncInFlight = syncQueueManager.isProjectSyncInFlight(projectId)
+                    Log.d(
+                        TAG,
+                        "[ProjectType] Rendering selection page for projectId=$projectId propertyId=${project.propertyId} serverId=${project.serverId} syncInFlight=$syncInFlight"
+                    )
                     _uiState.value = ProjectTypeSelectionViewState(
                         isLoading = false,
                         projectName = project.displayName(),
@@ -192,6 +199,8 @@ class ProjectTypeSelectionViewModel(
     }
 
     companion object {
+        private const val TAG = "ProjectTypeSelection"
+
         fun provideFactory(
             application: Application,
             projectId: Long

@@ -7,23 +7,9 @@
     android:background="@android:color/white"
     tools:context=".ui.projects.CreateProjectFragment">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/createProjectToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/white"
-        android:elevation="0dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="@string/create_project_title"
-        app:titleCentered="true"
-        app:titleTextColor="@color/dark_text_rp" />
-
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="?attr/actionBarSize"
         android:fillViewport="true">
 
         <LinearLayout
@@ -64,12 +50,14 @@
                 app:boxStrokeColor="@color/light_gray_rp"
                 app:boxStrokeWidth="1dp"
                 app:boxStrokeWidthFocused="2dp"
+                app:endIconMode="dropdown_menu"
                 app:hintEnabled="false">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/addressInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:completionThreshold="1"
                     android:hint="@string/create_project_address_hint"
                     android:inputType="textPostalAddress"
                     android:textColor="@color/dark_text_rp"

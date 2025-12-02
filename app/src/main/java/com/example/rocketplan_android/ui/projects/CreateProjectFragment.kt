@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
@@ -14,9 +15,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.R
-import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 
@@ -26,11 +26,12 @@ import kotlinx.coroutines.launch
  */
 class CreateProjectFragment : Fragment() {
 
-    private lateinit var toolbar: MaterialToolbar
     private lateinit var addressInputLayout: TextInputLayout
-    private lateinit var addressInput: TextInputEditText
+    private lateinit var addressInput: MaterialAutoCompleteTextView
     private lateinit var manualEntryLink: TextView
     private lateinit var createProjectButton: MaterialButton
+    private lateinit var addressAdapter: ArrayAdapter<String>
+    private var lastSuggestions: List<String> = emptyList()
 
     private val viewModel: CreateProjectViewModel by activityViewModels()
 
@@ -42,21 +43,30 @@ class CreateProjectFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        toolbar = view.findViewById(R.id.createProjectToolbar)
         addressInputLayout = view.findViewById(R.id.addressInputLayout)
         addressInput = view.findViewById(R.id.addressInput)
         manualEntryLink = view.findViewById(R.id.manualEntryLink)
         createProjectButton = view.findViewById(R.id.createProjectButton)
+        addressAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, mutableListOf())
+
+        addressInput.setAdapter(addressAdapter)
+        addressInput.threshold = 0
+        addressInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && addressAdapter.count > 0 && addressInput.text.isNullOrBlank()) {
+                addressInput.showDropDown()
+            }
+        }
+        addressInput.setOnClickListener {
+            if (addressAdapter.count > 0) {
+                addressInput.showDropDown()
+            }
+        }
 
         addressInput.doAfterTextChanged {
             if (!it.isNullOrBlank()) {
                 addressInputLayout.error = null
                 viewModel.clearError()
             }
-        }
-
-        toolbar.setNavigationOnClickListener {
-            findNavController().navigateUp()
         }
 
         manualEntryLink.setOnClickListener {
@@ -93,6 +103,11 @@ class CreateProjectFragment : Fragment() {
                             CreateProjectValidation.StreetRequired -> {
                                 // Ignore – handled in manual fragment
                             }
+                            CreateProjectValidation.CityRequired,
+                            CreateProjectValidation.StateRequired,
+                            CreateProjectValidation.PostalRequired -> {
+                                // Ignore – handled in manual fragment
+                            }
                         }
                     }
                 }
@@ -103,7 +118,7 @@ class CreateProjectFragment : Fragment() {
     private fun renderState(state: CreateProjectUiState) {
         createProjectButton.isEnabled = !state.isSubmitting
         manualEntryLink.isEnabled = !state.isSubmitting
-        toolbar.isEnabled = !state.isSubmitting
+        updateAddressSuggestions(state.recentAddresses)
 
         if (!state.errorMessage.isNullOrBlank()) {
             Toast.makeText(requireContext(), state.errorMessage, Toast.LENGTH_LONG).show()
@@ -115,5 +130,17 @@ class CreateProjectFragment : Fragment() {
         val action = CreateProjectFragmentDirections
             .actionCreateProjectFragmentToProjectLandingFragment(projectId)
         findNavController().navigate(action)
+    }
+
+    private fun updateAddressSuggestions(addresses: List<String>) {
+        if (addresses == lastSuggestions) return
+        lastSuggestions = addresses
+        addressAdapter.clear()
+        addressAdapter.addAll(addresses)
+        addressAdapter.notifyDataSetChanged()
+        addressInputLayout.isEndIconVisible = addresses.isNotEmpty()
+        if (addressInput.hasFocus() && addressInput.text.isNullOrBlank() && addresses.isNotEmpty()) {
+            addressInput.showDropDown()
+        }
     }
 }

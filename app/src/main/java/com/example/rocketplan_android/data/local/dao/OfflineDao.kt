@@ -539,6 +539,42 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId LIMIT 1")
     suspend fun getProperty(propertyId: Long): OfflinePropertyEntity?
+
+    @Query(
+        """
+        SELECT address FROM (
+            SELECT address, MAX(lastUsed) AS lastUsed FROM (
+                SELECT TRIM(address) AS address, MAX(updatedAt) AS lastUsed
+                FROM offline_properties
+                WHERE address IS NOT NULL
+                  AND TRIM(address) != ''
+                GROUP BY TRIM(address)
+                UNION ALL
+                SELECT TRIM(
+                    CASE
+                        WHEN addressLine2 IS NOT NULL AND TRIM(addressLine2) != '' THEN addressLine1 || ', ' || addressLine2
+                        ELSE addressLine1
+                    END
+                ) AS address,
+                MAX(updatedAt) AS lastUsed
+                FROM offline_projects
+                WHERE addressLine1 IS NOT NULL
+                  AND TRIM(addressLine1) != ''
+                  AND isDeleted = 0
+                GROUP BY
+                    CASE
+                        WHEN addressLine2 IS NOT NULL AND TRIM(addressLine2) != '' THEN addressLine1 || ', ' || addressLine2
+                        ELSE addressLine1
+                    END
+            )
+            WHERE address IS NOT NULL AND address != ''
+            GROUP BY address
+        )
+        ORDER BY lastUsed DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun getRecentAddresses(limit: Int): List<String>
     // endregion
 
     // region Sync Queue

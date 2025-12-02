@@ -6,22 +6,11 @@
     android:layout_height="match_parent"
     tools:context=".ui.projects.ProjectNotesFragment">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/notesToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/white"
-        android:elevation="0dp"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="@string/all_project_notes_title"
-        app:titleTextColor="@color/black" />
-
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="16dp"
-        android:layout_marginTop="?attr/actionBarSize">
+        android:padding="16dp">
 
         <TextView
             android:id="@+id/notesSubtitle"

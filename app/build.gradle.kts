@@ -78,7 +78,8 @@ android {
             // Standard Android devices without thermal camera
             buildConfigField("Boolean", "HAS_FLIR_SUPPORT", "false")
             ndk {
-                abiFilters += "armeabi-v7a"
+                // Include x86_64 for emulator support, ARM for physical devices
+                abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
             }
         }
     }
@@ -163,9 +164,9 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
     implementation(libs.okhttp.logging)
-    implementation(libs.pusher) {
-        exclude(group = "org.slf4j", module = "slf4j-api")
-    }
+    implementation(libs.pusher)
+    // SLF4J Android implementation required by java-websocket (Pusher dependency)
+    implementation("org.slf4j:slf4j-android:1.7.36")
 
     // DataStore for secure storage
     implementation(libs.androidx.datastore.preferences)

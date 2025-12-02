@@ -13,7 +13,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.R
-import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -25,13 +24,15 @@ import kotlinx.coroutines.launch
  */
 class ManualAddressEntryFragment : Fragment() {
 
-    private lateinit var toolbar: MaterialToolbar
     private lateinit var saveButton: MaterialButton
     private lateinit var streetLayout: TextInputLayout
     private lateinit var streetInput: TextInputEditText
     private lateinit var unitInput: TextInputEditText
+    private lateinit var cityLayout: TextInputLayout
     private lateinit var cityInput: TextInputEditText
+    private lateinit var stateLayout: TextInputLayout
     private lateinit var stateInput: TextInputEditText
+    private lateinit var postalLayout: TextInputLayout
     private lateinit var postalInput: TextInputEditText
 
     private val viewModel: CreateProjectViewModel by activityViewModels()
@@ -44,13 +45,15 @@ class ManualAddressEntryFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        toolbar = view.findViewById(R.id.manualAddressToolbar)
         saveButton = view.findViewById(R.id.manualAddressSaveButton)
         streetLayout = view.findViewById(R.id.manualStreetLayout)
         streetInput = view.findViewById(R.id.manualStreetInput)
         unitInput = view.findViewById(R.id.manualUnitInput)
+        cityLayout = view.findViewById(R.id.manualCityLayout)
         cityInput = view.findViewById(R.id.manualCityInput)
+        stateLayout = view.findViewById(R.id.manualStateLayout)
         stateInput = view.findViewById(R.id.manualStateInput)
+        postalLayout = view.findViewById(R.id.manualPostalLayout)
         postalInput = view.findViewById(R.id.manualPostalInput)
 
         streetInput.doAfterTextChanged {
@@ -60,8 +63,25 @@ class ManualAddressEntryFragment : Fragment() {
             }
         }
 
-        toolbar.setNavigationOnClickListener {
-            findNavController().navigateUp()
+        cityInput.doAfterTextChanged {
+            if (!it.isNullOrBlank()) {
+                cityLayout.error = null
+                viewModel.clearError()
+            }
+        }
+
+        stateInput.doAfterTextChanged {
+            if (!it.isNullOrBlank()) {
+                stateLayout.error = null
+                viewModel.clearError()
+            }
+        }
+
+        postalInput.doAfterTextChanged {
+            if (!it.isNullOrBlank()) {
+                postalLayout.error = null
+                viewModel.clearError()
+            }
         }
 
         saveButton.setOnClickListener {
@@ -83,7 +103,6 @@ class ManualAddressEntryFragment : Fragment() {
                 launch {
                     viewModel.uiState.collect { state ->
                         saveButton.isEnabled = !state.isSubmitting
-                        toolbar.isEnabled = !state.isSubmitting
                         if (!state.errorMessage.isNullOrBlank()) {
                             Toast.makeText(requireContext(), state.errorMessage, Toast.LENGTH_LONG).show()
                             viewModel.clearError()
@@ -102,6 +121,12 @@ class ManualAddressEntryFragment : Fragment() {
                         when (validation) {
                             CreateProjectValidation.StreetRequired ->
                                 streetLayout.error = getString(R.string.manual_address_street_error)
+                            CreateProjectValidation.CityRequired ->
+                                cityLayout.error = getString(R.string.manual_address_city_error)
+                            CreateProjectValidation.StateRequired ->
+                                stateLayout.error = getString(R.string.manual_address_state_error)
+                            CreateProjectValidation.PostalRequired ->
+                                postalLayout.error = getString(R.string.manual_address_postal_error)
                             CreateProjectValidation.AddressRequired -> {
                                 // Ignore – quick create screen handles this case
                             }

@@ -114,7 +114,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             when (destination.id) {
-                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment, R.id.oauthWebViewFragment, R.id.nav_projects -> {
+                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment, R.id.oauthWebViewFragment, R.id.nav_projects, R.id.photoViewerFragment -> {
                     // Hide toolbar and drawer on auth screens and projects screen
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
@@ -325,9 +325,6 @@ class MainActivity : AppCompatActivity() {
         }
         PopupMenu(this, anchor, Gravity.END).apply {
             menuInflater.inflate(R.menu.profile_menu, menu)
-            val navController = findNavController(R.id.nav_host_fragment_content_main)
-            val isProjectDetail = navController.currentDestination?.id == R.id.projectDetailFragment
-            menu.findItem(R.id.action_delete_project)?.isVisible = isProjectDetail
             Log.d(TAG, "🟣 Profile menu inflated with ${menu.size()} items")
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "Profile menu inflated with ${menu.size()} items")
@@ -371,7 +368,6 @@ class MainActivity : AppCompatActivity() {
                         findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.companyInfoFragment)
                         true
                     }
-                    R.id.action_delete_project -> handleDeleteProjectRequest()
                     R.id.action_sign_out -> {
                         performSignOut()
                         true

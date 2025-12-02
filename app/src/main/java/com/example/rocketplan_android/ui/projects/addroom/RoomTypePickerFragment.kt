@@ -6,7 +6,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.Toast
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
@@ -57,7 +56,8 @@ class RoomTypePickerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        setupToolbar()
+        requireActivity().title = getString(pickerMode.titleRes)
+        binding.roomTypeHeader.text = getString(pickerMode.titleRes)
         setupList()
         setupSearch()
         observeUiState()
@@ -68,17 +68,6 @@ class RoomTypePickerFragment : Fragment() {
         binding.roomTypeRecyclerView.adapter = null
         _binding = null
         super.onDestroyView()
-    }
-
-    private fun setupToolbar() {
-        binding.roomTypeToolbar.title = ""
-        binding.roomTypeToolbar.navigationIcon?.setTint(
-            ContextCompat.getColor(requireContext(), R.color.icon_colour)
-        )
-        binding.roomTypeToolbar.setNavigationOnClickListener {
-            findNavController().navigateUp()
-        }
-        binding.roomTypeHeader.text = getString(pickerMode.titleRes)
     }
 
     private fun setupList() {

@@ -15,7 +15,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.appbar.MaterialToolbar
 import kotlinx.coroutines.flow.collectLatest
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -37,7 +36,6 @@ class ProjectNotesFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyState: TextView
     private lateinit var subtitle: TextView
-    private lateinit var toolbar: MaterialToolbar
     private val adapter = ProjectNotesAdapter()
 
     override fun onCreateView(
@@ -51,13 +49,10 @@ class ProjectNotesFragment : Fragment() {
         recyclerView = view.findViewById(R.id.notesRecyclerView)
         emptyState = view.findViewById(R.id.notesEmptyState)
         subtitle = view.findViewById(R.id.notesSubtitle)
-        toolbar = view.findViewById(R.id.notesToolbar)
         val addButton: FloatingActionButton = view.findViewById(R.id.addNoteFab)
 
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
         recyclerView.adapter = adapter
-        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        toolbar.title = getString(R.string.all_project_notes_title)
 
         addButton.setOnClickListener { showAddNoteDialog() }
 

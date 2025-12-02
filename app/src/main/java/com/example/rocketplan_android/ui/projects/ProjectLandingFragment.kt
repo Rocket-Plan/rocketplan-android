@@ -113,18 +113,21 @@ class ProjectLandingFragment : Fragment() {
             val summary = latestSummary ?: return@setOnClickListener
 
             when {
+                // No property at all - need to create one via type selection
                 !summary.hasProperty -> {
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
                     findNavController().navigate(action)
                 }
-                // No levels yet, continue onboarding via property type selection
-                !summary.hasLevels -> {
+                // Property exists but no levels yet AND sync is not in progress
+                // If sync is in progress, go to detail and let it show loading state
+                !summary.hasLevels && !summary.isSyncing -> {
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
                     findNavController().navigate(action)
                 }
                 else -> {
+                    // Has property and either has levels or sync is in progress
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
                     findNavController().navigate(action)

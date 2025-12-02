@@ -40,7 +40,8 @@ data class ProjectLandingSummary(
     val noteCount: Int,
     val hasLevels: Boolean,
     val hasRooms: Boolean,
-    val hasProperty: Boolean
+    val hasProperty: Boolean,
+    val isSyncing: Boolean = false
 )
 
 class ProjectLandingViewModel(
@@ -78,12 +79,14 @@ class ProjectLandingViewModel(
                 if (project == null) {
                     ProjectLandingUiState.Loading
                 } else {
+                    val isSyncing = syncQueueManager.isProjectSyncInFlight(projectId)
                     ProjectLandingUiState.Ready(
                         summary = project.toSummary(
                             noteCount = notes.size,
                             hasLevels = locations.isNotEmpty(),
                             hasRooms = rooms.isNotEmpty(),
-                            aliasIsUpdating = aliasUpdating
+                            aliasIsUpdating = aliasUpdating,
+                            isSyncing = isSyncing
                         )
                     )
                 }
@@ -97,7 +100,8 @@ class ProjectLandingViewModel(
         noteCount: Int,
         hasLevels: Boolean,
         hasRooms: Boolean,
-        aliasIsUpdating: Boolean
+        aliasIsUpdating: Boolean,
+        isSyncing: Boolean
     ): ProjectLandingSummary {
         val titleCandidates = listOfNotNull(
             addressLine1?.takeIf { it.isNotBlank() },
@@ -129,7 +133,8 @@ class ProjectLandingViewModel(
             noteCount = noteCount,
             hasLevels = hasLevels,
             hasRooms = hasRooms,
-            hasProperty = propertyId != null
+            hasProperty = propertyId != null,
+            isSyncing = isSyncing
         )
     }
 

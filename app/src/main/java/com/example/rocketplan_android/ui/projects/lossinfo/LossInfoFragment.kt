@@ -88,7 +88,7 @@ class LossInfoFragment : Fragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                 viewModel.events.collect { event ->
                     when (event) {
                         ProjectLossInfoEvent.SaveSuccess -> {

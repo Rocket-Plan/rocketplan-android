@@ -7,23 +7,9 @@
     android:background="@android:color/white"
     tools:context=".ui.projects.ManualAddressEntryFragment">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/manualAddressToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        android:background="@android:color/white"
-        android:elevation="0dp"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="@string/manual_address_title"
-        app:titleCentered="true"
-        app:titleTextColor="@color/dark_text_rp" />
-
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="?attr/actionBarSize"
         android:fillViewport="true">
 
         <LinearLayout
