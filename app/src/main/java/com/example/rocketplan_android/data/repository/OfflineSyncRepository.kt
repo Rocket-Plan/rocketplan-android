@@ -23,7 +23,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.CreateRoomRequest
+import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
+import com.example.rocketplan_android.data.model.UpdateProjectRequest
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
@@ -37,6 +39,7 @@ import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
+import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.PaginationMeta
@@ -65,6 +68,7 @@ import java.util.concurrent.TimeUnit
 
 private const val ROOM_PHOTO_INCLUDE = "photo,albums,notes_count,creator"
 private const val ROOM_PHOTO_PAGE_LIMIT = 30
+private const val NOTES_PAGE_LIMIT = 100
 private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"
 private val DEFAULT_DELETION_TYPES = listOf(
     "projects",
@@ -371,15 +375,84 @@ class OfflineSyncRepository(
 
     suspend fun createCompanyProject(
         companyId: Long,
-        request: CreateCompanyProjectRequest
+        request: CreateCompanyProjectRequest,
+        projectAddress: ProjectAddressDto? = null,
+        addressRequest: CreateAddressRequest? = null
     ): Result<OfflineProjectEntity> = withContext(ioDispatcher) {
         runCatching {
             Log.d("API", "🚀 [createCompanyProject] Creating project for company=$companyId address=${request.addressId}")
             val dto = api.createCompanyProject(companyId, request).data
             val entity = dto.toEntity()
+            val enriched = entity.withAddressFallback(projectAddress, addressRequest)
+            localDataService.saveProjects(listOf(enriched))
+            enriched
+        }
+    }
+
+    suspend fun updateProjectAlias(
+        projectId: Long,
+        alias: String
+    ): Result<OfflineProjectEntity> = withContext(ioDispatcher) {
+        val normalizedAlias = alias.trim().takeIf { it.isNotEmpty() }
+            ?: return@withContext Result.failure(IllegalArgumentException("Alias cannot be blank"))
+
+        runCatching {
+            val project = localDataService.getProject(projectId)
+                ?: throw IllegalStateException("Project not found locally")
+            val serverId = project.serverId
+                ?: throw IllegalStateException("Project has no server ID - cannot update alias")
+            val statusId = ProjectStatus.fromApiValue(project.status)?.backendId
+
+            Log.d(
+                "API",
+                "🏷️ [updateProjectAlias] Updating alias for project $serverId (local: $projectId) to \"$normalizedAlias\""
+            )
+
+            val dto = api.updateProject(
+                projectId = serverId,
+                body = UpdateProjectRequest(
+                    alias = normalizedAlias,
+                    projectStatusId = statusId
+                )
+            ).data
+            val entity = dto.toEntity(existing = project)
             localDataService.saveProjects(listOf(entity))
             entity
         }
+    }
+
+    private fun OfflineProjectEntity.withAddressFallback(
+        projectAddress: ProjectAddressDto?,
+        addressRequest: CreateAddressRequest?
+    ): OfflineProjectEntity {
+        val resolvedLine1 = listOfNotNull(
+            addressLine1?.takeIf { it.isNotBlank() },
+            projectAddress?.address?.takeIf { it.isNotBlank() },
+            addressRequest?.address?.takeIf { it.isNotBlank() }
+        ).firstOrNull()
+
+        val resolvedLine2 = listOfNotNull(
+            addressLine2?.takeIf { it.isNotBlank() },
+            projectAddress?.address2?.takeIf { it.isNotBlank() },
+            addressRequest?.address2?.takeIf { it.isNotBlank() }
+        ).firstOrNull()
+
+        val resolvedPropertyId = propertyId ?: projectAddress?.id
+
+        val resolvedTitle = listOfNotNull(
+            resolvedLine1,
+            title.takeIf { it.isNotBlank() },
+            alias?.takeIf { it.isNotBlank() },
+            projectNumber?.takeIf { it.isNotBlank() },
+            uid?.takeIf { it.isNotBlank() }
+        ).firstOrNull() ?: title
+
+        return copy(
+            addressLine1 = resolvedLine1,
+            addressLine2 = resolvedLine2,
+            propertyId = resolvedPropertyId,
+            title = resolvedTitle
+        )
     }
 
     suspend fun createProjectProperty(
@@ -639,11 +712,24 @@ class OfflineSyncRepository(
         val notesCheckpointKey = projectNotesKey(projectId)
         val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
         // Notes
-        runCatching { api.getProjectNotes(projectId, updatedSince = notesSince) }
+        Log.d(
+            "API",
+            "🔄 [syncProjectMetadata] Fetching notes with pagination (limit=$NOTES_PAGE_LIMIT) since ${notesSince ?: "beginning"}"
+        )
+        runCatching {
+            fetchAllPages { page ->
+                api.getProjectNotes(
+                    projectId = projectId,
+                    page = page,
+                    limit = NOTES_PAGE_LIMIT,
+                    updatedSince = notesSince
+                )
+            }
+        }
             .onSuccess { notes ->
                 localDataService.saveNotes(notes.mapNotNull { it.toEntity() })
                 itemCount += notes.size
-                Log.d("API", "📝 [syncProjectMetadata] Saved ${notes.size} notes")
+                Log.d("API", "📝 [syncProjectMetadata] Saved ${notes.size} notes (paginated)")
                 notes.latestTimestamp { it.updatedAt }
                     ?.let { syncCheckpointStore.updateCheckpoint(notesCheckpointKey, it) }
             }
@@ -655,7 +741,7 @@ class OfflineSyncRepository(
             .onSuccess { equipment ->
                 localDataService.saveEquipment(equipment.map { it.toEntity() })
                 itemCount += equipment.size
-                Log.d("API", "🔧 [syncProjectMetadata] Saved ${equipment.size} equipment")
+                Log.d("API", "🔧 [syncProjectMetadata] Saved ${equipment.size} equipment (single response)")
             }
             .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch equipment", it) }
         ensureActive()

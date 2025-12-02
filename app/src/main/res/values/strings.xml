@@ -152,12 +152,17 @@
     <string name="materials_count">%d Materials</string>
     <string name="photo_viewer_title">Photo</string>
     <string name="retry">Retry</string>
+    <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>
 
     <!-- Project landing screen -->
     <string name="project_overview_header">Map</string>
     <string name="add_alias">Add Alias</string>
-    <string name="project_alias_coming_soon">Project alias editing coming soon.</string>
+    <string name="project_alias_hint">Project alias</string>
+    <string name="project_alias_required">Alias cannot be blank.</string>
+    <string name="project_alias_update_failed">Unable to update project alias. Please try again.</string>
+    <string name="project_alias_saved">Alias saved</string>
+    <string name="saving_alias">Saving alias...</string>
     <string name="add_project_info_title">Add Project/Loss Info</string>
     <string name="add_project_info_subtitle">Collect property and loss details here.</string>
     <string name="add_project_info_coming_soon">Project/Loss info collection coming soon.</string>
@@ -188,6 +193,8 @@
     <string name="loss_info_claims_placeholder">No claims yet.</string>
     <string name="loss_info_value_not_available">—</string>
     <string name="loss_info_locations_placeholder">No locations synced for this project.</string>
+    <string name="loss_info_save_success">Loss info saved.</string>
+    <string name="loss_info_save_failed">Unable to save loss info.</string>
     <string name="loss_info_yes">Yes</string>
     <string name="loss_info_no">No</string>
     <string name="loss_info_residential">Residential</string>
@@ -262,6 +269,7 @@
     <string name="project_type_commercial">Commercial</string>
     <string name="project_type_loading_project_name">Loading project...</string>
     <string name="project_type_error_generic">Unable to update the property. Please try again.</string>
+    <string name="project_type_sync_in_progress">Project is still syncing. Please wait a moment before creating a property.</string>
     <string name="project_type_missing_project">Project unavailable.</string>
 
     <!-- Create Project -->

@@ -25,6 +25,7 @@ import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.ProjectResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
+import com.example.rocketplan_android.data.model.UpdateProjectRequest
 import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
@@ -85,8 +86,10 @@ interface OfflineSyncApi {
     @GET("/api/projects/{projectId}/notes")
     suspend fun getProjectNotes(
         @Path("projectId") projectId: Long,
+        @Query("page") page: Int? = null,
+        @Query("limit") limit: Int? = null,
         @Query("filter[updated_date]") updatedSince: String? = null
-    ): List<NoteDto>
+    ): PaginatedResponse<NoteDto>
 
     @POST("/api/projects/{projectId}/notes")
     suspend fun createProjectNote(
@@ -114,6 +117,12 @@ interface OfflineSyncApi {
     suspend fun createCompanyProject(
         @Path("companyId") companyId: Long,
         @Body body: CreateCompanyProjectRequest
+    ): ProjectResourceResponse
+
+    @PUT("/api/projects/{projectId}")
+    suspend fun updateProject(
+        @Path("projectId") projectId: Long,
+        @Body body: UpdateProjectRequest
     ): ProjectResourceResponse
 
     // Feature flags

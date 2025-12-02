@@ -24,6 +24,11 @@ data class CreateCompanyProjectRequest(
     @SerializedName("project_type_id") val projectTypeId: Int? = null
 )
 
+data class UpdateProjectRequest(
+    val alias: String? = null,
+    @SerializedName("project_status_id") val projectStatusId: Int? = null
+)
+
 data class SingleResourceResponse<T>(
     val data: T
 )

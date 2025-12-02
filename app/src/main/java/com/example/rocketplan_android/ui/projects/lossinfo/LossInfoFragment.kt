@@ -4,16 +4,29 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.Toast
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.model.DamageCauseDto
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.datepicker.MaterialDatePicker
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
+import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
+import com.google.android.material.timepicker.MaterialTimePicker
+import com.google.android.material.timepicker.TimeFormat
 import kotlinx.coroutines.launch
+import java.util.Calendar
+import java.util.Date
+import java.util.TimeZone
 
 class LossInfoFragment : Fragment() {
 
@@ -29,14 +42,23 @@ class LossInfoFragment : Fragment() {
     )
 
     private lateinit var damageTypesGroup: ChipGroup
-    private lateinit var damageCauseValue: MaterialTextView
-    private lateinit var damageCategoryValue: MaterialTextView
-    private lateinit var lossClassValue: MaterialTextView
-    private lateinit var lossDateValue: MaterialTextView
-    private lateinit var callReceivedValue: MaterialTextView
-    private lateinit var crewDispatchedValue: MaterialTextView
-    private lateinit var arrivedOnSiteValue: MaterialTextView
+    private lateinit var damageCauseInput: MaterialAutoCompleteTextView
+    private lateinit var damageCategoryInput: TextInputEditText
+    private lateinit var lossClassInput: TextInputEditText
+    private lateinit var lossDateInput: TextInputEditText
+    private lateinit var callReceivedInput: TextInputEditText
+    private lateinit var crewDispatchedInput: TextInputEditText
+    private lateinit var arrivedOnSiteInput: TextInputEditText
     private lateinit var affectedLocationsValue: MaterialTextView
+    private lateinit var saveButton: MaterialButton
+
+    private var availableDamageCauses: List<DamageCauseDto> = emptyList()
+    private val selectedDamageTypeIds = mutableSetOf<Long>()
+    private var selectedDamageCauseId: Long? = null
+    private var lossDate: Date? = null
+    private var callReceived: Date? = null
+    private var crewDispatched: Date? = null
+    private var arrivedOnSite: Date? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -47,44 +69,81 @@ class LossInfoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         damageTypesGroup = view.findViewById(R.id.damageTypesGroup)
-        damageCauseValue = view.findViewById(R.id.damageCauseValue)
-        damageCategoryValue = view.findViewById(R.id.damageCategoryValue)
-        lossClassValue = view.findViewById(R.id.lossClassValue)
-        lossDateValue = view.findViewById(R.id.lossDateValue)
-        callReceivedValue = view.findViewById(R.id.callReceivedValue)
-        crewDispatchedValue = view.findViewById(R.id.crewDispatchedValue)
-        arrivedOnSiteValue = view.findViewById(R.id.arrivedOnSiteValue)
+        damageCauseInput = view.findViewById(R.id.damageCauseInput)
+        damageCategoryInput = view.findViewById(R.id.damageCategoryInput)
+        lossClassInput = view.findViewById(R.id.lossClassInput)
+        lossDateInput = view.findViewById(R.id.lossDateInput)
+        callReceivedInput = view.findViewById(R.id.callReceivedInput)
+        crewDispatchedInput = view.findViewById(R.id.crewDispatchedInput)
+        arrivedOnSiteInput = view.findViewById(R.id.arrivedOnSiteInput)
         affectedLocationsValue = view.findViewById(R.id.affectedLocationsValue)
+        saveButton = view.findViewById(R.id.saveLossInfoButton)
+
+        bindInputs()
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { render(it) }
             }
         }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        ProjectLossInfoEvent.SaveSuccess -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.loss_info_save_success),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+
+                        is ProjectLossInfoEvent.SaveFailed -> {
+                            val message = event.message.ifBlank {
+                                getString(R.string.loss_info_save_failed)
+                            }
+                            Toast.makeText(
+                                requireContext(),
+                                message,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun render(state: ProjectLossInfoUiState) {
         renderDamageTypes(state)
-        damageCauseValue.text = state.selectedDamageCause?.name
-            ?: getString(R.string.loss_info_value_not_available)
-        damageCategoryValue.text = state.damageCategory?.toString()
-            ?: getString(R.string.loss_info_value_not_available)
-        lossClassValue.text = state.lossClass?.toString()
-            ?: getString(R.string.loss_info_value_not_available)
-        lossDateValue.text = viewModel.formatDate(state.lossDate)
-        callReceivedValue.text = viewModel.formatDateTime(state.callReceived)
-        crewDispatchedValue.text = viewModel.formatDateTime(state.crewDispatched)
-        arrivedOnSiteValue.text = viewModel.formatDateTime(state.arrivedOnSite)
+
+        lossDate = state.lossDate
+        callReceived = state.callReceived
+        crewDispatched = state.crewDispatched
+        arrivedOnSite = state.arrivedOnSite
+        selectedDamageCauseId = state.selectedDamageCause?.id
+
+        renderDamageCauses(state)
+        damageCategoryInput.setText(state.damageCategory?.toString().orEmpty())
+        lossClassInput.setText(state.lossClass?.toString().orEmpty())
+        setDateInputText(lossDateInput, lossDate)
+        setDateTimeInputText(callReceivedInput, callReceived)
+        setDateTimeInputText(crewDispatchedInput, crewDispatched)
+        setDateTimeInputText(arrivedOnSiteInput, arrivedOnSite)
 
         affectedLocationsValue.text = if (state.affectedLocations.isNotEmpty()) {
             state.affectedLocations.joinToString(separator = "\n")
         } else {
             getString(R.string.loss_info_locations_placeholder)
         }
+
+        saveButton.isEnabled = !state.isSaving && !state.isLoading
     }
 
     private fun renderDamageTypes(state: ProjectLossInfoUiState) {
         damageTypesGroup.removeAllViews()
+        selectedDamageTypeIds.clear()
         if (state.damageTypes.isEmpty()) {
             val chip = Chip(requireContext()).apply {
                 text = getString(R.string.loss_info_value_not_available)
@@ -95,15 +154,204 @@ class LossInfoFragment : Fragment() {
             return
         }
 
+        selectedDamageTypeIds.addAll(state.selectedDamageTypeIds)
+
         state.damageTypes.forEach { damageType ->
             val chip = Chip(requireContext()).apply {
                 text = damageType.title ?: damageType.name ?: damageType.id.toString()
                 isCheckable = true
-                isClickable = false
+                isClickable = true
                 isChecked = state.selectedDamageTypeIds.contains(damageType.id)
+                setOnCheckedChangeListener { _, isChecked ->
+                    if (isChecked) {
+                        selectedDamageTypeIds.add(damageType.id)
+                    } else {
+                        selectedDamageTypeIds.remove(damageType.id)
+                    }
+                }
             }
             damageTypesGroup.addView(chip)
         }
+    }
+
+    private fun renderDamageCauses(state: ProjectLossInfoUiState) {
+        availableDamageCauses = state.damageCauses
+        val labels = availableDamageCauses.map { cause ->
+            cause.name ?: getString(R.string.loss_info_value_not_available)
+        }
+        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, labels)
+        damageCauseInput.setAdapter(adapter)
+
+        val selected = availableDamageCauses.firstOrNull { it.id == selectedDamageCauseId }
+            ?: state.selectedDamageCause
+        selectedDamageCauseId = selected?.id
+        damageCauseInput.setText(selected?.name.orEmpty(), false)
+    }
+
+    private fun bindInputs() {
+        damageCauseInput.doAfterTextChanged { text ->
+            if (text.isNullOrBlank()) {
+                selectedDamageCauseId = null
+                return@doAfterTextChanged
+            }
+            val match = availableDamageCauses.firstOrNull {
+                it.name?.equals(text.toString(), ignoreCase = true) == true
+            }
+            selectedDamageCauseId = match?.id
+        }
+        damageCauseInput.setOnItemClickListener { _, _, position, _ ->
+            selectedDamageCauseId = availableDamageCauses.getOrNull(position)?.id
+        }
+
+        lossDateInput.setOnClickListener {
+            openDatePicker(
+                current = lossDate,
+                title = getString(R.string.loss_info_loss_date_label)
+            ) { selected ->
+                lossDate = selected
+                setDateInputText(lossDateInput, selected)
+            }
+        }
+        callReceivedInput.setOnClickListener {
+            openDateTimePicker(
+                current = callReceived,
+                title = getString(R.string.loss_info_call_received_label)
+            ) { selected ->
+                callReceived = selected
+                setDateTimeInputText(callReceivedInput, selected)
+            }
+        }
+        crewDispatchedInput.setOnClickListener {
+            openDateTimePicker(
+                current = crewDispatched,
+                title = getString(R.string.loss_info_crew_dispatched_label)
+            ) { selected ->
+                crewDispatched = selected
+                setDateTimeInputText(crewDispatchedInput, selected)
+            }
+        }
+        arrivedOnSiteInput.setOnClickListener {
+            openDateTimePicker(
+                current = arrivedOnSite,
+                title = getString(R.string.loss_info_arrived_on_site_label)
+            ) { selected ->
+                arrivedOnSite = selected
+                setDateTimeInputText(arrivedOnSiteInput, selected)
+            }
+        }
+
+        saveButton.setOnClickListener { handleSave() }
+    }
+
+    private fun openDatePicker(
+        current: Date?,
+        title: String,
+        onSelected: (Date) -> Unit
+    ) {
+        val selection = current?.time ?: MaterialDatePicker.todayInUtcMilliseconds()
+        val picker = MaterialDatePicker.Builder.datePicker()
+            .setTitleText(title)
+            .setSelection(selection)
+            .build()
+
+        picker.addOnPositiveButtonClickListener { millis ->
+            onSelected(materialDateSelectionToDate(millis))
+        }
+        picker.show(parentFragmentManager, "date_picker_$title")
+    }
+
+    private fun openDateTimePicker(
+        current: Date?,
+        title: String,
+        onSelected: (Date) -> Unit
+    ) {
+        val baseCalendar = Calendar.getInstance().apply {
+            time = current ?: Date()
+        }
+
+        val datePicker = MaterialDatePicker.Builder.datePicker()
+            .setTitleText(title)
+            .setSelection(baseCalendar.timeInMillis)
+            .build()
+
+        datePicker.addOnPositiveButtonClickListener { millis ->
+            val date = Calendar.getInstance().apply {
+                time = materialDateSelectionToDate(millis)
+            }
+            openTimePicker(date, title, onSelected)
+        }
+        datePicker.show(parentFragmentManager, "date_time_picker_$title")
+    }
+
+    private fun openTimePicker(
+        base: Calendar,
+        title: String,
+        onSelected: (Date) -> Unit
+    ) {
+        val picker = MaterialTimePicker.Builder()
+            .setTimeFormat(TimeFormat.CLOCK_12H)
+            .setHour(base.get(Calendar.HOUR_OF_DAY))
+            .setMinute(base.get(Calendar.MINUTE))
+            .setTitleText(title)
+            .build()
+
+        picker.addOnPositiveButtonClickListener {
+            base.set(Calendar.HOUR_OF_DAY, picker.hour)
+            base.set(Calendar.MINUTE, picker.minute)
+            base.set(Calendar.SECOND, 0)
+            base.set(Calendar.MILLISECOND, 0)
+            onSelected(base.time)
+        }
+
+        picker.show(parentFragmentManager, "time_picker_$title")
+    }
+
+    private fun materialDateSelectionToDate(selection: Long): Date {
+        val utc = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+            timeInMillis = selection
+        }
+        return Calendar.getInstance().apply {
+            set(Calendar.YEAR, utc.get(Calendar.YEAR))
+            set(Calendar.MONTH, utc.get(Calendar.MONTH))
+            set(Calendar.DAY_OF_MONTH, utc.get(Calendar.DAY_OF_MONTH))
+            set(Calendar.HOUR_OF_DAY, 12)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.time
+    }
+
+    private fun setDateInputText(input: TextInputEditText, value: Date?) {
+        if (value == null) {
+            input.setText("")
+        } else {
+            input.setText(viewModel.formatDate(value))
+        }
+    }
+
+    private fun setDateTimeInputText(input: TextInputEditText, value: Date?) {
+        if (value == null) {
+            input.setText("")
+        } else {
+            input.setText(viewModel.formatDateTime(value))
+        }
+    }
+
+    private fun handleSave() {
+        val damageCategory = damageCategoryInput.text?.toString()?.toIntOrNull()
+        val lossClass = lossClassInput.text?.toString()?.toIntOrNull()
+
+        val form = LossInfoFormInput(
+            selectedDamageTypeIds = selectedDamageTypeIds.toSet(),
+            damageCauseId = selectedDamageCauseId,
+            damageCategory = damageCategory,
+            lossClass = lossClass,
+            lossDate = lossDate,
+            callReceived = callReceived,
+            crewDispatched = crewDispatched,
+            arrivedOnSite = arrivedOnSite
+        )
+        viewModel.saveLossInfo(form)
     }
 
     companion object {

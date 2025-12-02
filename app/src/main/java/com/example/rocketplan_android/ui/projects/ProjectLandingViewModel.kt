@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.model.ProjectStatus
@@ -24,6 +25,8 @@ sealed class ProjectLandingUiState {
 sealed class ProjectLandingEvent {
     object ProjectDeleted : ProjectLandingEvent()
     data class DeleteFailed(val error: String) : ProjectLandingEvent()
+    data class AliasUpdated(val alias: String) : ProjectLandingEvent()
+    data class AliasUpdateFailed(val error: String) : ProjectLandingEvent()
 }
 
 data class ProjectLandingSummary(
@@ -31,6 +34,7 @@ data class ProjectLandingSummary(
     val projectCode: String,
     val aliasText: String?,
     val aliasIsActionable: Boolean,
+    val aliasIsUpdating: Boolean,
     val status: ProjectStatus?,
     val statusLabel: String?,
     val noteCount: Int,
@@ -55,6 +59,7 @@ class ProjectLandingViewModel(
 
     private val _events = Channel<ProjectLandingEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
+    private val aliasUpdateInProgress = MutableStateFlow(false)
 
     init {
         // Prioritize this project in the sync queue
@@ -66,8 +71,9 @@ class ProjectLandingViewModel(
                 localDataService.observeProjects(),
                 localDataService.observeNotes(projectId),
                 localDataService.observeLocations(projectId),
-                localDataService.observeRooms(projectId)
-            ) { projects, notes, locations, rooms ->
+                localDataService.observeRooms(projectId),
+                aliasUpdateInProgress
+            ) { projects, notes, locations, rooms, aliasUpdating ->
                 val project = projects.firstOrNull { it.projectId == projectId }
                 if (project == null) {
                     ProjectLandingUiState.Loading
@@ -76,7 +82,8 @@ class ProjectLandingViewModel(
                         summary = project.toSummary(
                             noteCount = notes.size,
                             hasLevels = locations.isNotEmpty(),
-                            hasRooms = rooms.isNotEmpty()
+                            hasRooms = rooms.isNotEmpty(),
+                            aliasIsUpdating = aliasUpdating
                         )
                     )
                 }
@@ -89,7 +96,8 @@ class ProjectLandingViewModel(
     private fun OfflineProjectEntity.toSummary(
         noteCount: Int,
         hasLevels: Boolean,
-        hasRooms: Boolean
+        hasRooms: Boolean,
+        aliasIsUpdating: Boolean
     ): ProjectLandingSummary {
         val titleCandidates = listOfNotNull(
             addressLine1?.takeIf { it.isNotBlank() },
@@ -103,7 +111,7 @@ class ProjectLandingViewModel(
             ?: ""
 
         val aliasText = alias?.takeIf { it.isNotBlank() }
-        val aliasActionable = aliasText == null
+        val aliasActionable = aliasText == null && !aliasIsUpdating
 
         val projectStatus = ProjectStatus.fromApiValue(status)
         val statusLabel = projectStatus?.let { projectStatus ->
@@ -115,6 +123,7 @@ class ProjectLandingViewModel(
             projectCode = codeText,
             aliasText = aliasText,
             aliasIsActionable = aliasActionable,
+            aliasIsUpdating = aliasIsUpdating,
             status = projectStatus,
             statusLabel = statusLabel,
             noteCount = noteCount,
@@ -122,6 +131,39 @@ class ProjectLandingViewModel(
             hasRooms = hasRooms,
             hasProperty = propertyId != null
         )
+    }
+
+    fun addAlias(input: String) {
+        val trimmed = input.trim()
+        if (trimmed.isEmpty()) {
+            viewModelScope.launch {
+                val message = getApplication<Application>().getString(R.string.project_alias_required)
+                _events.send(ProjectLandingEvent.AliasUpdateFailed(message))
+            }
+            return
+        }
+        if (aliasUpdateInProgress.value) {
+            return
+        }
+
+        viewModelScope.launch {
+            aliasUpdateInProgress.value = true
+            try {
+                val result = offlineSyncRepository.updateProjectAlias(projectId, trimmed)
+                result.fold(
+                    onSuccess = { updated ->
+                        val resolvedAlias = updated.alias?.takeIf { it.isNotBlank() } ?: trimmed
+                        _events.send(ProjectLandingEvent.AliasUpdated(resolvedAlias))
+                    },
+                    onFailure = { error ->
+                        val fallback = getApplication<Application>().getString(R.string.project_alias_update_failed)
+                        _events.send(ProjectLandingEvent.AliasUpdateFailed(error.message ?: fallback))
+                    }
+                )
+            } finally {
+                aliasUpdateInProgress.value = false
+            }
+        }
     }
 
     fun updateProjectStatus(projectStatus: ProjectStatus) {

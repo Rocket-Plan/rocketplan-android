@@ -1,7 +1,7 @@
 package com.example.rocketplan_android.ui.projects
 
-import android.app.AlertDialog
 import android.os.Bundle
+import android.text.InputType
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -22,6 +23,8 @@ import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 
 /**
@@ -55,7 +58,7 @@ class ProjectLandingFragment : Fragment() {
     private lateinit var allNotesSubtitle: TextView
 
     private var latestSummary: ProjectLandingSummary? = null
-    private var statusDialog: androidx.appcompat.app.AlertDialog? = null
+    private var statusDialog: AlertDialog? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -95,13 +98,11 @@ class ProjectLandingFragment : Fragment() {
             showProjectMenu(it)
         }
         aliasAction.setOnClickListener {
-            if (aliasAction.isEnabled) {
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.project_alias_coming_soon),
-                    Toast.LENGTH_SHORT
-                ).show()
+            val summary = latestSummary ?: return@setOnClickListener
+            if (!summary.aliasIsActionable || summary.aliasIsUpdating) {
+                return@setOnClickListener
             }
+            showAliasInputDialog()
         }
         addProjectInfoCard.setOnClickListener {
             val action = ProjectLandingFragmentDirections
@@ -172,6 +173,20 @@ class ProjectLandingFragment : Fragment() {
                                 Toast.LENGTH_LONG
                             ).show()
                         }
+                        is ProjectLandingEvent.AliasUpdated -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.project_alias_saved),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        is ProjectLandingEvent.AliasUpdateFailed -> {
+                            Toast.makeText(
+                                requireContext(),
+                                event.error,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
                     }
                 }
             }
@@ -196,14 +211,19 @@ class ProjectLandingFragment : Fragment() {
         projectCode.isVisible = summary.projectCode.isNotBlank()
         projectCode.text = summary.projectCode
 
-        val aliasText = summary.aliasText ?: getString(R.string.add_alias)
+        val aliasText = when {
+            summary.aliasIsUpdating -> getString(R.string.saving_alias)
+            summary.aliasText != null -> summary.aliasText
+            else -> getString(R.string.add_alias)
+        }
         aliasAction.text = aliasText
-        aliasAction.isEnabled = summary.aliasIsActionable
-        aliasAction.isClickable = summary.aliasIsActionable
-        val aliasColor = if (summary.aliasIsActionable) {
-            requireContext().getColor(R.color.main_purple)
-        } else {
-            requireContext().getColor(R.color.light_text_rp)
+        val aliasClickable = summary.aliasIsActionable && !summary.aliasIsUpdating
+        aliasAction.isEnabled = aliasClickable
+        aliasAction.isClickable = aliasClickable
+        val aliasColor = when {
+            summary.aliasIsUpdating -> requireContext().getColor(R.color.light_text_rp)
+            summary.aliasIsActionable -> requireContext().getColor(R.color.main_purple)
+            else -> requireContext().getColor(R.color.light_text_rp)
         }
         aliasAction.setTextColor(aliasColor)
 
@@ -215,6 +235,43 @@ class ProjectLandingFragment : Fragment() {
             R.string.project_notes_subtitle_with_count,
             summary.noteCount
         )
+    }
+
+    private fun showAliasInputDialog() {
+        val context = requireContext()
+        val sidePadding = resources.getDimensionPixelSize(R.dimen.activity_horizontal_margin)
+        val inputLayout = TextInputLayout(context).apply {
+            hint = getString(R.string.project_alias_hint)
+            setPadding(sidePadding, 0, sidePadding, 0)
+        }
+
+        val aliasInput = TextInputEditText(context).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
+            setSingleLine()
+        }
+        inputLayout.addView(aliasInput)
+
+        val dialog = MaterialAlertDialogBuilder(context)
+            .setTitle(R.string.add_alias)
+            .setView(inputLayout)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val alias = aliasInput.text?.toString()?.trim().orEmpty()
+                if (alias.isBlank()) {
+                    inputLayout.error = getString(R.string.project_alias_required)
+                    return@setOnClickListener
+                }
+                inputLayout.error = null
+                viewModel.addAlias(alias)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
     }
 
     private fun showProjectMenu(anchor: View) {

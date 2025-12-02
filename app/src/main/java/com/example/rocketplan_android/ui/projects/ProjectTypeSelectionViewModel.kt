@@ -40,6 +40,7 @@ class ProjectTypeSelectionViewModel(
 
     private val missingProjectMessage = application.getString(R.string.project_type_missing_project)
     private val genericErrorMessage = application.getString(R.string.project_type_error_generic)
+    private val syncInProgressMessage = application.getString(R.string.project_type_sync_in_progress)
 
     private val _uiState = MutableStateFlow(ProjectTypeSelectionViewState())
     val uiState: StateFlow<ProjectTypeSelectionViewState> = _uiState
@@ -96,6 +97,16 @@ class ProjectTypeSelectionViewModel(
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSelectionInProgress = true, errorMessage = null) }
+
+            if (project.propertyId == null && syncQueueManager.isProjectSyncInFlight(projectId)) {
+                _uiState.update {
+                    it.copy(
+                        isSelectionInProgress = false,
+                        errorMessage = syncInProgressMessage
+                    )
+                }
+                return@launch
+            }
 
             val request = PropertyMutationRequest(propertyTypeId = propertyType.propertyTypeId)
             val result = if (project.propertyId == null) {

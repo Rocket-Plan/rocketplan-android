@@ -101,7 +101,12 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
                     addressId = addressId
                 )
 
-                offlineSyncRepository.createCompanyProject(companyId, projectRequest).getOrThrow()
+                offlineSyncRepository.createCompanyProject(
+                    companyId = companyId,
+                    request = projectRequest,
+                    projectAddress = address,
+                    addressRequest = addressRequest
+                ).getOrThrow()
             }
 
             result.fold(

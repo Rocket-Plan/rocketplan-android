@@ -135,6 +135,16 @@ class SyncQueueManager(
     }
 
     /**
+     * Returns true if a sync job for the given project is currently running or queued.
+     * Used by UI flows to avoid kicking duplicate syncs or mutating data while a sync is in flight.
+     */
+    suspend fun isProjectSyncInFlight(projectId: Long): Boolean = mutex.withLock {
+        activeProjectSyncJobs.containsKey(projectId) ||
+            taskIndex.containsKey("project_$projectId") ||
+            pendingPhotoSyncs.contains(projectId)
+    }
+
+    /**
      * Cancel the ongoing project sync for a given project.
      * This cancels the active coroutine and removes the job from queue if pending.
      */

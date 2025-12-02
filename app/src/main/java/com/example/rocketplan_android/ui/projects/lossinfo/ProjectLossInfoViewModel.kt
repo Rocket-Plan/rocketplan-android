@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.api.RetrofitClient
@@ -16,15 +17,24 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.model.ClaimDto
 import com.example.rocketplan_android.data.model.DamageCauseDto
 import com.example.rocketplan_android.data.model.DamageTypeDto
+import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
+import com.example.rocketplan_android.ui.projects.PropertyType
 import com.example.rocketplan_android.util.DateUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -37,8 +47,25 @@ data class ClaimListItem(
     val locationName: String? = null
 )
 
+data class LossInfoFormInput(
+    val selectedDamageTypeIds: Set<Long>,
+    val damageCauseId: Long?,
+    val damageCategory: Int?,
+    val lossClass: Int?,
+    val lossDate: Date?,
+    val callReceived: Date?,
+    val crewDispatched: Date?,
+    val arrivedOnSite: Date?
+)
+
+sealed interface ProjectLossInfoEvent {
+    data object SaveSuccess : ProjectLossInfoEvent
+    data class SaveFailed(val message: String) : ProjectLossInfoEvent
+}
+
 data class ProjectLossInfoUiState(
     val isLoading: Boolean = true,
+    val isSaving: Boolean = false,
     val errorMessage: String? = null,
     val projectTitle: String? = null,
     val projectCode: String? = null,
@@ -234,13 +261,18 @@ class ProjectLossInfoViewModel(
 ) : AndroidViewModel(application) {
 
     private val rocketPlanApp = application as RocketPlanApplication
+    private val localDataService = rocketPlanApp.localDataService
+    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val api = RetrofitClient.createService<OfflineSyncApi>()
     private val repository = ProjectLossInfoRepository(
-        api = RetrofitClient.createService<OfflineSyncApi>(),
+        api = api,
         localDataService = rocketPlanApp.localDataService
     )
 
     private val _uiState = MutableStateFlow(ProjectLossInfoUiState())
     val uiState: StateFlow<ProjectLossInfoUiState> = _uiState
+    private val _events = MutableSharedFlow<ProjectLossInfoEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<ProjectLossInfoEvent> = _events
 
     private val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     private val dateTimeFormatter = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
@@ -251,7 +283,17 @@ class ProjectLossInfoViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.value = _uiState.value.copy(isLoading = true, isSaving = false, errorMessage = null)
+            val propertyReady = ensurePropertyAttached()
+            if (propertyReady.isFailure) {
+                val error = propertyReady.exceptionOrNull()
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    isSaving = false,
+                    errorMessage = error?.message ?: "Property still syncing, please try again."
+                )
+                return@launch
+            }
             runCatching { repository.load(projectId) }
                 .onSuccess { payload ->
                     _uiState.value = payload.toUiState()
@@ -259,9 +301,42 @@ class ProjectLossInfoViewModel(
                 .onFailure { error ->
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
+                        isSaving = false,
                         errorMessage = error.message ?: "Unable to load loss info"
                     )
                 }
+        }
+    }
+
+    fun saveLossInfo(form: LossInfoFormInput) {
+        viewModelScope.launch {
+            if (_uiState.value.isSaving) return@launch
+            val previous = _uiState.value
+            _uiState.value = previous.copy(
+                isSaving = true,
+                selectedDamageTypeIds = form.selectedDamageTypeIds,
+                selectedDamageCause = previous.damageCauses.firstOrNull { it.id == form.damageCauseId },
+                damageCategory = form.damageCategory,
+                lossClass = form.lossClass,
+                lossDate = form.lossDate,
+                callReceived = form.callReceived,
+                crewDispatched = form.crewDispatched,
+                arrivedOnSite = form.arrivedOnSite,
+                errorMessage = null
+            )
+
+            val result = runCatching {
+                saveLossInfoInternal(form, previous.selectedDamageTypeIds)
+            }
+            result.onSuccess {
+                _uiState.update { it.copy(isSaving = false) }
+                _events.emit(ProjectLossInfoEvent.SaveSuccess)
+                refresh()
+            }.onFailure { error ->
+                val message = error.message ?: rocketPlanApp.getString(R.string.loss_info_save_failed)
+                _uiState.update { it.copy(isSaving = false, errorMessage = message) }
+                _events.emit(ProjectLossInfoEvent.SaveFailed(message))
+            }
         }
     }
 
@@ -306,13 +381,95 @@ class ProjectLossInfoViewModel(
         )
     }
 
+    private suspend fun saveLossInfoInternal(
+        form: LossInfoFormInput,
+        previousDamageTypeIds: Set<Long>
+    ) = withContext(Dispatchers.IO) {
+        val project = localDataService.getProject(projectId)
+            ?: throw IllegalStateException("Project $projectId not found locally")
+        val propertyId = project.propertyId
+            ?: throw IllegalStateException("Property still syncing, please try again.")
+        val propertyTypeId = resolvePropertyTypeId(project)
+        val propertyTypeValue = project.propertyType
+            ?: _uiState.value.property?.propertyType
+            ?: PropertyType.fromApiValue(_uiState.value.property?.propertyType)?.apiValue
+
+        val request = PropertyMutationRequest(
+            propertyTypeId = propertyTypeId,
+            damageCategory = form.damageCategory,
+            lossClass = form.lossClass,
+            lossDate = form.lossDate?.let { DateUtils.formatApiDate(it) },
+            callReceived = form.callReceived?.let { DateUtils.formatApiDate(it) },
+            crewDispatched = form.crewDispatched?.let { DateUtils.formatApiDate(it) },
+            arrivedOnSite = form.arrivedOnSite?.let { DateUtils.formatApiDate(it) },
+            damageCauseId = form.damageCauseId?.toInt()
+        )
+
+        offlineSyncRepository.updateProjectProperty(
+            projectId = projectId,
+            propertyId = propertyId,
+            request = request,
+            propertyTypeValue = propertyTypeValue
+        ).getOrThrow()
+
+        val propertyServerId = localDataService.getProperty(propertyId)?.serverId
+            ?: _uiState.value.property?.id
+            ?: throw IllegalStateException("Unable to resolve property for damage types")
+
+        val toAdd = form.selectedDamageTypeIds - previousDamageTypeIds
+        val toRemove = previousDamageTypeIds - form.selectedDamageTypeIds
+
+        toAdd.forEach { api.addPropertyDamageType(propertyServerId, it) }
+        toRemove.forEach { api.removePropertyDamageType(propertyServerId, it) }
+    }
+
+    private fun resolvePropertyTypeId(project: OfflineProjectEntity): Int {
+        _uiState.value.property?.propertyTypeId?.toInt()?.let { return it }
+        PropertyType.fromApiValue(project.propertyType)?.propertyTypeId?.let { return it }
+        throw IllegalStateException("Missing property type for project $projectId")
+    }
+
     fun formatDate(date: Date?): String =
         date?.let { dateFormatter.format(it) } ?: "—"
 
     fun formatDateTime(date: Date?): String =
         date?.let { dateTimeFormatter.format(it) } ?: "—"
 
+    /**
+     * Ensure the property has been persisted locally before loading loss info to avoid
+     * the race where the UI reads before syncProjectEssentials finishes.
+     */
+    private suspend fun ensurePropertyAttached(): Result<Long> {
+        val project = localDataService.getProject(projectId)
+            ?: return Result.failure(IllegalStateException("Project $projectId not found locally"))
+
+        project.propertyId?.let { return Result.success(it) }
+
+        val serverId = project.serverId
+            ?: return Result.failure(IllegalStateException("Project is not synced yet; property unavailable"))
+
+        val syncResult = offlineSyncRepository.syncProjectEssentials(serverId)
+        if (!syncResult.success) {
+            return Result.failure(syncResult.error ?: IllegalStateException("Unable to sync project essentials"))
+        }
+
+        val propertyId = awaitPropertyId()
+            ?: return Result.failure(IllegalStateException("Property still syncing, please try again."))
+
+        return Result.success(propertyId)
+    }
+
+    private suspend fun awaitPropertyId(timeoutMs: Long = PROPERTY_WAIT_TIMEOUT_MS): Long? =
+        withTimeoutOrNull(timeoutMs) {
+            localDataService.observeProjects()
+                .map { projects -> projects.firstOrNull { it.projectId == projectId }?.propertyId }
+                .filterNotNull()
+                .first()
+        }
+
     companion object {
+        private const val PROPERTY_WAIT_TIMEOUT_MS = 5_000L
+
         fun provideFactory(
             application: Application,
             projectId: Long

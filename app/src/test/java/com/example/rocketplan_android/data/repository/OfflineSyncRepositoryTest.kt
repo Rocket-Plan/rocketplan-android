@@ -199,7 +199,7 @@ class OfflineSyncRepositoryTest {
             }
         }
         coEvery { api.getProjectDamageMaterials(projectId) } returns emptyList()
-        coEvery { api.getProjectNotes(projectId) } returns emptyList()
+        coEvery { api.getProjectNotes(projectId, any(), any(), any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectUsers(projectId) } returns emptyList()
         coEvery { api.getProjectEquipment(projectId) } returns emptyList()
 
@@ -346,7 +346,7 @@ class OfflineSyncRepositoryTest {
         coEvery { api.getProjectUnitPhotos(projectId, any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectAlbums(projectId, any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectDamageMaterials(projectId) } returns emptyList()
-        coEvery { api.getProjectNotes(projectId) } returns emptyList()
+        coEvery { api.getProjectNotes(projectId, any(), any(), any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectUsers(projectId) } returns emptyList()
         coEvery { api.getProjectEquipment(projectId) } returns emptyList()
 
