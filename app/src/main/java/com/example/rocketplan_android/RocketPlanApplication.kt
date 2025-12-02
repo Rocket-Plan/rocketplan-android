@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.thermal.FlirSdkManager
+import androidx.work.BackoffPolicy
 
 class RocketPlanApplication : Application() {
 
@@ -181,7 +182,13 @@ class RocketPlanApplication : Application() {
         val retryWorkRequest = PeriodicWorkRequestBuilder<com.example.rocketplan_android.data.worker.ImageProcessorRetryWorker>(
             repeatInterval = 15,
             repeatIntervalTimeUnit = TimeUnit.MINUTES
-        ).build()
+        )
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                RETRY_BACKOFF_MS,
+                TimeUnit.MILLISECONDS
+            )
+            .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             com.example.rocketplan_android.data.worker.ImageProcessorRetryWorker.WORK_NAME,
@@ -206,5 +213,10 @@ class RocketPlanApplication : Application() {
         CoroutineScope(Dispatchers.IO).launch {
             localDataService.repairMismatchedPhotoRoomIds()
         }
+    }
+
+    private companion object {
+        // Modest backoff to avoid hammering network/services on failures
+        private const val RETRY_BACKOFF_MS = 5_000L
     }
 }

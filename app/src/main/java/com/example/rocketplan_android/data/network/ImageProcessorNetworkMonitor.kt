@@ -6,6 +6,12 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 
 /**
@@ -15,13 +21,16 @@ import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 class ImageProcessorNetworkMonitor(
     context: Context,
     private val queueManager: ImageProcessorQueueManager
-) {
+    ) {
     companion object {
         private const val TAG = "ImgProcessorNetMonitor"
+        private const val RESTORE_DEBOUNCE_MS = 2_000L
     }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private var isNetworkAvailable = false
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var restoreJob: Job? = null
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -78,9 +87,12 @@ class ImageProcessorNetworkMonitor(
     }
 
     private fun onNetworkRestored() {
-        Log.d(TAG, "🔄 Network restored - triggering retry queue (bypass timeout)")
-        // Bypass timeout for immediate retry on network restoration (matching iOS behavior)
-        queueManager.processRetryQueue(bypassTimeout = true)
+        Log.d(TAG, "🔄 Network restored - triggering retry queue (debounced, bypass timeout)")
+        restoreJob?.cancel()
+        restoreJob = scope.launch {
+            delay(RESTORE_DEBOUNCE_MS)
+            queueManager.processRetryQueue(bypassTimeout = true)
+        }
     }
 
     fun unregister() {

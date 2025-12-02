@@ -17,6 +17,7 @@ import com.example.rocketplan_android.data.model.ClaimDto
 import com.example.rocketplan_android.data.model.DamageCauseDto
 import com.example.rocketplan_android.data.model.DamageTypeDto
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
+import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.util.DateUtils
 import kotlinx.coroutines.CoroutineDispatcher
@@ -80,7 +81,7 @@ private class ProjectLossInfoRepository(
 
         val projectDetail = runCatching { api.getProjectDetail(projectServerId).data }.getOrNull()
         val locations = localDataService.getLocations(projectId)
-        val propertyId = resolvePropertyId(projectId, project, projectServerId, projectDetail?.address)
+        val propertyId = resolvePropertyId(projectId, project, projectServerId, projectDetail)
         val property = api.getProperty(propertyId)
         val damageTypes = api.getProjectDamageTypes(projectServerId)
         val damageCauses = api.getDamageCauses(projectServerId).data
@@ -110,7 +111,7 @@ private class ProjectLossInfoRepository(
         projectId: Long,
         project: OfflineProjectEntity,
         projectServerId: Long,
-        projectAddress: ProjectAddressDto?
+        projectDetail: ProjectDetailDto?
     ): Long {
         // Check if we have a cached property with a valid serverId
         project.propertyId?.let { localPropertyId ->
@@ -118,21 +119,77 @@ private class ProjectLossInfoRepository(
             cached?.serverId?.let { return it }
         }
 
-        // Fetch from API if no valid serverId
-        val properties = api.getProjectProperties(projectServerId).data
-        val propertyDto = properties.firstOrNull()
+        // If project detail has a propertyId and we already cached it, link and return
+        projectDetail?.propertyId?.let { serverPropertyId ->
+            val cached = localDataService.getProperty(serverPropertyId)
+            if (cached != null) {
+                val resolvedId = cached.serverId ?: cached.propertyId
+                localDataService.attachPropertyToProject(
+                    projectId = projectId,
+                    propertyId = resolvedId,
+                    propertyType = projectDetail.propertyType
+                )
+                return resolvedId
+            }
+        }
+
+        // Fetch from API (with fallbacks) if no valid serverId
+        val propertyDto = fetchPropertyWithFallback(projectServerId, projectDetail)
             ?: throw IllegalStateException("No property found for project $projectServerId")
 
         Log.d("API", "🏠 [LossInfo] Property DTO from API: id=${propertyDto.id}, address=${propertyDto.address}, city=${propertyDto.city}, state=${propertyDto.state}, zip=${propertyDto.postalCode}")
-        val entity = propertyDto.toEntity(projectAddress = projectAddress, project = project)
+        val entity = propertyDto.toEntity(projectAddress = projectDetail?.address, project = project)
         Log.d("API", "🏠 [LossInfo] Property Entity to save: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
         localDataService.saveProperty(entity)
+        val resolvedId = entity.serverId ?: entity.propertyId
         localDataService.attachPropertyToProject(
             projectId = projectId,
-            propertyId = entity.propertyId,
-            propertyType = propertyDto.propertyType
+            propertyId = resolvedId,
+            propertyType = listOfNotNull(
+                projectDetail?.propertyType,
+                propertyDto.propertyType,
+                projectDetail?.properties?.firstOrNull()?.propertyType
+            ).firstOrNull()
         )
-        return entity.serverId ?: entity.propertyId
+        return resolvedId
+    }
+
+    private suspend fun fetchPropertyWithFallback(
+        projectServerId: Long,
+        projectDetail: ProjectDetailDto?
+    ): PropertyDto? {
+        val result = runCatching { api.getProjectProperties(projectServerId) }
+        result.onFailure { error ->
+            Log.e("API", "❌ [LossInfo] getProjectProperties failed for project $projectServerId", error)
+        }
+        val response = result.getOrNull()
+        val propertyFromList = response?.data?.firstOrNull()
+        if (propertyFromList != null) {
+            return propertyFromList
+        }
+
+        Log.d("API", "⚠️ [LossInfo] No property in response for project $projectServerId, attempting fallback")
+        val detail = projectDetail ?: runCatching { api.getProjectDetail(projectServerId).data }
+            .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load project detail for fallback (project $projectServerId)", it) }
+            .getOrNull()
+        val fallbackPropertyId = detail?.propertyId ?: detail?.properties?.firstOrNull()?.id
+
+        if (fallbackPropertyId != null) {
+            val propertyById = runCatching { api.getProperty(fallbackPropertyId) }
+                .onFailure { Log.e("API", "❌ [LossInfo] getProperty fallback failed for project $projectServerId (propertyId=$fallbackPropertyId)", it) }
+                .getOrNull()
+            if (propertyById != null) {
+                return propertyById
+            }
+        }
+
+        val embedded = detail?.properties?.firstOrNull()
+        if (embedded != null) {
+            Log.d("API", "🏠 [LossInfo] Using embedded property from project detail for project $projectServerId: id=${embedded.id}, address=${embedded.address}, city=${embedded.city}, state=${embedded.state}, zip=${embedded.postalCode}")
+            return embedded
+        }
+
+        return null
     }
 
     private fun PropertyDto.toEntity(

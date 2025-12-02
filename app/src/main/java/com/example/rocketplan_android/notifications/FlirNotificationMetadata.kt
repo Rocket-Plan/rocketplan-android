@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.notifications
 
+import android.app.Notification
 import android.os.Bundle
 import android.view.Gravity
 import androidx.core.app.NotificationCompat
@@ -57,3 +58,20 @@ fun NotificationCompat.Builder.addFlirAceMetadata(
         )
     )
 }
+
+/**
+ * Build the notification with ACE metadata already attached.
+ */
+fun NotificationCompat.Builder.buildWithFlirAceMetadata(
+    buttonText: String = "Close",
+    secondaryButtonText: String = "Redirect",
+    redirectPackageName: String = BuildConfig.APPLICATION_ID,
+    gravity: Int = Gravity.TOP,
+    closeOption: Boolean = true
+): Notification = addFlirAceMetadata(
+    buttonText = buttonText,
+    secondaryButtonText = secondaryButtonText,
+    redirectPackageName = redirectPackageName,
+    gravity = gravity,
+    closeOption = closeOption
+).build()

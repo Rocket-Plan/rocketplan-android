@@ -108,6 +108,20 @@ class OfflineSyncRepositoryTest {
             updatedAt = "2025-05-06T18:01:14.000000Z"
         )
 
+        val propertyDto = PropertyDto(
+            id = 10L,
+            uuid = "prop-10",
+            address = "123 Main Street",
+            city = "Vancouver",
+            state = "BC",
+            postalCode = "V5K0A1",
+            latitude = null,
+            longitude = null,
+            propertyType = "residential",
+            createdAt = "2025-05-06T18:01:14.000000Z",
+            updatedAt = "2025-05-06T18:01:14.000000Z"
+        )
+
         val api = mockk<OfflineSyncApi>()
         coEvery { api.getProjectDetail(projectId) } returns ProjectDetailDto(
             id = projectId,
@@ -128,6 +142,7 @@ class OfflineSyncRepositoryTest {
             workScopes = emptyList()
         )
         coEvery { api.getProjectProperties(projectId) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getProperty(10L) } returns propertyDto
         coEvery { api.getPropertyLevels(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getPropertyLocations(any(), any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomsForLocation(any(), any(), any(), any()) } returns PaginatedResponse(data = emptyList())
@@ -262,6 +277,19 @@ class OfflineSyncRepositoryTest {
         )
 
         val api = mockk<OfflineSyncApi>()
+        val propertyDto = PropertyDto(
+            id = 10L,
+            uuid = "prop-10",
+            address = "123 Main Street",
+            city = "Vancouver",
+            state = "BC",
+            postalCode = "V5K0A1",
+            latitude = null,
+            longitude = null,
+            propertyType = "residential",
+            createdAt = "2025-05-06T18:01:14.000000Z",
+            updatedAt = "2025-05-06T18:01:14.000000Z"
+        )
         coEvery { api.getProjectDetail(projectId) } returns ProjectDetailDto(
             id = projectId,
             title = "Project 4970",
@@ -301,6 +329,7 @@ class OfflineSyncRepositoryTest {
             workScopes = emptyList()
         )
         coEvery { api.getProjectProperties(projectId) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getProperty(10L) } returns propertyDto
         coEvery { api.getPropertyLevels(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getPropertyLocations(any(), any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomsForLocation(any(), any(), any(), any()) } returns PaginatedResponse(data = emptyList())

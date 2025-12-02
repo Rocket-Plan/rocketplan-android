@@ -83,6 +83,15 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = file("../release.jks")
+            storePassword = "rocketplan123"
+            keyAlias = "rocketplan"
+            keyPassword = "rocketplan123"
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -90,15 +99,13 @@ android {
         }
 
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-
-            // Signing config for release builds
-            // signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

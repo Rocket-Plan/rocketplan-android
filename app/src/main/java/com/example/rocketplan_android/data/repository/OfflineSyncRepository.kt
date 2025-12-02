@@ -36,6 +36,7 @@ import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectDto
+import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.PaginationMeta
@@ -255,31 +256,35 @@ class OfflineSyncRepository(
         // === NAVIGATION CHAIN: Property → Levels → Rooms ===
 
         // 1. Property
-        val property = fetchProjectProperty(projectId)
-        if (property != null) {
-            Log.d("API", "🏠 [syncProjectEssentials] Property DTO received: id=${property.id}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}, lat=${property.latitude}, lng=${property.longitude}")
-            Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail.address?.address}, city=${detail.address?.city}, state=${detail.address?.state}, zip=${detail.address?.zip}")
-            // Pass project address as fallback for missing property address fields
-            val entity = property.toEntity(projectAddress = detail.address)
-            Log.d("API", "🏠 [syncProjectEssentials] Property Entity created: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
-            localDataService.saveProperty(entity)
-            val resolvedId = entity.serverId ?: entity.propertyId
-            // Try to get propertyType from: detail.propertyType, property.propertyType, or embedded properties list
-            val embeddedPropertyType = detail.properties?.firstOrNull()?.propertyType
-            val resolvedPropertyType = detail.propertyType ?: property.propertyType ?: embeddedPropertyType
-            Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.propertyType}, embeddedPropertyType=$embeddedPropertyType)")
-            localDataService.attachPropertyToProject(
-                projectId = projectId,
-                propertyId = resolvedId,
-                propertyType = resolvedPropertyType
-            )
-            itemCount++
+        val property = fetchProjectProperty(projectId, detail) ?: run {
+            val duration = System.currentTimeMillis() - startTime
+            val error = IllegalStateException("No property found for project $projectId")
+            Log.e("API", "❌ [syncProjectEssentials] Property missing after fallback, aborting navigation chain", error)
+            return@withContext SyncResult.failure(SyncSegment.PROJECT_ESSENTIALS, error, duration)
         }
+        Log.d("API", "🏠 [syncProjectEssentials] Property DTO received: id=${property.id}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}, lat=${property.latitude}, lng=${property.longitude}")
+        Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail.address?.address}, city=${detail.address?.city}, state=${detail.address?.state}, zip=${detail.address?.zip}")
+        // Pass project address as fallback for missing property address fields
+        val entity = property.toEntity(projectAddress = detail.address)
+        Log.d("API", "🏠 [syncProjectEssentials] Property Entity created: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
+        localDataService.saveProperty(entity)
+        val resolvedId = entity.serverId ?: entity.propertyId
+        // Try to get propertyType from: detail.propertyType, property.propertyType, or embedded properties list
+        val embeddedPropertyType = detail.properties?.firstOrNull()?.propertyType
+        val resolvedPropertyType = detail.propertyType ?: property.propertyType ?: embeddedPropertyType
+        Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.propertyType}, embeddedPropertyType=$embeddedPropertyType)")
+        localDataService.attachPropertyToProject(
+            projectId = projectId,
+            propertyId = resolvedId,
+            propertyType = resolvedPropertyType
+        )
+        itemCount++
         ensureActive()
 
         // 2. Levels (Locations from property)
         var usedIncrementalSync = false
-        val propertyLocations = property?.id?.let { propertyId ->
+        val propertyLocations = run {
+            val propertyId = property.id
             val existingLocationData = localDataService.getLatestLocationUpdate(projectId = projectId)
             val levels = runCatching { api.getPropertyLevels(propertyId) }
                 .getOrNull()?.data ?: emptyList()
@@ -302,7 +307,7 @@ class OfflineSyncRepository(
 
             Log.d("API", "✅ [FAST] Received ${levels.size} levels + ${nested.size} nested locations for property $propertyId")
             levels + nested
-        } ?: emptyList()
+        }
 
         val locationIds = mutableSetOf<Long>()
         if (propertyLocations.isNotEmpty()) {
@@ -1199,7 +1204,10 @@ class OfflineSyncRepository(
         }
     }
 
-    private suspend fun fetchProjectProperty(projectId: Long): PropertyDto? {
+    private suspend fun fetchProjectProperty(
+        projectId: Long,
+        projectDetail: ProjectDetailDto? = null
+    ): PropertyDto? {
         // Note: iOS uses include=propertyType,asbestosStatus,propertyDamageTypes,damageCause
         // but QA backend doesn't support it - returns empty array. Use project detail for propertyType instead.
         val result = runCatching { api.getProjectProperties(projectId) }
@@ -1211,10 +1219,37 @@ class OfflineSyncRepository(
         val property = response?.data?.firstOrNull()
         if (property != null) {
             Log.d("API", "🔍 [fetchProjectProperty] PropertyDto for project $projectId: id=${property.id}, propertyTypeId=${property.propertyTypeId}, propertyType=${property.propertyType}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}")
-        } else {
-            Log.d("API", "⚠️ [fetchProjectProperty] No property in response for project $projectId")
+            return property
         }
-        return property
+
+        Log.d("API", "⚠️ [fetchProjectProperty] No property in response for project $projectId")
+        val detail = projectDetail ?: runCatching { api.getProjectDetail(projectId).data }
+            .onFailure { Log.w("API", "⚠️ [fetchProjectProperty] Unable to load project detail for fallback (project $projectId)", it) }
+            .getOrNull()
+        val detailPropertyId = detail?.propertyId ?: detail?.properties?.firstOrNull()?.id
+
+        if (detailPropertyId != null) {
+            val fetchedById = runCatching { api.getProperty(detailPropertyId) }
+                .onSuccess { fetched ->
+                    Log.d("API", "🏠 [fetchProjectProperty] Fallback getProperty succeeded for project $projectId (id=$detailPropertyId, address=${fetched.address}, city=${fetched.city}, state=${fetched.state}, zip=${fetched.postalCode})")
+                }
+                .onFailure {
+                    Log.e("API", "❌ [fetchProjectProperty] Fallback getProperty failed for project $projectId (id=$detailPropertyId)", it)
+                }
+                .getOrNull()
+            if (fetchedById != null) {
+                return fetchedById
+            }
+        }
+
+        val embedded = detail?.properties?.firstOrNull()
+        if (embedded != null) {
+            Log.d("API", "🏠 [fetchProjectProperty] Using embedded property from project detail for project $projectId: id=${embedded.id}, address=${embedded.address}, city=${embedded.city}, state=${embedded.state}, zip=${embedded.postalCode}")
+            return embedded
+        }
+
+        Log.d("API", "⚠️ [fetchProjectProperty] No property found for project $projectId after fallback attempts")
+        return null
     }
 
     private suspend fun fetchRoomsForLocation(locationId: Long): List<RoomDto> {
