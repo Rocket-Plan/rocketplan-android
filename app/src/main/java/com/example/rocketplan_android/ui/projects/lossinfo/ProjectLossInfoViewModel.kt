@@ -14,6 +14,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.model.ClaimDto
+import com.example.rocketplan_android.data.model.ClaimMutationRequest
 import com.example.rocketplan_android.data.model.DamageCauseDto
 import com.example.rocketplan_android.data.model.DamageTypeDto
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
@@ -77,11 +78,14 @@ data class PropertyInfoFormInput(
 sealed interface ProjectLossInfoEvent {
     data object SaveSuccess : ProjectLossInfoEvent
     data class SaveFailed(val message: String) : ProjectLossInfoEvent
+    data class ClaimUpdated(val claim: ClaimDto) : ProjectLossInfoEvent
+    data class ClaimUpdateFailed(val message: String) : ProjectLossInfoEvent
 }
 
 data class ProjectLossInfoUiState(
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
+    val savingClaimId: Long? = null,
     val errorMessage: String? = null,
     val projectTitle: String? = null,
     val projectCode: String? = null,
@@ -124,15 +128,25 @@ private class ProjectLossInfoRepository(
 
         val projectDetail = runCatching { api.getProjectDetail(projectServerId).data }.getOrNull()
         val propertyId = resolvePropertyId(projectId, project, projectServerId, projectDetail)
-        val property = api.getProperty(propertyId)
+        val property = runCatching { api.getProperty(propertyId) }
+            .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load property $propertyId from server", it) }
+            .getOrElse { throw it }
         val locations = buildClaimLocations(projectId, property.id, projectDetail)
-        val damageTypes = api.getProjectDamageTypes(projectServerId)
-        val damageCauses = api.getDamageCauses(projectServerId).data
-        val projectClaims = api.getProjectClaims(projectServerId).data
+        val damageTypes = runCatching { api.getProjectDamageTypes(projectServerId) }
+            .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load damage types for project $projectServerId", it) }
+            .getOrDefault(emptyList())
+        val damageCauses = runCatching { api.getDamageCauses(projectServerId).data }
+            .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load damage causes for project $projectServerId", it) }
+            .getOrDefault(emptyList())
+        val projectClaims = runCatching { api.getProjectClaims(projectServerId).data }
+            .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load project claims for $projectServerId", it) }
+            .getOrDefault(emptyList())
 
         val locationClaims = mutableMapOf<Long, List<ClaimDto>>()
         locations.forEach { location ->
-            val claims = api.getLocationClaims(location.id).data
+            val claims = runCatching { api.getLocationClaims(location.id).data }
+                .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load claims for location ${location.id}", it) }
+                .getOrDefault(emptyList())
             if (claims.isNotEmpty()) {
                 locationClaims[location.id] = claims
             }
@@ -329,13 +343,19 @@ class ProjectLossInfoViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, isSaving = false, errorMessage = null)
+            _uiState.value = _uiState.value.copy(
+                isLoading = true,
+                isSaving = false,
+                savingClaimId = null,
+                errorMessage = null
+            )
             val propertyReady = ensurePropertyAttached()
             if (propertyReady.isFailure) {
                 val error = propertyReady.exceptionOrNull()
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isSaving = false,
+                    savingClaimId = null,
                     errorMessage = error?.message ?: "Property still syncing, please try again."
                 )
                 return@launch
@@ -348,6 +368,7 @@ class ProjectLossInfoViewModel(
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         isSaving = false,
+                        savingClaimId = null,
                         errorMessage = error.message ?: "Unable to load loss info"
                     )
                 }
@@ -357,7 +378,7 @@ class ProjectLossInfoViewModel(
     fun savePropertyInfo(form: PropertyInfoFormInput) {
         viewModelScope.launch {
             if (_uiState.value.isSaving) return@launch
-            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+            _uiState.update { it.copy(isSaving = true, savingClaimId = null, errorMessage = null) }
 
             val result = runCatching { savePropertyInfoInternal(form) }
             result.onSuccess { property ->
@@ -382,6 +403,7 @@ class ProjectLossInfoViewModel(
             val previous = _uiState.value
             _uiState.value = previous.copy(
                 isSaving = true,
+                savingClaimId = null,
                 selectedDamageTypeIds = form.selectedDamageTypeIds,
                 selectedDamageCause = previous.damageCauses.firstOrNull { it.id == form.damageCauseId },
                 damageCategory = form.damageCategory,
@@ -408,12 +430,42 @@ class ProjectLossInfoViewModel(
         }
     }
 
+    fun updateClaim(claimId: Long, request: ClaimMutationRequest) {
+        viewModelScope.launch {
+            if (_uiState.value.savingClaimId == claimId) return@launch
+            _uiState.update { it.copy(savingClaimId = claimId, errorMessage = null) }
+
+            val result = runCatching { api.updateClaim(claimId, request) }
+            result.onSuccess { updated ->
+                _uiState.update { state ->
+                    state.copy(
+                        savingClaimId = null,
+                        claims = state.claims.map { item ->
+                            if (item.claim.id == updated.id) item.copy(claim = updated) else item
+                        }
+                    )
+                }
+                _events.emit(ProjectLossInfoEvent.ClaimUpdated(updated))
+            }.onFailure { error ->
+                val message = error.message ?: rocketPlanApp.getString(R.string.loss_info_claim_save_failed)
+                _uiState.update { it.copy(savingClaimId = null, errorMessage = message) }
+                _events.emit(ProjectLossInfoEvent.ClaimUpdateFailed(message))
+            }
+        }
+    }
+
     private fun ProjectLossInfoPayload.toUiState(): ProjectLossInfoUiState {
         val propertyDamageTypes = property.propertyDamageTypes.orEmpty()
         val selectedDamageTypeIds = propertyDamageTypes.mapNotNull { it.id }.toSet()
+        val projectDisplayName = listOfNotNull(
+            project.addressLine1?.takeIf { it.isNotBlank() },
+            project.title.takeIf { it.isNotBlank() },
+            project.alias?.takeIf { it.isNotBlank() }
+        ).firstOrNull()
+            ?: rocketPlanApp.getString(R.string.loss_info_claim_project_tag)
 
         val claims = mutableListOf<ClaimListItem>().apply {
-            projectClaims.forEach { add(ClaimListItem(it, null)) }
+            projectClaims.forEach { add(ClaimListItem(it, projectDisplayName)) }
             locations.forEach { location ->
                 val locationClaimList = locationClaims[location.id].orEmpty()
                 if (locationClaimList.isNotEmpty()) {
@@ -424,11 +476,7 @@ class ProjectLossInfoViewModel(
 
         return ProjectLossInfoUiState(
             isLoading = false,
-            projectTitle = listOfNotNull(
-                project.addressLine1?.takeIf { it.isNotBlank() },
-                project.title.takeIf { it.isNotBlank() },
-                project.alias?.takeIf { it.isNotBlank() }
-            ).firstOrNull(),
+            projectTitle = projectDisplayName,
             projectCode = project.uid?.takeIf { it.isNotBlank() }
                 ?: project.projectNumber,
             projectCreatedAt = project.createdAt?.let { dateFormatter.format(it) },

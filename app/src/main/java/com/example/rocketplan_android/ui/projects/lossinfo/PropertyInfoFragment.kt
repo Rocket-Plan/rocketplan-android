@@ -117,6 +117,8 @@ class PropertyInfoFragment : Fragment() {
                                 Toast.LENGTH_LONG
                             ).show()
                         }
+                        is ProjectLossInfoEvent.ClaimUpdated,
+                        is ProjectLossInfoEvent.ClaimUpdateFailed -> Unit
                     }
                 }
             }

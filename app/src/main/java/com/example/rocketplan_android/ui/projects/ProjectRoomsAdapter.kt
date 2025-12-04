@@ -91,13 +91,16 @@ class ProjectRoomsAdapter(
         private val spinner: View = view.findViewById(R.id.loadingSpinner)
 
         fun bind(room: RoomCard) {
+            val mode = this@ProjectRoomsAdapter.statMode
             val previousRoom = thumbnail.getTag(R.id.tag_room_photo_id) as? RoomCard
-            val needsReload = previousRoom?.let { hasVisualDifferences(it, room) } ?: true
+            val previousMode = thumbnail.getTag(R.id.tag_room_card_mode) as? RoomStatMode
+            val hasModeChanged = previousMode != mode
+            val needsReload = previousRoom?.let { hasVisualDifferences(it, room) || hasModeChanged } ?: true
 
             thumbnail.setTag(R.id.tag_room_photo_id, room)
+            thumbnail.setTag(R.id.tag_room_card_mode, mode)
 
             title.text = room.title
-            val mode = this@ProjectRoomsAdapter.statMode
             if (mode == RoomStatMode.DAMAGES) {
                 val count = room.damageCount
                 photoCount.text = itemView.resources.getQuantityString(
@@ -106,14 +109,23 @@ class ProjectRoomsAdapter(
                     count
                 )
                 spinner.isVisible = false
-            } else {
-                photoCount.text = itemView.resources.getQuantityString(
-                    R.plurals.photo_count,
-                    room.photoCount,
-                    room.photoCount
-                )
-                spinner.isVisible = room.isLoadingPhotos
+                if (needsReload) {
+                    Log.d(TAG, "🔄 Resetting thumbnail for damages view room id=${room.roomId}")
+                    thumbnail.load(R.drawable.bg_room_placeholder) {
+                        crossfade(false)
+                    }
+                }
+                thumbnail.isVisible = true
+                itemView.setOnClickListener { onRoomClick(room) }
+                return
             }
+
+            photoCount.text = itemView.resources.getQuantityString(
+                R.plurals.photo_count,
+                room.photoCount,
+                room.photoCount
+            )
+            spinner.isVisible = room.isLoadingPhotos
 
             if (needsReload) {
                 Log.d(TAG, "🔄 Loading thumbnail for room id=${room.roomId}, prev=${previousRoom?.roomId}")
@@ -123,7 +135,7 @@ class ProjectRoomsAdapter(
                     memoryCacheKey(cacheKey)
                     placeholder(R.drawable.bg_room_placeholder)
                     error(R.drawable.bg_room_placeholder)
-                    crossfade(previousRoom == null)
+                    crossfade(previousRoom == null || hasModeChanged)
                 }
             } else {
                 Log.v(TAG, "✅ Skipping reload for room id=${room.roomId} (same as previous)")

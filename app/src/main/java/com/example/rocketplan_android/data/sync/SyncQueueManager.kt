@@ -105,7 +105,8 @@ class SyncQueueManager(
                 SyncJob.SyncProjectGraph(
                     projectId = projectId,
                     prio = 1,
-                    skipPhotos = true
+                    skipPhotos = true,
+                    mode = SyncJob.ProjectSyncMode.METADATA_ONLY
                 )
             )
         }
@@ -417,6 +418,17 @@ class SyncQueueManager(
                                     }
                                 }
                                 photoCacheScheduler.schedulePrefetch()
+                            }
+                            SyncJob.ProjectSyncMode.METADATA_ONLY -> {
+                                val results = syncRepository.syncProjectSegments(
+                                    job.projectId,
+                                    listOf(SyncSegment.PROJECT_METADATA)
+                                )
+                                syncSucceeded = results.all { it.success }.also { success ->
+                                    if (!success) {
+                                        logSegmentFailures(job.projectId, results)
+                                    }
+                                }
                             }
                             SyncJob.ProjectSyncMode.PHOTOS_ONLY -> {
                                 val results = syncRepository.syncProjectSegments(

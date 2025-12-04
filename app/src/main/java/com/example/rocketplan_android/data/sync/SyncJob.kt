@@ -13,7 +13,8 @@ sealed class SyncJob(
         FULL,
         ESSENTIALS_ONLY,
         CONTENT_ONLY,
-        PHOTOS_ONLY
+        PHOTOS_ONLY,
+        METADATA_ONLY
     }
 
     data class SyncProjectGraph(

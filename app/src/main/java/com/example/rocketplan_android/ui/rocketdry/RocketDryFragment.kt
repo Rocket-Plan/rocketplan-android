@@ -62,7 +62,7 @@ class RocketDryFragment : Fragment() {
     private lateinit var equipmentSummaryAdapter: EquipmentSummaryAdapter
     private lateinit var equipmentLevelAdapter: EquipmentLevelAdapter
     private var suppressToggleChanges = false
-    private var currentTab: RocketDryTab = initialTab
+    private lateinit var currentTab: RocketDryTab
 
     override fun onCreateView(
         inflater: LayoutInflater,

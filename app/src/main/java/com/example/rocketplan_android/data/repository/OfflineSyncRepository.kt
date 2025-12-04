@@ -625,8 +625,8 @@ class OfflineSyncRepository(
                 photoId = photoId,
                 categoryId = categoryId
             )
-            val dto = api.createProjectNote(projectId, request)
-            dto.toEntity()?.copy(uuid = pending.uuid, isDirty = false, syncStatus = SyncStatus.SYNCED)
+            val response = api.createProjectNote(projectId, request)
+            response.data.toEntity()?.copy(uuid = pending.uuid, isDirty = false, syncStatus = SyncStatus.SYNCED)
         }.onSuccess { synced ->
             synced?.let { localDataService.saveNote(it) }
         }.onFailure { error ->
@@ -1353,12 +1353,12 @@ class OfflineSyncRepository(
                         photoId = note.photoId,
                         categoryId = note.categoryId
                     )
-                    val dto = if (note.serverId == null) {
+                    val response = if (note.serverId == null) {
                         api.createProjectNote(projectId, request)
                     } else {
                         api.updateNote(note.serverId, request)
                     }
-                    dto.toEntity()?.let { entity ->
+                    response.data.toEntity()?.let { entity ->
                         val resolved = entity.copy(
                             uuid = note.uuid,
                             isDirty = false,

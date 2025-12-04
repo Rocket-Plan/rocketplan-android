@@ -23,6 +23,7 @@ import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.AddressResourceResponse
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
+import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.ProjectResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
@@ -95,13 +96,13 @@ interface OfflineSyncApi {
     suspend fun createProjectNote(
         @Path("projectId") projectId: Long,
         @Body body: CreateNoteRequest
-    ): NoteDto
+    ): NoteResourceResponse
 
     @PUT("/api/notes/{noteId}")
     suspend fun updateNote(
         @Path("noteId") noteId: Long,
         @Body body: CreateNoteRequest
-    ): NoteDto
+    ): NoteResourceResponse
 
     @DELETE("/api/notes/{noteId}")
     suspend fun deleteNote(
