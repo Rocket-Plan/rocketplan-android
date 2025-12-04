@@ -626,7 +626,13 @@ class OfflineSyncRepository(
                 categoryId = categoryId
             )
             val response = api.createProjectNote(projectId, request)
-            response.data.toEntity()?.copy(uuid = pending.uuid, isDirty = false, syncStatus = SyncStatus.SYNCED)
+            response.data.toEntity()?.copy(
+                uuid = pending.uuid,
+                projectId = projectId,
+                roomId = roomId,
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED
+            )
         }.onSuccess { synced ->
             synced?.let { localDataService.saveNote(it) }
         }.onFailure { error ->
@@ -1361,6 +1367,8 @@ class OfflineSyncRepository(
                     response.data.toEntity()?.let { entity ->
                         val resolved = entity.copy(
                             uuid = note.uuid,
+                            projectId = note.projectId,
+                            roomId = note.roomId ?: entity.roomId,
                             isDirty = false,
                             syncStatus = SyncStatus.SYNCED,
                             isDeleted = false
