@@ -7,6 +7,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.logging.LogLevel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +42,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
                 Log.e(TAG, "❌ Sync error: $message")
                 _isRefreshing.value = false
                 val currentState = _uiState.value
-                if (currentState !is ProjectsUiState.Success || (currentState.myProjects.isEmpty() && currentState.wipProjects.isEmpty())) {
+                if (currentState !is ProjectsUiState.Success || (currentState.myProjects.isEmpty() && currentState.projectsByStatus.values.all { it.isEmpty() })) {
                     _uiState.value = ProjectsUiState.Error(message)
                 }
             }
@@ -62,21 +63,21 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
 
                 val mappedProjects = projects.map { it.toListItem() }
                 val myProjects = mappedProjects.filter { assignedIds.contains(it.projectId) }
-                val wipProjects = mappedProjects.filter {
-                    it.status.equals("wip", ignoreCase = true) ||
-                        it.status.equals("draft", ignoreCase = true)
+                val projectsByStatus = ProjectStatus.orderedStatuses.associateWith { status ->
+                    mappedProjects.filter { it.matchesStatus(status) }
                 }
+                val statusCounts = projectsByStatus.entries.joinToString { "${it.key.apiValue}=${it.value.size}" }
 
-                Log.d(TAG, "✅ Projects - My Projects: ${myProjects.size}, WIP: ${wipProjects.size}")
+                Log.d(TAG, "✅ Projects - My Projects: ${myProjects.size}, byStatus: [$statusCounts]")
 
                 remoteLogger.log(
                     level = LogLevel.DEBUG,
                     tag = TAG,
-                    message = "Projects updated: my=${myProjects.size}, wip=${wipProjects.size}",
+                    message = "Projects updated: my=${myProjects.size}, byStatus=[$statusCounts]",
                     metadata = mapOf("source" to "room_update")
                 )
 
-                _uiState.value = ProjectsUiState.Success(myProjects, wipProjects)
+                _uiState.value = ProjectsUiState.Success(myProjects, projectsByStatus)
                 _isRefreshing.value = false
             }
         }
@@ -99,24 +100,6 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         syncQueueManager.prioritizeProject(projectId)
     }
 
-    private fun OfflineProjectEntity.toListItem(): ProjectListItem {
-        val displayTitle = listOfNotNull(
-            addressLine1?.takeIf { it.isNotBlank() },
-            title.takeIf { it.isNotBlank() }
-        ).firstOrNull() ?: "Project ${serverId ?: projectId}"
-        val displayCode = uid?.takeIf { it.isNotBlank() }
-            ?: projectNumber?.takeIf { it.isNotBlank() }
-            ?: "RP-${serverId ?: projectId}"
-        val displayAlias = alias?.takeIf { it.isNotBlank() }
-        return ProjectListItem(
-            projectId = projectId,
-            title = displayTitle,
-            projectCode = displayCode,
-            alias = displayAlias,
-            status = status
-        )
-    }
-
     companion object {
         private const val TAG = "ProjectsViewModel"
     }
@@ -127,11 +110,17 @@ data class ProjectListItem(
     val title: String,
     val projectCode: String,
     val alias: String? = null,
-    val status: String
+    val status: String,
+    val propertyId: Long? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
 )
 
 sealed class ProjectsUiState {
     object Loading : ProjectsUiState()
-    data class Success(val myProjects: List<ProjectListItem>, val wipProjects: List<ProjectListItem>) : ProjectsUiState()
+    data class Success(
+        val myProjects: List<ProjectListItem>,
+        val projectsByStatus: Map<ProjectStatus, List<ProjectListItem>>
+    ) : ProjectsUiState()
     data class Error(val message: String) : ProjectsUiState()
 }

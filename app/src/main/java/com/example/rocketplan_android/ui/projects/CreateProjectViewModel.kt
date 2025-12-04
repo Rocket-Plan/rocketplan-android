@@ -55,12 +55,14 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
         unit: String?,
         city: String?,
         state: String?,
-        postalCode: String?
+        postalCode: String?,
+        country: String?
     ) {
         val cleanedStreet = street?.trim().orEmpty()
         val cleanedCity = city?.trim().orEmpty()
         val cleanedState = state?.trim().orEmpty()
         val cleanedPostal = postalCode?.trim().orEmpty()
+        val cleanedCountry = country?.trim().orEmpty()
 
         var hasError = false
         if (cleanedStreet.isEmpty()) {
@@ -79,6 +81,10 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
             _validationEvents.tryEmit(CreateProjectValidation.PostalRequired)
             hasError = true
         }
+        if (cleanedCountry.isEmpty()) {
+            _validationEvents.tryEmit(CreateProjectValidation.CountryRequired)
+            hasError = true
+        }
 
         if (hasError) return
 
@@ -87,7 +93,8 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
             address2 = unit?.trim().takeIf { !it.isNullOrBlank() },
             city = cleanedCity,
             state = cleanedState,
-            zip = cleanedPostal
+            zip = cleanedPostal,
+            country = cleanedCountry
         )
 
         submitProject(addressRequest)
@@ -184,7 +191,8 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
         val cityStateZip = listOfNotNull(
             request.city?.trim()?.takeIf { it.isNotEmpty() },
             request.state?.trim()?.takeIf { it.isNotEmpty() },
-            request.zip?.trim()?.takeIf { it.isNotEmpty() }
+            request.zip?.trim()?.takeIf { it.isNotEmpty() },
+            request.country?.trim()?.takeIf { it.isNotEmpty() }
         ).joinToString(" ")
         if (cityStateZip.isNotEmpty()) {
             parts.add(cityStateZip)
@@ -214,4 +222,5 @@ sealed interface CreateProjectValidation {
     data object CityRequired : CreateProjectValidation
     data object StateRequired : CreateProjectValidation
     data object PostalRequired : CreateProjectValidation
+    data object CountryRequired : CreateProjectValidation
 }

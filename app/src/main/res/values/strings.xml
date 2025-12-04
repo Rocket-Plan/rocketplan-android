@@ -43,6 +43,19 @@
     <string name="menu_home">Home</string>
     <string name="menu_gallery">Gallery</string>
     <string name="menu_slideshow">Slideshow</string>
+    <string name="bottom_nav_map">Map</string>
+    <string name="bottom_nav_projects">Projects</string>
+    <string name="bottom_nav_notifications">Notifications</string>
+    <string name="bottom_nav_people">People</string>
+    <string name="map_placeholder_message">The map view is coming soon.</string>
+    <string name="map_view_all">View All</string>
+    <string name="map_empty_my_projects">No assigned projects yet. Create one or view all.</string>
+    <string name="map_empty_wip">No WIP projects to show on the map.</string>
+    <string name="map_current_location">Current location</string>
+    <string name="map_location_permission_denied">Location permission denied</string>
+    <string name="map_location_unavailable">Location unavailable right now.</string>
+    <string name="notifications_placeholder_message">Notifications will live here.</string>
+    <string name="people_placeholder_message">Invite your team to see them here.</string>
 
     <string name="brand_rocketplan">RocketPlan</string>
     <string name="content_desc_onboarding_illustration">Onboarding illustration</string>
@@ -145,8 +158,33 @@
     <string name="wind_speed_short">Wind Spe…</string>
     <string name="mph">mph</string>
     <string name="rocket_scan_empty_state">No project photos yet. Capture images with RocketScan to populate this album.</string>
+    <string name="damages_coming_soon">Damages coming soon</string>
+    <string name="sketch_coming_soon">Sketch coming soon</string>
+    <string name="room_damages_empty_state">No damages captured for this room yet.</string>
+    <string name="manage_equipment">Manage equipment</string>
+    <string name="manage_equipment_subtitle">Open RocketDry to view or assign gear</string>
+    <string name="rocketdry_equipment_overview">Equipment overview</string>
+    <plurals name="rocketdry_equipment_units">
+        <item quantity="one">%d total unit</item>
+        <item quantity="other">%d total units</item>
+    </plurals>
+    <string name="rocketdry_equipment_status_breakdown">%1$d active | %2$d removed | %3$d damaged</string>
+    <string name="rocketdry_equipment_by_type">By type</string>
+    <string name="rocketdry_equipment_by_room">By room</string>
+    <plurals name="damage_count">
+        <item quantity="one">%d Damage</item>
+        <item quantity="other">%d Damages</item>
+    </plurals>
+    <string name="room_damage_updated_format">Updated %1$s</string>
+    <string name="severity_low">Low</string>
+    <string name="severity_medium">Medium</string>
+    <string name="severity_high">High</string>
+    <string name="room_damage_severity_unknown">Unspecified</string>
     <string name="location_icon">Location Icon</string>
     <string name="main_level">Main Level</string>
+    <string name="scope_sheet">Scope Sheet</string>
+    <string name="room_scope_empty_state">No scope sheet items for this room yet.</string>
+    <string name="room_scope_updated_format">Updated %1$s</string>
     <string name="rocket_scan_photo_preview_placeholder">Photo preview coming soon.</string>
     <string name="material_count">%d Material</string>
     <string name="materials_count">%d Materials</string>
@@ -194,6 +232,15 @@
     <string name="loss_info_arrived_on_site_label">Arrived on site</string>
     <string name="loss_info_locations_heading">Affected locations</string>
     <string name="loss_info_claims_placeholder">No claims yet.</string>
+    <string name="loss_info_claim_numbers_label">Numbers</string>
+    <string name="loss_info_claim_policy_number">Policy # %1$s</string>
+    <string name="loss_info_claim_claim_number">Claim # %1$s</string>
+    <string name="loss_info_claim_adjuster_label">Adjuster</string>
+    <string name="loss_info_claim_deductible_label">Deductible</string>
+    <string name="loss_info_claim_labeled_value">%1$s: %2$s</string>
+    <string name="loss_info_claim_project_tag">Project</string>
+    <string name="loss_info_claim_project_claim_label">Project claim</string>
+    <string name="loss_info_claim_location_claim_label">%1$s claim</string>
     <string name="loss_info_value_not_available">—</string>
     <string name="loss_info_locations_placeholder">No locations synced for this project.</string>
     <string name="loss_info_save_success">Loss info saved.</string>
@@ -263,6 +310,7 @@
     <string name="project_status_invoiced">Invoiced</string>
     <string name="project_status_paid">Paid</string>
     <string name="project_status_recon">Recon</string>
+    <string name="projects_tab_my_projects">My Projects</string>
 
     <!-- Project Type Selection -->
     <string name="project_type_title">This Project Is…</string>
@@ -296,12 +344,14 @@
     <string name="manual_address_unit_label">Unit / Suite (optional)</string>
     <string name="manual_address_city_label">City</string>
     <string name="manual_address_state_label">State / Province</string>
+    <string name="manual_address_country_label">Country</string>
     <string name="manual_address_postal_label">ZIP / Postal Code</string>
     <string name="manual_address_action">Save Address</string>
     <string name="manual_address_toast">Manual address submission coming soon.</string>
     <string name="manual_address_street_error">Street address is required.</string>
     <string name="manual_address_city_error">City is required.</string>
     <string name="manual_address_state_error">State / province is required.</string>
+    <string name="manual_address_country_error">Country is required.</string>
     <string name="manual_address_postal_error">ZIP / postal code is required.</string>
 
     <!-- Batch Photo Capture -->

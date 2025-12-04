@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Upsert
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
@@ -29,6 +30,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
+import com.example.rocketplan_android.data.local.model.ProjectWithProperty
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
 
@@ -44,6 +46,10 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
     fun observeProjects(): Flow<List<OfflineProjectEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
+    fun observeProjectsWithProperty(): Flow<List<ProjectWithProperty>>
 
     @Query("SELECT * FROM offline_projects WHERE projectId = :projectId LIMIT 1")
     suspend fun getProject(projectId: Long): OfflineProjectEntity?
@@ -86,6 +92,9 @@ interface OfflineDao {
     fun observeRoomsForProject(projectId: Long): Flow<List<OfflineRoomEntity>>
     @Query("SELECT roomId FROM offline_rooms WHERE projectId = :projectId")
     suspend fun getRoomIdsForProject(projectId: Long): List<Long>
+
+    @Query("SELECT serverId FROM offline_rooms WHERE projectId = :projectId AND serverId IS NOT NULL AND isDeleted = 0")
+    suspend fun getServerRoomIdsForProject(projectId: Long): List<Long>
 
     @Query("UPDATE offline_rooms SET isDeleted = 1 WHERE projectId = :projectId")
     suspend fun markRoomsDeletedByProject(projectId: Long)
@@ -511,6 +520,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_work_scopes SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markWorkScopesDeleted(serverIds: List<Long>)
+
+    @Query("UPDATE offline_work_scopes SET roomId = :newRoomId WHERE roomId = :oldRoomId")
+    suspend fun migrateWorkScopeRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
     @Query("DELETE FROM offline_work_scopes WHERE roomId = :roomId")
     suspend fun deleteWorkScopesByRoomId(roomId: Long): Int

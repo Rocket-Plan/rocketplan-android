@@ -32,6 +32,8 @@ class ManualAddressEntryFragment : Fragment() {
     private lateinit var cityInput: TextInputEditText
     private lateinit var stateLayout: TextInputLayout
     private lateinit var stateInput: TextInputEditText
+    private lateinit var countryLayout: TextInputLayout
+    private lateinit var countryInput: TextInputEditText
     private lateinit var postalLayout: TextInputLayout
     private lateinit var postalInput: TextInputEditText
 
@@ -53,6 +55,8 @@ class ManualAddressEntryFragment : Fragment() {
         cityInput = view.findViewById(R.id.manualCityInput)
         stateLayout = view.findViewById(R.id.manualStateLayout)
         stateInput = view.findViewById(R.id.manualStateInput)
+        countryLayout = view.findViewById(R.id.manualCountryLayout)
+        countryInput = view.findViewById(R.id.manualCountryInput)
         postalLayout = view.findViewById(R.id.manualPostalLayout)
         postalInput = view.findViewById(R.id.manualPostalInput)
 
@@ -77,6 +81,13 @@ class ManualAddressEntryFragment : Fragment() {
             }
         }
 
+        countryInput.doAfterTextChanged {
+            if (!it.isNullOrBlank()) {
+                countryLayout.error = null
+                viewModel.clearError()
+            }
+        }
+
         postalInput.doAfterTextChanged {
             if (!it.isNullOrBlank()) {
                 postalLayout.error = null
@@ -90,7 +101,8 @@ class ManualAddressEntryFragment : Fragment() {
                 unit = unitInput.text?.toString(),
                 city = cityInput.text?.toString(),
                 state = stateInput.text?.toString(),
-                postalCode = postalInput.text?.toString()
+                postalCode = postalInput.text?.toString(),
+                country = countryInput.text?.toString()
             )
         }
 
@@ -125,6 +137,8 @@ class ManualAddressEntryFragment : Fragment() {
                                 cityLayout.error = getString(R.string.manual_address_city_error)
                             CreateProjectValidation.StateRequired ->
                                 stateLayout.error = getString(R.string.manual_address_state_error)
+                            CreateProjectValidation.CountryRequired ->
+                                countryLayout.error = getString(R.string.manual_address_country_error)
                             CreateProjectValidation.PostalRequired ->
                                 postalLayout.error = getString(R.string.manual_address_postal_error)
                             CreateProjectValidation.AddressRequired -> {

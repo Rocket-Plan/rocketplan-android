@@ -15,6 +15,7 @@ import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
+import androidx.core.view.isVisible
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -36,6 +37,12 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
+        private val BOTTOM_NAV_DESTINATIONS = setOf(
+            R.id.nav_map,
+            R.id.nav_projects,
+            R.id.nav_notifications,
+            R.id.nav_people
+        )
     }
 
     private lateinit var appBarConfiguration: AppBarConfiguration
@@ -73,6 +80,7 @@ class MainActivity : AppCompatActivity() {
 
         val drawerLayout: DrawerLayout = binding.drawerLayout
         val navView: NavigationView = binding.navView
+        val bottomNavigation = binding.appBarMain.contentMain.bottomNavigation
         val navController = findNavController(R.id.nav_host_fragment_content_main)
 
         // Check if this was launched from OAuth callback deep link
@@ -84,12 +92,12 @@ class MainActivity : AppCompatActivity() {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(
-            setOf(
-                R.id.nav_projects, R.id.nav_home, R.id.nav_gallery, R.id.nav_slideshow
-            ), drawerLayout
+            BOTTOM_NAV_DESTINATIONS,
+            drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
+        bottomNavigation.setupWithNavController(navController)
 
         // Get IMM for keyboard management
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
@@ -113,14 +121,40 @@ class MainActivity : AppCompatActivity() {
                 imm.hideSoftInputFromWindow(focused.windowToken, 0)
             }
 
-            when (destination.id) {
-                R.id.emailCheckFragment, R.id.loginFragment, R.id.signUpFragment, R.id.forgotPasswordFragment, R.id.oauthWebViewFragment, R.id.nav_projects, R.id.photoViewerFragment -> {
-                    // Hide toolbar and drawer on auth screens and projects screen
+            val isBottomNavDestination = BOTTOM_NAV_DESTINATIONS.contains(destination.id)
+            bottomNavigation.isVisible = isBottomNavDestination
+
+            when {
+                destination.id == R.id.emailCheckFragment ||
+                    destination.id == R.id.loginFragment ||
+                    destination.id == R.id.signUpFragment ||
+                    destination.id == R.id.forgotPasswordFragment ||
+                    destination.id == R.id.oauthWebViewFragment -> {
+                    // Hide toolbar and drawer on auth screens
+                    bottomNavigation.isVisible = false
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                     window.setSoftInputMode(hiddenSoftInputMode)
                 }
-                R.id.roomDetailFragment -> {
+                destination.id == R.id.photoViewerFragment -> {
+                    bottomNavigation.isVisible = false
+                    supportActionBar?.hide()
+                    drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                    window.setSoftInputMode(hiddenSoftInputMode)
+                }
+                destination.id == R.id.rocketDryFragment -> {
+                    bottomNavigation.isVisible = false
+                    supportActionBar?.hide()
+                    drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                    window.setSoftInputMode(hiddenSoftInputMode)
+                }
+                isBottomNavDestination -> {
+                    // Hide toolbar/drawer on main tabs to mirror iOS layout
+                    supportActionBar?.hide()
+                    drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                    window.setSoftInputMode(hiddenSoftInputMode)
+                }
+                destination.id == R.id.roomDetailFragment -> {
                     // Show toolbar and drawer, but force keyboard hidden
                     supportActionBar?.show()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
@@ -133,6 +167,7 @@ class MainActivity : AppCompatActivity() {
                     // Show toolbar and drawer on other screens
                     supportActionBar?.show()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                    bottomNavigation.isVisible = false
                     window.setSoftInputMode(hiddenSoftInputMode)
                 }
             }

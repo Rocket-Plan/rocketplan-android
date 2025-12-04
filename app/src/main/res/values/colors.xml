@@ -43,4 +43,6 @@
     <color name="dark_text_rp">#2C2736</color>
     <color name="light_gray_rp">#E8E7ED</color>
     <color name="dark_gray">#666666</color>
+    <color name="severity_low_bg">#E7F5EF</color>
+    <color name="severity_medium_bg">#FFF6E5</color>
 </resources>

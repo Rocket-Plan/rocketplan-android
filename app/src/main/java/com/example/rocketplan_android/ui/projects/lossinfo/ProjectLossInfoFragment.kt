@@ -4,11 +4,9 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
-import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -31,8 +29,6 @@ class ProjectLossInfoFragment : Fragment() {
         ProjectLossInfoViewModel.provideFactory(requireActivity().application, args.projectId)
     }
 
-    private lateinit var backButton: ImageButton
-    private lateinit var titleView: TextView
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
 
@@ -44,12 +40,8 @@ class ProjectLossInfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        backButton = view.findViewById(R.id.backButton)
-        titleView = view.findViewById(R.id.lossInfoToolbarTitle)
         tabLayout = view.findViewById(R.id.lossInfoTabLayout)
         viewPager = view.findViewById(R.id.lossInfoViewPager)
-
-        backButton.setOnClickListener { findNavController().navigateUp() }
 
         viewPager.adapter = ProjectLossInfoPagerAdapter(this, args.projectId)
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
@@ -60,13 +52,19 @@ class ProjectLossInfoFragment : Fragment() {
             }
         }.attach()
 
+        updateToolbarTitle(getString(R.string.add_project_info_title))
+
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    titleView.text = state.projectTitle
-                        ?: getString(R.string.add_project_info_title)
+                    val title = state.projectTitle ?: getString(R.string.add_project_info_title)
+                    updateToolbarTitle(title)
                 }
             }
         }
+    }
+
+    private fun updateToolbarTitle(title: String) {
+        (activity as? AppCompatActivity)?.supportActionBar?.title = title
     }
 }

@@ -10,6 +10,7 @@ import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.model.ProjectStatus
+import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -115,11 +116,19 @@ class ProjectLandingViewModel(
             ?: ""
 
         val aliasText = alias?.takeIf { it.isNotBlank() }
-        val aliasActionable = aliasText == null && !aliasIsUpdating
+        val aliasActionable = !aliasIsUpdating
 
-        val projectStatus = ProjectStatus.fromApiValue(status)
-        val statusLabel = projectStatus?.let { projectStatus ->
-            getApplication<Application>().getString(projectStatus.labelRes)
+        val rawStatus = status.trim()
+        val projectStatus = ProjectStatus.fromApiValue(rawStatus)
+        val statusLabel = when {
+            projectStatus != null -> getApplication<Application>().getString(projectStatus.labelRes)
+            rawStatus.isNotEmpty() && !rawStatus.equals("unknown", ignoreCase = true) -> rawStatus
+                .replace("_", " ")
+                .replace("-", " ")
+                .replaceFirstChar { char ->
+                    if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
+                }
+            else -> null
         }
 
         return ProjectLandingSummary(

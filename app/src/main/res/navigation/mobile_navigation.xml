@@ -105,10 +105,21 @@
         tools:layout="@layout/fragment_home" />
 
     <fragment
+        android:id="@+id/nav_map"
+        android:name="com.example.rocketplan_android.ui.map.MapFragment"
+        android:label="@string/bottom_nav_map"
+        tools:layout="@layout/fragment_map" />
+
+    <fragment
         android:id="@+id/nav_projects"
         android:name="com.example.rocketplan_android.ui.projects.ProjectsFragment"
-        android:label="Projects"
+        android:label="@string/bottom_nav_projects"
         tools:layout="@layout/fragment_projects">
+
+        <argument
+            android:name="initialTab"
+            app:argType="string"
+            android:defaultValue="" />
 
         <action
             android:id="@+id/action_nav_projects_to_emailCheckFragment"
@@ -124,6 +135,18 @@
             android:id="@+id/action_nav_projects_to_createProjectFragment"
             app:destination="@id/createProjectFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/nav_notifications"
+        android:name="com.example.rocketplan_android.ui.notifications.NotificationsFragment"
+        android:label="@string/bottom_nav_notifications"
+        tools:layout="@layout/fragment_notifications" />
+
+    <fragment
+        android:id="@+id/nav_people"
+        android:name="com.example.rocketplan_android.ui.people.PeopleFragment"
+        android:label="@string/bottom_nav_people"
+        tools:layout="@layout/fragment_people" />
 
     <fragment
         android:id="@+id/projectLandingFragment"
@@ -150,6 +173,10 @@
         <action
             android:id="@+id/action_projectLandingFragment_to_projectLossInfoFragment"
             app:destination="@id/projectLossInfoFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_rocketDryFragment"
+            app:destination="@id/rocketDryFragment" />
     </fragment>
 
     <fragment
@@ -203,6 +230,11 @@
         <argument
             android:name="projectId"
             app:argType="long" />
+
+        <argument
+            android:name="startTab"
+            app:argType="string"
+            android:defaultValue="equipment" />
     </fragment>
 
     <fragment
@@ -218,6 +250,15 @@
         <argument
             android:name="roomId"
             app:argType="long" />
+
+        <argument
+            android:name="startTab"
+            app:argType="string"
+            android:defaultValue="photos" />
+
+        <action
+            android:id="@+id/action_roomDetailFragment_to_rocketDryFragment"
+            app:destination="@id/rocketDryFragment" />
 
         <action
             android:id="@+id/action_roomDetailFragment_to_photoViewerFragment"

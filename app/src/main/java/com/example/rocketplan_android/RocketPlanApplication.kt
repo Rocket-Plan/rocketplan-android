@@ -22,6 +22,8 @@ import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
+import com.example.rocketplan_android.realtime.NotesRealtimeManager
+import com.example.rocketplan_android.realtime.ProjectRealtimeManager
 import com.example.rocketplan_android.realtime.PhotoSyncRealtimeManager
 import com.example.rocketplan_android.realtime.PusherService
 import com.example.rocketplan_android.work.PhotoCacheScheduler
@@ -82,6 +84,10 @@ class RocketPlanApplication : Application() {
         private set
 
     lateinit var photoSyncRealtimeManager: PhotoSyncRealtimeManager
+        private set
+    lateinit var projectRealtimeManager: ProjectRealtimeManager
+        private set
+    lateinit var notesRealtimeManager: NotesRealtimeManager
         private set
 
     private lateinit var pusherService: PusherService
@@ -153,8 +159,20 @@ class RocketPlanApplication : Application() {
             remoteLogger = remoteLogger
         )
         photoSyncRealtimeManager = PhotoSyncRealtimeManager(pusherService)
+        projectRealtimeManager = ProjectRealtimeManager(
+            pusherService = pusherService,
+            syncQueueManager = syncQueueManager,
+            authRepository = authRepository,
+            remoteLogger = remoteLogger
+        )
+        notesRealtimeManager = NotesRealtimeManager(
+            pusherService = pusherService,
+            syncQueueManager = syncQueueManager,
+            remoteLogger = remoteLogger
+        )
         // Connect PhotoSyncRealtimeManager to SyncQueueManager to handle Pusher events
         syncQueueManager.setPhotoSyncRealtimeManager(photoSyncRealtimeManager)
+        syncQueueManager.setProjectRealtimeManager(projectRealtimeManager)
 
         imageProcessorRepository = ImageProcessorRepository(
             context = this,
@@ -183,11 +201,6 @@ class RocketPlanApplication : Application() {
             repeatInterval = 15,
             repeatIntervalTimeUnit = TimeUnit.MINUTES
         )
-            .setBackoffCriteria(
-                BackoffPolicy.EXPONENTIAL,
-                RETRY_BACKOFF_MS,
-                TimeUnit.MILLISECONDS
-            )
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(

@@ -40,6 +40,12 @@ class PendingRemoteLogStore(context: Context) {
         return loadInternal().toList()
     }
 
+    suspend fun getByIds(ids: Collection<String>): List<PendingRemoteLog> = mutex.withLock {
+        if (ids.isEmpty()) return emptyList()
+        val set = ids.toSet()
+        return loadInternal().filter { set.contains(it.id) }
+    }
+
     suspend fun remove(ids: Collection<String>) = mutex.withLock {
         if (ids.isEmpty()) return
         val current = loadInternal()

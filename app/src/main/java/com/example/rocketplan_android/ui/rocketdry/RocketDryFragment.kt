@@ -8,14 +8,22 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.card.MaterialCardView
+import kotlinx.coroutines.launch
 
 class RocketDryFragment : Fragment() {
 
@@ -24,6 +32,12 @@ class RocketDryFragment : Fragment() {
     }
 
     private val args: RocketDryFragmentArgs by navArgs()
+    private val viewModel: RocketDryViewModel by viewModels {
+        RocketDryViewModel.provideFactory(requireActivity().application, args.projectId)
+    }
+    private val initialTab: RocketDryTab by lazy {
+        if (args.startTab.equals("moisture", ignoreCase = true)) RocketDryTab.MOISTURE else RocketDryTab.EQUIPMENT
+    }
 
     private lateinit var backButton: ImageButton
     private lateinit var menuButton: ImageButton
@@ -32,10 +46,23 @@ class RocketDryFragment : Fragment() {
     private lateinit var toggleGroup: MaterialButtonToggleGroup
     private lateinit var equipmentButton: MaterialButton
     private lateinit var moistureButton: MaterialButton
+    private lateinit var equipmentContentGroup: View
+    private lateinit var moistureContentGroup: View
+    private lateinit var equipmentTotalCount: TextView
+    private lateinit var equipmentStatusBreakdown: TextView
+    private lateinit var equipmentSummaryRecyclerView: RecyclerView
+    private lateinit var equipmentLocationsRecyclerView: RecyclerView
     private lateinit var roomCard: MaterialCardView
     private lateinit var exteriorSpaceCard: MaterialCardView
     private lateinit var atmosphericLogsRecyclerView: RecyclerView
     private lateinit var locationsRecyclerView: RecyclerView
+
+    private lateinit var atmosphericLogAdapter: AtmosphericLogAdapter
+    private lateinit var locationLevelAdapter: LocationLevelAdapter
+    private lateinit var equipmentSummaryAdapter: EquipmentSummaryAdapter
+    private lateinit var equipmentLevelAdapter: EquipmentLevelAdapter
+    private var suppressToggleChanges = false
+    private var currentTab: RocketDryTab = initialTab
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,9 +76,10 @@ class RocketDryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initializeViews(view)
+        selectInitialTab()
         setupClickListeners()
         setupRecyclerViews()
-        loadProjectData()
+        observeViewModel()
     }
 
     private fun initializeViews(view: View) {
@@ -62,10 +90,30 @@ class RocketDryFragment : Fragment() {
         toggleGroup = view.findViewById(R.id.toggleGroup)
         equipmentButton = view.findViewById(R.id.equipmentButton)
         moistureButton = view.findViewById(R.id.moistureButton)
+        equipmentContentGroup = view.findViewById(R.id.equipmentContentGroup)
+        moistureContentGroup = view.findViewById(R.id.moistureContentGroup)
+        equipmentTotalCount = view.findViewById(R.id.equipmentTotalCount)
+        equipmentStatusBreakdown = view.findViewById(R.id.equipmentStatusBreakdown)
+        equipmentSummaryRecyclerView = view.findViewById(R.id.equipmentSummaryRecyclerView)
+        equipmentLocationsRecyclerView = view.findViewById(R.id.equipmentLocationsRecyclerView)
         roomCard = view.findViewById(R.id.roomCard)
         exteriorSpaceCard = view.findViewById(R.id.exteriorSpaceCard)
         atmosphericLogsRecyclerView = view.findViewById(R.id.atmosphericLogsRecyclerView)
         locationsRecyclerView = view.findViewById(R.id.locationsRecyclerView)
+    }
+
+    private fun selectInitialTab() {
+        suppressToggleChanges = true
+        toggleGroup.check(
+            when (initialTab) {
+                RocketDryTab.EQUIPMENT -> R.id.equipmentButton
+                RocketDryTab.MOISTURE -> R.id.moistureButton
+            }
+        )
+        currentTab = initialTab
+        updateToggleStyles(initialTab)
+        showTab(initialTab)
+        toggleGroup.post { suppressToggleChanges = false }
     }
 
     private fun setupClickListeners() {
@@ -82,16 +130,12 @@ class RocketDryFragment : Fragment() {
         }
 
         toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (isChecked) {
-                when (checkedId) {
-                    R.id.equipmentButton -> {
-                        Toast.makeText(context, "Equipment view", Toast.LENGTH_SHORT).show()
-                    }
-                    R.id.moistureButton -> {
-                        Toast.makeText(context, "Moisture view", Toast.LENGTH_SHORT).show()
-                    }
-                }
+            if (!isChecked || suppressToggleChanges) return@addOnButtonCheckedListener
+            val selectedTab = when (checkedId) {
+                R.id.equipmentButton -> RocketDryTab.EQUIPMENT
+                else -> RocketDryTab.MOISTURE
             }
+            onTabSelected(selectedTab)
         }
 
         roomCard.setOnClickListener {
@@ -103,68 +147,104 @@ class RocketDryFragment : Fragment() {
         }
     }
 
+    private fun onTabSelected(tab: RocketDryTab) {
+        currentTab = tab
+        updateToggleStyles(tab)
+        showTab(tab)
+    }
+
+    private fun updateToggleStyles(active: RocketDryTab) {
+        val selectedBackground =
+            ContextCompat.getColorStateList(requireContext(), R.color.main_purple)
+        val unselectedBackground =
+            ContextCompat.getColorStateList(requireContext(), android.R.color.white)
+        val selectedText = ContextCompat.getColor(requireContext(), android.R.color.white)
+        val unselectedText = ContextCompat.getColor(requireContext(), R.color.main_purple)
+
+        listOf(
+            equipmentButton to RocketDryTab.EQUIPMENT,
+            moistureButton to RocketDryTab.MOISTURE
+        ).forEach { (button, tab) ->
+            val isSelected = tab == active
+            button.backgroundTintList = if (isSelected) selectedBackground else unselectedBackground
+            button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.main_purple)
+            button.setTextColor(if (isSelected) selectedText else unselectedText)
+        }
+    }
+
+    private fun showTab(tab: RocketDryTab) {
+        equipmentContentGroup.isVisible = tab == RocketDryTab.EQUIPMENT
+        moistureContentGroup.isVisible = tab == RocketDryTab.MOISTURE
+    }
+
     private fun setupRecyclerViews() {
         // Atmospheric Logs RecyclerView
+        atmosphericLogAdapter = AtmosphericLogAdapter()
         atmosphericLogsRecyclerView.layoutManager = LinearLayoutManager(context)
-        atmosphericLogsRecyclerView.adapter = AtmosphericLogAdapter(getSampleAtmosphericLogs())
+        atmosphericLogsRecyclerView.adapter = atmosphericLogAdapter
+
+        // Equipment summary RecyclerView
+        equipmentSummaryAdapter = EquipmentSummaryAdapter()
+        equipmentSummaryRecyclerView.layoutManager = GridLayoutManager(context, 2)
+        equipmentSummaryRecyclerView.adapter = equipmentSummaryAdapter
+
+        // Equipment by level RecyclerView
+        equipmentLevelAdapter = EquipmentLevelAdapter()
+        equipmentLocationsRecyclerView.layoutManager = LinearLayoutManager(context)
+        equipmentLocationsRecyclerView.adapter = equipmentLevelAdapter
 
         // Locations RecyclerView
+        locationLevelAdapter = LocationLevelAdapter()
         locationsRecyclerView.layoutManager = LinearLayoutManager(context)
-        locationsRecyclerView.adapter = LocationLevelAdapter(getSampleLocationLevels())
+        locationsRecyclerView.adapter = locationLevelAdapter
     }
 
-    private fun loadProjectData() {
-        // TODO: Load actual project data using the projectId from args
-        projectAddress.text = "201 Faker Road"
+    private fun observeViewModel() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is RocketDryUiState.Ready -> renderState(state)
+                        RocketDryUiState.Loading -> showLoadingState()
+                    }
+                }
+            }
+        }
     }
 
-    // Sample data for demonstration
-    private fun getSampleAtmosphericLogs(): List<AtmosphericLogItem> {
-        return listOf(
-            AtmosphericLogItem(
-                dateTime = "Oct 21, 4:19pm",
-                humidity = 6.0,
-                temperature = 6.0,
-                pressure = 6.0,
-                windSpeed = 6.0
-            )
+    private fun showLoadingState() {
+        projectAddress.text = getString(R.string.loading_project)
+        atmosphericLogAdapter.submitLogs(emptyList())
+        locationLevelAdapter.submitLevels(emptyList())
+        equipmentSummaryAdapter.submitItems(emptyList())
+        equipmentLevelAdapter.submitLevels(emptyList())
+        equipmentTotalCount.text = getString(R.string.loading_project)
+        equipmentStatusBreakdown.text = ""
+        showTab(currentTab)
+    }
+
+    private fun renderState(state: RocketDryUiState.Ready) {
+        projectAddress.text = state.projectAddress
+        atmosphericLogAdapter.submitLogs(state.atmosphericLogs)
+        locationLevelAdapter.submitLevels(state.locationLevels)
+        equipmentSummaryAdapter.submitItems(state.equipmentByType)
+        equipmentLevelAdapter.submitLevels(state.equipmentLevels)
+        equipmentTotalCount.text = resources.getQuantityString(
+            R.plurals.rocketdry_equipment_units,
+            state.equipmentTotals.total,
+            state.equipmentTotals.total
         )
-    }
-
-    private fun getSampleLocationLevels(): List<LocationLevel> {
-        return listOf(
-            LocationLevel(
-                levelName = "Main Level",
-                locations = listOf(
-                    LocationItem(
-                        name = "Basement",
-                        materialCount = 1
-                    )
-                )
-            ),
-            LocationLevel(
-                levelName = "Main Level",
-                locations = emptyList()
-            )
+        equipmentStatusBreakdown.text = getString(
+            R.string.rocketdry_equipment_status_breakdown,
+            state.equipmentTotals.active,
+            state.equipmentTotals.removed,
+            state.equipmentTotals.damaged
         )
+        showTab(currentTab)
     }
 }
 
-// Data classes for display
-data class AtmosphericLogItem(
-    val dateTime: String,
-    val humidity: Double,
-    val temperature: Double,
-    val pressure: Double,
-    val windSpeed: Double
-)
-
-data class LocationLevel(
-    val levelName: String,
-    val locations: List<LocationItem>
-)
-
-data class LocationItem(
-    val name: String,
-    val materialCount: Int
-)
+private enum class RocketDryTab {
+    EQUIPMENT,
+    MOISTURE
+}

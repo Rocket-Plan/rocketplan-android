@@ -3,8 +3,10 @@ package com.example.rocketplan_android.data.sync
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
+import com.example.rocketplan_android.data.repository.SyncSegment
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import com.example.rocketplan_android.realtime.ProjectRealtimeManager
 import com.example.rocketplan_android.realtime.PhotoSyncRealtimeManager
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import java.util.PriorityQueue
@@ -34,6 +36,7 @@ class SyncQueueManager(
 ) {
 
     private var photoSyncRealtimeManager: PhotoSyncRealtimeManager? = null
+    private var projectRealtimeManager: ProjectRealtimeManager? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val mutex = Mutex()
@@ -52,6 +55,7 @@ class SyncQueueManager(
 
     // Track active project sync jobs for cancellation
     private val activeProjectSyncJobs = mutableMapOf<Long, Job>()
+    private val activeProjectModes = mutableMapOf<Long, SyncJob.ProjectSyncMode>()
     @Volatile
     private var foregroundProjectId: Long? = null
     // Track projects with pending photo sync jobs to avoid duplicates
@@ -77,6 +81,10 @@ class SyncQueueManager(
         }
     }
 
+    fun setProjectRealtimeManager(manager: ProjectRealtimeManager) {
+        this.projectRealtimeManager = manager
+    }
+
     suspend fun ensureInitialSync() {
         if (initialSyncStarted.compareAndSet(false, true)) {
             enqueue(SyncJob.EnsureUserContext)
@@ -88,6 +96,18 @@ class SyncQueueManager(
         scope.launch {
             enqueue(SyncJob.EnsureUserContext)
             enqueue(SyncJob.SyncProjects(force = true))
+        }
+    }
+
+    fun refreshProjectMetadata(projectId: Long) {
+        scope.launch {
+            enqueue(
+                SyncJob.SyncProjectGraph(
+                    projectId = projectId,
+                    prio = 1,
+                    skipPhotos = true
+                )
+            )
         }
     }
 
@@ -110,7 +130,7 @@ class SyncQueueManager(
 
             Log.d(TAG, "📷 Refreshing photos for current project $projectId (triggered by Pusher)")
 
-            // Queue a full sync (with photos) at high priority
+            // Queue a photo-only sync at high priority
             val shouldEnqueue = mutex.withLock {
                 if (pendingPhotoSyncs.contains(projectId)) {
                     Log.d(TAG, "⏭️ Photo sync already pending for project $projectId, skipping duplicate")
@@ -127,7 +147,8 @@ class SyncQueueManager(
                     SyncJob.SyncProjectGraph(
                         projectId = projectId,
                         prio = FOREGROUND_PHOTO_PRIORITY,
-                        skipPhotos = false
+                        skipPhotos = false,
+                        mode = SyncJob.ProjectSyncMode.PHOTOS_ONLY
                     )
                 )
             }
@@ -156,6 +177,7 @@ class SyncQueueManager(
                     Log.d(TAG, "🛑 Cancelling active sync for project $projectId")
                     job.cancel()
                     activeProjectSyncJobs.remove(projectId)
+                    activeProjectModes.remove(projectId)
                 }
 
                 // Remove from queue if pending
@@ -173,15 +195,71 @@ class SyncQueueManager(
         }
     }
 
+    fun pauseProjectPhotoSync(projectId: Long) {
+        scope.launch {
+            mutex.withLock {
+                val activeMode = activeProjectModes[projectId]
+                if (activeMode?.includesPhotos() == true) {
+                    activeProjectSyncJobs[projectId]?.let { job ->
+                        Log.d(TAG, "🛑 Pausing active photo sync for project $projectId (state stays partial; resume will rerun content)")
+                        job.cancel()
+                        activeProjectSyncJobs.remove(projectId)
+                        activeProjectModes.remove(projectId)
+                    }
+                }
+
+                val key = "project_$projectId"
+                taskIndex[key]?.let { task ->
+                    val syncJob = task.job
+                    if (syncJob is SyncJob.SyncProjectGraph && syncJob.mode.includesPhotos()) {
+                        Log.d(TAG, "🗑️ Removing queued photo sync for project $projectId")
+                        queue.remove(task)
+                        taskIndex.remove(key)
+                        pendingPhotoSyncs.remove(projectId)
+                        updatePhotoSyncingProjectsLocked()
+                    }
+                }
+            }
+        }
+    }
+
+    fun resumeProjectPhotoSync(projectId: Long, priority: Int = FOREGROUND_PHOTO_PRIORITY) {
+        scope.launch {
+            val shouldEnqueue = mutex.withLock {
+                if (pendingPhotoSyncs.contains(projectId)) {
+                    false
+                } else {
+                    pendingPhotoSyncs.add(projectId)
+                    updatePhotoSyncingProjectsLocked()
+                    true
+                }
+            }
+
+            if (shouldEnqueue) {
+                Log.d(TAG, "📷 Resuming photo sync for project $projectId at priority $priority")
+                enqueue(
+                    SyncJob.SyncProjectGraph(
+                        projectId = projectId,
+                        prio = priority,
+                        skipPhotos = false,
+                        mode = SyncJob.ProjectSyncMode.CONTENT_ONLY
+                    )
+                )
+            }
+        }
+    }
+
     fun clear() {
         scope.launch {
             mutex.withLock {
                 queue.clear()
                 taskIndex.clear()
                 pendingPhotoSyncs.clear()
+                activeProjectModes.clear()
                 updatePhotoSyncingProjectsLocked()
                 initialSyncStarted.set(false)
             }
+            projectRealtimeManager?.clear()
             _isActive.value = false
         }
     }
@@ -253,6 +331,10 @@ class SyncQueueManager(
                 userId?.let { id ->
                     Log.d(TAG, "📷 Setting up Pusher subscription for user $id")
                     photoSyncRealtimeManager?.subscribeForUser(id.toInt())
+                    val companies = authRepository.getUserCompanies().getOrElse { emptyList() }
+                        .map { it.id }
+                        .toSet()
+                    projectRealtimeManager?.updateUserContext(id, companies)
                 }
                 Unit
             }
@@ -296,23 +378,72 @@ class SyncQueueManager(
                     remoteLogger.log(LogLevel.INFO, TAG, "Sync returned no projects.")
                 }
 
+                projectRealtimeManager?.updateProjects(projects.map { it.projectId }.toSet())
+
                 projects.forEachIndexed { index, project ->
-                    enqueue(SyncJob.SyncProjectGraph(project.projectId, prio = 2 + index))
+                    enqueue(
+                        SyncJob.SyncProjectGraph(
+                            projectId = project.projectId,
+                            prio = 2 + index,
+                            skipPhotos = true,
+                            mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY
+                        )
+                    )
                 }
             }
 
             is SyncJob.SyncProjectGraph -> {
+                val mode = job.mode
                 var syncSucceeded = false
                 val syncJob = scope.launch {
                     try {
-                        syncRepository.syncProjectGraph(job.projectId, skipPhotos = job.skipPhotos)
-                        syncSucceeded = true
-                        photoCacheScheduler.schedulePrefetch()
+                        when (mode) {
+                            SyncJob.ProjectSyncMode.ESSENTIALS_ONLY -> {
+                                val results = syncRepository.syncProjectSegments(
+                                    job.projectId,
+                                    listOf(SyncSegment.PROJECT_ESSENTIALS)
+                                )
+                                syncSucceeded = results.all { it.success }.also { success ->
+                                    if (!success) {
+                                        logSegmentFailures(job.projectId, results)
+                                    }
+                                }
+                            }
+                            SyncJob.ProjectSyncMode.CONTENT_ONLY -> {
+                                val results = syncRepository.syncProjectContent(job.projectId)
+                                syncSucceeded = results.all { it.success }.also { success ->
+                                    if (!success) {
+                                        logSegmentFailures(job.projectId, results)
+                                    }
+                                }
+                                photoCacheScheduler.schedulePrefetch()
+                            }
+                            SyncJob.ProjectSyncMode.PHOTOS_ONLY -> {
+                                val results = syncRepository.syncProjectSegments(
+                                    job.projectId,
+                                    listOf(
+                                        SyncSegment.ALL_ROOM_PHOTOS,
+                                        SyncSegment.PROJECT_LEVEL_PHOTOS
+                                    )
+                                )
+                                syncSucceeded = results.all { it.success }.also { success ->
+                                    if (!success) {
+                                        logSegmentFailures(job.projectId, results)
+                                    }
+                                }
+                                photoCacheScheduler.schedulePrefetch()
+                            }
+                            SyncJob.ProjectSyncMode.FULL -> {
+                                syncRepository.syncProjectGraph(job.projectId, skipPhotos = false)
+                                syncSucceeded = true
+                                photoCacheScheduler.schedulePrefetch()
+                            }
+                        }
                     } finally {
                         mutex.withLock {
                             activeProjectSyncJobs.remove(job.projectId)
-                            // Remove from pendingPhotoSyncs when full sync completes
-                            if (!job.skipPhotos) {
+                            activeProjectModes.remove(job.projectId)
+                            if (mode.includesPhotos()) {
                                 pendingPhotoSyncs.remove(job.projectId)
                                 updatePhotoSyncingProjectsLocked()
                             }
@@ -323,13 +454,14 @@ class SyncQueueManager(
 
                 mutex.withLock {
                     activeProjectSyncJobs[job.projectId] = syncJob
+                    activeProjectModes[job.projectId] = mode
                 }
 
                 // Wait for completion
                 syncJob.join()
 
                 // If fast sync succeeded, queue photo sync (unless already pending)
-                if (syncSucceeded && job.skipPhotos) {
+                if (syncSucceeded && mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
                     val shouldEnqueuePhotos = mutex.withLock {
                         if (pendingPhotoSyncs.contains(job.projectId)) {
                             Log.d(TAG, "⏭️ Photo sync already pending for project ${job.projectId}, skipping duplicate")
@@ -347,12 +479,14 @@ class SyncQueueManager(
                         }
                     }
                     if (shouldEnqueuePhotos) {
-                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority $FOREGROUND_PHOTO_PRIORITY")
+                        val followUpPrio = job.prio + 1
+                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority $followUpPrio")
                         enqueue(
                             SyncJob.SyncProjectGraph(
                                 projectId = job.projectId,
-                                prio = FOREGROUND_PHOTO_PRIORITY,
-                                skipPhotos = false
+                                prio = followUpPrio,
+                                skipPhotos = false,
+                                mode = SyncJob.ProjectSyncMode.CONTENT_ONLY
                             )
                         )
                     }
@@ -360,7 +494,7 @@ class SyncQueueManager(
 
                 // Only clear foreground and resume background after FULL sync completes
                 val shouldResumeBackground = mutex.withLock {
-                    if (foregroundProjectId == job.projectId && !job.skipPhotos) {
+                    if (foregroundProjectId == job.projectId && mode != SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
                         foregroundProjectId = null
                         true
                     } else {
@@ -373,6 +507,21 @@ class SyncQueueManager(
                     enqueue(SyncJob.SyncProjects(force = false))
                 }
             }
+        }
+    }
+
+    private fun SyncJob.ProjectSyncMode.includesPhotos(): Boolean =
+        this == SyncJob.ProjectSyncMode.CONTENT_ONLY ||
+            this == SyncJob.ProjectSyncMode.PHOTOS_ONLY ||
+            this == SyncJob.ProjectSyncMode.FULL
+
+    private fun logSegmentFailures(projectId: Long, results: List<com.example.rocketplan_android.data.repository.SyncResult>) {
+        results.filterNot { it.success }.forEach { result ->
+            Log.w(
+                TAG,
+                "⚠️ Segment ${result.segment} failed for project $projectId (items=${result.itemsSynced}, duration=${result.durationMs}ms)",
+                result.error
+            )
         }
     }
 

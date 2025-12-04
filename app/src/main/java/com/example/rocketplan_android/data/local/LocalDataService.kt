@@ -32,6 +32,7 @@ import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
 import com.example.rocketplan_android.data.local.entity.preferredImageSource
 import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
+import com.example.rocketplan_android.data.local.model.ProjectWithProperty
 import com.example.rocketplan_android.data.model.ProjectStatus
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,9 @@ class LocalDataService private constructor(
 
     // region Project accessors
     fun observeProjects(): Flow<List<OfflineProjectEntity>> = dao.observeProjects()
+
+    fun observeProjectsWithProperty(): Flow<List<ProjectWithProperty>> =
+        dao.observeProjectsWithProperty()
 
     suspend fun getAllProjects(): List<OfflineProjectEntity> = withContext(ioDispatcher) {
         dao.getProjectsOnce()
@@ -92,6 +96,9 @@ class LocalDataService private constructor(
 
     suspend fun getRoomByServerId(serverId: Long): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoomByServerId(serverId) }
+
+    suspend fun getServerRoomIdsForProject(projectId: Long): List<Long> =
+        withContext(ioDispatcher) { dao.getServerRoomIdsForProject(projectId) }
 
     suspend fun getRoomByUuid(uuid: String): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoomByUuid(uuid) }
@@ -212,6 +219,9 @@ class LocalDataService private constructor(
     fun observeEquipmentForRoom(roomId: Long): Flow<List<OfflineEquipmentEntity>> =
         dao.observeEquipmentForRoom(roomId)
 
+    fun observeMoistureLogsForProject(projectId: Long): Flow<List<OfflineMoistureLogEntity>> =
+        dao.observeMoistureLogsForProject(projectId)
+
     fun observeMoistureLogsForRoom(roomId: Long): Flow<List<OfflineMoistureLogEntity>> =
         dao.observeMoistureLogsForRoom(roomId)
 
@@ -331,6 +341,7 @@ class LocalDataService private constructor(
         var atmosphericRelinked = 0
         var moistureRelinked = 0
         var albumsRelinked = 0
+        var workScopesRelinked = 0
 
         database.withTransaction {
             rooms.forEach { room ->
@@ -343,7 +354,7 @@ class LocalDataService private constructor(
 
                 suspend fun migrateReferences(oldId: Long, newId: Long): ReferenceMigrationCounts {
                     if (oldId == newId) {
-                        return ReferenceMigrationCounts(0, 0, 0, 0, 0, 0, 0)
+                        return ReferenceMigrationCounts(0, 0, 0, 0, 0, 0, 0, 0)
                     }
                     val photoCount = dao.migratePhotoRoomIds(oldId, newId)
                     val noteCount = dao.migrateNoteRoomIds(oldId, newId)
@@ -352,6 +363,7 @@ class LocalDataService private constructor(
                     val atmosphericCount = dao.migrateAtmosphericLogRoomIds(oldId, newId)
                     val moistureCount = dao.migrateMoistureLogRoomIds(oldId, newId)
                     val albumCount = dao.migrateAlbumRoomIds(oldId, newId)
+                    val workScopeCount = dao.migrateWorkScopeRoomIds(oldId, newId)
                     return ReferenceMigrationCounts(
                         photos = photoCount,
                         notes = noteCount,
@@ -359,7 +371,8 @@ class LocalDataService private constructor(
                         equipment = equipmentCount,
                         atmosphericLogs = atmosphericCount,
                         moistureLogs = moistureCount,
-                        albums = albumCount
+                        albums = albumCount,
+                        workScopes = workScopeCount
                     )
                 }
 
@@ -373,6 +386,7 @@ class LocalDataService private constructor(
                     atmosphericRelinked += counts.atmosphericLogs
                     moistureRelinked += counts.moistureLogs
                     albumsRelinked += counts.albums
+                    workScopesRelinked += counts.workScopes
                 }
             }
         }
@@ -385,7 +399,8 @@ class LocalDataService private constructor(
             equipmentRelinked = equipmentRelinked,
             atmosphericLogsRelinked = atmosphericRelinked,
             moistureLogsRelinked = moistureRelinked,
-            albumsRelinked = albumsRelinked
+            albumsRelinked = albumsRelinked,
+            workScopesRelinked = workScopesRelinked
         )
     }
 
@@ -638,7 +653,8 @@ data class RoomDataRepairResult(
     val equipmentRelinked: Int = 0,
     val atmosphericLogsRelinked: Int = 0,
     val moistureLogsRelinked: Int = 0,
-    val albumsRelinked: Int = 0
+    val albumsRelinked: Int = 0,
+    val workScopesRelinked: Int = 0
 )
 
 private data class ReferenceMigrationCounts(
@@ -648,8 +664,9 @@ private data class ReferenceMigrationCounts(
     val equipment: Int,
     val atmosphericLogs: Int,
     val moistureLogs: Int,
-    val albums: Int
+    val albums: Int,
+    val workScopes: Int
 ) {
     fun hasAnyUpdates(): Boolean =
-        photos + notes + damages + equipment + atmosphericLogs + moistureLogs + albums > 0
+        photos + notes + damages + equipment + atmosphericLogs + moistureLogs + albums + workScopes > 0
 }

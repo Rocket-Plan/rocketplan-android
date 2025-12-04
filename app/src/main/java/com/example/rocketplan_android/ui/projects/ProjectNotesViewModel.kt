@@ -32,6 +32,7 @@ class ProjectNotesViewModel(
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val notesRealtimeManager = rocketPlanApp.notesRealtimeManager
     private val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.US)
 
     private val _uiState = MutableStateFlow(ProjectNotesUiState())
@@ -70,6 +71,10 @@ class ProjectNotesViewModel(
                         com.example.rocketplan_android.R.string.notes_for_project
                     )
                 }
+
+                val serverNoteIds = notes.mapNotNull { it.serverId }.toSet()
+                notesRealtimeManager.updateProjectSubscriptions(projectId, serverNoteIds)
+
                 ProjectNotesUiState(
                     items = items,
                     subtitle = subtitle,
@@ -90,6 +95,11 @@ class ProjectNotesViewModel(
                 categoryId = categoryId?.takeIf { it != 0L }
             )
         }
+    }
+
+    override fun onCleared() {
+        notesRealtimeManager.clearProject(projectId)
+        super.onCleared()
     }
 
     private fun OfflineNoteEntity.toItem(roomTitle: String?): NoteListItem {

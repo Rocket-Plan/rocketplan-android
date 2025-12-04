@@ -10,7 +10,6 @@ import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.local.LocalDataService
-import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.SyncStatus
@@ -45,6 +44,11 @@ import android.util.Log
 data class ClaimListItem(
     val claim: ClaimDto,
     val locationName: String? = null
+)
+
+private data class ClaimLocation(
+    val id: Long,
+    val name: String
 )
 
 data class LossInfoFormInput(
@@ -104,7 +108,7 @@ private data class ProjectLossInfoPayload(
     val damageCauses: List<DamageCauseDto>,
     val projectClaims: List<ClaimDto>,
     val locationClaims: Map<Long, List<ClaimDto>>,
-    val locations: List<OfflineLocationEntity>
+    val locations: List<ClaimLocation>
 )
 
 private class ProjectLossInfoRepository(
@@ -119,19 +123,18 @@ private class ProjectLossInfoRepository(
         val projectServerId = project.serverId ?: project.projectId
 
         val projectDetail = runCatching { api.getProjectDetail(projectServerId).data }.getOrNull()
-        val locations = localDataService.getLocations(projectId)
         val propertyId = resolvePropertyId(projectId, project, projectServerId, projectDetail)
         val property = api.getProperty(propertyId)
+        val locations = buildClaimLocations(projectId, property.id, projectDetail)
         val damageTypes = api.getProjectDamageTypes(projectServerId)
         val damageCauses = api.getDamageCauses(projectServerId).data
         val projectClaims = api.getProjectClaims(projectServerId).data
 
         val locationClaims = mutableMapOf<Long, List<ClaimDto>>()
         locations.forEach { location ->
-            val serverId = location.serverId ?: location.locationId
-            val claims = api.getLocationClaims(serverId).data
+            val claims = api.getLocationClaims(location.id).data
             if (claims.isNotEmpty()) {
-                locationClaims[serverId] = claims
+                locationClaims[location.id] = claims
             }
         }
 
@@ -144,6 +147,37 @@ private class ProjectLossInfoRepository(
             locationClaims = locationClaims,
             locations = locations
         )
+    }
+
+    private suspend fun buildClaimLocations(
+        projectId: Long,
+        propertyServerId: Long,
+        projectDetail: ProjectDetailDto?
+    ): List<ClaimLocation> {
+        val localLocations = localDataService.getLocations(projectId)
+            .mapNotNull { entity ->
+                entity.serverId?.let { serverId ->
+                    ClaimLocation(id = serverId, name = entity.title)
+                }
+            }
+        val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }
+            .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load property locations for claims (propertyId=$propertyServerId)", it) }
+            .getOrNull()
+            .orEmpty()
+            .mapNotNull { dto ->
+                val title = listOfNotNull(dto.title, dto.name)
+                    .firstOrNull { it.isNotBlank() }
+                title?.let { ClaimLocation(id = dto.id, name = it) }
+            }
+
+        if (localLocations.isNotEmpty() || remoteLocations.isNotEmpty()) {
+            return (localLocations + remoteLocations).distinctBy { it.id }
+        }
+
+        Log.d("API", "ℹ️ [LossInfo] No local locations found; falling back to project detail title")
+        val fallbackLocation = projectDetail?.title
+            ?.let { ClaimLocation(id = projectDetail.id, name = it) }
+        return fallbackLocation?.let { listOf(it) } ?: emptyList()
     }
 
     private suspend fun resolvePropertyId(
@@ -381,10 +415,9 @@ class ProjectLossInfoViewModel(
         val claims = mutableListOf<ClaimListItem>().apply {
             projectClaims.forEach { add(ClaimListItem(it, null)) }
             locations.forEach { location ->
-                val serverId = location.serverId ?: location.locationId
-                val locationClaimList = locationClaims[serverId].orEmpty()
+                val locationClaimList = locationClaims[location.id].orEmpty()
                 if (locationClaimList.isNotEmpty()) {
-                    locationClaimList.forEach { add(ClaimListItem(it, location.title)) }
+                    locationClaimList.forEach { add(ClaimListItem(it, location.name)) }
                 }
             }
         }
@@ -410,7 +443,7 @@ class ProjectLossInfoViewModel(
             callReceived = DateUtils.parseApiDate(property.callReceived),
             crewDispatched = DateUtils.parseApiDate(property.crewDispatched),
             arrivedOnSite = DateUtils.parseApiDate(property.arrivedOnSite),
-            affectedLocations = locations.map { it.title },
+            affectedLocations = locations.map { it.name },
             claims = claims
         )
     }

@@ -139,20 +139,18 @@
 
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
-            <!-- Room / Exterior Space Buttons -->
             <LinearLayout
+                android:id="@+id/equipmentContentGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="20dp"
-                android:baselineAligned="false"
-                android:orientation="horizontal">
+                android:orientation="vertical"
+                android:visibility="gone">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/roomCard"
-                    android:layout_width="0dp"
+                    android:id="@+id/equipmentTotalsCard"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
+                    android:layout_marginBottom="16dp"
                     app:cardBackgroundColor="@color/white"
                     app:cardCornerRadius="12dp"
                     app:cardElevation="0dp"
@@ -162,101 +160,198 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
                         android:orientation="vertical"
-                        android:padding="24dp">
-
-                        <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:layout_marginBottom="8dp"
-                            android:background="@drawable/bg_icon_circle_purple"
-                            android:contentDescription="@string/room"
-                            android:padding="12dp"
-                            android:src="@drawable/ic_door" />
+                        android:padding="16dp">
 
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/room"
+                            android:text="@string/rocketdry_equipment_overview"
+                            android:textColor="@color/light_text_rp"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:id="@+id/equipmentTotalCount"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
                             android:textColor="@color/black"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            tools:text="12 total units" />
 
+                        <TextView
+                            android:id="@+id/equipmentStatusBreakdown"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textColor="@color/light_text_rp"
+                            android:textSize="14sp"
+                            tools:text="10 active | 1 removed | 1 damaged" />
                     </LinearLayout>
-
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/exteriorSpaceCard"
-                    android:layout_width="0dp"
+                <TextView
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="@color/white"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp"
-                    app:strokeColor="@color/light_border"
-                    app:strokeWidth="1dp">
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/rocketdry_equipment_by_type"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="24dp">
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/equipmentSummaryRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    android:nestedScrollingEnabled="false"
+                    tools:itemCount="4"
+                    tools:listitem="@layout/item_equipment_summary" />
 
-                        <ImageView
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
-                            android:layout_marginBottom="8dp"
-                            android:background="@drawable/bg_icon_circle_purple"
-                            android:contentDescription="@string/exterior_space"
-                            android:padding="12dp"
-                            android:src="@drawable/ic_exterior" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/rocketdry_equipment_by_room"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/exterior_space"
-                            android:textColor="@color/black"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                    </LinearLayout>
-
-                </com.google.android.material.card.MaterialCardView>
-
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/equipmentLocationsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    tools:itemCount="2"
+                    tools:listitem="@layout/item_equipment_level" />
             </LinearLayout>
 
-            <!-- External Atmospheric Log Section -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="@string/external_atmospheric_log"
-                android:textColor="@color/light_text_rp"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <!-- Atmospheric Log RecyclerView -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/atmosphericLogsRecyclerView"
+            <LinearLayout
+                android:id="@+id/moistureContentGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:nestedScrollingEnabled="false"
-                tools:itemCount="1"
-                tools:listitem="@layout/item_atmospheric_log" />
+                android:orientation="vertical">
 
-            <!-- Locations by Level Section -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/locationsRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                tools:itemCount="2"
-                tools:listitem="@layout/item_location_level" />
+                <!-- Room / Exterior Space Buttons -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="20dp"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/roomCard"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/white"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/light_border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="24dp">
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginBottom="8dp"
+                                android:background="@drawable/bg_icon_circle_purple"
+                                android:contentDescription="@string/room"
+                                android:padding="12dp"
+                                android:src="@drawable/ic_door" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/room"
+                                android:textColor="@color/black"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/exteriorSpaceCard"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        app:cardBackgroundColor="@color/white"
+                        app:cardCornerRadius="12dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/light_border"
+                        app:strokeWidth="1dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center"
+                            android:orientation="vertical"
+                            android:padding="24dp">
+
+                            <ImageView
+                                android:layout_width="48dp"
+                                android:layout_height="48dp"
+                                android:layout_marginBottom="8dp"
+                                android:background="@drawable/bg_icon_circle_purple"
+                                android:contentDescription="@string/exterior_space"
+                                android:padding="12dp"
+                                android:src="@drawable/ic_exterior" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/exterior_space"
+                                android:textColor="@color/black"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                    </com.google.android.material.card.MaterialCardView>
+
+                </LinearLayout>
+
+                <!-- External Atmospheric Log Section -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:text="@string/external_atmospheric_log"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <!-- Atmospheric Log RecyclerView -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/atmosphericLogsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="24dp"
+                    android:nestedScrollingEnabled="false"
+                    tools:itemCount="1"
+                    tools:listitem="@layout/item_atmospheric_log" />
+
+                <!-- Locations by Level Section -->
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/locationsRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    tools:itemCount="2"
+                    tools:listitem="@layout/item_location_level" />
+            </LinearLayout>
 
         </LinearLayout>
 

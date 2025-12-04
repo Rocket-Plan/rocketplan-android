@@ -9,9 +9,17 @@ sealed class SyncJob(
     data class SyncProjects(val force: Boolean = false) :
         SyncJob(priority = if (force) 0 else 1, key = "sync_projects")
 
+    enum class ProjectSyncMode {
+        FULL,
+        ESSENTIALS_ONLY,
+        CONTENT_ONLY,
+        PHOTOS_ONLY
+    }
+
     data class SyncProjectGraph(
         val projectId: Long,
         val prio: Int = 3,
-        val skipPhotos: Boolean = false
+        val skipPhotos: Boolean = false,
+        val mode: ProjectSyncMode = if (skipPhotos) ProjectSyncMode.ESSENTIALS_ONLY else ProjectSyncMode.FULL
     ) : SyncJob(priority = prio, key = "project_$projectId")
 }

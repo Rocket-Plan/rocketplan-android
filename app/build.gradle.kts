@@ -1,9 +1,29 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("androidx.navigation.safeargs.kotlin")
-    id("org.jetbrains.kotlin.kapt")
+    alias(libs.plugins.ksp)
 }
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
+// Release signing secrets are expected from local.properties or env vars
+val releaseStoreFile = localProperties.getProperty("release.storeFile") ?: System.getenv("RP_RELEASE_STORE_FILE")
+val releaseStorePassword = localProperties.getProperty("release.storePassword") ?: System.getenv("RP_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = localProperties.getProperty("release.keyAlias") ?: System.getenv("RP_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = localProperties.getProperty("release.keyPassword") ?: System.getenv("RP_RELEASE_KEY_PASSWORD")
+val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+    .all { !it.isNullOrBlank() }
 
 android {
     namespace = "com.example.rocketplan_android"
@@ -12,11 +32,12 @@ android {
     defaultConfig {
         applicationId = "com.example.rocketplan_android"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("maps.api.key", "")
     }
 
     // Product Flavors for different environments and device types
@@ -29,9 +50,10 @@ android {
             versionNameSuffix = "-dev"
 
             // Dev environment BuildConfig fields
-            buildConfigField("String", "API_BASE_URL", "\"https://api-qa-mongoose-br2wu78v1.rocketplantech.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api-qa-mongoose-br2wu78v1.rocketplantech.com/\"")
             buildConfigField("String", "ENVIRONMENT", "\"DEV\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "true")
+            buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
 
             // Custom resources for dev
             resValue("string", "app_name", "RocketPlan Dev")
@@ -43,9 +65,10 @@ android {
             versionNameSuffix = "-staging"
 
             // Staging/Test environment BuildConfig fields
-            buildConfigField("String", "API_BASE_URL", "\"https://api-staging-mongoose-n5tr2spgf.rocketplantech.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api-staging-mongoose-n5tr2spgf.rocketplantech.com/\"")
             buildConfigField("String", "ENVIRONMENT", "\"STAGING\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "true")
+            buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
 
             // Custom resources for staging
             resValue("string", "app_name", "RocketPlan Staging")
@@ -55,9 +78,10 @@ android {
             dimension = "environment"
 
             // Production environment BuildConfig fields
-            buildConfigField("String", "API_BASE_URL", "\"https://api-public.rocketplantech.com\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://api-public.rocketplantech.com/\"")
             buildConfigField("String", "ENVIRONMENT", "\"PROD\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "false")
+            buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
 
             // Custom resources for production
             resValue("string", "app_name", "RocketPlan")
@@ -86,10 +110,14 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("../release.jks")
-            storePassword = "rocketplan123"
-            keyAlias = "rocketplan"
-            keyPassword = "rocketplan123"
+            if (!hasReleaseSigning) {
+                logger.warn("Release signing credentials not configured; falling back to debug signing for release builds.")
+            } else {
+                storeFile = file(releaseStoreFile!!)
+                storePassword = releaseStorePassword!!
+                keyAlias = releaseKeyAlias!!
+                keyPassword = releaseKeyPassword!!
+            }
         }
     }
 
@@ -106,7 +134,11 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 
@@ -158,15 +190,21 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.play.services.maps)
+    implementation(libs.play.services.location)
 
     // Networking
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
     implementation(libs.okhttp.logging)
-    implementation(libs.pusher)
-    // SLF4J Android implementation required by java-websocket (Pusher dependency)
-    implementation("org.slf4j:slf4j-android:1.7.36")
+    // Pusher for standard builds (includes SLF4J)
+    "standardImplementation"(libs.pusher)
+    "standardImplementation"("org.slf4j:slf4j-android:1.7.36")
+    // Pusher for FLIR builds - exclude SLF4J since FLIR SDK bundles its own
+    "flirImplementation"(libs.pusher) {
+        exclude(group = "org.slf4j")
+    }
 
     // DataStore for secure storage
     implementation(libs.androidx.datastore.preferences)
@@ -182,7 +220,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.androidx.work.runtime)

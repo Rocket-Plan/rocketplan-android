@@ -24,14 +24,18 @@ class ClaimsListAdapter :
 
     class ClaimViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val policyHolder: TextView = itemView.findViewById(R.id.claimPolicyHolder)
+        private val claimType: TextView = itemView.findViewById(R.id.claimType)
         private val provider: TextView = itemView.findViewById(R.id.claimProvider)
         private val numbers: TextView = itemView.findViewById(R.id.claimNumbers)
+        private val adjuster: TextView = itemView.findViewById(R.id.claimAdjuster)
+        private val deductible: TextView = itemView.findViewById(R.id.claimDeductible)
         private val location: TextView = itemView.findViewById(R.id.claimLocation)
 
         fun bind(item: ClaimListItem) {
             policyHolder.text = item.claim.policyHolder.orEmpty().ifBlank {
                 itemView.context.getString(R.string.loss_info_value_not_available)
             }
+            claimType.text = buildClaimTypeText(item)
             provider.text = listOfNotNull(
                 item.claim.provider,
                 item.claim.representative
@@ -40,17 +44,59 @@ class ClaimsListAdapter :
             }
             val policyNumber = item.claim.policyNumber.orEmpty()
             val claimNumber = item.claim.claimNumber.orEmpty()
-            numbers.text = listOf(policyNumber, claimNumber)
-                .filter { it.isNotBlank() }
-                .joinToString(" • ")
-                .ifBlank { itemView.context.getString(R.string.loss_info_value_not_available) }
+            val numbersLabel = itemView.context.getString(R.string.loss_info_claim_numbers_label)
+            numbers.text = buildString {
+                append(numbersLabel).append(": ")
+                append(
+                    listOf(
+                        policyNumber.takeIf { it.isNotBlank() }?.let {
+                            itemView.context.getString(R.string.loss_info_claim_policy_number, it)
+                        },
+                        claimNumber.takeIf { it.isNotBlank() }?.let {
+                            itemView.context.getString(R.string.loss_info_claim_claim_number, it)
+                        }
+                    ).filterNotNull()
+                        .joinToString(" • ")
+                        .ifBlank { itemView.context.getString(R.string.loss_info_value_not_available) }
+                )
+            }
+
+            val adjusterLabel = itemView.context.getString(R.string.loss_info_claim_adjuster_label)
+            val adjusterValue = listOfNotNull(
+                item.claim.adjuster,
+                item.claim.adjusterPhone,
+                item.claim.adjusterEmail
+            ).joinToString(" • ").ifBlank {
+                itemView.context.getString(R.string.loss_info_value_not_available)
+            }
+            adjuster.text = itemView.context.getString(
+                R.string.loss_info_claim_labeled_value,
+                adjusterLabel,
+                adjusterValue
+            )
+
+            val deductibleLabel = itemView.context.getString(R.string.loss_info_claim_deductible_label)
+            val deductibleValue = item.claim.insuranceDeductible.orEmpty().ifBlank {
+                itemView.context.getString(R.string.loss_info_value_not_available)
+            }
+            deductible.text = itemView.context.getString(
+                R.string.loss_info_claim_labeled_value,
+                deductibleLabel,
+                deductibleValue
+            )
 
             if (item.locationName.isNullOrBlank()) {
-                location.visibility = View.GONE
+                location.text = itemView.context.getString(R.string.loss_info_claim_project_tag)
             } else {
-                location.visibility = View.VISIBLE
                 location.text = item.locationName
             }
+        }
+
+        private fun buildClaimTypeText(item: ClaimListItem): String {
+            val fallback = item.locationName?.let {
+                itemView.context.getString(R.string.loss_info_claim_location_claim_label, it)
+            } ?: itemView.context.getString(R.string.loss_info_claim_project_claim_label)
+            return item.claim.claimType?.name?.takeIf { it.isNotBlank() } ?: fallback
         }
     }
 

@@ -20,6 +20,7 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textview.MaterialTextView
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
@@ -42,6 +43,7 @@ class LossInfoFragment : Fragment() {
     )
 
     private lateinit var damageTypesGroup: ChipGroup
+    private lateinit var damageCauseLayout: TextInputLayout
     private lateinit var damageCauseInput: MaterialAutoCompleteTextView
     private lateinit var damageCategoryInput: TextInputEditText
     private lateinit var lossClassInput: TextInputEditText
@@ -52,7 +54,8 @@ class LossInfoFragment : Fragment() {
     private lateinit var affectedLocationsValue: MaterialTextView
     private lateinit var saveButton: MaterialButton
 
-    private var availableDamageCauses: List<DamageCauseDto> = emptyList()
+    private var allDamageCauses: List<DamageCauseDto> = emptyList()
+    private var filteredDamageCauses: List<DamageCauseDto> = emptyList()
     private val selectedDamageTypeIds = mutableSetOf<Long>()
     private var selectedDamageCauseId: Long? = null
     private var lossDate: Date? = null
@@ -69,6 +72,7 @@ class LossInfoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         damageTypesGroup = view.findViewById(R.id.damageTypesGroup)
+        damageCauseLayout = view.findViewById(R.id.damageCauseLayout)
         damageCauseInput = view.findViewById(R.id.damageCauseInput)
         damageCategoryInput = view.findViewById(R.id.damageCategoryInput)
         lossClassInput = view.findViewById(R.id.lossClassInput)
@@ -167,7 +171,9 @@ class LossInfoFragment : Fragment() {
                         selectedDamageTypeIds.add(damageType.id)
                     } else {
                         selectedDamageTypeIds.remove(damageType.id)
+                        clearDamageCauseIfFilteredOut(damageType.id)
                     }
+                    applyDamageCauseFilter()
                 }
             }
             damageTypesGroup.addView(chip)
@@ -175,17 +181,32 @@ class LossInfoFragment : Fragment() {
     }
 
     private fun renderDamageCauses(state: ProjectLossInfoUiState) {
-        availableDamageCauses = state.damageCauses
-        val labels = availableDamageCauses.map { cause ->
+        allDamageCauses = state.damageCauses
+        applyDamageCauseFilter()
+    }
+
+    private fun applyDamageCauseFilter() {
+        filteredDamageCauses = allDamageCauses.filter { cause ->
+            val typeId = cause.propertyDamageType?.id
+            typeId != null && selectedDamageTypeIds.contains(typeId)
+        }
+        val labels = filteredDamageCauses.map { cause ->
             cause.name ?: getString(R.string.loss_info_value_not_available)
         }
         val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, labels)
         damageCauseInput.setAdapter(adapter)
 
-        val selected = availableDamageCauses.firstOrNull { it.id == selectedDamageCauseId }
-            ?: state.selectedDamageCause
-        selectedDamageCauseId = selected?.id
-        damageCauseInput.setText(selected?.name.orEmpty(), false)
+        val selected = filteredDamageCauses.firstOrNull { it.id == selectedDamageCauseId }
+        if (selected != null) {
+            damageCauseInput.setText(selected.name.orEmpty(), false)
+        } else {
+            selectedDamageCauseId = null
+            damageCauseInput.setText("", false)
+        }
+
+        val hasOptions = filteredDamageCauses.isNotEmpty()
+        damageCauseLayout.isEnabled = hasOptions
+        damageCauseInput.isEnabled = hasOptions
     }
 
     private fun bindInputs() {
@@ -194,13 +215,13 @@ class LossInfoFragment : Fragment() {
                 selectedDamageCauseId = null
                 return@doAfterTextChanged
             }
-            val match = availableDamageCauses.firstOrNull {
+            val match = filteredDamageCauses.firstOrNull {
                 it.name?.equals(text.toString(), ignoreCase = true) == true
             }
             selectedDamageCauseId = match?.id
         }
         damageCauseInput.setOnItemClickListener { _, _, position, _ ->
-            selectedDamageCauseId = availableDamageCauses.getOrNull(position)?.id
+            selectedDamageCauseId = filteredDamageCauses.getOrNull(position)?.id
         }
 
         lossDateInput.setOnClickListener {
@@ -352,6 +373,16 @@ class LossInfoFragment : Fragment() {
             arrivedOnSite = arrivedOnSite
         )
         viewModel.saveLossInfo(form)
+    }
+
+    private fun clearDamageCauseIfFilteredOut(removedDamageTypeId: Long) {
+        val selected = filteredDamageCauses.firstOrNull { it.id == selectedDamageCauseId }
+            ?: allDamageCauses.firstOrNull { it.id == selectedDamageCauseId }
+        val selectedTypeId = selected?.propertyDamageType?.id
+        if (selectedTypeId == removedDamageTypeId) {
+            selectedDamageCauseId = null
+            damageCauseInput.setText("", false)
+        }
     }
 
     companion object {

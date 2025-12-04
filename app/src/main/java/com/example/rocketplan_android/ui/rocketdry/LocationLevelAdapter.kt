@@ -8,9 +8,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 
-class LocationLevelAdapter(
-    private val levels: List<LocationLevel>
-) : RecyclerView.Adapter<LocationLevelAdapter.ViewHolder>() {
+class LocationLevelAdapter : RecyclerView.Adapter<LocationLevelAdapter.ViewHolder>() {
+
+    private val levels: MutableList<LocationLevel> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -24,23 +24,31 @@ class LocationLevelAdapter(
 
     override fun getItemCount(): Int = levels.size
 
+    fun submitLevels(items: List<LocationLevel>) {
+        levels.clear()
+        levels.addAll(items)
+        notifyDataSetChanged()
+    }
+
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val levelName: TextView = itemView.findViewById(R.id.levelName)
         private val locationsInLevelRecyclerView: RecyclerView =
             itemView.findViewById(R.id.locationsInLevelRecyclerView)
+        private val locationAdapter = LocationCardAdapter()
 
         fun bind(level: LocationLevel) {
             levelName.text = level.levelName
 
             locationsInLevelRecyclerView.layoutManager = LinearLayoutManager(itemView.context)
-            locationsInLevelRecyclerView.adapter = LocationCardAdapter(level.locations)
+            locationsInLevelRecyclerView.adapter = locationAdapter
+            locationAdapter.submitLocations(level.locations)
         }
     }
 }
 
-class LocationCardAdapter(
-    private val locations: List<LocationItem>
-) : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>() {
+class LocationCardAdapter : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>() {
+
+    private val locations: MutableList<LocationItem> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -53,6 +61,12 @@ class LocationCardAdapter(
     }
 
     override fun getItemCount(): Int = locations.size
+
+    fun submitLocations(items: List<LocationItem>) {
+        locations.clear()
+        locations.addAll(items)
+        notifyDataSetChanged()
+    }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val locationName: TextView = itemView.findViewById(R.id.locationName)

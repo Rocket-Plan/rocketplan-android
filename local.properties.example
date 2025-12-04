@@ -35,3 +35,4 @@ sdk.dir=/Users/YOUR_USERNAME/Library/Android/sdk
 # oauth.client.id=your-oauth-client-id
 # oauth.client.secret=your-oauth-client-secret
 # analytics.key=your-analytics-key
+# maps.api.key=your-google-maps-key

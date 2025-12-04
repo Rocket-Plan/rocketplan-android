@@ -23,6 +23,16 @@ class ProjectRoomsAdapter(
     private val onRoomClick: (RoomCard) -> Unit
 ) : ListAdapter<RoomListItem, RecyclerView.ViewHolder>(DiffCallback) {
 
+    enum class RoomStatMode { PHOTOS, DAMAGES }
+
+    var statMode: RoomStatMode = RoomStatMode.PHOTOS
+        set(value) {
+            if (field != value) {
+                field = value
+                notifyDataSetChanged()
+            }
+        }
+
     override fun getItemViewType(position: Int): Int = when (getItem(position)) {
         is RoomListItem.Header -> VIEW_TYPE_HEADER
         is RoomListItem.Room -> VIEW_TYPE_ROOM
@@ -70,7 +80,7 @@ class ProjectRoomsAdapter(
         }
     }
 
-    class RoomViewHolder(
+    inner class RoomViewHolder(
         view: View,
         private val onRoomClick: (RoomCard) -> Unit
     ) : RecyclerView.ViewHolder(view) {
@@ -87,12 +97,23 @@ class ProjectRoomsAdapter(
             thumbnail.setTag(R.id.tag_room_photo_id, room)
 
             title.text = room.title
-            photoCount.text = itemView.resources.getQuantityString(
-                R.plurals.photo_count,
-                room.photoCount,
-                room.photoCount
-            )
-            spinner.isVisible = room.isLoadingPhotos
+            val mode = this@ProjectRoomsAdapter.statMode
+            if (mode == RoomStatMode.DAMAGES) {
+                val count = room.damageCount
+                photoCount.text = itemView.resources.getQuantityString(
+                    R.plurals.damage_count,
+                    count,
+                    count
+                )
+                spinner.isVisible = false
+            } else {
+                photoCount.text = itemView.resources.getQuantityString(
+                    R.plurals.photo_count,
+                    room.photoCount,
+                    room.photoCount
+                )
+                spinner.isVisible = room.isLoadingPhotos
+            }
 
             if (needsReload) {
                 Log.d(TAG, "🔄 Loading thumbnail for room id=${room.roomId}, prev=${previousRoom?.roomId}")
@@ -114,13 +135,10 @@ class ProjectRoomsAdapter(
         private fun hasVisualDifferences(old: RoomCard, new: RoomCard): Boolean {
             return old.roomId != new.roomId || old.thumbnailUrl != new.thumbnailUrl
         }
-
-        companion object {
-            private const val TAG = "RoomViewHolder"
-        }
     }
 
     companion object {
+        private const val TAG = "ProjectRoomsAdapter"
         const val VIEW_TYPE_HEADER = 1
         const val VIEW_TYPE_ROOM = 2
     }

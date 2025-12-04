@@ -57,6 +57,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -68,7 +69,7 @@ import java.util.concurrent.TimeUnit
 
 private const val ROOM_PHOTO_INCLUDE = "photo,albums,notes_count,creator"
 private const val ROOM_PHOTO_PAGE_LIMIT = 30
-private const val NOTES_PAGE_LIMIT = 100
+private const val NOTES_PAGE_LIMIT = 30
 private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"
 private val DEFAULT_DELETION_TYPES = listOf(
     "projects",
@@ -405,7 +406,7 @@ class OfflineSyncRepository(
 
             Log.d(
                 "API",
-                "🏷️ [updateProjectAlias] Updating alias for project $serverId (local: $projectId) to \"$normalizedAlias\""
+                "🏷️ [updateProjectAlias] Updating alias for project $serverId (local: $projectId) to \"$normalizedAlias\", existing companyId=${project.companyId}"
             )
 
             val dto = api.updateProject(
@@ -415,7 +416,15 @@ class OfflineSyncRepository(
                     projectStatusId = statusId
                 )
             ).data
+            Log.d(
+                "API",
+                "🏷️ [updateProjectAlias] API response: alias=${dto.alias}, companyId=${dto.companyId}"
+            )
             val entity = dto.toEntity(existing = project)
+            Log.d(
+                "API",
+                "🏷️ [updateProjectAlias] Mapped entity: alias=${entity.alias}, companyId=${entity.companyId}"
+            )
             localDataService.saveProjects(listOf(entity))
             entity
         }
@@ -645,6 +654,89 @@ class OfflineSyncRepository(
     }
 
     /**
+     * Runs a set of sync segments sequentially for a project.
+     * Used by SyncQueueManager to compose fast vs. background sync passes without relying on the monolithic graph.
+     */
+    suspend fun syncProjectSegments(
+        projectId: Long,
+        segments: List<SyncSegment>
+    ): List<SyncResult> {
+        val startTime = System.currentTimeMillis()
+        val results = mutableListOf<SyncResult>()
+
+        for (segment in segments) {
+            val result = when (segment) {
+                SyncSegment.PROJECT_ESSENTIALS -> syncProjectEssentials(projectId)
+                SyncSegment.PROJECT_METADATA -> syncProjectMetadata(projectId)
+                SyncSegment.ALL_ROOM_PHOTOS -> syncAllRoomPhotos(projectId)
+                SyncSegment.PROJECT_LEVEL_PHOTOS -> syncProjectLevelPhotos(projectId)
+                SyncSegment.ROOM_PHOTOS -> {
+                    Log.w(
+                        "API",
+                        "⚠️ [syncProjectSegments] ROOM_PHOTOS requires a roomId; skipping"
+                    )
+                    SyncResult.failure(
+                        SyncSegment.ROOM_PHOTOS,
+                        IllegalArgumentException("roomId required for ROOM_PHOTOS segment"),
+                        0
+                    )
+                }
+            }
+            if (!result.success) {
+                Log.w(
+                    "API",
+                    "⚠️ [syncProjectSegments] Segment ${segment.name} failed for project $projectId",
+                    result.error
+                )
+            }
+            results += result
+            coroutineContext.ensureActive()
+        }
+
+        val duration = System.currentTimeMillis() - startTime
+        Log.d(
+            "API",
+            "✅ [syncProjectSegments] Completed ${segments.joinToString { it.name }} for project $projectId in ${duration}ms"
+        )
+        return results
+    }
+
+    /**
+     * Background-friendly sync pass that skips essentials but fetches metadata and photos.
+     */
+    suspend fun syncProjectContent(projectId: Long): List<SyncResult> =
+        syncProjectSegments(
+            projectId,
+            listOf(
+                SyncSegment.PROJECT_METADATA,
+                SyncSegment.ALL_ROOM_PHOTOS,
+                SyncSegment.PROJECT_LEVEL_PHOTOS
+            )
+        )
+
+    private suspend fun syncWorkScopesForProject(projectId: Long): Int {
+        val start = System.currentTimeMillis()
+        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
+        if (roomIds.isEmpty()) {
+            Log.d("API", "ℹ️ [syncWorkScopes] No server room IDs for project $projectId; skipping work scope sync")
+            return 0
+        }
+
+        var total = 0
+        roomIds.forEach { roomId ->
+            coroutineContext.ensureActive()
+            total += syncRoomWorkScopes(projectId, roomId)
+        }
+
+        val duration = System.currentTimeMillis() - start
+        Log.d(
+            "API",
+            "✅ [syncWorkScopes] Synced $total work scope items across ${roomIds.size} rooms for project $projectId in ${duration}ms"
+        )
+        return total
+    }
+
+    /**
      * Full project sync: syncs essentials + metadata + all photos.
      * Uses modular functions to avoid duplication.
      */
@@ -653,48 +745,59 @@ class OfflineSyncRepository(
         Log.d("API", "🔄 [syncProjectGraph] Starting $syncType sync for project $projectId")
         val startTime = System.currentTimeMillis()
 
-        // 1. Sync essentials (navigation chain)
-        val essentialsResult = syncProjectEssentials(projectId)
-        if (!essentialsResult.success) {
+        val segments = buildList {
+            add(SyncSegment.PROJECT_ESSENTIALS)
+            if (!skipPhotos) {
+                add(SyncSegment.PROJECT_METADATA)
+                add(SyncSegment.ALL_ROOM_PHOTOS)
+                add(SyncSegment.PROJECT_LEVEL_PHOTOS)
+            }
+        }
+
+        val results = syncProjectSegments(projectId, segments)
+        val duration = System.currentTimeMillis() - startTime
+
+        val essentialsResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_ESSENTIALS }
+        if (essentialsResult != null && !essentialsResult.success) {
             Log.e("API", "❌ [syncProjectGraph] Failed to sync essentials", essentialsResult.error)
             return@withContext
         }
-        ensureActive()
 
         // Skip metadata and photos for FAST foreground sync - rooms are available now
         if (skipPhotos) {
-            val duration = System.currentTimeMillis() - startTime
             Log.d("API", "✅ [syncProjectGraph] FAST sync completed in ${duration}ms (metadata & photos deferred)")
-            Log.d("API", "   Essentials: ${essentialsResult.itemsSynced} items in ${essentialsResult.durationMs}ms")
+            essentialsResult?.let {
+                Log.d("API", "   Essentials: ${it.itemsSynced} items in ${it.durationMs}ms")
+            }
             return@withContext
         }
 
-        // 2. Sync metadata (notes, equipment, damages, logs, work scopes)
-        val metadataResult = syncProjectMetadata(projectId)
-        if (!metadataResult.success) {
+        val metadataResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_METADATA }
+        if (metadataResult != null && !metadataResult.success) {
             Log.w("API", "⚠️ [syncProjectGraph] Metadata sync failed but continuing", metadataResult.error)
         }
-        ensureActive()
-
-        // 3. Sync all room photos
-        val roomPhotosResult = syncAllRoomPhotos(projectId)
-        if (!roomPhotosResult.success) {
+        val roomPhotosResult = results.firstOrNull { it.segment == SyncSegment.ALL_ROOM_PHOTOS }
+        if (roomPhotosResult != null && !roomPhotosResult.success) {
             Log.w("API", "⚠️ [syncProjectGraph] Room photos sync failed but continuing", roomPhotosResult.error)
         }
-        ensureActive()
-
-        // 4. Sync project-level photos (floor, location, unit)
-        val projectPhotosResult = syncProjectLevelPhotos(projectId)
-        if (!projectPhotosResult.success) {
+        val projectPhotosResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_LEVEL_PHOTOS }
+        if (projectPhotosResult != null && !projectPhotosResult.success) {
             Log.w("API", "⚠️ [syncProjectGraph] Project-level photos sync failed", projectPhotosResult.error)
         }
 
-        val duration = System.currentTimeMillis() - startTime
         Log.d("API", "✅ [syncProjectGraph] FULL sync completed in ${duration}ms")
-        Log.d("API", "   Essentials: ${essentialsResult.itemsSynced} items in ${essentialsResult.durationMs}ms")
-        Log.d("API", "   Metadata: ${metadataResult.itemsSynced} items in ${metadataResult.durationMs}ms")
-        Log.d("API", "   Room photos: ${roomPhotosResult.itemsSynced} photos in ${roomPhotosResult.durationMs}ms")
-        Log.d("API", "   Project photos: ${projectPhotosResult.itemsSynced} photos in ${projectPhotosResult.durationMs}ms")
+        essentialsResult?.let {
+            Log.d("API", "   Essentials: ${it.itemsSynced} items in ${it.durationMs}ms")
+        }
+        metadataResult?.let {
+            Log.d("API", "   Metadata: ${it.itemsSynced} items in ${it.durationMs}ms")
+        }
+        roomPhotosResult?.let {
+            Log.d("API", "   Room photos: ${it.itemsSynced} photos in ${it.durationMs}ms")
+        }
+        projectPhotosResult?.let {
+            Log.d("API", "   Project photos: ${it.itemsSynced} photos in ${it.durationMs}ms")
+        }
     }
 
     /**
@@ -760,6 +863,10 @@ class OfflineSyncRepository(
             .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch damages", it) }
         ensureActive()
 
+        val workScopeCount = syncWorkScopesForProject(projectId)
+        itemCount += workScopeCount
+        ensureActive()
+
         val atmosCheckpointKey = projectAtmosLogsKey(projectId)
         val atmosSince = syncCheckpointStore.updatedSinceParam(atmosCheckpointKey)
         // Atmospheric logs
@@ -777,6 +884,24 @@ class OfflineSyncRepository(
         val duration = System.currentTimeMillis() - startTime
         Log.d("API", "✅ [syncProjectMetadata] Synced $itemCount items in ${duration}ms")
         SyncResult.success(SyncSegment.PROJECT_METADATA, itemCount, duration)
+    }
+
+    suspend fun syncRoomWorkScopes(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
+        val startTime = System.currentTimeMillis()
+        val response = runCatching { api.getRoomWorkScope(roomId) }
+            .onFailure { Log.e("API", "❌ [syncRoomWorkScopes] Failed for roomId=$roomId (projectId=$projectId)", it) }
+            .getOrNull() ?: return@withContext 0
+
+        val entities = response.mapNotNull { it.toEntity() }
+        if (entities.isNotEmpty()) {
+            localDataService.saveWorkScopes(entities)
+        }
+        val duration = System.currentTimeMillis() - startTime
+        Log.d(
+            "API",
+            "🛠️ [syncRoomWorkScopes] Saved ${entities.size} scope items for roomId=$roomId (projectId=$projectId) in ${duration}ms"
+        )
+        entities.size
     }
 
     suspend fun syncDeletedRecords(types: List<String> = DEFAULT_DELETION_TYPES) = withContext(ioDispatcher) {
@@ -1417,11 +1542,12 @@ private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallback
         Log.e("OfflineSyncRepository", "   ProjectDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
     }
     val timestamp = now()
-    val addressLine1 = address?.address?.takeIf { it.isNotBlank() }
-    val addressLine2 = address?.address2?.takeIf { it.isNotBlank() }
+    val addressLine1 = address?.address?.takeIf { it.isNotBlank() } ?: existing?.addressLine1
+    val addressLine2 = address?.address2?.takeIf { it.isNotBlank() } ?: existing?.addressLine2
     val resolvedTitle = listOfNotNull(
         addressLine1,
         title?.takeIf { it.isNotBlank() },
+        existing?.title?.takeIf { it.isNotBlank() },
         alias?.takeIf { it.isNotBlank() },
         projectNumber?.takeIf { it.isNotBlank() },
         uid?.takeIf { it.isNotBlank() }
@@ -1447,7 +1573,7 @@ private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallback
         addressLine2 = addressLine2,
         status = resolvedStatus,
         propertyType = resolvedPropertyType,
-        companyId = companyId ?: fallbackCompanyId,
+        companyId = companyId ?: existing?.companyId ?: fallbackCompanyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
@@ -1500,7 +1626,7 @@ private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.t
         addressLine2 = addressLine2,
         status = resolvedStatus,
         propertyType = resolvedPropertyType,
-        companyId = companyId ?: fallbackCompanyId ?: existing?.companyId,
+        companyId = companyId ?: existing?.companyId ?: fallbackCompanyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,

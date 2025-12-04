@@ -105,6 +105,7 @@ class CreateProjectFragment : Fragment() {
                             }
                             CreateProjectValidation.CityRequired,
                             CreateProjectValidation.StateRequired,
+                            CreateProjectValidation.CountryRequired,
                             CreateProjectValidation.PostalRequired -> {
                                 // Ignore – handled in manual fragment
                             }

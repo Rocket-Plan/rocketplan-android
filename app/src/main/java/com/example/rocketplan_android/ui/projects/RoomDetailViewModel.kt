@@ -29,6 +29,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -63,6 +65,9 @@ class RoomDetailViewModel(
     private val dateFormatter: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
         SimpleDateFormat("MM/dd/yyyy", Locale.US)
     }
+    private val damageDateFormatter: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
+        SimpleDateFormat("MMM d, yyyy", Locale.US)
+    }
 
     private val _uiState = MutableStateFlow<RoomDetailUiState>(RoomDetailUiState.Loading)
     val uiState: StateFlow<RoomDetailUiState> = _uiState
@@ -76,6 +81,8 @@ class RoomDetailViewModel(
     private var lastRefreshAt = 0L
     private var isRefreshing = false
     private var lastSyncedServerRoomId: Long? = null
+    private var lastScopeSyncedRoomId: Long? = null
+    private var lastScopeSyncAt = 0L
     private var currentPhotoLookupRoomId: Long? = null
     private var lastSnapshotRoomId: Long? = null
     private val _resolvedRoom = MutableStateFlow<OfflineRoomEntity?>(null)
@@ -93,6 +100,58 @@ class RoomDetailViewModel(
                     .groupingBy { it }
                     .eachCount()
             }
+    val roomDamages: StateFlow<List<RoomDamageItem>> =
+        combine(_resolvedRoom, localDataService.observeDamages(projectId)) { room, damages ->
+            val resolvedRoom = room ?: return@combine emptyList()
+            val formatter = requireNotNull(damageDateFormatter.get())
+            val roomIds = buildSet {
+                add(resolvedRoom.roomId)
+                resolvedRoom.serverId?.let { add(it) }
+            }
+            damages
+                .filter { damage -> damage.roomId != null && damage.roomId in roomIds }
+                .sortedByDescending { it.updatedAt }
+                .map { damage ->
+                    val updatedAt = damage.updatedAt ?: damage.createdAt
+                    RoomDamageItem(
+                        id = damage.damageId,
+                        title = damage.title,
+                        description = damage.description,
+                        severity = damage.severity,
+                        updatedOn = updatedAt?.let { formatter.format(it) }
+                    )
+                }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    val roomScopes: StateFlow<List<RoomScopeItem>> =
+        combine(_resolvedRoom, localDataService.observeWorkScopes(projectId)) { room, scopes ->
+            val resolvedRoom = room ?: return@combine emptyList()
+            val formatter = requireNotNull(damageDateFormatter.get())
+            val roomIds = buildSet {
+                add(resolvedRoom.roomId)
+                resolvedRoom.serverId?.let { add(it) }
+            }
+            scopes
+                .filter { scope -> scope.roomId != null && scope.roomId in roomIds }
+                .sortedByDescending { it.updatedAt }
+                .map { scope ->
+                    val updatedAt = scope.updatedAt ?: scope.createdAt
+                    RoomScopeItem(
+                        id = scope.workScopeId,
+                        title = scope.name,
+                        description = scope.description,
+                        updatedOn = updatedAt?.let { formatter.format(it) }
+                    )
+                }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
 
     init {
         Log.d(TAG, "📦 init(projectId=$projectId, roomId=$roomId)")
@@ -188,6 +247,7 @@ class RoomDetailViewModel(
                     lastSyncedServerRoomId = serverId
                     Log.d(TAG, "⚡️ Server room id resolved ($serverId); forcing photo refresh")
                     ensureRoomPhotosFresh(force = true)
+                    ensureWorkScopesFresh(serverId, force = true)
                 }
             }
         }
@@ -196,6 +256,27 @@ class RoomDetailViewModel(
     fun selectTab(tab: RoomDetailTab) {
         if (_selectedTab.value != tab) {
             _selectedTab.value = tab
+        }
+    }
+
+    fun refreshWorkScopesIfStale() {
+        val serverRoomId = _resolvedRoom.value?.serverId ?: return
+        ensureWorkScopesFresh(serverRoomId)
+    }
+
+    private fun ensureWorkScopesFresh(serverRoomId: Long, force: Boolean = false) {
+        val now = SystemClock.elapsedRealtime()
+        if (!force && serverRoomId == lastScopeSyncedRoomId && now - lastScopeSyncAt < ROOM_REFRESH_INTERVAL_MS) {
+            return
+        }
+
+        lastScopeSyncedRoomId = serverRoomId
+        lastScopeSyncAt = now
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { offlineSyncRepository.syncRoomWorkScopes(projectId, serverRoomId) }
+                .onFailure { error ->
+                    Log.w(TAG, "⚠️ Failed to sync work scopes for room $serverRoomId", error)
+                }
         }
     }
 
@@ -219,9 +300,12 @@ class RoomDetailViewModel(
             try {
                 Log.d(
                     TAG,
-                    "🔄 ensureRoomPhotosFresh(force=$force) -> refreshRoomPhotos(projectId=$projectId, remoteRoomId=$remoteRoomId)"
+                    "🔄 ensureRoomPhotosFresh(force=$force) -> syncRoomPhotos(projectId=$projectId, remoteRoomId=$remoteRoomId)"
                 )
-                offlineSyncRepository.refreshRoomPhotos(projectId, remoteRoomId)
+                val result = offlineSyncRepository.syncRoomPhotos(projectId, remoteRoomId)
+                if (!result.success) {
+                    Log.w(TAG, "⚠️ Room photo sync failed for roomId=$remoteRoomId", result.error)
+                }
                 Log.d(TAG, "🗂 Sync complete; refreshing snapshot for roomId=$remoteRoomId")
                 refreshSnapshot(remoteRoomId)
             } catch (t: Throwable) {
@@ -481,6 +565,21 @@ data class RoomAlbumItem(
     val thumbnailUrl: String?
 )
 
+data class RoomDamageItem(
+    val id: Long,
+    val title: String,
+    val description: String?,
+    val severity: String?,
+    val updatedOn: String?
+)
+
+data class RoomScopeItem(
+    val id: Long,
+    val title: String,
+    val description: String?,
+    val updatedOn: String?
+)
+
 enum class RoomDetailTab {
-    PHOTOS, DAMAGES
+    PHOTOS, DAMAGES, SCOPE
 }

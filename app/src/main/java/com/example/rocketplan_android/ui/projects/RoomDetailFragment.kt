@@ -21,9 +21,13 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.DividerItemDecoration
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
@@ -31,6 +35,7 @@ import com.google.android.material.chip.ChipGroup
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
+import java.util.Locale
 
 class RoomDetailFragment : Fragment() {
 
@@ -38,6 +43,10 @@ class RoomDetailFragment : Fragment() {
 
     private val viewModel: RoomDetailViewModel by viewModels {
         RoomDetailViewModel.provideFactory(requireActivity().application, args.projectId, args.roomId)
+    }
+
+    private val syncQueueManager: SyncQueueManager by lazy {
+        (requireActivity().application as RocketPlanApplication).syncQueueManager
     }
 
     private lateinit var backButton: ImageButton
@@ -48,6 +57,7 @@ class RoomDetailFragment : Fragment() {
     private lateinit var tabToggleGroup: MaterialButtonToggleGroup
     private lateinit var photosTabButton: MaterialButton
     private lateinit var damagesTabButton: MaterialButton
+    private lateinit var scopeTabButton: MaterialButton
     private lateinit var noteCard: View
     private lateinit var addPhotoCard: View
     private lateinit var noteCardLabel: TextView
@@ -59,15 +69,28 @@ class RoomDetailFragment : Fragment() {
     private lateinit var addPhotoChip: Chip
     private lateinit var damageAssessmentChip: Chip
     private lateinit var photosRecyclerView: RecyclerView
+    private lateinit var damagesRecyclerView: RecyclerView
+    private lateinit var scopeRecyclerView: RecyclerView
     private lateinit var placeholderText: TextView
     private lateinit var photosLoadingSpinner: View
     private lateinit var loadingOverlay: View
+    private lateinit var manageEquipmentCard: View
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
+    private var latestDamages: List<RoomDamageItem> = emptyList()
+    private var latestScopes: List<RoomScopeItem> = emptyList()
     private var photoLoadStartTime: Long = 0L
     private var latestLoadState: LoadState? = null
     private var snapshotRefreshInProgress: Boolean = false
     private var awaitingRealtimePhotos: Boolean = false
+
+    private val initialTab: RoomDetailTab by lazy {
+        when (args.startTab.lowercase(Locale.US)) {
+            "damages" -> RoomDetailTab.DAMAGES
+            "scope", "scope_sheet" -> RoomDetailTab.SCOPE
+            else -> RoomDetailTab.PHOTOS
+        }
+    }
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -87,6 +110,10 @@ class RoomDetailFragment : Fragment() {
         )
     }
 
+    private val damagesAdapter by lazy { RoomDamageAdapter() }
+
+    private val scopeAdapter by lazy { RoomScopeAdapter() }
+
     private val photoLoadStateAdapter by lazy {
         RoomPhotoLoadStateAdapter { photoAdapter.retry() }
     }
@@ -103,10 +130,20 @@ class RoomDetailFragment : Fragment() {
         Log.d(TAG, "🧭 onViewCreated(projectId=${args.projectId}, roomId=${args.roomId})")
         bindViews(view)
         configureRecycler()
-        configureToggleGroup()
+        configureToggleGroup(initialTab)
         bindListeners()
         observeNavigationResults()
         observeViewModel()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        syncQueueManager.pauseProjectPhotoSync(args.projectId)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        syncQueueManager.resumeProjectPhotoSync(args.projectId)
     }
 
 
@@ -119,6 +156,7 @@ class RoomDetailFragment : Fragment() {
         tabToggleGroup = root.findViewById(R.id.roomTabGroup)
         photosTabButton = root.findViewById(R.id.roomPhotosTabButton)
         damagesTabButton = root.findViewById(R.id.roomDamagesTabButton)
+        scopeTabButton = root.findViewById(R.id.roomScopeTabButton)
         noteCard = root.findViewById(R.id.roomNoteCard)
         noteCardLabel = root.findViewById(R.id.roomNoteLabel)
         noteCardSummary = root.findViewById(R.id.roomNoteSummary)
@@ -130,12 +168,14 @@ class RoomDetailFragment : Fragment() {
         addPhotoChip = root.findViewById(R.id.addPhotoChip)
         damageAssessmentChip = root.findViewById(R.id.damageAssessmentChip)
         photosRecyclerView = root.findViewById(R.id.roomPhotosRecyclerView)
+        damagesRecyclerView = root.findViewById(R.id.roomDamagesRecyclerView)
+        scopeRecyclerView = root.findViewById(R.id.roomScopeRecyclerView)
         placeholderText = root.findViewById(R.id.photosPlaceholder)
         photosLoadingSpinner = root.findViewById(R.id.photosLoadingSpinner)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
+        manageEquipmentCard = root.findViewById(R.id.manageEquipmentCard)
 
-        tabToggleGroup.check(R.id.roomPhotosTabButton)
-        addPhotoChip.isChecked = true
+        addPhotoChip.isChecked = initialTab == RoomDetailTab.PHOTOS
         gridSectionTitle.text = getString(R.string.damage_assessment)
         noteCardLabel.text = getString(R.string.add_note)
         backButton.contentDescription = getString(R.string.all_locations)
@@ -174,17 +214,50 @@ class RoomDetailFragment : Fragment() {
                 spacing = resources.getDimensionPixelSize(R.dimen.room_grid_spacing)
             )
         )
+
+        damagesRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = damagesAdapter
+            addItemDecoration(
+                DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
+            )
+            isVisible = false
+        }
+
+        scopeRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = scopeAdapter
+            addItemDecoration(
+                DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
+            )
+            isVisible = false
+        }
     }
 
-    private fun configureToggleGroup() {
-        updateToggleStyles(RoomDetailTab.PHOTOS)
+    private fun configureToggleGroup(initial: RoomDetailTab) {
+        viewModel.selectTab(initial)
+        val initialButtonId = when (initial) {
+            RoomDetailTab.PHOTOS -> R.id.roomPhotosTabButton
+            RoomDetailTab.DAMAGES -> R.id.roomDamagesTabButton
+            RoomDetailTab.SCOPE -> R.id.roomScopeTabButton
+        }
+        tabToggleGroup.check(initialButtonId)
+        if (initial == RoomDetailTab.SCOPE) {
+            viewModel.refreshWorkScopesIfStale()
+        }
+        updateToggleStyles(initial)
         tabToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
             val tab = when (checkedId) {
                 R.id.roomPhotosTabButton -> RoomDetailTab.PHOTOS
-                else -> RoomDetailTab.DAMAGES
+                R.id.roomDamagesTabButton -> RoomDetailTab.DAMAGES
+                R.id.roomScopeTabButton -> RoomDetailTab.SCOPE
+                else -> RoomDetailTab.PHOTOS
             }
             viewModel.selectTab(tab)
+            if (tab == RoomDetailTab.SCOPE) {
+                viewModel.refreshWorkScopesIfStale()
+            }
             updateToggleStyles(tab)
         }
     }
@@ -199,13 +272,42 @@ class RoomDetailFragment : Fragment() {
 
         listOf(
             photosTabButton to RoomDetailTab.PHOTOS,
-            damagesTabButton to RoomDetailTab.DAMAGES
+            damagesTabButton to RoomDetailTab.DAMAGES,
+            scopeTabButton to RoomDetailTab.SCOPE
         ).forEach { (button, tab) ->
             val isSelected = tab == active
             button.backgroundTintList = if (isSelected) selectedBackground else unselectedBackground
             button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.main_purple)
             button.setTextColor(if (isSelected) selectedText else unselectedText)
         }
+    }
+
+    private fun updateDamageVisibility() {
+        val isActive = viewModel.selectedTab.value == RoomDetailTab.DAMAGES
+        if (!isActive) {
+            damagesRecyclerView.isVisible = false
+            placeholderText.isVisible = false
+            return
+        }
+
+        val hasDamages = latestDamages.isNotEmpty()
+        damagesRecyclerView.isVisible = hasDamages
+        placeholderText.isVisible = !hasDamages
+        placeholderText.text = if (hasDamages) "" else getString(R.string.room_damages_empty_state)
+    }
+
+    private fun updateScopeVisibility() {
+        val isActive = viewModel.selectedTab.value == RoomDetailTab.SCOPE
+        if (!isActive) {
+            scopeRecyclerView.isVisible = false
+            placeholderText.isVisible = false
+            return
+        }
+
+        val hasScopes = latestScopes.isNotEmpty()
+        scopeRecyclerView.isVisible = hasScopes
+        placeholderText.isVisible = !hasScopes
+        placeholderText.text = if (hasScopes) "" else getString(R.string.room_scope_empty_state)
     }
 
     private fun bindListeners() {
@@ -228,11 +330,20 @@ class RoomDetailFragment : Fragment() {
                 )
             findNavController().navigate(action)
         }
+        manageEquipmentCard.setOnClickListener {
+            val action = RoomDetailFragmentDirections
+                .actionRoomDetailFragmentToRocketDryFragment(
+                    projectId = args.projectId,
+                    startTab = "equipment"
+                )
+            findNavController().navigate(action)
+        }
     }
 
     private fun resolveNoteCategoryId(): Long {
         return when (viewModel.selectedTab.value) {
             RoomDetailTab.DAMAGES -> 1L // Matches iOS Category.roomDamage raw value
+            RoomDetailTab.SCOPE -> 1L // Scope notes share the roomDamage category for now
             RoomDetailTab.PHOTOS -> 2L // Matches iOS Category.roomPhoto raw value
         }
     }
@@ -351,6 +462,20 @@ class RoomDetailFragment : Fragment() {
                     }
                 }
                 launch {
+                    viewModel.roomDamages.collect { damages ->
+                        latestDamages = damages
+                        damagesAdapter.submitList(damages)
+                        updateDamageVisibility()
+                    }
+                }
+                launch {
+                    viewModel.roomScopes.collect { scopes ->
+                        latestScopes = scopes
+                        scopeAdapter.submitList(scopes)
+                        updateScopeVisibility()
+                    }
+                }
+                launch {
                     viewModel.isSnapshotRefreshing.collect { refreshing ->
                         snapshotRefreshInProgress = refreshing
                         Log.d(TAG, if (refreshing) "🌀 Snapshot refresh started" else "✅ Snapshot refresh finished")
@@ -374,6 +499,8 @@ class RoomDetailFragment : Fragment() {
         roomTitle.text = ""
         noteSummary.text = ""
         photosRecyclerView.isVisible = false
+        damagesRecyclerView.isVisible = false
+        scopeRecyclerView.isVisible = false
         placeholderText.isVisible = false
         photosLoadingSpinner.isVisible = false
     }
@@ -408,6 +535,9 @@ class RoomDetailFragment : Fragment() {
         Log.d(TAG, "🧩 applyTabState: $tab, albums=${albumsAdapter.currentList.size}, photoCount=$latestPhotoCount")
         when (tab) {
             RoomDetailTab.PHOTOS -> {
+                gridSectionTitle.text = getString(R.string.damage_assessment)
+                damagesRecyclerView.isVisible = false
+                scopeRecyclerView.isVisible = false
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
                 albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
                 updatePhotoVisibility()
@@ -415,15 +545,29 @@ class RoomDetailFragment : Fragment() {
                 gridSectionTitle.isVisible = true
             }
             RoomDetailTab.DAMAGES -> {
+                gridSectionTitle.text = getString(R.string.damages)
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
-                photosRecyclerView.isVisible = false
-                placeholderText.isVisible = true
-                placeholderText.text = getString(R.string.damages) + " coming soon"
                 filterChipGroup.isVisible = false
-                gridSectionTitle.isVisible = false
-                loadingOverlay.isVisible = snapshotRefreshInProgress || awaitingRealtimePhotos
+                gridSectionTitle.isVisible = true
+                photosRecyclerView.isVisible = false
                 photosLoadingSpinner.isVisible = false
+                loadingOverlay.isVisible = false
+                updateDamageVisibility()
+                photosLoadingSpinner.isVisible = false
+                scopeRecyclerView.isVisible = false
+            }
+            RoomDetailTab.SCOPE -> {
+                gridSectionTitle.text = getString(R.string.scope_sheet)
+                albumsHeader.isVisible = false
+                albumsRecyclerView.isVisible = false
+                filterChipGroup.isVisible = false
+                gridSectionTitle.isVisible = true
+                photosRecyclerView.isVisible = false
+                damagesRecyclerView.isVisible = false
+                photosLoadingSpinner.isVisible = false
+                loadingOverlay.isVisible = false
+                updateScopeVisibility()
             }
         }
     }
@@ -450,10 +594,6 @@ class RoomDetailFragment : Fragment() {
         loadState?.let { latestLoadState = it }
         val activeTab = viewModel.selectedTab.value
         if (activeTab != RoomDetailTab.PHOTOS) {
-            photosRecyclerView.isVisible = false
-            placeholderText.isVisible = false
-            photosLoadingSpinner.isVisible = false
-            loadingOverlay.isVisible = snapshotRefreshInProgress || awaitingRealtimePhotos
             return
         }
 

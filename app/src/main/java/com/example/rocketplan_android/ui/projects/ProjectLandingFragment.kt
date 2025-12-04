@@ -1,11 +1,15 @@
 package com.example.rocketplan_android.ui.projects
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.PopupMenu
@@ -21,6 +25,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
@@ -51,6 +56,7 @@ class ProjectLandingFragment : Fragment() {
 
     private lateinit var addProjectInfoCard: View
     private lateinit var addProjectInfoIcon: ImageView
+    private lateinit var rocketDryCard: View
     private lateinit var rocketScanCard: View
     private lateinit var rocketScanIcon: ImageView
     private lateinit var allNotesCard: View
@@ -86,6 +92,7 @@ class ProjectLandingFragment : Fragment() {
 
         addProjectInfoCard = root.findViewById(R.id.addProjectInfoCard)
         addProjectInfoIcon = root.findViewById(R.id.addProjectInfoIcon)
+        rocketDryCard = root.findViewById(R.id.rocketDryCard)
         rocketScanCard = root.findViewById(R.id.rocketScanCard)
         rocketScanIcon = root.findViewById(R.id.rocketScanIcon)
         allNotesCard = root.findViewById(R.id.allNotesCard)
@@ -107,6 +114,14 @@ class ProjectLandingFragment : Fragment() {
         addProjectInfoCard.setOnClickListener {
             val action = ProjectLandingFragmentDirections
                 .actionProjectLandingFragmentToProjectLossInfoFragment(args.projectId)
+            findNavController().navigate(action)
+        }
+        rocketDryCard.setOnClickListener {
+            if (!AppConfig.isRocketDryEnabled) {
+                return@setOnClickListener
+            }
+            val action = ProjectLandingFragmentDirections
+                .actionProjectLandingFragmentToRocketDryFragment(args.projectId)
             findNavController().navigate(action)
         }
         rocketScanCard.setOnClickListener {
@@ -238,30 +253,78 @@ class ProjectLandingFragment : Fragment() {
             R.string.project_notes_subtitle_with_count,
             summary.noteCount
         )
+
+        rocketDryCard.isVisible = AppConfig.isRocketDryEnabled
     }
 
     private fun showAliasInputDialog() {
         val context = requireContext()
-        val sidePadding = resources.getDimensionPixelSize(R.dimen.activity_horizontal_margin)
-        val inputLayout = TextInputLayout(context).apply {
+        val horizontalPadding = resources.getDimensionPixelSize(R.dimen.activity_horizontal_margin)
+        val container = FrameLayout(context).apply {
+            setPadding(
+                horizontalPadding,
+                resources.getDimensionPixelSize(R.dimen.activity_vertical_margin),
+                horizontalPadding,
+                0
+            )
+        }
+
+        val inputLayout = TextInputLayout(
+            context,
+            /* attrs = */ null,
+            com.google.android.material.R.style.Widget_MaterialComponents_TextInputLayout_OutlinedBox
+        ).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            )
             hint = getString(R.string.project_alias_hint)
-            setPadding(sidePadding, 0, sidePadding, 0)
+            boxBackgroundMode = TextInputLayout.BOX_BACKGROUND_OUTLINE
+            boxBackgroundColor = context.getColor(R.color.white)
+            setBoxCornerRadii(
+                resources.getDimension(R.dimen.activity_horizontal_margin),
+                resources.getDimension(R.dimen.activity_horizontal_margin),
+                resources.getDimension(R.dimen.activity_horizontal_margin),
+                resources.getDimension(R.dimen.activity_horizontal_margin)
+            )
+            setBoxStrokeColorStateList(
+                ColorStateList(
+                    arrayOf(
+                        intArrayOf(android.R.attr.state_focused),
+                        intArrayOf(-android.R.attr.state_focused)
+                    ),
+                    intArrayOf(
+                        context.getColor(R.color.main_purple),
+                        context.getColor(R.color.light_border)
+                    )
+                )
+            )
         }
 
         val aliasInput = TextInputEditText(context).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_WORDS
             setSingleLine()
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_MaterialComponents_Body1)
+            setTextColor(context.getColor(R.color.dark_text_rp))
+            setHintTextColor(context.getColor(R.color.placeholder))
         }
         inputLayout.addView(aliasInput)
+        container.addView(inputLayout)
 
         val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(R.string.add_alias)
-            .setView(inputLayout)
+            .setView(container)
             .setPositiveButton(R.string.save, null)
             .setNegativeButton(android.R.string.cancel, null)
             .create()
 
         dialog.setOnShowListener {
+            aliasInput.requestFocus()
+            dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val alias = aliasInput.text?.toString()?.trim().orEmpty()
                 if (alias.isBlank()) {

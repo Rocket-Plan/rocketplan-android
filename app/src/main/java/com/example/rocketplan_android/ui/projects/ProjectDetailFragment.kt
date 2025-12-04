@@ -22,6 +22,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
+import com.example.rocketplan_android.ui.projects.ProjectRoomsAdapter.RoomStatMode
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -66,7 +67,14 @@ class ProjectDetailFragment : Fragment() {
         ProjectRoomsAdapter(
             onRoomClick = { room ->
                 val action = ProjectDetailFragmentDirections
-                    .actionProjectDetailFragmentToRoomDetailFragment(args.projectId, room.roomId)
+                    .actionProjectDetailFragmentToRoomDetailFragment(
+                        projectId = args.projectId,
+                        roomId = room.roomId,
+                        startTab = when (viewModel.selectedTab.value) {
+                            ProjectDetailTab.DAMAGES -> "damages"
+                            else -> "photos"
+                        }
+                    )
                 findNavController().navigate(action)
             }
         )
@@ -262,30 +270,32 @@ class ProjectDetailFragment : Fragment() {
     private fun applyTabVisibility(tab: ProjectDetailTab) {
         when (tab) {
             ProjectDetailTab.PHOTOS -> {
+                roomsAdapter.statMode = RoomStatMode.PHOTOS
                 tabPlaceholder.isVisible = false
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
                 albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
                 updateRoomsSectionVisibility(ProjectDetailTab.PHOTOS)
             }
             ProjectDetailTab.DAMAGES -> {
+                roomsAdapter.statMode = RoomStatMode.DAMAGES
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
                 updateRoomsSectionVisibility(ProjectDetailTab.DAMAGES)
-                tabPlaceholder.isVisible = true
-                tabPlaceholder.text = getString(R.string.damages) + " coming soon"
+                tabPlaceholder.isVisible = false
             }
             ProjectDetailTab.SKETCH -> {
+                roomsAdapter.statMode = RoomStatMode.PHOTOS
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
                 updateRoomsSectionVisibility(ProjectDetailTab.SKETCH)
                 tabPlaceholder.isVisible = true
-                tabPlaceholder.text = getString(R.string.sketch) + " coming soon"
+                tabPlaceholder.text = getString(R.string.sketch_coming_soon)
             }
         }
     }
 
     private fun updateRoomsSectionVisibility(activeTab: ProjectDetailTab = viewModel.selectedTab.value) {
-        if (activeTab != ProjectDetailTab.PHOTOS) {
+        if (activeTab == ProjectDetailTab.SKETCH) {
             roomsProgressBar.isVisible = false
             roomsRecyclerView.isVisible = false
             roomsPlaceholder.isVisible = false

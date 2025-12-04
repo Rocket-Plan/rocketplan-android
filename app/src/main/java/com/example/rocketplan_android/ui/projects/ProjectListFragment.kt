@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -14,27 +15,30 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.model.ProjectStatus
 import kotlinx.coroutines.launch
 
 class ProjectListFragment : Fragment() {
 
     companion object {
-        private const val ARG_TAB_TYPE = "tab_type"
-        const val TAB_MY_PROJECTS = 0
-        const val TAB_WIP = 1
+        private const val ARG_TAB_KEY = "tab_key"
+        private const val TAB_MY_PROJECTS = "my_projects"
 
-        fun newInstance(tabType: Int): ProjectListFragment {
-            return ProjectListFragment().apply {
-                arguments = Bundle().apply {
-                    putInt(ARG_TAB_TYPE, tabType)
-                }
+        fun newMyProjectsInstance(): ProjectListFragment =
+            ProjectListFragment().apply {
+                arguments = bundleOf(ARG_TAB_KEY to TAB_MY_PROJECTS)
             }
-        }
+
+        fun newStatusInstance(status: ProjectStatus): ProjectListFragment =
+            ProjectListFragment().apply {
+                arguments = bundleOf(ARG_TAB_KEY to status.apiValue)
+            }
     }
 
     private val viewModel: ProjectsViewModel by activityViewModels()
     private lateinit var adapter: ProjectsAdapter
-    private var tabType: Int = TAB_MY_PROJECTS
+    private var tabKey: String = TAB_MY_PROJECTS
+    private var statusFilter: ProjectStatus? = null
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
@@ -43,7 +47,8 @@ class ProjectListFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        tabType = arguments?.getInt(ARG_TAB_TYPE) ?: TAB_MY_PROJECTS
+        tabKey = arguments?.getString(ARG_TAB_KEY) ?: TAB_MY_PROJECTS
+        statusFilter = ProjectStatus.fromApiValue(tabKey)
     }
 
     override fun onCreateView(
@@ -92,9 +97,9 @@ class ProjectListFragment : Fragment() {
                     is ProjectsUiState.Success -> {
                         progressBar.isVisible = false
 
-                        val projects = when (tabType) {
-                            TAB_MY_PROJECTS -> state.myProjects
-                            TAB_WIP -> state.wipProjects
+                        val projects = when {
+                            tabKey == TAB_MY_PROJECTS -> state.myProjects
+                            statusFilter != null -> state.projectsByStatus[statusFilter] ?: emptyList()
                             else -> emptyList()
                         }
 

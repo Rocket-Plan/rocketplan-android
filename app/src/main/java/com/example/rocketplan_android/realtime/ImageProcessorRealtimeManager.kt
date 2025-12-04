@@ -7,6 +7,7 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
 import com.example.rocketplan_android.data.local.entity.PhotoStatus
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ class ImageProcessorRealtimeManager(
         AssemblyStatus.CANCELLED,
         AssemblyStatus.FAILED
     )
+    private val assemblyResultType = object : TypeToken<AssemblyResultEnvelope>() {}.type
 
     init {
         scope.launch {
@@ -69,6 +71,17 @@ class ImageProcessorRealtimeManager(
             val payload = update ?: return@bindImageProcessorEvent
             if (payload.assemblyId.isNullOrBlank()) return@bindImageProcessorEvent
             scope.launch { handleUpdate(payload, isFinalEvent = true) }
+        }
+
+        // Legacy fallback: some backends emit PhotoAssemblyUpdated for failures
+        val legacyChannel = PusherConfig.legacyAssemblyChannel(assemblyId)
+        pusherService.bindTypedEvent<AssemblyResultEnvelope>(
+            channelName = legacyChannel,
+            eventName = PusherConfig.PHOTO_ASSEMBLY_RESULT_EVENT,
+            type = assemblyResultType
+        ) { envelope: AssemblyResultEnvelope? ->
+            val result = envelope?.assemblyResponse
+            scope.launch { handleAssemblyResult(assemblyId, result) }
         }
 
         remoteLogger?.log(
@@ -138,6 +151,7 @@ class ImageProcessorRealtimeManager(
         if (!trackedAssemblies.remove(assemblyId)) return
         val channelName = PusherConfig.channelNameForAssembly(assemblyId)
         pusherService.unsubscribe(channelName)
+        pusherService.unsubscribe(PusherConfig.legacyAssemblyChannel(assemblyId))
 
         remoteLogger?.log(
             level = LogLevel.INFO,
@@ -174,6 +188,29 @@ class ImageProcessorRealtimeManager(
         }
 
         return false
+    }
+
+    private suspend fun handleAssemblyResult(
+        assemblyId: String,
+        result: AssemblyResponse?
+    ) {
+        val status = result?.status ?: return
+        if (!status.equals("failed", ignoreCase = true)) return
+
+        val assembly = dao.getAssembly(assemblyId) ?: return
+        val updated = assembly.copy(
+            status = AssemblyStatus.FAILED.value,
+            errorMessage = assembly.errorMessage ?: "Marked failed via Pusher"
+        )
+        dao.updateAssembly(updated)
+        stopTracking(assemblyId)
+
+        remoteLogger?.log(
+            level = LogLevel.WARN,
+            tag = TAG,
+            message = "Assembly marked failed from legacy Pusher event",
+            metadata = mapOf("assembly_id" to assemblyId)
+        )
     }
 
     private fun mapAssemblyStatus(raw: String): AssemblyStatus? = when (raw.lowercase(Locale.US)) {

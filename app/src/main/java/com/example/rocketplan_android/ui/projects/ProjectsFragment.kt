@@ -20,6 +20,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayout
@@ -30,6 +31,8 @@ class ProjectsFragment : Fragment() {
 
     companion object {
         private const val TAG = "ProjectsFragment"
+        private const val ARG_INITIAL_TAB = "initialTab"
+        private const val TAB_MY_PROJECTS_KEY = "my_projects"
     }
 
     private val viewModel: ProjectsViewModel by activityViewModels()
@@ -41,6 +44,13 @@ class ProjectsFragment : Fragment() {
     private lateinit var userInitials: TextView
     private lateinit var refreshButton: ImageView
     private lateinit var fabNewProject: FloatingActionButton
+    private lateinit var tabs: List<ProjectTab>
+    private var initialTabKey: String? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        initialTabKey = arguments?.getString(ARG_INITIAL_TAB)?.takeIf { it.isNotBlank() }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -67,17 +77,25 @@ class ProjectsFragment : Fragment() {
     }
 
     private fun setupViewPager() {
-        val adapter = ProjectsPagerAdapter(this)
+        tabs = buildList {
+            add(ProjectTab.MyProjects)
+            val statusTabs = listOf(ProjectStatus.WIP) +
+                ProjectStatus.orderedStatuses.filterNot { it == ProjectStatus.WIP }
+            addAll(statusTabs.map { ProjectTab.Status(it) })
+        }
+
+        val adapter = ProjectsPagerAdapter(this, tabs)
         viewPager.adapter = adapter
 
         // Connect TabLayout with ViewPager2
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            tab.text = when (position) {
-                0 -> "My Projects"
-                1 -> "WIP"
-                else -> "Tab $position"
+            when (val tabItem = tabs[position]) {
+                ProjectTab.MyProjects -> tab.text = getString(R.string.projects_tab_my_projects)
+                is ProjectTab.Status -> tab.text = getString(tabItem.status.labelRes)
             }
         }.attach()
+
+        applyInitialTabSelection()
     }
 
     private fun setupUserInterface() {
@@ -95,6 +113,24 @@ class ProjectsFragment : Fragment() {
 
         userInitials.setOnClickListener {
             showProfileMenu(it)
+        }
+    }
+
+    private fun applyInitialTabSelection() {
+        val key = initialTabKey?.lowercase() ?: return
+        val status = ProjectStatus.fromApiValue(key)
+        val targetIndex = when {
+            key == TAB_MY_PROJECTS_KEY -> 0
+            status != null -> tabs.indexOfFirst { tab ->
+                tab is ProjectTab.Status && tab.status == status
+            }
+            else -> -1
+        }
+        if (targetIndex >= 0) {
+            initialTabKey = null
+            viewPager.post {
+                viewPager.currentItem = targetIndex
+            }
         }
     }
 
@@ -204,15 +240,22 @@ class ProjectsFragment : Fragment() {
         }
     }
 
-    private class ProjectsPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
-        override fun getItemCount(): Int = 2
+    private class ProjectsPagerAdapter(
+        fragment: Fragment,
+        private val tabs: List<ProjectTab>
+    ) : FragmentStateAdapter(fragment) {
+        override fun getItemCount(): Int = tabs.size
 
         override fun createFragment(position: Int): Fragment {
-            return when (position) {
-                0 -> ProjectListFragment.newInstance(ProjectListFragment.TAB_MY_PROJECTS)
-                1 -> ProjectListFragment.newInstance(ProjectListFragment.TAB_WIP)
-                else -> throw IllegalArgumentException("Invalid position: $position")
+            return when (val tab = tabs[position]) {
+                ProjectTab.MyProjects -> ProjectListFragment.newMyProjectsInstance()
+                is ProjectTab.Status -> ProjectListFragment.newStatusInstance(tab.status)
             }
         }
+    }
+
+    private sealed class ProjectTab {
+        object MyProjects : ProjectTab()
+        data class Status(val status: ProjectStatus) : ProjectTab()
     }
 }

@@ -12,6 +12,7 @@ import com.pusher.client.channel.SubscriptionEventListener
 import com.pusher.client.connection.ConnectionEventListener
 import com.pusher.client.connection.ConnectionState
 import com.pusher.client.connection.ConnectionStateChange
+import java.lang.reflect.Type
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -148,6 +149,85 @@ class PusherService(
 
         val listener = SubscriptionEventListener { event ->
             callback()
+        }
+
+        binding.listeners[eventName] = listener
+        binding.channel.bind(eventName, listener)
+        ensureConnected()
+    }
+
+    /**
+     * Binds a generic event listener and forwards the raw JSON payload.
+     * Useful for simple notification events where only the trigger matters.
+     */
+    fun bindRawEvent(
+        channelName: String,
+        eventName: String,
+        callback: (String?) -> Unit
+    ) {
+        val binding = channelBindings.getOrPut(channelName) {
+            ChannelBinding(
+                channel = pusher.subscribe(channelName),
+                listeners = ConcurrentHashMap()
+            )
+        }
+        attachSubscriptionLifecycle(channelName, binding)
+
+        binding.listeners.remove(eventName)?.let { existing ->
+            binding.channel.unbind(eventName, existing)
+        }
+
+        val listener = SubscriptionEventListener { event ->
+            callback(event.data)
+        }
+
+        binding.listeners[eventName] = listener
+        binding.channel.bind(eventName, listener)
+        ensureConnected()
+    }
+
+    /**
+     * Binds an event and decodes the JSON payload into the requested type.
+     */
+    fun <T> bindTypedEvent(
+        channelName: String,
+        eventName: String,
+        type: Type,
+        callback: (T?) -> Unit
+    ) {
+        val binding = channelBindings.getOrPut(channelName) {
+            ChannelBinding(
+                channel = pusher.subscribe(channelName),
+                listeners = ConcurrentHashMap()
+            )
+        }
+        attachSubscriptionLifecycle(channelName, binding)
+
+        binding.listeners.remove(eventName)?.let { existing ->
+            binding.channel.unbind(eventName, existing)
+        }
+
+        val listener = SubscriptionEventListener { event ->
+            val raw = event.data
+            if (raw.isNullOrBlank() || raw == "[]") {
+                callback(null)
+                return@SubscriptionEventListener
+            }
+
+            val parsed = runCatching { gson.fromJson<T>(raw, type) }
+                .onFailure { error ->
+                    remoteLogger?.log(
+                        level = LogLevel.WARN,
+                        tag = TAG,
+                        message = "Failed to decode Pusher payload for $eventName",
+                        metadata = mapOf(
+                            "channel" to channelName,
+                            "reason" to (error.message ?: "unknown")
+                        )
+                    )
+                }
+                .getOrNull()
+            callback(parsed)
         }
 
         binding.listeners[eventName] = listener

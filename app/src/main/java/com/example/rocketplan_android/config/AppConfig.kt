@@ -75,6 +75,12 @@ object AppConfig {
     val isAnalyticsEnabled: Boolean = isProduction || isStaging
 
     /**
+     * Feature flag: enable RocketDry surfaces in the UI.
+     * Controlled via BuildConfig so it can be toggled per flavor.
+     */
+    val isRocketDryEnabled: Boolean = BuildConfig.ENABLE_ROCKET_DRY
+
+    /**
      * Print current configuration to logs
      */
     fun logConfiguration() {

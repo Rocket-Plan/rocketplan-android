@@ -8,7 +8,7 @@ enum class SyncSegment {
     ROOM_PHOTOS,         // Photos for a single room
     ALL_ROOM_PHOTOS,     // Photos for all rooms (bulk)
     PROJECT_LEVEL_PHOTOS, // Floor/location/unit photos
-    PROJECT_METADATA     // Notes, equipment, damages (future)
+    PROJECT_METADATA     // Notes, equipment, damages, work scopes, logs
 }
 
 /**

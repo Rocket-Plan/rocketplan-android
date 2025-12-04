@@ -32,7 +32,28 @@ enum class ProjectStatus(
         fun fromBackendId(id: Int?): ProjectStatus? =
             values().firstOrNull { it.backendId == id }
 
-        fun fromApiValue(value: String?): ProjectStatus? =
-            values().firstOrNull { it.apiValue.equals(value, ignoreCase = true) }
+        fun fromApiValue(value: String?): ProjectStatus? {
+            val raw = value?.trim().orEmpty()
+            if (raw.isEmpty()) return null
+
+            // Direct match against known API values
+            values().firstOrNull { it.apiValue.equals(raw, ignoreCase = true) }?.let { return it }
+
+            // Accept common variants (spaces/hyphens) that come from the backend
+            val slug = raw.lowercase()
+                .replace(" ", "_")
+                .replace("-", "_")
+            values().firstOrNull { it.apiValue == slug }?.let { return it }
+
+            // Handle legacy/numeric identifiers
+            raw.toIntOrNull()?.let { id ->
+                return fromBackendId(id)
+            }
+
+            // Legacy alias used by older projects
+            if (slug == "draft") return WIP
+
+            return null
+        }
     }
 }

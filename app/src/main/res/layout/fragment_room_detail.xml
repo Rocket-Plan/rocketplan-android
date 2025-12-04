@@ -122,6 +122,16 @@
                     android:text="@string/damages"
                     android:textAllCaps="false"
                     android:textSize="16sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/roomScopeTabButton"
+                    style="@style/Widget.RocketPlan.SegmentedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="48dp"
+                    android:layout_weight="1"
+                    android:text="@string/scope_sheet"
+                    android:textAllCaps="false"
+                    android:textSize="16sp" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <com.google.android.material.card.MaterialCardView
@@ -218,6 +228,64 @@
                 </LinearLayout>
             </FrameLayout>
 
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/manageEquipmentCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/light_border"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="20dp">
+
+                    <FrameLayout
+                        android:layout_width="48dp"
+                        android:layout_height="48dp"
+                        android:background="@drawable/bg_icon_circle_purple">
+
+                        <ImageView
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:layout_gravity="center"
+                            android:contentDescription="@string/manage_equipment"
+                            android:src="@drawable/ic_material"
+                            android:tint="@color/main_purple" />
+                    </FrameLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="16dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/manage_equipment"
+                            android:textColor="@color/black"
+                            android:textSize="16sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/manage_equipment_subtitle"
+                            android:textColor="@color/light_text_rp"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
             <TextView
                 android:id="@+id/roomAlbumsHeader"
                 android:layout_width="wrap_content"
@@ -285,6 +353,22 @@
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false"
                     tools:listitem="@layout/item_room_photo" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/roomDamagesRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone"
+                    tools:listitem="@layout/item_room_damage" />
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/roomScopeRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    android:visibility="gone"
+                    tools:listitem="@layout/item_room_scope" />
 
                 <TextView
                     android:id="@+id/photosPlaceholder"

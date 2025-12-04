@@ -3,6 +3,10 @@ package com.example.rocketplan_android.data.queue
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.work.BackoffPolicy
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
@@ -27,9 +31,11 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import com.example.rocketplan_android.data.worker.ImageProcessorRetryWorker
 import java.io.File
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.TimeUnit
 
 /**
  * Manages sequential processing of image processor assemblies.
@@ -48,7 +54,9 @@ class ImageProcessorQueueManager(
         private const val TAG = "ImgProcessorQueueMgr"
         private const val MAX_RETRY_ATTEMPTS = 13
         private const val INITIAL_RETRY_TIMEOUT_SECONDS = 10
-        private const val MAX_RETRY_TIMEOUT_SECONDS = 86400 // 24 hours
+        // Match iOS cap: exponential backoff up to 30 minutes
+        private const val MAX_RETRY_TIMEOUT_SECONDS = 1800
+        private const val ONE_OFF_RETRY_WORK_NAME = "image_processor_retry_one_off"
     }
 
     private val isProcessingQueue = AtomicBoolean(false)
@@ -336,6 +344,10 @@ class ImageProcessorQueueManager(
                     lastTimeout = nextTimeout
                 )
                 dao.updateAssembly(updated)
+
+                if (updated.failsCount < MAX_RETRY_ATTEMPTS) {
+                    scheduleOneOffRetry(nextTimeout.toLong())
+                }
             }
 
             onAssemblyCompleted(assembly.assemblyId, success = false, errorMessage = e.message)
@@ -462,6 +474,10 @@ class ImageProcessorQueueManager(
                         lastTimeout = nextTimeout
                     )
                     dao.updateAssembly(updated)
+
+                    if (updated.failsCount < MAX_RETRY_ATTEMPTS) {
+                        scheduleOneOffRetry(nextTimeout.toLong())
+                    }
                 }
 
                 onAssemblyCompleted(assemblyId, success = false, errorMessage = errorMessage)
@@ -561,9 +577,42 @@ class ImageProcessorQueueManager(
     }
 
     private fun calculateNextRetryTimeout(retryCount: Int): Int {
-        // Exponential backoff: 10s, 20s, 40s, 80s, ... up to 24h
+        // Exponential backoff: 10s, 20s, 40s, 80s, ... capped at 30 minutes
         val timeout = INITIAL_RETRY_TIMEOUT_SECONDS * (1 shl retryCount)
         return timeout.coerceAtMost(MAX_RETRY_TIMEOUT_SECONDS)
+    }
+
+    /**
+     * Schedule a one-off retry work with the computed backoff delay so we don't
+     * wait for the 15-minute periodic worker. Replaces any pending one-off to
+     * ensure the soonest run wins.
+     */
+    private fun scheduleOneOffRetry(delaySeconds: Long) {
+        val workManager = WorkManager.getInstance(context)
+        val request = OneTimeWorkRequestBuilder<ImageProcessorRetryWorker>()
+            .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                INITIAL_RETRY_TIMEOUT_SECONDS.toLong(),
+                TimeUnit.SECONDS
+            )
+            .build()
+
+        workManager.enqueueUniqueWork(
+            ONE_OFF_RETRY_WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+
+        remoteLogger?.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Scheduled one-off retry",
+            metadata = mapOf(
+                "delay_seconds" to delaySeconds.toString(),
+                "work" to ONE_OFF_RETRY_WORK_NAME
+            )
+        )
     }
 
     private suspend fun resetFailedPhotosToPending(assemblyId: String) {

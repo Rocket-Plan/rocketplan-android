@@ -9,6 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
 
 class ProjectDetailViewModel(
@@ -47,31 +49,38 @@ class ProjectDetailViewModel(
                 localDataService.observeRooms(projectId),
                 localDataService.observePhotosForProject(projectId),
                 localDataService.observeNotes(projectId),
-                localDataService.observeAlbumsForProject(projectId),
-                syncQueueManager.photoSyncingProjects
-            ) { flows ->
-                val projects = flows[0] as List<*>
-                val rooms = flows[1] as List<*>
-                val photos = flows[2] as List<*>
-                val notes = flows[3] as List<*>
-                val albums = flows[4] as List<*>
-                val photoSyncingProjects = flows[5] as Set<*>
+                localDataService.observeAlbumsForProject(projectId)
+            ) { projects, rooms, photos, notes, albums ->
+                DetailData(projects, rooms, photos, notes, albums)
+            }.combine(
+                combine(
+                    syncQueueManager.photoSyncingProjects,
+                    localDataService.observeDamages(projectId)
+                ) { photoSyncingProjects, damages -> photoSyncingProjects to damages }
+            ) { data, extra -> data to extra }
+            .mapLatest { (data, extra) ->
+                val (projects, rooms, photos, notes, albums) = data
+                val (photoSyncingProjects, damages) = extra
 
                 Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
-                val project = (projects as List<OfflineProjectEntity>).firstOrNull { it.projectId == projectId }
+                val project = projects.firstOrNull { it.projectId == projectId }
                 if (project == null) {
                     Log.d("ProjectDetailVM", "⚠️ Project $projectId not found in database")
                     ProjectDetailUiState.Loading
                 } else {
                     Log.d("ProjectDetailVM", "✅ Project found: ${project.title}")
-                    val header = project.toHeader((notes as List<OfflineNoteEntity>).size)
-                    val isProjectPhotoSyncing = (photoSyncingProjects as Set<Long>).contains(projectId)
-                    val sections = (rooms as List<OfflineRoomEntity>).toSections(photos as List<OfflinePhotoEntity>, isProjectPhotoSyncing)
+                    val header = project.toHeader(notes.size)
+                    val isProjectPhotoSyncing = photoSyncingProjects.contains(projectId)
+                    val sections = rooms.toSections(
+                        photos = photos,
+                        damages = damages,
+                        isProjectPhotoSyncing = isProjectPhotoSyncing
+                    )
                     val roomCreationStatus = project.resolveRoomCreationStatus(localDataService)
                     ProjectDetailUiState.Ready(
                         header = header,
                         levelSections = sections,
-                        albums = (albums as List<OfflineAlbumEntity>).toAlbumSections(photos as List<OfflinePhotoEntity>),
+                        albums = albums.toAlbumSections(photos),
                         roomCreationStatus = roomCreationStatus
                     )
                 }
@@ -86,11 +95,14 @@ class ProjectDetailViewModel(
                         val newPhotoTotal = new.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
                         val oldLoadingCount = old.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
                         val newLoadingCount = new.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
+                        val oldDamageTotal = old.levelSections.sumOf { it.rooms.sumOf { r -> r.damageCount } }
+                        val newDamageTotal = new.levelSections.sumOf { it.rooms.sumOf { r -> r.damageCount } }
 
                         old.levelSections.size == new.levelSections.size &&
                             old.albums.size == new.albums.size &&
                             oldPhotoTotal == newPhotoTotal &&
                             oldLoadingCount == newLoadingCount &&
+                            oldDamageTotal == newDamageTotal &&
                             old.roomCreationStatus == new.roomCreationStatus
                     }
                     old is ProjectDetailUiState.Loading && new is ProjectDetailUiState.Loading -> true
@@ -142,6 +154,7 @@ class ProjectDetailViewModel(
 
     private fun List<OfflineRoomEntity>.toSections(
         photos: List<OfflinePhotoEntity>,
+        damages: List<OfflineDamageEntity>,
         isProjectPhotoSyncing: Boolean
     ): List<RoomLevelSection> {
         if (isEmpty()) {
@@ -150,6 +163,7 @@ class ProjectDetailViewModel(
         }
         Log.d("ProjectDetailVM", "🏠 Loading ${this.size} rooms: ${this.map { "[${it.serverId}] ${it.title}" }}")
         val photosByRoom = photos.groupBy { it.roomId }
+        val damagesByRoom = damages.groupBy { it.roomId }
         return this
             .groupBy { room ->
                 room.level?.takeIf { it.isNotBlank() } ?: "Unassigned"
@@ -168,11 +182,20 @@ class ProjectDetailViewModel(
                         val isLoadingPhotos = room.serverId == null ||
                             (isProjectPhotoSyncing && resolvedPhotoCount > roomPhotos.size) ||
                             (isProjectPhotoSyncing && roomPhotos.isEmpty())
+                        val relatedRoomIds = buildSet {
+                            add(room.roomId)
+                            room.serverId?.let { add(it) }
+                        }
+                        val damageCount = damages.count { damage ->
+                            val rid = damage.roomId ?: return@count false
+                            relatedRoomIds.contains(rid)
+                        }
                         RoomCard(
                             roomId = roomKey,
                             title = room.title,
                             level = level,
                             photoCount = resolvedPhotoCount,
+                            damageCount = damageCount,
                             thumbnailUrl = resolvedThumbnail,
                             isLoadingPhotos = isLoadingPhotos
                         )
@@ -278,6 +301,7 @@ data class RoomCard(
     val title: String,
     val level: String,
     val photoCount: Int,
+    val damageCount: Int,
     val thumbnailUrl: String?,
     val isLoadingPhotos: Boolean
 )
@@ -317,3 +341,11 @@ private fun String?.existingFilePath(): String? {
     val file = File(this)
     return file.takeIf { it.exists() }?.absolutePath
 }
+
+private data class DetailData(
+    val projects: List<OfflineProjectEntity>,
+    val rooms: List<OfflineRoomEntity>,
+    val photos: List<OfflinePhotoEntity>,
+    val notes: List<OfflineNoteEntity>,
+    val albums: List<OfflineAlbumEntity>
+)

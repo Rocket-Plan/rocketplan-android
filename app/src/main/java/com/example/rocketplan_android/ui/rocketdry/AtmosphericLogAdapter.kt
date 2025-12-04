@@ -9,9 +9,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import kotlin.math.roundToInt
 
-class AtmosphericLogAdapter(
-    private val logs: List<AtmosphericLogItem>
-) : RecyclerView.Adapter<AtmosphericLogAdapter.ViewHolder>() {
+class AtmosphericLogAdapter : RecyclerView.Adapter<AtmosphericLogAdapter.ViewHolder>() {
+
+    private val logs: MutableList<AtmosphericLogItem> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -24,6 +24,12 @@ class AtmosphericLogAdapter(
     }
 
     override fun getItemCount(): Int = logs.size
+
+    fun submitLogs(items: List<AtmosphericLogItem>) {
+        logs.clear()
+        logs.addAll(items)
+        notifyDataSetChanged()
+    }
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val logDateTime: TextView = itemView.findViewById(R.id.logDateTime)

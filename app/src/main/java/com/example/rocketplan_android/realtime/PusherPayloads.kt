@@ -51,3 +51,13 @@ data class PhotoUpdate(
             else -> null
         }
 }
+
+data class AssemblyResultEnvelope(
+    @SerializedName("assemblyResponse")
+    val assemblyResponse: AssemblyResponse? = null
+)
+
+data class AssemblyResponse(
+    @SerializedName("status")
+    val status: String?
+)

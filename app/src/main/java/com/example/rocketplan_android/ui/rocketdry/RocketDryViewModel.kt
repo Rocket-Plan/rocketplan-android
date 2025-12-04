@@ -1,0 +1,284 @@
+package com.example.rocketplan_android.ui.rocketdry
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
+import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
+import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
+import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
+private const val DEFAULT_LEVEL_LABEL = "General"
+private const val UNASSIGNED_LABEL = "Unassigned"
+
+class RocketDryViewModel(
+    application: Application,
+    private val projectId: Long
+) : AndroidViewModel(application) {
+
+    private val rocketPlanApp = application as RocketPlanApplication
+    private val localDataService = rocketPlanApp.localDataService
+
+    private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
+    val uiState: StateFlow<RocketDryUiState> = _uiState
+
+    init {
+        viewModelScope.launch {
+            combine(
+                localDataService.observeProjects(),
+                localDataService.observeAtmosphericLogsForProject(projectId),
+                localDataService.observeRooms(projectId),
+                localDataService.observeLocations(projectId),
+                localDataService.observeMoistureLogsForProject(projectId)
+            ) { projects, atmosphericLogs, rooms, locations, moistureLogs ->
+                Data(projects, atmosphericLogs, rooms, locations, moistureLogs)
+            }.combine(localDataService.observeEquipmentForProject(projectId)) { data, equipment ->
+                val project = data.projects.firstOrNull { it.projectId == projectId }
+                if (project == null) {
+                    RocketDryUiState.Loading
+                } else {
+                    val locationLookup = data.locations.associateBy { it.locationId }
+                    val moistureByRoom = data.moistureLogs.groupBy { it.roomId }
+                    val locationLevels = buildLocationLevels(data.rooms, locationLookup, moistureByRoom)
+                    val equipmentByRoom = equipment.groupBy { it.roomId }
+                    RocketDryUiState.Ready(
+                        projectAddress = buildProjectAddress(project),
+                        atmosphericLogs = data.atmosphericLogs.map { it.toUiItem() },
+                        locationLevels = locationLevels,
+                        equipmentTotals = buildEquipmentTotals(equipment),
+                        equipmentByType = buildEquipmentTypeSummaries(equipment),
+                        equipmentLevels = buildEquipmentLevels(data.rooms, locationLookup, equipmentByRoom),
+                        totalMoistureLogs = data.moistureLogs.size
+                    )
+                }
+            }.collect { state ->
+                _uiState.value = state
+            }
+        }
+    }
+
+    private data class Data(
+        val projects: List<OfflineProjectEntity>,
+        val atmosphericLogs: List<OfflineAtmosphericLogEntity>,
+        val rooms: List<OfflineRoomEntity>,
+        val locations: List<OfflineLocationEntity>,
+        val moistureLogs: List<OfflineMoistureLogEntity>
+    )
+
+    private fun buildProjectAddress(project: OfflineProjectEntity): String {
+        val address = project.addressLine1?.takeIf { it.isNotBlank() }
+        val title = project.title.takeIf { it.isNotBlank() }
+        val alias = project.alias?.takeIf { it.isNotBlank() }
+        return listOfNotNull(address, title, alias).firstOrNull()
+            ?: "Project ${project.projectId}"
+    }
+
+    private fun buildLocationLevels(
+        rooms: List<OfflineRoomEntity>,
+        locations: Map<Long, OfflineLocationEntity>,
+        moistureByRoom: Map<Long, List<OfflineMoistureLogEntity>>
+    ): List<LocationLevel> {
+        val roomsByLevel = rooms.groupBy { room ->
+            resolveLevelName(room, locations)
+        }
+        return roomsByLevel.map { (levelName, levelRooms) ->
+            val roomItems = levelRooms.map { room ->
+                LocationItem(
+                    name = room.title,
+                    materialCount = moistureByRoom[room.roomId]?.size ?: 0
+                )
+            }.sortedBy { it.name.lowercase(Locale.getDefault()) }
+            LocationLevel(levelName = levelName, locations = roomItems)
+        }.sortedBy { it.levelName.lowercase(Locale.getDefault()) }
+    }
+
+    private fun OfflineAtmosphericLogEntity.toUiItem(): AtmosphericLogItem =
+        AtmosphericLogItem(
+            dateTime = formatDateTime(date),
+            humidity = relativeHumidity,
+            temperature = temperature,
+            pressure = pressure ?: 0.0,
+            windSpeed = windSpeed ?: 0.0
+        )
+
+    private fun buildEquipmentTotals(equipment: List<OfflineEquipmentEntity>): EquipmentTotals {
+        val total = equipment.sumOf { it.quantity }
+        val active = equipment.filter { it.status.equals("active", ignoreCase = true) }
+            .sumOf { it.quantity }
+        val removed = equipment.filter { it.status.equals("removed", ignoreCase = true) }
+            .sumOf { it.quantity }
+        val damaged = equipment.filter { it.status.equals("damaged", ignoreCase = true) }
+            .sumOf { it.quantity }
+        return EquipmentTotals(
+            total = total,
+            active = active,
+            removed = removed,
+            damaged = damaged
+        )
+    }
+
+    private fun buildEquipmentTypeSummaries(
+        equipment: List<OfflineEquipmentEntity>
+    ): List<EquipmentTypeSummary> {
+        val grouped = equipment.groupBy { normalizeType(it.type) }
+        return grouped.map { (typeKey, items) ->
+            val meta = equipmentMeta(typeKey)
+            EquipmentTypeSummary(
+                type = typeKey,
+                label = meta.label,
+                count = items.sumOf { it.quantity },
+                iconRes = meta.iconRes
+            )
+        }.sortedWith(
+            compareByDescending<EquipmentTypeSummary> { it.count }
+                .thenBy { it.label.lowercase(Locale.getDefault()) }
+        )
+    }
+
+    private fun buildEquipmentLevels(
+        rooms: List<OfflineRoomEntity>,
+        locations: Map<Long, OfflineLocationEntity>,
+        equipmentByRoom: Map<Long?, List<OfflineEquipmentEntity>>
+    ): List<EquipmentLevel> {
+        val roomIds = rooms.map { it.roomId }.toSet()
+        val roomsWithEquipment = rooms.mapNotNull { room ->
+            val roomEquipment = equipmentByRoom[room.roomId].orEmpty()
+            if (roomEquipment.isEmpty()) return@mapNotNull null
+
+            val levelName = resolveLevelName(room, locations)
+            levelName to EquipmentRoomSummary(
+                roomName = room.title,
+                summary = buildEquipmentSummaryText(roomEquipment)
+            )
+        }.toMutableList()
+
+        val orphanedEquipment = equipmentByRoom
+            .filterKeys { key -> key != null && key !in roomIds }
+            .values
+            .flatten()
+        val unassignedEquipment = equipmentByRoom[null].orEmpty() + orphanedEquipment
+        if (unassignedEquipment.isNotEmpty()) {
+            roomsWithEquipment.add(
+                UNASSIGNED_LABEL to EquipmentRoomSummary(
+                    roomName = UNASSIGNED_LABEL,
+                    summary = buildEquipmentSummaryText(unassignedEquipment)
+                )
+            )
+        }
+
+        val groupedByLevel = roomsWithEquipment.groupBy(
+            keySelector = { it.first },
+            valueTransform = { it.second }
+        )
+
+        return groupedByLevel.map { (levelName, roomsForLevel) ->
+            EquipmentLevel(
+                levelName = levelName,
+                rooms = roomsForLevel.sortedBy { it.roomName.lowercase(Locale.getDefault()) }
+            )
+        }.sortedBy { it.levelName.lowercase(Locale.getDefault()) }
+    }
+
+    private fun buildEquipmentSummaryText(items: List<OfflineEquipmentEntity>): String {
+        return items
+            .groupBy { normalizeType(it.type) }
+            .map { (typeKey, groupedItems) ->
+                val count = groupedItems.sumOf { it.quantity }
+                val label = equipmentMeta(typeKey).label
+                formatEquipmentCount(count, label)
+            }
+            .sortedBy { it.lowercase(Locale.getDefault()) }
+            .joinToString(separator = ", ")
+            .ifBlank { "None" }
+    }
+
+    private fun resolveLevelName(
+        room: OfflineRoomEntity,
+        locations: Map<Long, OfflineLocationEntity>
+    ): String {
+        return room.level?.takeIf { it.isNotBlank() }
+            ?: room.locationId?.let { locations[it]?.title }
+            ?: DEFAULT_LEVEL_LABEL
+    }
+
+    private fun normalizeType(type: String?): String =
+        type?.trim()
+            ?.lowercase(Locale.getDefault())
+            ?.replace(" ", "_")
+            ?.replace("-", "_")
+            ?: "equipment"
+
+    private fun equipmentMeta(typeKey: String): EquipmentTypeMeta =
+        when (typeKey) {
+            "dehumidifier", "dehumidifiers" ->
+                EquipmentTypeMeta("Dehumidifier", R.drawable.ic_water_drop)
+
+            "air_mover", "air_movers" ->
+                EquipmentTypeMeta("Air Mover", R.drawable.ic_material)
+
+            "air_scrubber", "air_scrubbers" ->
+                EquipmentTypeMeta("Air Scrubber", R.drawable.ic_material)
+
+            "inject_drier", "injectidrier", "inject_dryers" ->
+                EquipmentTypeMeta("Injectidrier", R.drawable.ic_material)
+
+            "drying_mat", "drying_mats" ->
+                EquipmentTypeMeta("Drying Mat", R.drawable.ic_material)
+
+            else -> {
+                val label = typeKey.replace("_", " ")
+                    .replaceFirstChar { char ->
+                        if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
+                    }
+                EquipmentTypeMeta(label.ifBlank { "Equipment" }, R.drawable.ic_material)
+            }
+        }
+
+    private fun formatEquipmentCount(count: Int, label: String): String {
+        val base = label.trim().ifBlank { "Equipment" }
+        val needsPlural = count != 1 && !base.endsWith("s", ignoreCase = true)
+        val finalLabel = if (needsPlural) "$base" + "s" else base
+        return "$count $finalLabel"
+    }
+
+    private data class EquipmentTypeMeta(
+        val label: String,
+        val iconRes: Int
+    )
+
+    private fun formatDateTime(date: Date): String {
+        val formatter = SimpleDateFormat("MMM d, h:mma", Locale.getDefault())
+        val formatted = formatter.format(date)
+        return formatted
+            .replace("AM", "am")
+            .replace("PM", "pm")
+    }
+
+    companion object {
+        fun provideFactory(
+            application: Application,
+            projectId: Long
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                require(modelClass.isAssignableFrom(RocketDryViewModel::class.java)) {
+                    "Unknown ViewModel class"
+                }
+                return RocketDryViewModel(application, projectId) as T
+            }
+        }
+    }
+}
