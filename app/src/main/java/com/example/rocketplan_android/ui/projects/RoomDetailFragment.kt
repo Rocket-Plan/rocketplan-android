@@ -72,11 +72,14 @@ class RoomDetailFragment : Fragment() {
     private lateinit var filterChipGroup: ChipGroup
     private lateinit var addPhotoChip: Chip
     private lateinit var damageAssessmentChip: Chip
+    private lateinit var damageCategoryGroup: MaterialButtonToggleGroup
     private lateinit var totalEquipmentButton: MaterialButton
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var damagesRecyclerView: RecyclerView
     private lateinit var scopeRecyclerView: RecyclerView
+    private lateinit var placeholderContainer: View
     private lateinit var placeholderText: TextView
+    private lateinit var placeholderImage: ImageView
     private lateinit var photosLoadingSpinner: View
     private lateinit var loadingOverlay: View
     private lateinit var addScopeCard: View
@@ -173,10 +176,13 @@ class RoomDetailFragment : Fragment() {
         filterChipGroup = root.findViewById(R.id.photoFilterChips)
         addPhotoChip = root.findViewById(R.id.addPhotoChip)
         damageAssessmentChip = root.findViewById(R.id.damageAssessmentChip)
+        damageCategoryGroup = root.findViewById(R.id.damageCategoryGroup)
         photosRecyclerView = root.findViewById(R.id.roomPhotosRecyclerView)
         damagesRecyclerView = root.findViewById(R.id.roomDamagesRecyclerView)
         scopeRecyclerView = root.findViewById(R.id.roomScopeRecyclerView)
-        placeholderText = root.findViewById(R.id.photosPlaceholder)
+        placeholderContainer = root.findViewById(R.id.photosPlaceholder)
+        placeholderText = root.findViewById(R.id.photosPlaceholderText)
+        placeholderImage = root.findViewById(R.id.photosPlaceholderImage)
         photosLoadingSpinner = root.findViewById(R.id.photosLoadingSpinner)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
         addScopeCard = root.findViewById(R.id.addScopeCard)
@@ -184,8 +190,11 @@ class RoomDetailFragment : Fragment() {
         addPhotoChip.isChecked = initialTab == RoomDetailTab.PHOTOS
         addPhotoCard.isVisible = initialTab == RoomDetailTab.PHOTOS
         addScopeCard.isVisible = initialTab != RoomDetailTab.PHOTOS
+        damageCategoryGroup.check(R.id.damageFilterAll)
+        damageCategoryGroup.isVisible = initialTab == RoomDetailTab.DAMAGES
+        filterChipGroup.isVisible = initialTab == RoomDetailTab.PHOTOS
         gridSectionTitle.text = getString(R.string.damage_assessment)
-        noteCardLabel.text = getString(R.string.add_note)
+        noteCardLabel.text = getString(R.string.add_note_with_plus)
         backButton.contentDescription = getString(R.string.all_locations)
     }
 
@@ -294,34 +303,38 @@ class RoomDetailFragment : Fragment() {
         val isActive = viewModel.selectedTab.value == RoomDetailTab.DAMAGES
         if (!isActive) {
             damagesRecyclerView.isVisible = false
-            placeholderText.isVisible = false
+            placeholderContainer.isVisible = false
+            placeholderImage.isVisible = false
             return
         }
 
         val hasDamages = latestDamages.isNotEmpty()
         damagesRecyclerView.isVisible = hasDamages
-        placeholderText.isVisible = !hasDamages
-        placeholderText.text = if (hasDamages) "" else getString(R.string.room_damages_empty_state)
+        placeholderContainer.isVisible = !hasDamages
+        placeholderImage.isVisible = !hasDamages
+        placeholderText.text = if (hasDamages) "" else getString(R.string.room_damages_scope_empty_state)
     }
 
     private fun updateScopeVisibility() {
         val isActive = viewModel.selectedTab.value == RoomDetailTab.SCOPE
         if (!isActive) {
             scopeRecyclerView.isVisible = false
-            placeholderText.isVisible = false
+            placeholderContainer.isVisible = false
+            placeholderImage.isVisible = false
             return
         }
 
         val hasScopes = latestScopes.isNotEmpty()
         scopeRecyclerView.isVisible = hasScopes
-        placeholderText.isVisible = !hasScopes
-        placeholderText.text = if (hasScopes) "" else getString(R.string.room_scope_empty_state)
+        placeholderContainer.isVisible = !hasScopes
+        placeholderImage.isVisible = !hasScopes
+        placeholderText.text = if (hasScopes) "" else getString(R.string.room_damages_scope_empty_state)
     }
 
     private fun bindListeners() {
         backButton.setOnClickListener { findNavController().navigateUp() }
         menuButton.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.menu), Toast.LENGTH_SHORT).show()
+            Toast.makeText(requireContext(), getString(R.string.edit_room), Toast.LENGTH_SHORT).show()
         }
         addPhotoCard.setOnClickListener { showAddPhotoOptions(it) }
         addPhotoChip.setOnClickListener { showAddPhotoOptions(it) }
@@ -546,10 +559,13 @@ class RoomDetailFragment : Fragment() {
         photosRecyclerView.isVisible = false
         damagesRecyclerView.isVisible = false
         scopeRecyclerView.isVisible = false
-        placeholderText.isVisible = false
+        placeholderContainer.isVisible = false
+        placeholderImage.isVisible = false
         photosLoadingSpinner.isVisible = false
         addPhotoCard.isVisible = false
         addScopeCard.isVisible = false
+        filterChipGroup.isVisible = false
+        damageCategoryGroup.isVisible = false
     }
 
     private fun renderState(state: RoomDetailUiState.Ready) {
@@ -583,6 +599,7 @@ class RoomDetailFragment : Fragment() {
         when (tab) {
             RoomDetailTab.PHOTOS -> {
                 gridSectionTitle.text = getString(R.string.damage_assessment)
+                noteSummary.isVisible = true
                 damagesRecyclerView.isVisible = false
                 scopeRecyclerView.isVisible = false
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
@@ -593,14 +610,16 @@ class RoomDetailFragment : Fragment() {
                 totalEquipmentButton.isVisible = false
                 addPhotoCard.isVisible = true
                 addScopeCard.isVisible = false
+                damageCategoryGroup.isVisible = false
             }
             RoomDetailTab.DAMAGES -> {
                 gridSectionTitle.text = getString(R.string.damages)
+                noteSummary.isVisible = false
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
                 filterChipGroup.isVisible = false
-                gridSectionTitle.isVisible = true
-                totalEquipmentButton.isVisible = true
+                gridSectionTitle.isVisible = false
+                totalEquipmentButton.isVisible = false
                 photosRecyclerView.isVisible = false
                 photosLoadingSpinner.isVisible = false
                 loadingOverlay.isVisible = false
@@ -609,13 +628,15 @@ class RoomDetailFragment : Fragment() {
                 scopeRecyclerView.isVisible = false
                 addPhotoCard.isVisible = false
                 addScopeCard.isVisible = true
+                damageCategoryGroup.isVisible = true
             }
             RoomDetailTab.SCOPE -> {
                 gridSectionTitle.text = getString(R.string.scope_sheet)
+                noteSummary.isVisible = false
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
                 filterChipGroup.isVisible = false
-                gridSectionTitle.isVisible = true
+                gridSectionTitle.isVisible = false
                 totalEquipmentButton.isVisible = false
                 photosRecyclerView.isVisible = false
                 damagesRecyclerView.isVisible = false
@@ -624,6 +645,7 @@ class RoomDetailFragment : Fragment() {
                 updateScopeVisibility()
                 addPhotoCard.isVisible = false
                 addScopeCard.isVisible = true
+                damageCategoryGroup.isVisible = false
             }
         }
     }
@@ -658,7 +680,8 @@ class RoomDetailFragment : Fragment() {
         if (snapshotRefreshInProgress || waitingForRealtime) {
             loadingOverlay.isVisible = true
             photosRecyclerView.isVisible = false
-            placeholderText.isVisible = false
+            placeholderContainer.isVisible = false
+            placeholderImage.isVisible = false
             photosLoadingSpinner.isVisible = false
             return
         }
@@ -679,7 +702,8 @@ class RoomDetailFragment : Fragment() {
         )
 
         photosRecyclerView.isVisible = hasPhotos
-        placeholderText.isVisible = showPlaceholder
+        placeholderContainer.isVisible = showPlaceholder
+        placeholderImage.isVisible = false
         placeholderText.text = if (showPlaceholder) getString(R.string.rocket_scan_empty_state) else ""
         photosLoadingSpinner.isVisible = showSpinner
 

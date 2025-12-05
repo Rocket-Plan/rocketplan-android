@@ -97,6 +97,13 @@ class ProjectNotesViewModel(
         }
     }
 
+    fun deleteNote(uuid: String) {
+        viewModelScope.launch {
+            val note = localDataService.getNoteByUuid(uuid) ?: return@launch
+            offlineSyncRepository.deleteNote(projectId, note)
+        }
+    }
+
     override fun onCleared() {
         notesRealtimeManager.clearProject(projectId)
         super.onCleared()

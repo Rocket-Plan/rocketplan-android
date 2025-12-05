@@ -11,6 +11,23 @@
         <item name="android:textColor">@color/main_purple</item>
     </style>
 
+    <style name="Widget.RocketPlan.DamageFilterButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:insetLeft">0dp</item>
+        <item name="android:insetRight">0dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="cornerRadius">24dp</item>
+        <item name="strokeColor">@color/main_purple</item>
+        <item name="strokeWidth">2dp</item>
+        <item name="backgroundTint">@color/damage_filter_background</item>
+        <item name="android:textColor">@color/damage_filter_text</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingStart">20dp</item>
+        <item name="android:paddingEnd">20dp</item>
+        <item name="rippleColor">@color/light_purple</item>
+    </style>
+
     <style name="Widget.RocketPlan.Chip.Filter" parent="Widget.Material3.Chip.Filter">
         <item name="chipBackgroundColor">@color/chip_background</item>
         <item name="chipStrokeColor">@color/main_purple</item>

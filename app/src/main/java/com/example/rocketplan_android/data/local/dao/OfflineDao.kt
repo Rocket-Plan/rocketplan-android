@@ -485,6 +485,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND roomId = :roomId AND isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeNotesForRoom(projectId: Long, roomId: Long): Flow<List<OfflineNoteEntity>>
 
+    @Query("SELECT * FROM offline_notes WHERE uuid = :uuid LIMIT 1")
+    suspend fun getNoteByUuid(uuid: String): OfflineNoteEntity?
+
     @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND (isDirty = 1 OR syncStatus != :synced)")
     suspend fun getPendingNotes(projectId: Long, synced: SyncStatus = SyncStatus.SYNCED): List<OfflineNoteEntity>
 

@@ -122,6 +122,8 @@
     <string name="damages">Damages</string>
     <string name="sketch">Sketch</string>
     <string name="add_note">Add a note</string>
+    <string name="add_note_with_plus">+ Add a note</string>
+    <string name="note_input_hint">Note details</string>
     <string name="add_room">Room</string>
     <string name="add_exterior_space">Exterior Space</string>
     <string name="exterior_space">Exterior Space</string>
@@ -139,6 +141,7 @@
     <string name="capture_photos">Capture Photos</string>
     <string name="project_home">Project Home</string>
     <string name="all_locations">All Locations</string>
+    <string name="all">All</string>
     <string name="rocket_scan">RocketScan</string>
     <string name="damage_assessment">Damage Assessment</string>
     <string name="all_photos">All Photos</string>
@@ -162,6 +165,7 @@
     <string name="damages_coming_soon">Damages coming soon</string>
     <string name="sketch_coming_soon">Sketch coming soon</string>
     <string name="room_damages_empty_state">No damages captured for this room yet.</string>
+    <string name="room_damages_scope_empty_state">No scope items yet. Add a new scope item.</string>
     <string name="add_scope_sheet">Add sketch</string>
     <string name="add_scope_sheet_subtitle">Add a sketch for this room.</string>
     <string name="add_scope_sheet_title_hint">Sketch title</string>
@@ -189,6 +193,12 @@
     <string name="main_level">Main Level</string>
     <string name="scope_sheet">Sketch</string>
     <string name="room_scope_empty_state">No sketches for this room yet.</string>
+    <string name="cat_1">CAT 1</string>
+    <string name="cat_2">CAT 2</string>
+    <string name="cat_3">CAT 3</string>
+    <string name="add_scope_of_work_items">Add Scope of Work Items+</string>
+    <string name="add_scope_of_work_subtitle">Add details for work in this room.</string>
+    <string name="edit_room">Edit room</string>
     <string name="room_scope_updated_format">Updated %1$s</string>
     <string name="rocket_scan_photo_preview_placeholder">Photo preview coming soon.</string>
     <string name="material_count">%d Material</string>
@@ -276,6 +286,9 @@
     <string name="no_notes_yet">No notes yet</string>
     <string name="notes_for_room">Notes for %1$s</string>
     <string name="notes_for_project">Notes for this project</string>
+    <string name="delete_note">Delete note</string>
+    <string name="delete_note_title">Delete this note?</string>
+    <string name="delete_note_message">This note will be removed from the project.</string>
     <string name="loading_project">Loading project…</string>
     <string name="add_photo_card_subtitle">Capture new photos for this room.</string>
     <string name="add_photo_flir">Thermal photo (FLIR)</string>

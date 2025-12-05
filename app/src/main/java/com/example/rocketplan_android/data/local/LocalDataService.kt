@@ -230,6 +230,10 @@ class LocalDataService private constructor(
     fun observeNotesForRoom(projectId: Long, roomId: Long): Flow<List<OfflineNoteEntity>> =
         dao.observeNotesForRoom(projectId, roomId)
 
+    suspend fun getNoteByUuid(uuid: String): OfflineNoteEntity? = withContext(ioDispatcher) {
+        dao.getNoteByUuid(uuid)
+    }
+
     suspend fun getPendingNotes(projectId: Long): List<OfflineNoteEntity> = withContext(ioDispatcher) {
         dao.getPendingNotes(projectId)
     }

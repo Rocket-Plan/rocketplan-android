@@ -192,9 +192,11 @@ class ProjectDetailViewModel(
                             val rid = damage.roomId ?: return@count false
                             relatedRoomIds.contains(rid)
                         }
-                        val iconRes = RoomTypeCatalog.metadataForName(room.roomType)
-                            ?.resolveIconRes(getApplication())
-                            ?: RoomTypeCatalog.resolveIconRes(getApplication(), room.roomType)
+                        val iconRes = RoomTypeCatalog.resolveIconRes(
+                            context = getApplication(),
+                            typeId = room.roomTypeId,
+                            iconName = room.roomType
+                        )
                         RoomCard(
                             roomId = roomKey,
                             title = room.title,

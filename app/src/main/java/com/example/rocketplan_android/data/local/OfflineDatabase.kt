@@ -5,6 +5,8 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
@@ -55,7 +57,7 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         ImageProcessorAssemblyEntity::class,
         ImageProcessorPhotoEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -70,6 +72,12 @@ abstract class OfflineDatabase : RoomDatabase() {
         @Volatile
         private var instance: OfflineDatabase? = null
 
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE offline_rooms ADD COLUMN roomTypeId INTEGER")
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -77,6 +85,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
+                .addMigrations(MIGRATION_10_11)
                 .fallbackToDestructiveMigration()
                 .build()
     }

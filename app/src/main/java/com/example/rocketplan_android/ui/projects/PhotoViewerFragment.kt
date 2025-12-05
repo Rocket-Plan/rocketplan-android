@@ -5,11 +5,8 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
-import android.widget.FrameLayout
 import android.widget.ProgressBar
 import android.widget.TextView
-import android.view.Gravity
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -29,6 +26,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -146,23 +144,14 @@ class PhotoViewerFragment : Fragment() {
     }
 
     private fun showAddNoteDialog() {
-        val context = requireContext()
-        val input = EditText(context).apply {
-            hint = getString(R.string.add_note)
-            minLines = 3
-            gravity = Gravity.TOP or Gravity.START
-        }
-        val container = FrameLayout(context).apply {
-            val padding = (16 * resources.displayMetrics.density).toInt()
-            setPadding(padding, 0, padding, 0)
-            addView(input)
-        }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_note, null)
+        val noteInput = dialogView.findViewById<TextInputEditText>(R.id.noteInput)
 
-        MaterialAlertDialogBuilder(context)
+        MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.add_note)
-            .setView(container)
+            .setView(dialogView)
             .setPositiveButton(android.R.string.ok) { dialog, _ ->
-                val text = input.text.toString().trim()
+                val text = noteInput.text?.toString()?.trim().orEmpty()
                 if (text.isNotEmpty()) {
                     viewModel.addNoteForCurrentPhoto(text)
                 }

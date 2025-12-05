@@ -160,6 +160,7 @@ data class OfflineRoomEntity(
     val locationId: Long? = null,
     val title: String,
     val roomType: String? = null,
+    val roomTypeId: Long? = null,
     val level: String? = null,
     val squareFootage: Double? = null,
     val isAccessible: Boolean = true,

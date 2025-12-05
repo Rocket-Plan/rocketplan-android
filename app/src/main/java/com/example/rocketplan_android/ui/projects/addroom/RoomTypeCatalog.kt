@@ -24,8 +24,7 @@ data class RoomTypeOption(
     val isExterior: Boolean
 ) {
     fun resolveIconRes(context: Context): Int {
-        val resolvedId = context.resources.getIdentifier(iconName, "drawable", context.packageName)
-        return if (resolvedId != 0) resolvedId else R.drawable.ic_door
+        return RoomTypeCatalog.resolveIconRes(context, typeId = null, iconName = iconName)
     }
 }
 
@@ -54,6 +53,31 @@ object RoomTypeCatalog {
         "mailroom" to "office",
         "mail_room" to "office",
         "entire_unit" to "storefront"
+    )
+
+    private val idIconMappings = mapOf(
+        1L to "bedroom",
+        2L to "bathroom",
+        3L to "dining_room",
+        4L to "kitchen",
+        5L to "laundry",
+        6L to "living_room",
+        7L to "reading_room",
+        8L to "en_suit",
+        9L to "hallway",
+        10L to "stairway",
+        11L to "elevator",
+        12L to "lounge_1",
+        13L to "closet",
+        14L to "gym",
+        15L to "boiler_room",
+        16L to "entryway",
+        17L to "hallway",
+        18L to "garage",
+        19L to "basement",
+        20L to "master_bedroom",
+        21L to "basement",
+        22L to "den"
     )
 
     private val iosNameMappings = mapOf(
@@ -210,10 +234,20 @@ object RoomTypeCatalog {
         return optionsById[slug] ?: aliasMap[slug]?.let { optionsById[it] }
     }
 
-    fun resolveIconRes(context: Context, iconName: String?): Int {
-        if (iconName.isNullOrBlank()) return R.drawable.ic_door
-        val resolvedId = context.resources.getIdentifier(iconName, "drawable", context.packageName)
+    fun resolveIconRes(context: Context, iconName: String?): Int =
+        resolveIconRes(context, typeId = null, iconName = iconName)
+
+    fun resolveIconRes(context: Context, typeId: Long?, iconName: String?): Int {
+        val candidate = resolveIconName(typeId, iconName)
+        val resolvedId = candidate?.let { context.resources.getIdentifier(it, "drawable", context.packageName) } ?: 0
         return if (resolvedId != 0) resolvedId else R.drawable.ic_door
+    }
+
+    private fun resolveIconName(typeId: Long?, iconName: String?): String? {
+        idIconMappings[typeId]?.let { return it }
+        val metadata = metadataForName(iconName)
+        if (metadata != null) return metadata.iconName
+        return iconName?.let { slugify(it) }?.takeIf { it.isNotBlank() }
     }
 
     fun isExteriorType(type: String?): Boolean {

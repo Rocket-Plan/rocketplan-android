@@ -174,7 +174,7 @@ class RoomTypePickerViewModel(
     private fun RoomTypeDto.toUiModel(): RoomTypeUiModel {
         val app = getApplication<Application>()
         val metadata = RoomTypeCatalog.metadataForName(name)
-        val iconRes = metadata?.resolveIconRes(app) ?: RoomTypeCatalog.resolveIconRes(app, null)
+        val iconRes = RoomTypeCatalog.resolveIconRes(app, id, name)
         val category = metadata?.category ?: RoomTypeCategory.OTHER
         val displayName = name?.takeIf { it.isNotBlank() }
             ?: app.getString(R.string.room_type_fallback_name, id)

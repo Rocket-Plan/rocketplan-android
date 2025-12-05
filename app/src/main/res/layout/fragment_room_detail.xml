@@ -22,8 +22,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:visibility="gone">
+                android:orientation="horizontal">
 
                 <ImageButton
                     android:id="@+id/backButton"
@@ -43,15 +42,6 @@
                     android:text="@string/all_locations"
                     android:textColor="@color/light_text_rp"
                     android:textSize="14sp" />
-
-                <ImageButton
-                    android:id="@+id/menuButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/menu"
-                    android:src="@drawable/ic_more_vert"
-                    app:tint="@color/icon_colour" />
             </LinearLayout>
 
             <LinearLayout
@@ -90,49 +80,70 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:textColor="@color/light_text_rp"
-                        android:textSize="14sp"
-                        tools:text="No Notes" />
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="14sp"
+                    tools:text="No Notes" />
                 </LinearLayout>
+
+                <ImageButton
+                    android:id="@+id/menuButton"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/edit_room"
+                    android:src="@drawable/ic_edit"
+                    app:tint="@color/icon_colour" />
             </LinearLayout>
 
-            <com.google.android.material.button.MaterialButtonToggleGroup
-                android:id="@+id/roomTabGroup"
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/roomTabContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                app:singleSelection="true">
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="28dp"
+                app:cardElevation="0dp"
+                app:strokeColor="@color/main_purple"
+                app:strokeWidth="2dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/roomPhotosTabButton"
-                    style="@style/Widget.RocketPlan.SegmentedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="@string/photos"
-                    android:textAllCaps="false"
-                    android:textSize="16sp" />
+                <com.google.android.material.button.MaterialButtonToggleGroup
+                    android:id="@+id/roomTabGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="4dp"
+                    app:singleSelection="true">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/roomDamagesTabButton"
-                    style="@style/Widget.RocketPlan.SegmentedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="@string/damages"
-                    android:textAllCaps="false"
-                    android:textSize="16sp" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/roomPhotosTabButton"
+                        style="@style/Widget.RocketPlan.SegmentedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="@string/photos"
+                        android:textAllCaps="false"
+                        android:textSize="16sp" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/roomScopeTabButton"
-                    style="@style/Widget.RocketPlan.SegmentedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_weight="1"
-                    android:text="@string/scope_sheet"
-                    android:textAllCaps="false"
-                    android:textSize="16sp" />
-            </com.google.android.material.button.MaterialButtonToggleGroup>
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/roomDamagesTabButton"
+                        style="@style/Widget.RocketPlan.SegmentedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="@string/damages"
+                        android:textAllCaps="false"
+                        android:textSize="16sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/roomScopeTabButton"
+                        style="@style/Widget.RocketPlan.SegmentedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="@string/scope_sheet"
+                        android:textAllCaps="false"
+                        android:textSize="16sp" />
+                </com.google.android.material.button.MaterialButtonToggleGroup>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/roomNoteCard"
@@ -157,7 +168,7 @@
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="@string/add_note"
+                        android:text="@string/add_note_with_plus"
                         android:textColor="@color/black"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -169,6 +180,15 @@
                         android:textColor="@color/light_text_rp"
                         android:textSize="14sp"
                         tools:text="No Notes" />
+
+                    <ImageView
+                        android:id="@+id/roomNoteEditIcon"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="8dp"
+                        android:contentDescription="@string/add_note"
+                        android:src="@drawable/ic_edit"
+                        android:tint="@color/main_purple" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -228,17 +248,16 @@
                 </LinearLayout>
             </FrameLayout>
 
-            <com.google.android.material.card.MaterialCardView
+            <FrameLayout
                 android:id="@+id/addScopeCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:visibility="gone"
-                app:cardBackgroundColor="@color/white"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/light_border"
-                app:strokeWidth="1dp">
+                android:background="@drawable/photo_add_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:padding="16dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -256,7 +275,7 @@
                             android:layout_width="24dp"
                             android:layout_height="24dp"
                             android:layout_gravity="center"
-                            android:contentDescription="@string/add_scope_sheet"
+                            android:contentDescription="@string/add_scope_of_work_items"
                             android:src="@drawable/ic_edit"
                             android:tint="@color/main_purple" />
                     </FrameLayout>
@@ -271,7 +290,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@string/add_scope_sheet"
+                            android:text="@string/add_scope_of_work_items"
                             android:textColor="@color/black"
                             android:textSize="16sp"
                             android:textStyle="bold" />
@@ -280,12 +299,12 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:text="@string/add_scope_sheet_subtitle"
+                            android:text="@string/add_scope_of_work_subtitle"
                             android:textColor="@color/light_text_rp"
                             android:textSize="14sp" />
                     </LinearLayout>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
 
             <TextView
                 android:id="@+id/roomAlbumsHeader"
@@ -335,6 +354,43 @@
                     android:visibility="gone"
                     app:strokeColor="@color/main_purple" />
             </LinearLayout>
+
+            <com.google.android.material.button.MaterialButtonToggleGroup
+                android:id="@+id/damageCategoryGroup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:visibility="gone"
+                app:singleSelection="true">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/damageFilterAll"
+                    style="@style/Widget.RocketPlan.DamageFilterButton"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/all"
+                    android:textAllCaps="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/damageFilterCat1"
+                    style="@style/Widget.RocketPlan.DamageFilterButton"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/cat_1"
+                    android:textAllCaps="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/damageFilterCat2"
+                    style="@style/Widget.RocketPlan.DamageFilterButton"
+                    android:layout_marginEnd="8dp"
+                    android:text="@string/cat_2"
+                    android:textAllCaps="false" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/damageFilterCat3"
+                    style="@style/Widget.RocketPlan.DamageFilterButton"
+                    android:text="@string/cat_3"
+                    android:textAllCaps="false" />
+            </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/photoFilterChips"
@@ -390,16 +446,37 @@
                     android:visibility="gone"
                     tools:listitem="@layout/item_room_scope" />
 
-                <TextView
+                <LinearLayout
                     android:id="@+id/photosPlaceholder"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="40dp"
-                    android:gravity="center"
-                    android:textColor="@color/light_text_rp"
-                    android:textSize="16sp"
-                    android:visibility="gone"
-                    tools:text="No photos yet" />
+                    android:gravity="center_horizontal"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="16dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/photosPlaceholderText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textColor="@color/light_text_rp"
+                        android:textSize="20sp"
+                        android:textStyle="bold"
+                        tools:text="No scope items yet. Add a new scope item." />
+
+                    <ImageView
+                        android:id="@+id/photosPlaceholderImage"
+                        android:layout_width="220dp"
+                        android:layout_height="220dp"
+                        android:layout_marginTop="16dp"
+                        android:contentDescription="@string/rocket_scan"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/logo_rocket_launching"
+                        android:tint="@color/light_purple"
+                        android:visibility="gone" />
+                </LinearLayout>
 
                 <ProgressBar
                     android:id="@+id/photosLoadingSpinner"

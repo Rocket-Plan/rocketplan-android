@@ -4,17 +4,16 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.EditText
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.collectLatest
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -36,7 +35,9 @@ class ProjectNotesFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyState: TextView
     private lateinit var subtitle: TextView
-    private val adapter = ProjectNotesAdapter()
+    private val adapter = ProjectNotesAdapter { note ->
+        confirmDeleteNote(note)
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -68,23 +69,27 @@ class ProjectNotesFragment : Fragment() {
         }
     }
 
+    private fun confirmDeleteNote(note: NoteListItem) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_note_title)
+            .setMessage(R.string.delete_note_message)
+            .setPositiveButton(R.string.delete) { dialog, _ ->
+                viewModel.deleteNote(note.id)
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun showAddNoteDialog() {
-        val editText = EditText(requireContext()).apply {
-            hint = getString(R.string.add_note)
-            minLines = 3
-            gravity = android.view.Gravity.TOP or android.view.Gravity.START
-        }
-        val container = android.widget.FrameLayout(requireContext()).apply {
-            val padding = (16 * resources.displayMetrics.density).toInt()
-            setPadding(padding, 0, padding, 0)
-            addView(editText)
-        }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_note, null)
+        val noteInput = dialogView.findViewById<TextInputEditText>(R.id.noteInput)
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.add_note)
-            .setView(container)
+            .setView(dialogView)
             .setPositiveButton(android.R.string.ok) { dialog, _ ->
-                val text = editText.text.toString().trim()
+                val text = noteInput.text?.toString()?.trim().orEmpty()
                 if (text.isNotEmpty()) {
                     viewModel.addNote(text)
                 }
