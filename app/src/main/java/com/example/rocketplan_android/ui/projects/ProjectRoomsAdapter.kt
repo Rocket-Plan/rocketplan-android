@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
@@ -90,6 +91,7 @@ class ProjectRoomsAdapter(
         private val photoCount: TextView = view.findViewById(R.id.photoCount)
         private val spinner: View = view.findViewById(R.id.loadingSpinner)
         private val roomTypeIcon: ImageView = view.findViewById(R.id.roomTypeIcon)
+        private val gradientOverlay: View = view.findViewById(R.id.roomGradientOverlay)
 
         fun bind(room: RoomCard) {
             val mode = this@ProjectRoomsAdapter.statMode
@@ -102,7 +104,14 @@ class ProjectRoomsAdapter(
 
             title.text = room.title
             roomTypeIcon.setImageResource(room.iconRes)
-            if (mode == RoomStatMode.DAMAGES) {
+            val isDamages = mode == RoomStatMode.DAMAGES
+            val titleColor = ContextCompat.getColor(itemView.context, if (isDamages) R.color.black else android.R.color.white)
+            val subtitleColor = ContextCompat.getColor(itemView.context, if (isDamages) R.color.light_text_rp else android.R.color.white)
+            title.setTextColor(titleColor)
+            photoCount.setTextColor(subtitleColor)
+            gradientOverlay.isVisible = !isDamages
+
+            if (isDamages) {
                 roomTypeIcon.isVisible = true
                 roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_white)
                 val count = room.damageCount
@@ -118,7 +127,7 @@ class ProjectRoomsAdapter(
                     hasModeChanged
                 if (shouldResetPlaceholder) {
                     Log.d(TAG, "🔄 Resetting thumbnail for damages view room id=${room.roomId}")
-                    thumbnail.load(R.drawable.bg_room_placeholder) {
+                    thumbnail.load(R.drawable.bg_room_placeholder_white) {
                         crossfade(false)
                     }
                 }

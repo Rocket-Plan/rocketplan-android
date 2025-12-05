@@ -468,7 +468,8 @@ class ProjectLossInfoViewModel(
     }
 
     private fun ProjectLossInfoPayload.toUiState(): ProjectLossInfoUiState {
-        val propertyDamageTypes = property.propertyDamageTypes.orEmpty()
+        val resolvedProperty = property.withResolvedType(project.propertyType)
+        val propertyDamageTypes = resolvedProperty.propertyDamageTypes.orEmpty()
         val selectedDamageTypeIds = propertyDamageTypes.mapNotNull { it.id }.toSet()
         val projectDisplayName = listOfNotNull(
             project.addressLine1?.takeIf { it.isNotBlank() },
@@ -493,17 +494,17 @@ class ProjectLossInfoViewModel(
             projectCode = project.uid?.takeIf { it.isNotBlank() }
                 ?: project.projectNumber,
             projectCreatedAt = project.createdAt?.let { dateFormatter.format(it) },
-            property = property,
+            property = resolvedProperty,
             damageTypes = damageTypes,
             selectedDamageTypeIds = selectedDamageTypeIds,
-            selectedDamageCause = property.damageCause,
+            selectedDamageCause = resolvedProperty.damageCause,
             damageCauses = damageCauses,
-            damageCategory = property.damageCategory,
-            lossClass = property.lossClass,
-            lossDate = DateUtils.parseApiDate(property.lossDate),
-            callReceived = DateUtils.parseApiDate(property.callReceived),
-            crewDispatched = DateUtils.parseApiDate(property.crewDispatched),
-            arrivedOnSite = DateUtils.parseApiDate(property.arrivedOnSite),
+            damageCategory = resolvedProperty.damageCategory,
+            lossClass = resolvedProperty.lossClass,
+            lossDate = DateUtils.parseApiDate(resolvedProperty.lossDate),
+            callReceived = DateUtils.parseApiDate(resolvedProperty.callReceived),
+            crewDispatched = DateUtils.parseApiDate(resolvedProperty.crewDispatched),
+            arrivedOnSite = DateUtils.parseApiDate(resolvedProperty.arrivedOnSite),
             affectedLocations = locations.map { it.name },
             claims = claims
         )
@@ -587,7 +588,11 @@ class ProjectLossInfoViewModel(
                 ?: _uiState.value.property?.id
                 ?: throw IllegalStateException("Unable to resolve property for update")
 
-            api.getProperty(propertyServerId).data
+            val updatedProjectType = localDataService.getProject(projectId)?.propertyType ?: project.propertyType
+            api.getProperty(propertyServerId).data.withResolvedType(
+                projectType = updatedProjectType,
+                preferredType = form.propertyType
+            )
         }
 
     private fun resolvePropertyTypeId(project: OfflineProjectEntity): Int {
@@ -601,6 +606,24 @@ class ProjectLossInfoViewModel(
 
     fun formatDateTime(date: Date?): String =
         date?.let { dateTimeFormatter.format(it) } ?: "—"
+
+    private fun PropertyDto.withResolvedType(
+        projectType: String?,
+        preferredType: PropertyType? = null
+    ): PropertyDto {
+        val projectTypeValue = projectType?.takeIf { it.isNotBlank() }
+        val resolvedEnum = preferredType
+            ?: PropertyType.fromApiValue(propertyType)
+            ?: PropertyType.entries.firstOrNull { propertyTypeId?.toInt() == it.propertyTypeId }
+            ?: PropertyType.fromApiValue(projectTypeValue)
+        val resolvedTypeValue = propertyType?.takeIf { it.isNotBlank() }
+            ?: resolvedEnum?.apiValue
+            ?: projectTypeValue
+        val resolvedTypeId = propertyTypeId ?: resolvedEnum?.propertyTypeId?.toLong()
+
+        if (resolvedTypeValue == propertyType && resolvedTypeId == propertyTypeId) return this
+        return copy(propertyType = resolvedTypeValue, propertyTypeId = resolvedTypeId)
+    }
 
     /**
      * Ensure the property has been persisted locally before loading loss info to avoid

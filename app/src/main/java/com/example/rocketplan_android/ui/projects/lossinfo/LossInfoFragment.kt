@@ -1,9 +1,11 @@
 package com.example.rocketplan_android.ui.projects.lossinfo
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
@@ -220,12 +222,16 @@ class LossInfoFragment : Fragment() {
 
     private fun bindInputs() {
         damageCauseInput.threshold = 0
-        damageCauseInput.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus && damageCauseInput.isEnabled && (damageCauseInput.adapter?.count ?: 0) > 0) {
-                damageCauseInput.showDropDown()
+        damageCauseInput.setOnFocusChangeListener { view, hasFocus ->
+            if (hasFocus) {
+                showKeyboard(view)
+                if (damageCauseInput.isEnabled && (damageCauseInput.adapter?.count ?: 0) > 0) {
+                    damageCauseInput.showDropDown()
+                }
             }
         }
-        damageCauseInput.setOnClickListener {
+        damageCauseInput.setOnClickListener { view ->
+            showKeyboard(view)
             if (damageCauseInput.isEnabled && (damageCauseInput.adapter?.count ?: 0) > 0) {
                 damageCauseInput.showDropDown()
             }
@@ -242,6 +248,13 @@ class LossInfoFragment : Fragment() {
         }
         damageCauseInput.setOnItemClickListener { _, _, position, _ ->
             selectedDamageCauseId = filteredDamageCauses.getOrNull(position)?.id
+        }
+
+        listOf(damageCategoryInput, lossClassInput).forEach { input ->
+            input.setOnFocusChangeListener { view, hasFocus ->
+                if (hasFocus) showKeyboard(view)
+            }
+            input.setOnClickListener { showKeyboard(it) }
         }
 
         lossDateInput.setOnClickListener {
@@ -345,6 +358,14 @@ class LossInfoFragment : Fragment() {
         }
 
         picker.show(parentFragmentManager, "time_picker_$title")
+    }
+
+    private fun showKeyboard(target: View) {
+        val imm = context?.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        target.post {
+            target.requestFocus()
+            imm?.showSoftInput(target, InputMethodManager.SHOW_IMPLICIT)
+        }
     }
 
     private fun materialDateSelectionToDate(selection: Long): Date {
