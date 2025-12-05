@@ -5,7 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 
@@ -79,7 +79,7 @@ class EquipmentLevelAdapter : RecyclerView.Adapter<EquipmentLevelAdapter.ViewHol
 
         fun bind(level: EquipmentLevel) {
             levelName.text = level.levelName
-            roomsRecyclerView.layoutManager = LinearLayoutManager(itemView.context)
+            roomsRecyclerView.layoutManager = GridLayoutManager(itemView.context, 2)
             roomsRecyclerView.adapter = roomAdapter
             roomAdapter.submitRooms(level.rooms)
         }

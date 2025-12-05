@@ -309,7 +309,7 @@
                                 android:layout_marginTop="4dp"
                                 android:textColor="@color/light_text_rp"
                                 android:textSize="14sp"
-                                tools:text="@string/project_notes_subtitle_with_count" />
+                                tools:text="@string/project_notes_subtitle" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>

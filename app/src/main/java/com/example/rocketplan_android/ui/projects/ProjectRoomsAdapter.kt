@@ -103,6 +103,7 @@ class ProjectRoomsAdapter(
 
             title.text = room.title
             roomTypeIcon.setImageResource(room.iconRes)
+            roomTypeIcon.isVisible = mode == RoomStatMode.DAMAGES
             if (mode == RoomStatMode.DAMAGES) {
                 val count = room.damageCount
                 photoCount.text = itemView.resources.getQuantityString(

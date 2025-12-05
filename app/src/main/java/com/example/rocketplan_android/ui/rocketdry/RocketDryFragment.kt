@@ -7,6 +7,9 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -14,15 +17,12 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import androidx.core.content.ContextCompat
-import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.launch
 
 class RocketDryFragment : Fragment() {
@@ -52,8 +52,8 @@ class RocketDryFragment : Fragment() {
     private lateinit var equipmentStatusBreakdown: TextView
     private lateinit var equipmentSummaryRecyclerView: RecyclerView
     private lateinit var equipmentLocationsRecyclerView: RecyclerView
-    private lateinit var roomCard: MaterialCardView
-    private lateinit var exteriorSpaceCard: MaterialCardView
+    private lateinit var roomCard: View
+    private lateinit var exteriorSpaceCard: View
     private lateinit var atmosphericLogsRecyclerView: RecyclerView
     private lateinit var locationsRecyclerView: RecyclerView
 
@@ -154,21 +154,32 @@ class RocketDryFragment : Fragment() {
     }
 
     private fun updateToggleStyles(active: RocketDryTab) {
-        val selectedBackground =
-            ContextCompat.getColorStateList(requireContext(), R.color.main_purple)
-        val unselectedBackground =
-            ContextCompat.getColorStateList(requireContext(), android.R.color.white)
-        val selectedText = ContextCompat.getColor(requireContext(), android.R.color.white)
-        val unselectedText = ContextCompat.getColor(requireContext(), R.color.main_purple)
-
         listOf(
             equipmentButton to RocketDryTab.EQUIPMENT,
             moistureButton to RocketDryTab.MOISTURE
         ).forEach { (button, tab) ->
             val isSelected = tab == active
-            button.backgroundTintList = if (isSelected) selectedBackground else unselectedBackground
-            button.strokeColor = ContextCompat.getColorStateList(requireContext(), R.color.main_purple)
-            button.setTextColor(if (isSelected) selectedText else unselectedText)
+            val backgroundRes = when (button.id) {
+                R.id.equipmentButton -> if (isSelected) {
+                    R.drawable.rocketdry_tab_left_selected
+                } else {
+                    R.drawable.rocketdry_tab_left_unselected
+                }
+
+                else -> if (isSelected) {
+                    R.drawable.rocketdry_tab_right_selected
+                } else {
+                    R.drawable.rocketdry_tab_right_unselected
+                }
+            }
+            button.isChecked = isSelected
+            button.background = AppCompatResources.getDrawable(requireContext(), backgroundRes)
+            button.setTextColor(
+                ContextCompat.getColor(
+                    requireContext(),
+                    if (isSelected) android.R.color.white else R.color.main_purple
+                )
+            )
         }
     }
 

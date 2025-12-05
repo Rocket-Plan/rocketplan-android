@@ -249,10 +249,7 @@ class ProjectLandingFragment : Fragment() {
         statusContainer.isEnabled = true
         statusBadge.text = summary.statusLabel ?: getString(R.string.project_status_set_placeholder)
 
-        allNotesSubtitle.text = getString(
-            R.string.project_notes_subtitle_with_count,
-            summary.noteCount
-        )
+        allNotesSubtitle.text = getString(R.string.project_notes_subtitle)
 
         rocketDryCard.isVisible = AppConfig.isRocketDryEnabled
     }

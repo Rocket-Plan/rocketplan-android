@@ -24,6 +24,7 @@ import com.example.rocketplan_android.data.model.AddressResourceResponse
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.NoteResourceResponse
+import com.example.rocketplan_android.data.model.PropertyResourceResponse
 import com.example.rocketplan_android.data.model.ProjectResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
@@ -141,18 +142,18 @@ interface OfflineSyncApi {
     suspend fun createProjectProperty(
         @Path("projectId") projectId: Long,
         @Body body: PropertyMutationRequest
-    ): PropertyDto
+    ): PropertyResourceResponse
 
     @PUT("/api/properties/{propertyId}")
     suspend fun updateProperty(
         @Path("propertyId") propertyId: Long,
         @Body body: PropertyMutationRequest
-    ): PropertyDto
+    ): PropertyResourceResponse
 
     @GET("/api/properties/{propertyId}")
     suspend fun getProperty(
         @Path("propertyId") propertyId: Long
-    ): PropertyDto
+    ): PropertyResourceResponse
 
     @GET("/api/properties/{propertyId}/levels")
     suspend fun getPropertyLevels(

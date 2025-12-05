@@ -478,10 +478,10 @@ class OfflineSyncRepository(
                 ?: throw Exception("Project has no server ID - cannot create property on server")
 
             Log.d("API", "🏠 [createProjectProperty] Creating property for project serverId: $serverId (local: $projectId)")
-            val created = api.createProjectProperty(serverId, request)
+            val created = api.createProjectProperty(serverId, request).data
             Log.d("API", "🏠 [createProjectProperty] Property created with ID: ${created.id}")
 
-            val refreshed = runCatching { api.getProperty(created.id) }.getOrNull() ?: created
+            val refreshed = runCatching { api.getProperty(created.id).data }.getOrNull() ?: created
             persistProperty(projectId, refreshed, propertyTypeValue)
         }
     }
@@ -530,10 +530,10 @@ class OfflineSyncRepository(
                 ?: throw Exception("Property has no server ID - cannot update property on server")
 
             Log.d("API", "🏠 [updateProjectProperty] Updating property serverId: $serverId (local: $propertyId)")
-            val updated = api.updateProperty(serverId, request)
+            val updated = api.updateProperty(serverId, request).data
             Log.d("API", "🏠 [updateProjectProperty] Property updated with ID: ${updated.id}")
 
-            val refreshed = runCatching { api.getProperty(updated.id) }.getOrNull() ?: updated
+            val refreshed = runCatching { api.getProperty(updated.id).data }.getOrNull() ?: updated
             persistProperty(projectId, refreshed, propertyTypeValue)
         }
     }
@@ -1448,7 +1448,7 @@ class OfflineSyncRepository(
         val detailPropertyId = detail?.propertyId ?: detail?.properties?.firstOrNull()?.id
 
         if (detailPropertyId != null) {
-            val fetchedById = runCatching { api.getProperty(detailPropertyId) }
+            val fetchedById = runCatching { api.getProperty(detailPropertyId).data }
                 .onSuccess { fetched ->
                     Log.d("API", "🏠 [fetchProjectProperty] Fallback getProperty succeeded for project $projectId (id=$detailPropertyId, address=${fetched.address}, city=${fetched.city}, state=${fetched.state}, zip=${fetched.postalCode})")
                 }

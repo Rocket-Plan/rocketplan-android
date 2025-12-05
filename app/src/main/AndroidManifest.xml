@@ -27,6 +27,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Rocketplan_android"
         android:name="com.example.rocketplan_android.RocketPlanApplication">
+
+        <!-- Disable Sentry auto-init; we initialize manually in Application class -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
         <activity
             android:name="com.example.rocketplan_android.MainActivity"
             android:exported="true"

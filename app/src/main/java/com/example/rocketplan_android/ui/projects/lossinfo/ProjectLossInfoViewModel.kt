@@ -128,7 +128,7 @@ private class ProjectLossInfoRepository(
 
         val projectDetail = runCatching { api.getProjectDetail(projectServerId).data }.getOrNull()
         val propertyId = resolvePropertyId(projectId, project, projectServerId, projectDetail)
-        val property = runCatching { api.getProperty(propertyId) }
+        val property = runCatching { api.getProperty(propertyId).data }
             .onFailure { Log.w("API", "⚠️ [LossInfo] Unable to load property $propertyId from server", it) }
             .getOrElse { throw it }
         val locations = buildClaimLocations(projectId, property.id, projectDetail)
@@ -262,7 +262,7 @@ private class ProjectLossInfoRepository(
         val fallbackPropertyId = detail?.propertyId ?: detail?.properties?.firstOrNull()?.id
 
         if (fallbackPropertyId != null) {
-            val propertyById = runCatching { api.getProperty(fallbackPropertyId) }
+            val propertyById = runCatching { api.getProperty(fallbackPropertyId).data }
                 .onFailure { Log.e("API", "❌ [LossInfo] getProperty fallback failed for project $projectServerId (propertyId=$fallbackPropertyId)", it) }
                 .getOrNull()
             if (propertyById != null) {
@@ -574,7 +574,7 @@ class ProjectLossInfoViewModel(
                 ?: _uiState.value.property?.id
                 ?: throw IllegalStateException("Unable to resolve property for update")
 
-            api.getProperty(propertyServerId)
+            api.getProperty(propertyServerId).data
         }
 
     private fun resolvePropertyTypeId(project: OfflineProjectEntity): Int {

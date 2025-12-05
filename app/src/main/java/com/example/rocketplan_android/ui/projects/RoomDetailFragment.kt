@@ -312,7 +312,7 @@ class RoomDetailFragment : Fragment() {
         damagesRecyclerView.isVisible = hasDamages
         placeholderContainer.isVisible = !hasDamages
         placeholderImage.isVisible = !hasDamages
-        placeholderText.text = if (hasDamages) "" else getString(R.string.room_damages_scope_empty_state)
+        placeholderText.text = if (hasDamages) "" else getString(R.string.room_damages_empty_state)
     }
 
     private fun updateScopeVisibility() {
@@ -328,7 +328,7 @@ class RoomDetailFragment : Fragment() {
         scopeRecyclerView.isVisible = hasScopes
         placeholderContainer.isVisible = !hasScopes
         placeholderImage.isVisible = !hasScopes
-        placeholderText.text = if (hasScopes) "" else getString(R.string.room_damages_scope_empty_state)
+        placeholderText.text = if (hasScopes) "" else getString(R.string.room_scope_empty_state)
     }
 
     private fun bindListeners() {
