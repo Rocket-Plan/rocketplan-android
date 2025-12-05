@@ -154,9 +154,8 @@ class RocketDryViewModel(
         equipmentByRoom: Map<Long?, List<OfflineEquipmentEntity>>
     ): List<EquipmentLevel> {
         val roomIds = rooms.map { it.roomId }.toSet()
-        val roomsWithEquipment = rooms.mapNotNull { room ->
+        val roomSummaries = rooms.map { room ->
             val roomEquipment = equipmentByRoom[room.roomId].orEmpty()
-            if (roomEquipment.isEmpty()) return@mapNotNull null
 
             val levelName = resolveLevelName(room, locations)
             levelName to EquipmentRoomSummary(
@@ -171,7 +170,7 @@ class RocketDryViewModel(
             .flatten()
         val unassignedEquipment = equipmentByRoom[null].orEmpty() + orphanedEquipment
         if (unassignedEquipment.isNotEmpty()) {
-            roomsWithEquipment.add(
+            roomSummaries.add(
                 UNASSIGNED_LABEL to EquipmentRoomSummary(
                     roomName = UNASSIGNED_LABEL,
                     summary = buildEquipmentSummaryText(unassignedEquipment)
@@ -179,7 +178,7 @@ class RocketDryViewModel(
             )
         }
 
-        val groupedByLevel = roomsWithEquipment.groupBy(
+        val groupedByLevel = roomSummaries.groupBy(
             keySelector = { it.first },
             valueTransform = { it.second }
         )
@@ -193,7 +192,7 @@ class RocketDryViewModel(
     }
 
     private fun buildEquipmentSummaryText(items: List<OfflineEquipmentEntity>): String {
-        return items
+        val summary = items
             .groupBy { normalizeType(it.type) }
             .map { (typeKey, groupedItems) ->
                 val count = groupedItems.sumOf { it.quantity }
@@ -202,7 +201,7 @@ class RocketDryViewModel(
             }
             .sortedBy { it.lowercase(Locale.getDefault()) }
             .joinToString(separator = ", ")
-            .ifBlank { "None" }
+        return summary.ifBlank { rocketPlanApp.getString(R.string.rocketdry_no_equipment) }
     }
 
     private fun resolveLevelName(

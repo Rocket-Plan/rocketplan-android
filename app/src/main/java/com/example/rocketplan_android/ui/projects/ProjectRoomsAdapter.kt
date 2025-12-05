@@ -89,6 +89,7 @@ class ProjectRoomsAdapter(
         private val title: TextView = view.findViewById(R.id.roomTitle)
         private val photoCount: TextView = view.findViewById(R.id.photoCount)
         private val spinner: View = view.findViewById(R.id.loadingSpinner)
+        private val roomTypeIcon: ImageView = view.findViewById(R.id.roomTypeIcon)
 
         fun bind(room: RoomCard) {
             val mode = this@ProjectRoomsAdapter.statMode
@@ -101,6 +102,7 @@ class ProjectRoomsAdapter(
             thumbnail.setTag(R.id.tag_room_card_mode, mode)
 
             title.text = room.title
+            roomTypeIcon.setImageResource(room.iconRes)
             if (mode == RoomStatMode.DAMAGES) {
                 val count = room.damageCount
                 photoCount.text = itemView.resources.getQuantityString(
@@ -145,7 +147,9 @@ class ProjectRoomsAdapter(
         }
 
         private fun hasVisualDifferences(old: RoomCard, new: RoomCard): Boolean {
-            return old.roomId != new.roomId || old.thumbnailUrl != new.thumbnailUrl
+            return old.roomId != new.roomId ||
+                old.thumbnailUrl != new.thumbnailUrl ||
+                old.iconRes != new.iconRes
         }
     }
 

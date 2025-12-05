@@ -19,6 +19,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.logging.LogLevel
 import java.io.File
 import java.util.Date
@@ -280,6 +281,32 @@ class RoomDetailViewModel(
         }
     }
 
+    fun addScopeItem(name: String, description: String?) {
+        val room = _resolvedRoom.value
+        if (room == null) {
+            Log.w(TAG, "⚠️ Cannot add scope; room is not resolved yet")
+            return
+        }
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = Date()
+            val lookupRoomId = room.serverId ?: room.roomId
+            val scope = OfflineWorkScopeEntity(
+                uuid = UUID.randomUUID().toString(),
+                projectId = projectId,
+                roomId = lookupRoomId,
+                name = name.trim(),
+                description = description?.trim().takeUnless { it.isNullOrBlank() },
+                createdAt = now,
+                updatedAt = now,
+                syncStatus = SyncStatus.PENDING,
+                isDirty = true
+            )
+            localDataService.saveWorkScopes(listOf(scope))
+            Log.d(TAG, "📝 Added scope item '${scope.name}' for roomId=$lookupRoomId")
+        }
+    }
+
 
     fun ensureRoomPhotosFresh(force: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
@@ -344,6 +371,7 @@ class RoomDetailViewModel(
                         .map { pagingData ->
                             pagingData.map { snapshot -> snapshot.toPhotoItem(formatter) }
                         }
+                        .cachedIn(viewModelScope)
 
                     combine(snapshotFlow, photoNoteCounts) { pagingData, noteCounts ->
                         pagingData.map { item ->

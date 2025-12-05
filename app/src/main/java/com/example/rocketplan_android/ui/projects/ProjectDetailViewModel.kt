@@ -14,6 +14,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -99,6 +100,7 @@ class ProjectDetailViewModel(
                         val newDamageTotal = new.levelSections.sumOf { it.rooms.sumOf { r -> r.damageCount } }
 
                         old.levelSections.size == new.levelSections.size &&
+                            old.levelSections == new.levelSections &&
                             old.albums.size == new.albums.size &&
                             oldPhotoTotal == newPhotoTotal &&
                             oldLoadingCount == newLoadingCount &&
@@ -190,6 +192,9 @@ class ProjectDetailViewModel(
                             val rid = damage.roomId ?: return@count false
                             relatedRoomIds.contains(rid)
                         }
+                        val iconRes = RoomTypeCatalog.metadataForName(room.roomType)
+                            ?.resolveIconRes(getApplication())
+                            ?: RoomTypeCatalog.resolveIconRes(getApplication(), room.roomType)
                         RoomCard(
                             roomId = roomKey,
                             title = room.title,
@@ -197,7 +202,8 @@ class ProjectDetailViewModel(
                             photoCount = resolvedPhotoCount,
                             damageCount = damageCount,
                             thumbnailUrl = resolvedThumbnail,
-                            isLoadingPhotos = isLoadingPhotos
+                            isLoadingPhotos = isLoadingPhotos,
+                            iconRes = iconRes
                         )
                     }
                 RoomLevelSection(levelName = level, rooms = roomCards)
@@ -303,7 +309,8 @@ data class RoomCard(
     val photoCount: Int,
     val damageCount: Int,
     val thumbnailUrl: String?,
-    val isLoadingPhotos: Boolean
+    val isLoadingPhotos: Boolean,
+    val iconRes: Int
 )
 
 data class AlbumSection(

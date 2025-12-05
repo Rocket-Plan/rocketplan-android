@@ -9,6 +9,7 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -32,6 +33,9 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
@@ -68,13 +72,14 @@ class RoomDetailFragment : Fragment() {
     private lateinit var filterChipGroup: ChipGroup
     private lateinit var addPhotoChip: Chip
     private lateinit var damageAssessmentChip: Chip
+    private lateinit var totalEquipmentButton: MaterialButton
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var damagesRecyclerView: RecyclerView
     private lateinit var scopeRecyclerView: RecyclerView
     private lateinit var placeholderText: TextView
     private lateinit var photosLoadingSpinner: View
     private lateinit var loadingOverlay: View
-    private lateinit var manageEquipmentCard: View
+    private lateinit var addScopeCard: View
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
     private var latestDamages: List<RoomDamageItem> = emptyList()
@@ -87,7 +92,7 @@ class RoomDetailFragment : Fragment() {
     private val initialTab: RoomDetailTab by lazy {
         when (args.startTab.lowercase(Locale.US)) {
             "damages" -> RoomDetailTab.DAMAGES
-            "scope", "scope_sheet" -> RoomDetailTab.SCOPE
+            "scope", "scope_sheet", "sketch" -> RoomDetailTab.SCOPE
             else -> RoomDetailTab.PHOTOS
         }
     }
@@ -164,6 +169,7 @@ class RoomDetailFragment : Fragment() {
         albumsHeader = root.findViewById(R.id.roomAlbumsHeader)
         albumsRecyclerView = root.findViewById(R.id.roomAlbumsRecyclerView)
         gridSectionTitle = root.findViewById(R.id.gridSectionTitle)
+        totalEquipmentButton = root.findViewById(R.id.totalEquipmentButton)
         filterChipGroup = root.findViewById(R.id.photoFilterChips)
         addPhotoChip = root.findViewById(R.id.addPhotoChip)
         damageAssessmentChip = root.findViewById(R.id.damageAssessmentChip)
@@ -173,9 +179,11 @@ class RoomDetailFragment : Fragment() {
         placeholderText = root.findViewById(R.id.photosPlaceholder)
         photosLoadingSpinner = root.findViewById(R.id.photosLoadingSpinner)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
-        manageEquipmentCard = root.findViewById(R.id.manageEquipmentCard)
+        addScopeCard = root.findViewById(R.id.addScopeCard)
 
         addPhotoChip.isChecked = initialTab == RoomDetailTab.PHOTOS
+        addPhotoCard.isVisible = initialTab == RoomDetailTab.PHOTOS
+        addScopeCard.isVisible = initialTab != RoomDetailTab.PHOTOS
         gridSectionTitle.text = getString(R.string.damage_assessment)
         noteCardLabel.text = getString(R.string.add_note)
         backButton.contentDescription = getString(R.string.all_locations)
@@ -320,6 +328,8 @@ class RoomDetailFragment : Fragment() {
         damageAssessmentChip.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
         }
+        totalEquipmentButton.setOnClickListener { openEquipmentTotals() }
+        addScopeCard.setOnClickListener { showAddScopeDialog() }
         noteCard.setOnClickListener {
             val categoryId = resolveNoteCategoryId()
             val action = RoomDetailFragmentDirections
@@ -327,14 +337,6 @@ class RoomDetailFragment : Fragment() {
                     projectId = args.projectId,
                     roomId = args.roomId,
                     categoryId = categoryId
-                )
-            findNavController().navigate(action)
-        }
-        manageEquipmentCard.setOnClickListener {
-            val action = RoomDetailFragmentDirections
-                .actionRoomDetailFragmentToRocketDryFragment(
-                    projectId = args.projectId,
-                    startTab = "equipment"
                 )
             findNavController().navigate(action)
         }
@@ -367,7 +369,50 @@ class RoomDetailFragment : Fragment() {
         findNavController().navigate(action)
     }
 
+    private fun openEquipmentTotals() {
+        val action = RoomDetailFragmentDirections
+            .actionRoomDetailFragmentToRocketDryFragment(
+                projectId = args.projectId,
+                startTab = "equipment"
+            )
+        findNavController().navigate(action)
+    }
+
+    private fun showAddScopeDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_scope_sheet, null)
+        val titleLayout = dialogView.findViewById<TextInputLayout>(R.id.scopeTitleLayout)
+        val titleInput = dialogView.findViewById<TextInputEditText>(R.id.scopeTitleInput)
+        val descriptionInput = dialogView.findViewById<TextInputEditText>(R.id.scopeDescriptionInput)
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.add_scope_sheet))
+            .setView(dialogView)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val title = titleInput.text?.toString().orEmpty().trim()
+                if (title.isBlank()) {
+                    titleLayout.error = getString(R.string.add_scope_sheet_title_required)
+                    return@setOnClickListener
+                }
+                titleLayout.error = null
+                val description = descriptionInput.text?.toString()?.trim().orEmpty().takeIf { it.isNotBlank() }
+                viewModel.addScopeItem(title, description)
+                dialog.dismiss()
+            }
+        }
+
+        dialog.show()
+    }
+
     private fun showAddPhotoOptions(anchor: View) {
+        if (viewModel.selectedTab.value != RoomDetailTab.PHOTOS) {
+            Log.d(TAG, "Ignoring add photo action; Photos tab not active")
+            return
+        }
         val popup = PopupMenu(requireContext(), anchor)
         popup.menuInflater.inflate(R.menu.menu_add_photo_options, popup.menu)
         popup.setOnMenuItemClickListener { item ->
@@ -503,6 +548,8 @@ class RoomDetailFragment : Fragment() {
         scopeRecyclerView.isVisible = false
         placeholderText.isVisible = false
         photosLoadingSpinner.isVisible = false
+        addPhotoCard.isVisible = false
+        addScopeCard.isVisible = false
     }
 
     private fun renderState(state: RoomDetailUiState.Ready) {
@@ -543,6 +590,9 @@ class RoomDetailFragment : Fragment() {
                 updatePhotoVisibility()
                 filterChipGroup.isVisible = true
                 gridSectionTitle.isVisible = true
+                totalEquipmentButton.isVisible = false
+                addPhotoCard.isVisible = true
+                addScopeCard.isVisible = false
             }
             RoomDetailTab.DAMAGES -> {
                 gridSectionTitle.text = getString(R.string.damages)
@@ -550,12 +600,15 @@ class RoomDetailFragment : Fragment() {
                 albumsRecyclerView.isVisible = false
                 filterChipGroup.isVisible = false
                 gridSectionTitle.isVisible = true
+                totalEquipmentButton.isVisible = true
                 photosRecyclerView.isVisible = false
                 photosLoadingSpinner.isVisible = false
                 loadingOverlay.isVisible = false
                 updateDamageVisibility()
                 photosLoadingSpinner.isVisible = false
                 scopeRecyclerView.isVisible = false
+                addPhotoCard.isVisible = false
+                addScopeCard.isVisible = true
             }
             RoomDetailTab.SCOPE -> {
                 gridSectionTitle.text = getString(R.string.scope_sheet)
@@ -563,11 +616,14 @@ class RoomDetailFragment : Fragment() {
                 albumsRecyclerView.isVisible = false
                 filterChipGroup.isVisible = false
                 gridSectionTitle.isVisible = true
+                totalEquipmentButton.isVisible = false
                 photosRecyclerView.isVisible = false
                 damagesRecyclerView.isVisible = false
                 photosLoadingSpinner.isVisible = false
                 loadingOverlay.isVisible = false
                 updateScopeVisibility()
+                addPhotoCard.isVisible = false
+                addScopeCard.isVisible = true
             }
         }
     }

@@ -145,6 +145,7 @@
     <string name="add_photo">Add a photo+</string>
     <string name="edit_address">Edit Address</string>
     <string name="equipment">Equipment</string>
+    <string name="total_equipment">Total Equipment</string>
     <string name="moisture">Moisture</string>
     <string name="room">Room</string>
     <string name="external_atmospheric_log">External Atmospheric Log</string>
@@ -161,8 +162,11 @@
     <string name="damages_coming_soon">Damages coming soon</string>
     <string name="sketch_coming_soon">Sketch coming soon</string>
     <string name="room_damages_empty_state">No damages captured for this room yet.</string>
-    <string name="manage_equipment">Manage equipment</string>
-    <string name="manage_equipment_subtitle">Open RocketDry to view or assign gear</string>
+    <string name="add_scope_sheet">Add sketch</string>
+    <string name="add_scope_sheet_subtitle">Add a sketch for this room.</string>
+    <string name="add_scope_sheet_title_hint">Sketch title</string>
+    <string name="add_scope_sheet_description_hint">Description (optional)</string>
+    <string name="add_scope_sheet_title_required">Title is required.</string>
     <string name="rocketdry_equipment_overview">Equipment overview</string>
     <plurals name="rocketdry_equipment_units">
         <item quantity="one">%d total unit</item>
@@ -171,6 +175,7 @@
     <string name="rocketdry_equipment_status_breakdown">%1$d active | %2$d removed | %3$d damaged</string>
     <string name="rocketdry_equipment_by_type">By type</string>
     <string name="rocketdry_equipment_by_room">By room</string>
+    <string name="rocketdry_no_equipment">No equipment added</string>
     <plurals name="damage_count">
         <item quantity="one">%d Damage</item>
         <item quantity="other">%d Damages</item>
@@ -182,8 +187,8 @@
     <string name="room_damage_severity_unknown">Unspecified</string>
     <string name="location_icon">Location Icon</string>
     <string name="main_level">Main Level</string>
-    <string name="scope_sheet">Scope Sheet</string>
-    <string name="room_scope_empty_state">No scope sheet items for this room yet.</string>
+    <string name="scope_sheet">Sketch</string>
+    <string name="room_scope_empty_state">No sketches for this room yet.</string>
     <string name="room_scope_updated_format">Updated %1$s</string>
     <string name="rocket_scan_photo_preview_placeholder">Photo preview coming soon.</string>
     <string name="material_count">%d Material</string>
