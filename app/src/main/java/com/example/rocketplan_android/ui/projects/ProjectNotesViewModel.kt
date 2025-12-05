@@ -104,6 +104,15 @@ class ProjectNotesViewModel(
         }
     }
 
+    fun updateNote(uuid: String, content: String) {
+        viewModelScope.launch {
+            val note = localDataService.getNoteByUuid(uuid) ?: return@launch
+            val trimmed = content.trim()
+            if (trimmed.isEmpty() || trimmed == note.content) return@launch
+            offlineSyncRepository.updateNote(note, trimmed)
+        }
+    }
+
     override fun onCleared() {
         notesRealtimeManager.clearProject(projectId)
         super.onCleared()

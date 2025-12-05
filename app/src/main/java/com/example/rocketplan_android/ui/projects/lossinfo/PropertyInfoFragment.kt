@@ -60,6 +60,8 @@ class PropertyInfoFragment : Fragment() {
     private var selectedAsbestosStatusId: Int? = null
     private var isResidentialSelected = false
     private var isCommercialSelected = false
+    // Track the last property we rendered so we don't wipe in-progress edits when only flags change
+    private var lastRenderedProperty: PropertyDto? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -134,31 +136,10 @@ class PropertyInfoFragment : Fragment() {
         projectCodeView.text = state.projectCode ?: getString(R.string.loss_info_property_placeholder_code)
         projectCreatedView.text = state.projectCreatedAt ?: getString(R.string.loss_info_value_not_available)
 
-        val property = state.property
-        selectedPropertyType = resolvePropertyType(property)
-        projectTypeInput.setText(
-            selectedPropertyType?.let { friendlyPropertyTypeLabel(it) }.orEmpty(),
-            false
-        )
-
-        setClassification(property)
-
-        asbestosView.text = property?.asbestosStatus?.title
-            ?: getString(R.string.loss_info_value_not_available)
-        selectedAsbestosStatusId = property?.asbestosStatusId?.toInt()
-
-        yearBuiltInput.setText(property?.yearBuilt?.takeIf { it > 0 }?.toString().orEmpty())
-        buildingNameInput.setText(property?.name.orEmpty())
-        referralNameInput.setText(property?.referredByName.orEmpty())
-        referralPhoneInput.setText(property?.referredByPhone.orEmpty())
-
-        selectedPlatinumAgent = property?.isPlatinumAgent
-        platinumAgentInput.setText(
-            selectedPlatinumAgent?.let {
-                if (it) getString(R.string.loss_info_yes) else getString(R.string.loss_info_no)
-            }.orEmpty(),
-            false
-        )
+        if (state.property != lastRenderedProperty) {
+            renderProperty(state.property)
+            lastRenderedProperty = state.property
+        }
     }
 
     private fun bindInputs() {
@@ -216,6 +197,33 @@ class PropertyInfoFragment : Fragment() {
             buildingName = buildingNameInput.text?.toString()?.trim().orEmpty().ifBlank { null }
         )
         viewModel.savePropertyInfo(form)
+    }
+
+    private fun renderProperty(property: PropertyDto?) {
+        selectedPropertyType = resolvePropertyType(property)
+        projectTypeInput.setText(
+            selectedPropertyType?.let { friendlyPropertyTypeLabel(it) }.orEmpty(),
+            false
+        )
+
+        setClassification(property)
+
+        asbestosView.text = property?.asbestosStatus?.title
+            ?: getString(R.string.loss_info_value_not_available)
+        selectedAsbestosStatusId = property?.asbestosStatusId?.toInt()
+
+        yearBuiltInput.setText(property?.yearBuilt?.takeIf { it > 0 }?.toString().orEmpty())
+        buildingNameInput.setText(property?.name.orEmpty())
+        referralNameInput.setText(property?.referredByName.orEmpty())
+        referralPhoneInput.setText(property?.referredByPhone.orEmpty())
+
+        selectedPlatinumAgent = property?.isPlatinumAgent
+        platinumAgentInput.setText(
+            selectedPlatinumAgent?.let {
+                if (it) getString(R.string.loss_info_yes) else getString(R.string.loss_info_no)
+            }.orEmpty(),
+            false
+        )
     }
 
     private fun setClassification(property: PropertyDto?) {

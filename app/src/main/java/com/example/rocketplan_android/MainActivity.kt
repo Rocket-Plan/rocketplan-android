@@ -158,6 +158,7 @@ class MainActivity : AppCompatActivity() {
                     // Show toolbar and drawer, but force keyboard hidden
                     supportActionBar?.show()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                    @Suppress("DEPRECATION")
                     window.setSoftInputMode(
                         WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN or
                         WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE

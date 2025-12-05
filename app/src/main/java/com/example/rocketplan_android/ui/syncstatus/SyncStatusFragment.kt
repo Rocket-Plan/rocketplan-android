@@ -35,10 +35,6 @@ class SyncStatusFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.backButton.setOnClickListener {
-            findNavController().popBackStack()
-        }
-
         adapter = SyncStatusAdapter { projectStatus ->
             val action = SyncStatusFragmentDirections
                 .actionSyncStatusFragmentToProjectLandingFragment(projectStatus.projectId)

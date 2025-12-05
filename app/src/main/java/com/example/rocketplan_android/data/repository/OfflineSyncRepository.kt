@@ -642,6 +642,48 @@ class OfflineSyncRepository(
         localDataService.getPendingNotes(projectId).firstOrNull { it.uuid == pending.uuid } ?: pending
     }
 
+    suspend fun updateNote(
+        note: OfflineNoteEntity,
+        newContent: String
+    ): OfflineNoteEntity = withContext(ioDispatcher) {
+        val trimmed = newContent.trim()
+        if (trimmed.isEmpty() || trimmed == note.content) return@withContext note
+        val updated = note.copy(
+            content = trimmed,
+            updatedAt = now(),
+            isDirty = true,
+            syncStatus = SyncStatus.PENDING
+        )
+        localDataService.saveNote(updated)
+
+        note.serverId?.let { serverId ->
+            runCatching {
+                val request = CreateNoteRequest(
+                    projectId = note.projectId,
+                    roomId = note.roomId,
+                    body = trimmed,
+                    photoId = note.photoId,
+                    categoryId = note.categoryId
+                )
+                val response = api.updateNote(serverId, request)
+                response.data.toEntity()?.copy(
+                    uuid = note.uuid,
+                    projectId = note.projectId,
+                    roomId = note.roomId ?: response.data.roomId,
+                    isDirty = false,
+                    syncStatus = SyncStatus.SYNCED,
+                    isDeleted = false
+                )
+            }.onSuccess { synced ->
+                synced?.let { localDataService.saveNote(it) }
+            }.onFailure { error ->
+                Log.w("API", "⚠️ [updateNote] Failed to push note ${note.uuid}", error)
+            }
+        }
+
+        updated
+    }
+
     suspend fun deleteNote(projectId: Long, note: OfflineNoteEntity) = withContext(ioDispatcher) {
         localDataService.saveNote(
             note.copy(

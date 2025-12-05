@@ -53,7 +53,6 @@ class RoomDetailFragment : Fragment() {
         (requireActivity().application as RocketPlanApplication).syncQueueManager
     }
 
-    private lateinit var backButton: ImageButton
     private lateinit var menuButton: ImageButton
     private lateinit var roomIcon: ImageView
     private lateinit var roomTitle: TextView
@@ -156,7 +155,6 @@ class RoomDetailFragment : Fragment() {
 
 
     private fun bindViews(root: View) {
-        backButton = root.findViewById(R.id.backButton)
         menuButton = root.findViewById(R.id.menuButton)
         roomIcon = root.findViewById(R.id.roomIcon)
         roomTitle = root.findViewById(R.id.roomTitle)
@@ -191,11 +189,14 @@ class RoomDetailFragment : Fragment() {
         addPhotoCard.isVisible = initialTab == RoomDetailTab.PHOTOS
         addScopeCard.isVisible = initialTab != RoomDetailTab.PHOTOS
         damageCategoryGroup.check(R.id.damageFilterAll)
-        damageCategoryGroup.isVisible = initialTab == RoomDetailTab.DAMAGES
+        damageCategoryGroup.isVisible = initialTab == RoomDetailTab.DAMAGES || initialTab == RoomDetailTab.SCOPE
         filterChipGroup.isVisible = initialTab == RoomDetailTab.PHOTOS
-        gridSectionTitle.text = getString(R.string.damage_assessment)
+        gridSectionTitle.text = when (initialTab) {
+            RoomDetailTab.PHOTOS -> getString(R.string.damage_assessment)
+            RoomDetailTab.DAMAGES -> getString(R.string.damages)
+            RoomDetailTab.SCOPE -> getString(R.string.scope_sheet)
+        }
         noteCardLabel.text = getString(R.string.add_note_with_plus)
-        backButton.contentDescription = getString(R.string.all_locations)
     }
 
     private fun configureRecycler() {
@@ -332,7 +333,6 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun bindListeners() {
-        backButton.setOnClickListener { findNavController().navigateUp() }
         menuButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.edit_room), Toast.LENGTH_SHORT).show()
         }
@@ -342,7 +342,14 @@ class RoomDetailFragment : Fragment() {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
         }
         totalEquipmentButton.setOnClickListener { openEquipmentTotals() }
-        addScopeCard.setOnClickListener { showAddScopeDialog() }
+        addScopeCard.setOnClickListener {
+            if (viewModel.selectedTab.value != RoomDetailTab.SCOPE) {
+                tabToggleGroup.check(R.id.roomScopeTabButton)
+                viewModel.refreshWorkScopesIfStale()
+                return@setOnClickListener
+            }
+            showAddScopeDialog()
+        }
         noteCard.setOnClickListener {
             val categoryId = resolveNoteCategoryId()
             val action = RoomDetailFragmentDirections
@@ -599,6 +606,7 @@ class RoomDetailFragment : Fragment() {
         when (tab) {
             RoomDetailTab.PHOTOS -> {
                 gridSectionTitle.text = getString(R.string.damage_assessment)
+                gridSectionTitle.isVisible = true
                 noteSummary.isVisible = true
                 damagesRecyclerView.isVisible = false
                 scopeRecyclerView.isVisible = false
@@ -606,7 +614,6 @@ class RoomDetailFragment : Fragment() {
                 albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
                 updatePhotoVisibility()
                 filterChipGroup.isVisible = true
-                gridSectionTitle.isVisible = true
                 totalEquipmentButton.isVisible = false
                 addPhotoCard.isVisible = true
                 addScopeCard.isVisible = false
@@ -614,11 +621,11 @@ class RoomDetailFragment : Fragment() {
             }
             RoomDetailTab.DAMAGES -> {
                 gridSectionTitle.text = getString(R.string.damages)
+                gridSectionTitle.isVisible = true
                 noteSummary.isVisible = false
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
                 filterChipGroup.isVisible = false
-                gridSectionTitle.isVisible = false
                 totalEquipmentButton.isVisible = false
                 photosRecyclerView.isVisible = false
                 photosLoadingSpinner.isVisible = false
@@ -632,11 +639,11 @@ class RoomDetailFragment : Fragment() {
             }
             RoomDetailTab.SCOPE -> {
                 gridSectionTitle.text = getString(R.string.scope_sheet)
+                gridSectionTitle.isVisible = true
                 noteSummary.isVisible = false
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
                 filterChipGroup.isVisible = false
-                gridSectionTitle.isVisible = false
                 totalEquipmentButton.isVisible = false
                 photosRecyclerView.isVisible = false
                 damagesRecyclerView.isVisible = false
@@ -645,7 +652,7 @@ class RoomDetailFragment : Fragment() {
                 updateScopeVisibility()
                 addPhotoCard.isVisible = false
                 addScopeCard.isVisible = true
-                damageCategoryGroup.isVisible = false
+                damageCategoryGroup.isVisible = true
             }
         }
     }

@@ -14,7 +14,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.findNavController
 import coil.load
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
@@ -39,10 +38,6 @@ class CompanyInfoFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        binding.backButton.setOnClickListener {
-            findNavController().popBackStack()
-        }
 
         binding.retryButton.setOnClickListener {
             viewModel.refreshCompanyInfo()

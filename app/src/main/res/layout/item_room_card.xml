@@ -31,7 +31,7 @@
             android:layout_width="96dp"
             android:layout_height="96dp"
             android:layout_gravity="center"
-            android:background="@drawable/bg_icon_circle_purple"
+            android:background="@drawable/bg_icon_circle_white"
             android:adjustViewBounds="true"
             android:contentDescription="@string/location_icon"
             android:padding="16dp"

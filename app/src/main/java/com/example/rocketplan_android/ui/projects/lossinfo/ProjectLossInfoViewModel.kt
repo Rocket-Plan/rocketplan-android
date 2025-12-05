@@ -45,7 +45,20 @@ import android.util.Log
 data class ClaimListItem(
     val claim: ClaimDto,
     val locationName: String? = null
-)
+) {
+    val policyHolder: String? get() = claim.policyHolder ?: claim.claimInfo?.policyHolder
+    val ownershipStatus: String? get() = claim.ownershipStatus ?: claim.claimInfo?.ownershipStatus
+    val policyHolderPhone: String? get() = claim.policyHolderPhone ?: claim.claimInfo?.policyHolderPhone
+    val policyHolderEmail: String? get() = claim.policyHolderEmail ?: claim.claimInfo?.policyHolderEmail
+    val representative: String? get() = claim.representative ?: claim.claimInfo?.representative
+    val provider: String? get() = claim.provider ?: claim.claimInfo?.provider
+    val insuranceDeductible: String? get() = claim.insuranceDeductible ?: claim.claimInfo?.insuranceDeductible
+    val policyNumber: String? get() = claim.policyNumber ?: claim.claimInfo?.policyNumber
+    val claimNumber: String? get() = claim.claimNumber ?: claim.claimInfo?.claimNumber
+    val adjuster: String? get() = claim.adjuster ?: claim.claimInfo?.adjuster
+    val adjusterPhone: String? get() = claim.adjusterPhone ?: claim.claimInfo?.adjusterPhone
+    val adjusterEmail: String? get() = claim.adjusterEmail ?: claim.claimInfo?.adjusterEmail
+}
 
 private data class ClaimLocation(
     val id: Long,

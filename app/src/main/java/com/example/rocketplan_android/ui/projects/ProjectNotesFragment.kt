@@ -35,9 +35,14 @@ class ProjectNotesFragment : Fragment() {
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyState: TextView
     private lateinit var subtitle: TextView
-    private val adapter = ProjectNotesAdapter { note ->
-        confirmDeleteNote(note)
-    }
+    private val adapter = ProjectNotesAdapter(
+        onDeleteClicked = { note ->
+            confirmDeleteNote(note)
+        },
+        onNoteClicked = { note ->
+            showEditNoteDialog(note)
+        }
+    )
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -92,6 +97,26 @@ class ProjectNotesFragment : Fragment() {
                 val text = noteInput.text?.toString()?.trim().orEmpty()
                 if (text.isNotEmpty()) {
                     viewModel.addNote(text)
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showEditNoteDialog(note: NoteListItem) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_add_note, null)
+        val noteInput = dialogView.findViewById<TextInputEditText>(R.id.noteInput)
+        noteInput.setText(note.content)
+        noteInput.setSelection(note.content.length)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.edit_note)
+            .setView(dialogView)
+            .setPositiveButton(R.string.save) { dialog, _ ->
+                val text = noteInput.text?.toString()?.trim().orEmpty()
+                if (text.isNotEmpty()) {
+                    viewModel.updateNote(note.id, text)
                 }
                 dialog.dismiss()
             }

@@ -188,14 +188,21 @@ class LossInfoFragment : Fragment() {
     }
 
     private fun applyDamageCauseFilter() {
-        filteredDamageCauses = allDamageCauses.filter { cause ->
-            val typeId = cause.propertyDamageType?.id
-            typeId != null && selectedDamageTypeIds.contains(typeId)
+        filteredDamageCauses = when {
+            allDamageCauses.isEmpty() -> emptyList()
+            selectedDamageTypeIds.isEmpty() -> allDamageCauses
+            else -> {
+                val matching = allDamageCauses.filter { cause ->
+                    val typeId = cause.propertyDamageType?.id
+                    typeId != null && selectedDamageTypeIds.contains(typeId)
+                }
+                if (matching.isNotEmpty()) matching else allDamageCauses
+            }
         }
         val labels = filteredDamageCauses.map { cause ->
             cause.name ?: getString(R.string.loss_info_value_not_available)
         }
-        val adapter = ArrayAdapter(requireContext(), android.R.layout.simple_list_item_1, labels)
+        val adapter = ArrayAdapter(requireContext(), R.layout.list_item_dropdown, labels)
         damageCauseInput.setAdapter(adapter)
 
         val selected = filteredDamageCauses.firstOrNull { it.id == selectedDamageCauseId }
@@ -212,6 +219,17 @@ class LossInfoFragment : Fragment() {
     }
 
     private fun bindInputs() {
+        damageCauseInput.threshold = 0
+        damageCauseInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && damageCauseInput.isEnabled && (damageCauseInput.adapter?.count ?: 0) > 0) {
+                damageCauseInput.showDropDown()
+            }
+        }
+        damageCauseInput.setOnClickListener {
+            if (damageCauseInput.isEnabled && (damageCauseInput.adapter?.count ?: 0) > 0) {
+                damageCauseInput.showDropDown()
+            }
+        }
         damageCauseInput.doAfterTextChanged { text ->
             if (text.isNullOrBlank()) {
                 selectedDamageCauseId = null

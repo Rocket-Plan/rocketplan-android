@@ -96,15 +96,15 @@ class ProjectRoomsAdapter(
             val previousRoom = thumbnail.getTag(R.id.tag_room_photo_id) as? RoomCard
             val previousMode = thumbnail.getTag(R.id.tag_room_card_mode) as? RoomStatMode
             val hasModeChanged = previousMode != mode
-            val needsReload = previousRoom?.let { hasVisualDifferences(it, room) || hasModeChanged } ?: true
 
             thumbnail.setTag(R.id.tag_room_photo_id, room)
             thumbnail.setTag(R.id.tag_room_card_mode, mode)
 
             title.text = room.title
             roomTypeIcon.setImageResource(room.iconRes)
-            roomTypeIcon.isVisible = mode == RoomStatMode.DAMAGES
             if (mode == RoomStatMode.DAMAGES) {
+                roomTypeIcon.isVisible = true
+                roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_white)
                 val count = room.damageCount
                 photoCount.text = itemView.resources.getQuantityString(
                     R.plurals.damage_count,
@@ -112,7 +112,11 @@ class ProjectRoomsAdapter(
                     count
                 )
                 spinner.isVisible = false
-                if (needsReload) {
+                val shouldResetPlaceholder = previousRoom == null ||
+                    previousRoom.roomId != room.roomId ||
+                    previousRoom.iconRes != room.iconRes ||
+                    hasModeChanged
+                if (shouldResetPlaceholder) {
                     Log.d(TAG, "🔄 Resetting thumbnail for damages view room id=${room.roomId}")
                     thumbnail.load(R.drawable.bg_room_placeholder) {
                         crossfade(false)
@@ -123,6 +127,7 @@ class ProjectRoomsAdapter(
                 return
             }
 
+            roomTypeIcon.isVisible = false
             photoCount.text = itemView.resources.getQuantityString(
                 R.plurals.photo_count,
                 room.photoCount,
@@ -130,6 +135,7 @@ class ProjectRoomsAdapter(
             )
             spinner.isVisible = room.isLoadingPhotos
 
+            val needsReload = previousRoom?.let { hasVisualDifferences(it, room) || hasModeChanged } ?: true
             if (needsReload) {
                 Log.d(TAG, "🔄 Loading thumbnail for room id=${room.roomId}, prev=${previousRoom?.roomId}")
                 // Include URL in cache key so image updates get fresh load

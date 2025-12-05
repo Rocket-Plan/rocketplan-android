@@ -306,13 +306,13 @@ interface OfflineSyncApi {
     @GET("/api/projects/{projectId}/claims")
     suspend fun getProjectClaims(
         @Path("projectId") projectId: Long,
-        @Query("include") include: String? = "project,claimType"
+        @Query("include") include: String? = "project,claimType,claimInfo"
     ): PaginatedResponse<ClaimDto>
 
     @GET("/api/locations/{locationId}/claims")
     suspend fun getLocationClaims(
         @Path("locationId") locationId: Long,
-        @Query("include") include: String? = "project,claimType"
+        @Query("include") include: String? = "project,claimType,claimInfo"
     ): PaginatedResponse<ClaimDto>
 
     @POST("/api/projects/{projectId}/claims")

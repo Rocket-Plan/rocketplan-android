@@ -123,6 +123,7 @@
     <string name="sketch">Sketch</string>
     <string name="add_note">Add a note</string>
     <string name="add_note_with_plus">+ Add a note</string>
+    <string name="edit_note">Edit note</string>
     <string name="note_input_hint">Note details</string>
     <string name="add_room">Room</string>
     <string name="add_exterior_space">Exterior Space</string>

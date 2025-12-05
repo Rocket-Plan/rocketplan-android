@@ -18,7 +18,8 @@ data class NoteListItem(
 )
 
 class ProjectNotesAdapter(
-    private val onDeleteClicked: (NoteListItem) -> Unit
+    private val onDeleteClicked: (NoteListItem) -> Unit,
+    private val onNoteClicked: (NoteListItem) -> Unit
 ) : ListAdapter<NoteListItem, ProjectNotesAdapter.NoteViewHolder>(DIFF_CALLBACK) {
 
     init {
@@ -30,7 +31,7 @@ class ProjectNotesAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): NoteViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_project_note, parent, false)
-        return NoteViewHolder(view, onDeleteClicked)
+        return NoteViewHolder(view, onDeleteClicked, onNoteClicked)
     }
 
     override fun onBindViewHolder(holder: NoteViewHolder, position: Int) {
@@ -39,7 +40,8 @@ class ProjectNotesAdapter(
 
     class NoteViewHolder(
         itemView: View,
-        private val onDeleteClicked: (NoteListItem) -> Unit
+        private val onDeleteClicked: (NoteListItem) -> Unit,
+        private val onNoteClicked: (NoteListItem) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
         private val content: TextView = itemView.findViewById(R.id.noteContent)
         private val meta: TextView = itemView.findViewById(R.id.noteMeta)
@@ -58,6 +60,9 @@ class ProjectNotesAdapter(
         init {
             deleteButton.setOnClickListener {
                 boundItem?.let(onDeleteClicked)
+            }
+            itemView.setOnClickListener {
+                boundItem?.let(onNoteClicked)
             }
         }
     }

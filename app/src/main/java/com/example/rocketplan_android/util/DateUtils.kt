@@ -54,6 +54,7 @@ object DateUtils {
 
     fun parseHttpDate(value: String?): Date? {
         if (value.isNullOrBlank()) return null
-        return runCatching { httpDateFormatter.get().parse(value) }.getOrNull()
+        val formatter = httpDateFormatter.get() ?: return null
+        return runCatching { formatter.parse(value) }.getOrNull()
     }
 }

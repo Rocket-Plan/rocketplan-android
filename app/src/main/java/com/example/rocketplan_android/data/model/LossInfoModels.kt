@@ -29,6 +29,8 @@ data class ClaimDto(
     val projectId: Long? = null,
     @SerializedName("location_id")
     val locationId: Long? = null,
+    @SerializedName("claim_info")
+    val claimInfo: ClaimInfoDto? = null,
     @SerializedName("policy_holder")
     val policyHolder: String? = null,
     @SerializedName("ownership_status")
@@ -56,6 +58,31 @@ data class ClaimDto(
     val createdAt: Date? = null,
     @SerializedName("updated_at")
     val updatedAt: Date? = null
+)
+
+data class ClaimInfoDto(
+    val id: Long? = null,
+    @SerializedName("policy_holder")
+    val policyHolder: String? = null,
+    @SerializedName("ownership_status")
+    val ownershipStatus: String? = null,
+    @SerializedName("policy_holder_phone")
+    val policyHolderPhone: String? = null,
+    @SerializedName("policy_holder_email")
+    val policyHolderEmail: String? = null,
+    val representative: String? = null,
+    val provider: String? = null,
+    @SerializedName("insurance_deductible")
+    val insuranceDeductible: String? = null,
+    @SerializedName("policy_number")
+    val policyNumber: String? = null,
+    @SerializedName("claim_number")
+    val claimNumber: String? = null,
+    val adjuster: String? = null,
+    @SerializedName("adjuster_phone")
+    val adjusterPhone: String? = null,
+    @SerializedName("adjuster_email")
+    val adjusterEmail: String? = null
 )
 
 data class ClaimTypeDto(

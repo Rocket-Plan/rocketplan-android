@@ -16,7 +16,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
@@ -46,10 +45,6 @@ class ImageProcessorAssembliesFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        binding.backButton.setOnClickListener {
-            findNavController().popBackStack()
-        }
 
         adapter = ImageProcessorAssembliesAdapter()
         binding.assembliesRecyclerView.layoutManager = LinearLayoutManager(requireContext())
