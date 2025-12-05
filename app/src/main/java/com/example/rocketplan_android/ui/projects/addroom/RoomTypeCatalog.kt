@@ -65,7 +65,7 @@ object RoomTypeCatalog {
         7L to "reading_room",
         8L to "en_suit",
         9L to "hallway",
-        10L to "stairway",
+        10L to "stairwell",
         11L to "elevator",
         12L to "lounge_1",
         13L to "closet",

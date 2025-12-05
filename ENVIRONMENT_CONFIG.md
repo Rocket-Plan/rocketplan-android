@@ -249,6 +249,15 @@ For environment-specific Firebase configs:
 
 2. Each will be used for its corresponding build variant
 
+## Sentry Crash Reporting
+
+- Add DSN values per environment to `local.properties` (or use CI env vars):
+  - `sentry.dsn.dev` / `SENTRY_DSN_DEV`
+  - `sentry.dsn.staging` / `SENTRY_DSN_STAGING`
+  - `sentry.dsn.prod` / `SENTRY_DSN_PROD`
+- Leaving a DSN blank disables Sentry for that flavor; staging/prod should be set so crashes are captured.
+- Release/environment info is sent automatically as `<applicationId>@<versionName>+<versionCode>` with the `ENVIRONMENT` tag for filtering in Sentry.
+
 ## Best Practices
 
 ✅ **DO:**

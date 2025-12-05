@@ -25,6 +25,13 @@ val releaseKeyPassword = localProperties.getProperty("release.keyPassword") ?: S
 val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
     .all { !it.isNullOrBlank() }
 
+fun readSentryDsn(propertyKey: String, envKey: String): String =
+    (localProperties.getProperty(propertyKey) ?: System.getenv(envKey) ?: "").trim()
+
+val sentryDsnDev = readSentryDsn("sentry.dsn.dev", "SENTRY_DSN_DEV")
+val sentryDsnStaging = readSentryDsn("sentry.dsn.staging", "SENTRY_DSN_STAGING")
+val sentryDsnProd = readSentryDsn("sentry.dsn.prod", "SENTRY_DSN_PROD")
+
 android {
     namespace = "com.example.rocketplan_android"
     compileSdk = 36
@@ -54,6 +61,8 @@ android {
             buildConfigField("String", "ENVIRONMENT", "\"DEV\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "true")
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
+            buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnDev\"")
+            buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnDev.isNotBlank()}")
 
             // Custom resources for dev
             resValue("string", "app_name", "RocketPlan Dev")
@@ -69,6 +78,8 @@ android {
             buildConfigField("String", "ENVIRONMENT", "\"STAGING\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "true")
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
+            buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnStaging\"")
+            buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnStaging.isNotBlank()}")
 
             // Custom resources for staging
             resValue("string", "app_name", "RocketPlan Staging")
@@ -82,6 +93,8 @@ android {
             buildConfigField("String", "ENVIRONMENT", "\"PROD\"")
             buildConfigField("Boolean", "ENABLE_LOGGING", "false")
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
+            buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnProd\"")
+            buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnProd.isNotBlank()}")
 
             // Custom resources for production
             resValue("string", "app_name", "RocketPlan")
@@ -198,6 +211,9 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.gson)
     implementation(libs.okhttp.logging)
+
+    // Crash reporting
+    implementation(libs.sentry.android)
     // Pusher for standard builds (includes SLF4J)
     "standardImplementation"(libs.pusher)
     "standardImplementation"("org.slf4j:slf4j-android:1.7.36")

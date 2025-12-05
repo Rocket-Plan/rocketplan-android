@@ -36,3 +36,6 @@ sdk.dir=/Users/YOUR_USERNAME/Library/Android/sdk
 # oauth.client.secret=your-oauth-client-secret
 # analytics.key=your-analytics-key
 # maps.api.key=your-google-maps-key
+# sentry.dsn.dev=https://examplePublicKey@o0.ingest.sentry.io/0
+# sentry.dsn.staging=https://examplePublicKey@o0.ingest.sentry.io/1
+# sentry.dsn.prod=https://examplePublicKey@o0.ingest.sentry.io/2

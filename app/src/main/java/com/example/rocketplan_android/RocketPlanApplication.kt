@@ -31,7 +31,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.thermal.FlirSdkManager
-import androidx.work.BackoffPolicy
+import com.example.rocketplan_android.config.AppConfig
+import io.sentry.Sentry
+import io.sentry.android.core.SentryAndroid
 
 class RocketPlanApplication : Application() {
 
@@ -98,6 +100,8 @@ class RocketPlanApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        initSentry()
 
         // Initialize FLIR SDK early so discovery is ready when users enter thermal capture
         FlirSdkManager.init(this)
@@ -225,6 +229,24 @@ class RocketPlanApplication : Application() {
         // One-time data repair: Fix photos with mismatched roomIds from previous sync bugs
         CoroutineScope(Dispatchers.IO).launch {
             localDataService.repairMismatchedPhotoRoomIds()
+        }
+    }
+
+    private fun initSentry() {
+        val dsn = AppConfig.sentryDsn
+        if (!AppConfig.isCrashReportingEnabled || dsn.isBlank()) {
+            return
+        }
+
+        SentryAndroid.init(this) { options ->
+            options.dsn = dsn
+            options.environment = AppConfig.environment
+            options.release = "${BuildConfig.APPLICATION_ID}@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}"
+            options.isDebug = BuildConfig.DEBUG
+        }
+
+        Sentry.configureScope { scope ->
+            scope.setTag("device_flavor", if (BuildConfig.HAS_FLIR_SUPPORT) "flir" else "standard")
         }
     }
 

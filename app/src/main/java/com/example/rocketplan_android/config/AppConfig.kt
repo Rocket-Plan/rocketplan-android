@@ -56,6 +56,16 @@ object AppConfig {
      */
     val versionCode: Int = BuildConfig.VERSION_CODE
 
+    /**
+     * Sentry DSN for the current environment (blank disables reporting)
+     */
+    val sentryDsn: String = BuildConfig.SENTRY_DSN
+
+    /**
+     * Flag to enable crash reporting when a DSN is provided
+     */
+    val isSentryEnabled: Boolean = BuildConfig.SENTRY_ENABLED
+
     // Add more environment-specific configuration as needed
     // Examples:
 
@@ -67,7 +77,7 @@ object AppConfig {
     /**
      * Enable crash reporting
      */
-    val isCrashReportingEnabled: Boolean = isProduction
+    val isCrashReportingEnabled: Boolean = isSentryEnabled
 
     /**
      * Enable analytics
