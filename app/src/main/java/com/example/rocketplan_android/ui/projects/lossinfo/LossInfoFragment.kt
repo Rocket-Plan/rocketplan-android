@@ -24,8 +24,6 @@ import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.textview.MaterialTextView
-import com.google.android.material.timepicker.MaterialTimePicker
-import com.google.android.material.timepicker.TimeFormat
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Date
@@ -136,9 +134,9 @@ class LossInfoFragment : Fragment() {
         damageCategoryInput.setText(state.damageCategory?.toString().orEmpty())
         lossClassInput.setText(state.lossClass?.toString().orEmpty())
         setDateInputText(lossDateInput, lossDate)
-        setDateTimeInputText(callReceivedInput, callReceived)
-        setDateTimeInputText(crewDispatchedInput, crewDispatched)
-        setDateTimeInputText(arrivedOnSiteInput, arrivedOnSite)
+        setDateInputText(callReceivedInput, callReceived)
+        setDateInputText(crewDispatchedInput, crewDispatched)
+        setDateInputText(arrivedOnSiteInput, arrivedOnSite)
 
         affectedLocationsValue.text = if (state.affectedLocations.isNotEmpty()) {
             state.affectedLocations.joinToString(separator = "\n")
@@ -267,30 +265,30 @@ class LossInfoFragment : Fragment() {
             }
         }
         callReceivedInput.setOnClickListener {
-            openDateTimePicker(
+            openDatePicker(
                 current = callReceived,
                 title = getString(R.string.loss_info_call_received_label)
             ) { selected ->
                 callReceived = selected
-                setDateTimeInputText(callReceivedInput, selected)
+                setDateInputText(callReceivedInput, selected)
             }
         }
         crewDispatchedInput.setOnClickListener {
-            openDateTimePicker(
+            openDatePicker(
                 current = crewDispatched,
                 title = getString(R.string.loss_info_crew_dispatched_label)
             ) { selected ->
                 crewDispatched = selected
-                setDateTimeInputText(crewDispatchedInput, selected)
+                setDateInputText(crewDispatchedInput, selected)
             }
         }
         arrivedOnSiteInput.setOnClickListener {
-            openDateTimePicker(
+            openDatePicker(
                 current = arrivedOnSite,
                 title = getString(R.string.loss_info_arrived_on_site_label)
             ) { selected ->
                 arrivedOnSite = selected
-                setDateTimeInputText(arrivedOnSiteInput, selected)
+                setDateInputText(arrivedOnSiteInput, selected)
             }
         }
 
@@ -312,52 +310,6 @@ class LossInfoFragment : Fragment() {
             onSelected(materialDateSelectionToDate(millis))
         }
         picker.show(parentFragmentManager, "date_picker_$title")
-    }
-
-    private fun openDateTimePicker(
-        current: Date?,
-        title: String,
-        onSelected: (Date) -> Unit
-    ) {
-        val baseCalendar = Calendar.getInstance().apply {
-            time = current ?: Date()
-        }
-
-        val datePicker = MaterialDatePicker.Builder.datePicker()
-            .setTitleText(title)
-            .setSelection(baseCalendar.timeInMillis)
-            .build()
-
-        datePicker.addOnPositiveButtonClickListener { millis ->
-            val date = Calendar.getInstance().apply {
-                time = materialDateSelectionToDate(millis)
-            }
-            openTimePicker(date, title, onSelected)
-        }
-        datePicker.show(parentFragmentManager, "date_time_picker_$title")
-    }
-
-    private fun openTimePicker(
-        base: Calendar,
-        title: String,
-        onSelected: (Date) -> Unit
-    ) {
-        val picker = MaterialTimePicker.Builder()
-            .setTimeFormat(TimeFormat.CLOCK_12H)
-            .setHour(base.get(Calendar.HOUR_OF_DAY))
-            .setMinute(base.get(Calendar.MINUTE))
-            .setTitleText(title)
-            .build()
-
-        picker.addOnPositiveButtonClickListener {
-            base.set(Calendar.HOUR_OF_DAY, picker.hour)
-            base.set(Calendar.MINUTE, picker.minute)
-            base.set(Calendar.SECOND, 0)
-            base.set(Calendar.MILLISECOND, 0)
-            onSelected(base.time)
-        }
-
-        picker.show(parentFragmentManager, "time_picker_$title")
     }
 
     private fun showKeyboard(target: View) {
@@ -388,14 +340,6 @@ class LossInfoFragment : Fragment() {
             input.setText("")
         } else {
             input.setText(viewModel.formatDate(value))
-        }
-    }
-
-    private fun setDateTimeInputText(input: TextInputEditText, value: Date?) {
-        if (value == null) {
-            input.setText("")
-        } else {
-            input.setText(viewModel.formatDateTime(value))
         }
     }
 
