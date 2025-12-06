@@ -48,7 +48,11 @@ import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository.RequestType
+import com.example.rocketplan_android.data.model.offline.WorkScopeCatalogItemDto
+import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
+import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsRequest
+import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
@@ -784,6 +788,38 @@ class OfflineSyncRepository(
         return total
     }
 
+    suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> = withContext(ioDispatcher) {
+        val start = System.currentTimeMillis()
+        runCatching { api.getWorkScopeCatalog(companyId).data }
+            .onFailure { Log.e("API", "❌ [workScopeCatalog] Failed for companyId=$companyId", it) }
+            .getOrElse { emptyList() }
+            .also { sheets ->
+                val duration = System.currentTimeMillis() - start
+                Log.d("API", "📑 [workScopeCatalog] Fetched ${sheets.size} sheets for companyId=$companyId in ${duration}ms")
+            }
+    }
+
+    suspend fun addWorkScopeItems(
+        projectId: Long,
+        roomId: Long,
+        items: List<WorkScopeItemRequest>
+    ): Boolean = withContext(ioDispatcher) {
+        if (items.isEmpty()) return@withContext true
+        val body = AddWorkScopeItemsRequest(selectedItems = items)
+        val start = System.currentTimeMillis()
+        val response = runCatching { api.addRoomWorkScopeItems(roomId, body) }
+            .onFailure { Log.e("API", "❌ [addWorkScopeItems] Failed roomId=$roomId projectId=$projectId", it) }
+            .getOrNull()
+        val duration = System.currentTimeMillis() - start
+        if (response?.isSuccessful == true) {
+            Log.d("API", "✅ [addWorkScopeItems] Pushed ${items.size} items for roomId=$roomId in ${duration}ms")
+            true
+        } else {
+            Log.e("API", "❌ [addWorkScopeItems] Non-success response roomId=$roomId projectId=$projectId code=${response?.code()}")
+            false
+        }
+    }
+
     /**
      * Full project sync: syncs essentials + metadata + all photos.
      * Uses modular functions to avoid duplication.
@@ -889,7 +925,8 @@ class OfflineSyncRepository(
 
         // Equipment
         runCatching { api.getProjectEquipment(projectId) }
-            .onSuccess { equipment ->
+            .onSuccess { response ->
+                val equipment = response.data
                 localDataService.saveEquipment(equipment.map { it.toEntity() })
                 itemCount += equipment.size
                 Log.d("API", "🔧 [syncProjectMetadata] Saved ${equipment.size} equipment (single response)")
@@ -901,7 +938,8 @@ class OfflineSyncRepository(
         val damagesSince = syncCheckpointStore.updatedSinceParam(damagesCheckpointKey)
         // Damages
         runCatching { api.getProjectDamageMaterials(projectId, updatedSince = damagesSince) }
-            .onSuccess { damages ->
+            .onSuccess { response ->
+                val damages = response.data
                 localDataService.saveDamages(damages.mapNotNull { it.toEntity(defaultProjectId = projectId) })
                 itemCount += damages.size
                 Log.d("API", "⚠️ [syncProjectMetadata] Saved ${damages.size} damages")
@@ -919,7 +957,8 @@ class OfflineSyncRepository(
         val atmosSince = syncCheckpointStore.updatedSinceParam(atmosCheckpointKey)
         // Atmospheric logs
         runCatching { api.getProjectAtmosphericLogs(projectId, updatedSince = atmosSince) }
-            .onSuccess { logs ->
+            .onSuccess { response ->
+                val logs = response.data
                 localDataService.saveAtmosphericLogs(logs.map { it.toEntity(defaultRoomId = null) })
                 itemCount += logs.size
                 Log.d("API", "🌡️ [syncProjectMetadata] Saved ${logs.size} atmospheric logs")
@@ -940,7 +979,7 @@ class OfflineSyncRepository(
             .onFailure { Log.e("API", "❌ [syncRoomWorkScopes] Failed for roomId=$roomId (projectId=$projectId)", it) }
             .getOrNull() ?: return@withContext 0
 
-        val entities = response.mapNotNull { it.toEntity() }
+        val entities = response.data.mapNotNull { it.toEntity() }
         if (entities.isNotEmpty()) {
             localDataService.saveWorkScopes(entities)
         }

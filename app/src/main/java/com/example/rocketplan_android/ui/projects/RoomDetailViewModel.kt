@@ -25,6 +25,7 @@ import java.io.File
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -39,10 +40,12 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import kotlin.collections.buildSet
 import kotlin.collections.eachCount
@@ -63,6 +66,7 @@ class RoomDetailViewModel(
     private val remoteLogger = rocketPlanApp.remoteLogger
     private val imageProcessorRepository = rocketPlanApp.imageProcessorRepository
     private val imageProcessorQueueManager = rocketPlanApp.imageProcessorQueueManager
+    private val authRepository = rocketPlanApp.authRepository
     private val dateFormatter: ThreadLocal<SimpleDateFormat> = ThreadLocal.withInitial {
         SimpleDateFormat("MM/dd/yyyy", Locale.US)
     }
@@ -93,6 +97,8 @@ class RoomDetailViewModel(
     private val pendingAssemblyIds = mutableSetOf<String>()
     private val processedAssemblyIds = mutableSetOf<String>()
     private var assemblyWatcherJob: Job? = null
+    private val scopeCatalogCache = MutableStateFlow<List<ScopeCatalogItem>>(emptyList())
+    private var scopeCatalogCompanyId: Long? = null
     private val photoNoteCounts: Flow<Map<Long, Int>> =
         localDataService.observeNotes(projectId)
             .map { notes ->
@@ -307,6 +313,175 @@ class RoomDetailViewModel(
         }
     }
 
+    suspend fun loadSavedScopeOptions(): List<ScopeTemplateOption> = withContext(Dispatchers.IO) {
+        val room = _resolvedRoom.value ?: return@withContext emptyList()
+        val roomIds = currentRoomIds(room)
+        val scopes = localDataService.observeWorkScopes(projectId).first()
+        val existingNames = scopes
+            .filter { it.roomId != null && it.roomId in roomIds }
+            .mapNotNull { scope ->
+                scope.name.trim().takeIf { it.isNotEmpty() }?.lowercase(Locale.US)
+            }
+            .toSet()
+
+        scopes
+            .filter { scope ->
+                val name = scope.name.trim()
+                name.isNotEmpty() &&
+                    (scope.roomId == null || scope.roomId !in roomIds) &&
+                    name.lowercase(Locale.US) !in existingNames
+            }
+            .map { scope ->
+                ScopeTemplateOption(
+                    id = scope.workScopeId.takeIf { it != 0L } ?: scope.serverId,
+                    title = scope.name,
+                    description = scope.description
+                )
+            }
+    }
+
+    suspend fun loadScopeCatalog(): List<ScopeCatalogItem> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "📋 loadScopeCatalog() starting")
+        val companyId = resolveCompanyId() ?: run {
+            Log.w(TAG, "⚠️ Cannot load scope catalog: missing companyId after refresh")
+            return@withContext emptyList()
+        }
+        if (scopeCatalogCompanyId == companyId && scopeCatalogCache.value.isNotEmpty()) {
+            Log.d(TAG, "📋 Returning cached scope catalog for companyId=$companyId (${scopeCatalogCache.value.size} items)")
+            return@withContext scopeCatalogCache.value
+        }
+        val sheets = offlineSyncRepository.fetchWorkScopeCatalog(companyId)
+        if (sheets.isEmpty()) {
+            Log.w(TAG, "⚠️ Scope catalog fetch returned empty list for companyId=$companyId")
+        }
+        val catalogItems = sheets.flatMap { sheet ->
+            sheet.workScopeItems.map { item ->
+                ScopeCatalogItem(
+                    id = item.id,
+                    sheetId = sheet.id,
+                    tabName = sheet.tabName,
+                    category = item.category,
+                    codePart1 = item.codePart1.orEmpty(),
+                    codePart2 = item.codePart2.orEmpty(),
+                    description = item.description,
+                    unit = item.unit,
+                    rate = item.rate
+                )
+            }
+        }
+        scopeCatalogCompanyId = companyId
+        scopeCatalogCache.value = catalogItems
+        Log.d(TAG, "📋 Cached ${catalogItems.size} scope catalog items for companyId=$companyId (sheets=${sheets.size})")
+        catalogItems
+    }
+
+    private suspend fun resolveCompanyId(): Long? {
+        authRepository.getStoredCompanyId()?.let {
+            Log.d(TAG, "🏢 Using stored companyId=$it")
+            return it
+        }
+        localDataService.getProject(projectId)?.companyId?.let {
+            Log.d(TAG, "🏢 Using project companyId=$it for projectId=$projectId")
+            return it
+        }
+
+        runCatching { authRepository.ensureUserContext() }
+            .onFailure { Log.w(TAG, "⚠️ Failed to ensure user context for company lookup", it) }
+        authRepository.getStoredCompanyId()?.let {
+            Log.d(TAG, "🏢 Using refreshed companyId=$it")
+            return it
+        }
+
+        val companyId = authRepository.getUserCompanies()
+            .getOrNull()
+            ?.firstOrNull()
+            ?.id
+        if (companyId != null) {
+            authRepository.setActiveCompany(companyId)
+            Log.d(TAG, "🏢 Selected first available companyId=$companyId from user companies")
+            return companyId
+        }
+        Log.w(TAG, "⚠️ No companyId found in user companies")
+        return null
+    }
+
+    suspend fun addCatalogItems(options: List<ScopeCatalogItem>): Boolean = withContext(Dispatchers.IO) {
+        val room = _resolvedRoom.value
+        if (room == null) {
+            Log.w(TAG, "⚠️ Cannot add catalog scopes; room is not resolved yet")
+            return@withContext false
+        }
+        val serverRoomId = room.serverId
+        if (serverRoomId == null) {
+            Log.w(TAG, "⚠️ Cannot add catalog scopes; room has no serverId yet (roomId=${room.roomId})")
+            return@withContext false
+        }
+
+        val requestItems = options.map { option ->
+            WorkScopeItemRequest(
+                sheetId = option.sheetId,
+                description = option.description,
+                quantity = 1.0,
+                category = option.category,
+                codePart1 = option.codePart1,
+                codePart2 = option.codePart2,
+                unit = option.unit,
+                rate = option.rate?.toDoubleOrNull() ?: 0.0
+            )
+        }
+
+        val success = offlineSyncRepository.addWorkScopeItems(projectId, serverRoomId, requestItems)
+        if (success) {
+            runCatching { offlineSyncRepository.syncRoomWorkScopes(projectId, serverRoomId) }
+                .onFailure { Log.w(TAG, "⚠️ Failed to refresh room work scopes after add", it) }
+            Log.d(TAG, "🧾 Added catalog scopes via API for roomId=$serverRoomId (projectId=$projectId)")
+        }
+        success
+    }
+
+    fun addSavedScopeItems(options: List<ScopeTemplateOption>) {
+        val room = _resolvedRoom.value
+        if (room == null) {
+            Log.w(TAG, "⚠️ Cannot add saved scopes; room is not resolved yet")
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            val roomIds = currentRoomIds(room)
+            val existingNames = localDataService.observeWorkScopes(projectId).first()
+                .filter { it.roomId != null && it.roomId in roomIds }
+                .mapNotNull { it.name.trim().takeIf { name -> name.isNotEmpty() }?.lowercase(Locale.US) }
+                .toSet()
+            val now = Date()
+            val lookupRoomId = room.serverId ?: room.roomId
+            val newEntities = options
+                .filter { it.title.isNotBlank() }
+                .filter { option -> option.title.trim().lowercase(Locale.US) !in existingNames }
+                .map { option ->
+                    OfflineWorkScopeEntity(
+                        uuid = UUID.randomUUID().toString(),
+                        projectId = projectId,
+                        roomId = lookupRoomId,
+                        name = option.title.trim(),
+                        description = option.description?.takeIf { it.isNotBlank() },
+                        createdAt = now,
+                        updatedAt = now,
+                        syncStatus = SyncStatus.PENDING,
+                        isDirty = true
+                    )
+                }
+            if (newEntities.isNotEmpty()) {
+                localDataService.saveWorkScopes(newEntities)
+                Log.d(TAG, "🧾 Added ${newEntities.size} saved scope items for roomId=$lookupRoomId")
+            } else {
+                Log.d(TAG, "ℹ️ No new scope items to add for roomId=$lookupRoomId")
+            }
+        }
+    }
+
+    private fun currentRoomIds(room: OfflineRoomEntity): Set<Long> = buildSet {
+        add(room.roomId)
+        room.serverId?.let { add(it) }
+    }
 
     fun ensureRoomPhotosFresh(force: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
@@ -606,6 +781,24 @@ data class RoomScopeItem(
     val title: String,
     val description: String?,
     val updatedOn: String?
+)
+
+data class ScopeTemplateOption(
+    val id: Long?,
+    val title: String,
+    val description: String?
+)
+
+data class ScopeCatalogItem(
+    val id: Long,
+    val sheetId: Long,
+    val tabName: String,
+    val category: String,
+    val codePart1: String,
+    val codePart2: String,
+    val description: String,
+    val unit: String,
+    val rate: String?
 )
 
 enum class RoomDetailTab {

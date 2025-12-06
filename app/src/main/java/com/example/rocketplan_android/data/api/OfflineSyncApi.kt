@@ -34,7 +34,9 @@ import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
 import com.google.gson.JsonObject
 import com.example.rocketplan_android.data.model.offline.UserDto
+import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsRequest
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
+import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -261,7 +263,7 @@ interface OfflineSyncApi {
     suspend fun getProjectAtmosphericLogs(
         @Path("projectId") projectId: Long,
         @Query("filter[updated_date]") updatedSince: String? = null
-    ): List<AtmosphericLogDto>
+    ): PaginatedResponse<AtmosphericLogDto>
 
     @GET("/api/rooms/{roomId}/atmospheric-logs")
     suspend fun getRoomAtmosphericLogs(
@@ -279,7 +281,7 @@ interface OfflineSyncApi {
     suspend fun getProjectDamageMaterials(
         @Path("projectId") projectId: Long,
         @Query("filter[updated_date]") updatedSince: String? = null
-    ): List<DamageMaterialDto>
+    ): PaginatedResponse<DamageMaterialDto>
 
     @GET("/api/rooms/{roomId}/damage-materials")
     suspend fun getRoomDamageMaterials(
@@ -287,15 +289,26 @@ interface OfflineSyncApi {
         @Query("filter[updated_date]") updatedSince: String? = null
     ): List<DamageMaterialDto>
 
+    @GET("/api/work-scope/{companyId}")
+    suspend fun getWorkScopeCatalog(
+        @Path("companyId") companyId: Long
+    ): PaginatedResponse<WorkScopeSheetDto>
+
+    @POST("/api/rooms/{roomId}/work-scope-items")
+    suspend fun addRoomWorkScopeItems(
+        @Path("roomId") roomId: Long,
+        @Body body: AddWorkScopeItemsRequest
+    ): Response<Unit>
+
     @GET("/api/rooms/{roomId}/work-scope-items")
     suspend fun getRoomWorkScope(
         @Path("roomId") roomId: Long
-    ): List<WorkScopeDto>
+    ): PaginatedResponse<WorkScopeDto>
 
     @GET("/api/projects/{projectId}/equipment")
     suspend fun getProjectEquipment(
         @Path("projectId") projectId: Long
-    ): List<EquipmentDto>
+    ): PaginatedResponse<EquipmentDto>
 
     @GET("/api/rooms/{roomId}/equipment")
     suspend fun getRoomEquipment(

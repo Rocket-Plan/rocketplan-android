@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.ui.projects.ScopeCatalogItem
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -273,9 +274,7 @@ class RoomDetailFragment : Fragment() {
                 else -> RoomDetailTab.PHOTOS
             }
             viewModel.selectTab(tab)
-            if (tab == RoomDetailTab.SCOPE) {
-                viewModel.refreshWorkScopesIfStale()
-            }
+            if (tab == RoomDetailTab.SCOPE) viewModel.refreshWorkScopesIfStale()
             updateToggleStyles(tab)
         }
     }
@@ -345,10 +344,9 @@ class RoomDetailFragment : Fragment() {
         addScopeCard.setOnClickListener {
             if (viewModel.selectedTab.value != RoomDetailTab.SCOPE) {
                 tabToggleGroup.check(R.id.roomScopeTabButton)
-                viewModel.refreshWorkScopesIfStale()
-                return@setOnClickListener
             }
-            showAddScopeDialog()
+            viewModel.refreshWorkScopesIfStale()
+            showScopePicker()
         }
         noteCard.setOnClickListener {
             val categoryId = resolveNoteCategoryId()
@@ -426,6 +424,60 @@ class RoomDetailFragment : Fragment() {
         }
 
         dialog.show()
+    }
+
+    private fun showScopePicker() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            Log.d(TAG, "📋 showScopePicker() loading catalog")
+            val catalog = viewModel.loadScopeCatalog()
+            if (catalog.isEmpty()) {
+                Log.w(TAG, "⚠️ Scope catalog empty, showing custom scope dialog")
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.scope_picker_empty_message),
+                    Toast.LENGTH_SHORT
+                ).show()
+                showAddScopeDialog()
+                return@launch
+            }
+            Log.d(TAG, "📋 Scope catalog loaded: ${catalog.size} items")
+            showScopePickerDialog(catalog)
+        }
+    }
+
+    private fun showScopePickerDialog(options: List<ScopeCatalogItem>) {
+        val labels = options.map { option ->
+            val code = listOfNotNull(option.codePart1, option.codePart2).joinToString("")
+            val leading = if (code.isNotBlank()) "$code — " else ""
+            "${option.tabName}: ${option.category} - $leading${option.description}"
+        }.toTypedArray()
+        val checked = BooleanArray(options.size)
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.add_scope_sheet))
+            .setMultiChoiceItems(labels, checked) { _, index, isChecked ->
+                checked[index] = isChecked
+            }
+            .setPositiveButton(R.string.scope_picker_add_selected) { dialog, _ ->
+                val selected = options.filterIndexed { index, _ -> checked[index] }
+                dialog.dismiss()
+                if (selected.isEmpty()) return@setPositiveButton
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val success = viewModel.addCatalogItems(selected)
+                    if (!success) {
+                        Toast.makeText(
+                            requireContext(),
+                            getString(R.string.scope_picker_add_error),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+            .setNeutralButton(R.string.scope_picker_custom_item) { dialog, _ ->
+                dialog.dismiss()
+                showAddScopeDialog()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun showAddPhotoOptions(anchor: View) {

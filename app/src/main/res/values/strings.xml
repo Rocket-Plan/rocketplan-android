@@ -172,6 +172,10 @@
     <string name="add_scope_sheet_title_hint">Scope item title</string>
     <string name="add_scope_sheet_description_hint">Description (optional)</string>
     <string name="add_scope_sheet_title_required">Scope title is required.</string>
+    <string name="scope_picker_add_selected">Add selected</string>
+    <string name="scope_picker_custom_item">Custom item</string>
+    <string name="scope_picker_empty_message">No scope items available yet. Add a custom item instead.</string>
+    <string name="scope_picker_add_error">Could not add scope items. Check your connection and try again.</string>
     <string name="rocketdry_equipment_overview">Total Equipment</string>
     <string name="rocketdry_equipment_list_title">Equipment List</string>
     <plurals name="rocketdry_equipment_units">

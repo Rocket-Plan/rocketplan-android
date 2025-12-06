@@ -557,3 +557,42 @@ data class WorkScopeDto(
     @SerializedName("updated_at")
     val updatedAt: String?
 )
+
+data class WorkScopeSheetDto(
+    val id: Long,
+    @SerializedName("tab_name")
+    val tabName: String,
+    @SerializedName("work_scope_items")
+    val workScopeItems: List<WorkScopeCatalogItemDto>
+)
+
+data class WorkScopeCatalogItemDto(
+    val id: Long,
+    val category: String,
+    @SerializedName("code_part_1")
+    val codePart1: String?,
+    @SerializedName("code_part_2")
+    val codePart2: String?,
+    val description: String,
+    val unit: String,
+    val rate: String?
+)
+
+data class WorkScopeItemRequest(
+    @SerializedName("sheet_id")
+    val sheetId: Long,
+    val description: String,
+    val quantity: Double,
+    val category: String,
+    @SerializedName("code_part_1")
+    val codePart1: String,
+    @SerializedName("code_part_2")
+    val codePart2: String,
+    val unit: String,
+    val rate: Double
+)
+
+data class AddWorkScopeItemsRequest(
+    @SerializedName("selected_items")
+    val selectedItems: List<WorkScopeItemRequest>
+)
