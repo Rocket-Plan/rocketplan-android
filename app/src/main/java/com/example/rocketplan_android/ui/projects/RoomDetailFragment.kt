@@ -7,12 +7,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.CheckedTextView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -446,21 +448,35 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun showScopePickerDialog(options: List<ScopeCatalogItem>) {
-        val labels = options.map { option ->
-            val code = listOfNotNull(option.codePart1, option.codePart2).joinToString("")
-            val leading = if (code.isNotBlank()) "$code — " else ""
-            "${option.tabName}: ${option.category} - $leading${option.description}"
-        }.toTypedArray()
-        val checked = BooleanArray(options.size)
-        MaterialAlertDialogBuilder(requireContext())
+        val dialogView = layoutInflater.inflate(R.layout.dialog_scope_picker, null)
+        val searchInput = dialogView.findViewById<TextInputEditText>(R.id.scopeSearchInput)
+        val recycler = dialogView.findViewById<RecyclerView>(R.id.scopePickerRecycler)
+        val adapter = ScopePickerAdapter(options)
+        recycler.layoutManager = LinearLayoutManager(requireContext())
+        recycler.adapter = adapter
+
+        searchInput.addTextChangedListener { text ->
+            adapter.filter(text?.toString().orEmpty())
+        }
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.add_scope_sheet))
-            .setMultiChoiceItems(labels, checked) { _, index, isChecked ->
-                checked[index] = isChecked
+            .setView(dialogView)
+            .setPositiveButton(R.string.scope_picker_add_selected, null)
+            .setNeutralButton(R.string.scope_picker_custom_item) { dlg, _ ->
+                dlg.dismiss()
+                showAddScopeDialog()
             }
-            .setPositiveButton(R.string.scope_picker_add_selected) { dialog, _ ->
-                val selected = options.filterIndexed { index, _ -> checked[index] }
-                dialog.dismiss()
-                if (selected.isEmpty()) return@setPositiveButton
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val selected = adapter.selectedItems()
+                if (selected.isEmpty()) {
+                    dialog.dismiss()
+                    return@setOnClickListener
+                }
                 viewLifecycleOwner.lifecycleScope.launch {
                     val success = viewModel.addCatalogItems(selected)
                     if (!success) {
@@ -470,14 +486,74 @@ class RoomDetailFragment : Fragment() {
                             Toast.LENGTH_SHORT
                         ).show()
                     }
+                    dialog.dismiss()
                 }
             }
-            .setNeutralButton(R.string.scope_picker_custom_item) { dialog, _ ->
-                dialog.dismiss()
-                showAddScopeDialog()
+        }
+
+        dialog.show()
+    }
+
+    private inner class ScopePickerAdapter(
+        private val allItems: List<ScopeCatalogItem>
+    ) : RecyclerView.Adapter<ScopePickerAdapter.ScopePickerViewHolder>() {
+        private val selectedIds = mutableSetOf<Long>()
+        private var filtered: List<ScopeCatalogItem> = allItems
+
+        fun filter(query: String) {
+            val q = query.trim().lowercase(Locale.US)
+            filtered = if (q.isBlank()) {
+                allItems
+            } else {
+                allItems.filter { item ->
+                    val haystack = listOf(
+                        item.description,
+                        item.codePart1,
+                        item.codePart2,
+                        item.unit,
+                        item.category
+                    ).joinToString(" ") { it?.lowercase(Locale.US).orEmpty() }
+                    haystack.contains(q)
+                }
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+            notifyDataSetChanged()
+        }
+
+        fun selectedItems(): List<ScopeCatalogItem> {
+            return allItems.filter { selectedIds.contains(it.id) }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScopePickerViewHolder {
+            val view = LayoutInflater.from(parent.context)
+                .inflate(android.R.layout.simple_list_item_multiple_choice, parent, false)
+            return ScopePickerViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ScopePickerViewHolder, position: Int) {
+            holder.bind(filtered[position])
+        }
+
+        override fun getItemCount(): Int = filtered.size
+
+        inner class ScopePickerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+            private val checkBox = itemView.findViewById<CheckedTextView>(android.R.id.text1)
+
+            fun bind(item: ScopeCatalogItem) {
+                val code = listOfNotNull(item.codePart1, item.codePart2).joinToString("")
+                val leading = if (code.isNotBlank()) "$code — " else ""
+                checkBox.text = "$leading${item.description}"
+                checkBox.isChecked = selectedIds.contains(item.id)
+                itemView.setOnClickListener {
+                    if (selectedIds.contains(item.id)) {
+                        selectedIds.remove(item.id)
+                        checkBox.isChecked = false
+                    } else {
+                        selectedIds.add(item.id)
+                        checkBox.isChecked = true
+                    }
+                }
+            }
+        }
     }
 
     private fun showAddPhotoOptions(anchor: View) {

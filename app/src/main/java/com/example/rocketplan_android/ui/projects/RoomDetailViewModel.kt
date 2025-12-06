@@ -142,8 +142,10 @@ class RoomDetailViewModel(
                 add(resolvedRoom.roomId)
                 resolvedRoom.serverId?.let { add(it) }
             }
-            scopes
-                .filter { scope -> scope.roomId != null && scope.roomId in roomIds }
+            Log.d(TAG, "🔍 roomScopes: totalScopes=${scopes.size}, roomIds=$roomIds")
+            val filtered = scopes.filter { scope -> scope.roomId != null && scope.roomId in roomIds }
+            Log.d(TAG, "🔍 roomScopes: filteredCount=${filtered.size}, scopeRoomIds=${scopes.take(5).map { it.roomId }}")
+            filtered
                 .sortedByDescending { it.updatedAt }
                 .map { scope ->
                     val updatedAt = scope.updatedAt ?: scope.createdAt
