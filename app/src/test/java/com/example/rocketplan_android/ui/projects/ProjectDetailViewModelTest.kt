@@ -235,3 +235,11 @@ class ProjectDetailViewModelTest {
 
     private fun now(): Date = Date()
 }
+
+private fun List<OfflineAlbumEntity>.filterRoomScopedAlbums(): List<OfflineAlbumEntity> {
+    return filter { album ->
+        val isRoomScopedById = album.roomId != null
+        val isRoomScopedByType = album.albumableType?.contains("Room") == true
+        isRoomScopedById || isRoomScopedByType
+    }
+}
