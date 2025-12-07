@@ -29,6 +29,7 @@ import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
+import com.example.rocketplan_android.data.model.DeleteProjectRequest
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
@@ -56,6 +57,7 @@ import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsRequest
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
+import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
@@ -64,6 +66,7 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
+import retrofit2.HttpException
 import kotlin.coroutines.coroutineContext
 import kotlin.math.min
 import kotlin.text.Charsets
@@ -103,6 +106,8 @@ private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
     private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
     private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
     private const val OFFLINE_PENDING_STATUS = "pending_offline"
+private fun Throwable.isConflict(): Boolean = (this as? HttpException)?.code() == 409
+private fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
 
 class OfflineSyncRepository(
     private val api: OfflineSyncApi,
@@ -182,7 +187,10 @@ class OfflineSyncRepository(
         if (serverId != null) {
             // Project has been synced to server - delete from server first
             Log.d("API", "🗑️ [deleteProject] Project has serverId $serverId - calling API DELETE")
-            val requestBody = mapOf("project_id" to serverId)
+            val requestBody = DeleteProjectRequest(
+                projectId = serverId,
+                updatedAt = project.updatedAt.toApiTimestamp()
+            )
             Log.d("API", "🗑️ [deleteProject] Request: DELETE /api/projects/$serverId with body: $requestBody")
 
             val response = api.deleteProject(serverId, requestBody)
@@ -194,7 +202,11 @@ class OfflineSyncRepository(
                 Log.d("API", "✅ [deleteProject] Successfully deleted project $serverId (local: $localProjectId) from server and locally")
             } else {
                 val errorBody = response.errorBody()?.string() ?: "No error body"
-                val errorMsg = "Failed to delete project from server: HTTP ${response.code()}"
+                val errorMsg = if (response.code() == 409) {
+                    "Delete conflict (409) – project updated_at is stale"
+                } else {
+                    "Failed to delete project from server: HTTP ${response.code()}"
+                }
                 Log.e("API", "❌ [deleteProject] $errorMsg - Response: $errorBody")
                 throw Exception(errorMsg)
             }
@@ -411,9 +423,11 @@ class OfflineSyncRepository(
         projectAddress: ProjectAddressDto? = null,
         addressRequest: CreateAddressRequest? = null
     ): Result<OfflineProjectEntity> = withContext(ioDispatcher) {
+        val idempotencyKey = request.idempotencyKey ?: UUID.randomUUID().toString()
+        val requestWithKey = request.copy(idempotencyKey = idempotencyKey)
         runCatching {
             Log.d("API", "🚀 [createCompanyProject] Creating project for company=$companyId address=${request.addressId}")
-            val dto = api.createCompanyProject(companyId, request).data
+            val dto = api.createCompanyProject(companyId, requestWithKey).data
             val entity = dto.toEntity()
             val enriched = entity.withAddressFallback(projectAddress, addressRequest)
             localDataService.saveProjects(listOf(enriched))
@@ -426,13 +440,15 @@ class OfflineSyncRepository(
                 companyId = companyId,
                 statusValue = request.projectStatusId.toString(),
                 projectAddress = projectAddress,
-                addressRequest = addressReq
+                addressRequest = addressReq,
+                idempotencyKey = idempotencyKey
             )
             enqueueProjectCreation(
                 project = pending,
                 companyId = companyId,
                 statusId = request.projectStatusId,
-                addressRequest = addressReq
+                addressRequest = addressReq,
+                idempotencyKey = idempotencyKey
             )
             pending
         }
@@ -461,7 +477,8 @@ class OfflineSyncRepository(
                 projectId = serverId,
                 body = UpdateProjectRequest(
                     alias = normalizedAlias,
-                    projectStatusId = statusId
+                    projectStatusId = statusId,
+                    updatedAt = project.updatedAt.toApiTimestamp()
                 )
             ).data
             Log.d(
@@ -515,8 +532,14 @@ class OfflineSyncRepository(
     suspend fun createProjectProperty(
         projectId: Long,
         request: PropertyMutationRequest,
-        propertyTypeValue: String?
+        propertyTypeValue: String?,
+        idempotencyKey: String? = null
     ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
+        val resolvedIdempotencyKey = idempotencyKey ?: request.idempotencyKey ?: UUID.randomUUID().toString()
+        val requestWithKey = request.copy(
+            idempotencyKey = resolvedIdempotencyKey,
+            updatedAt = null
+        )
         runCatching {
             // Get the project to retrieve its server ID
             val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
@@ -526,7 +549,7 @@ class OfflineSyncRepository(
                 ?: throw Exception("Project has no server ID - cannot create property on server")
 
             Log.d("API", "🏠 [createProjectProperty] Creating property for project serverId: $serverId (local: $projectId)")
-            val created = api.createProjectProperty(serverId, request).data
+            val created = api.createProjectProperty(serverId, requestWithKey).data
             Log.d("API", "🏠 [createProjectProperty] Property created with ID: ${created.id}")
 
             val refreshed = runCatching { api.getProperty(created.id).data }.getOrNull() ?: created
@@ -574,11 +597,16 @@ class OfflineSyncRepository(
         }
 
         runCatching {
-            val serverId = property.serverId
+            val safeProperty = property ?: throw Exception("Property lookup failed unexpectedly")
+            val serverId = safeProperty.serverId
                 ?: throw Exception("Property has no server ID - cannot update property on server")
+            val requestWithVersion = request.copy(
+                updatedAt = safeProperty.updatedAt.toApiTimestamp(),
+                idempotencyKey = null
+            )
 
             Log.d("API", "🏠 [updateProjectProperty] Updating property serverId: $serverId (local: $propertyId)")
-            val updated = api.updateProperty(serverId, request).data
+            val updated = api.updateProperty(serverId, requestWithVersion).data
             Log.d("API", "🏠 [updateProjectProperty] Property updated with ID: ${updated.id}")
 
             val refreshed = runCatching { api.getProperty(updated.id).data }.getOrNull() ?: updated
@@ -590,8 +618,10 @@ class OfflineSyncRepository(
         projectId: Long,
         roomName: String,
         roomTypeId: Long,
-        isSource: Boolean = false
+        isSource: Boolean = false,
+        idempotencyKey: String? = null
     ): Result<OfflineRoomEntity> = withContext(ioDispatcher) {
+        val resolvedIdempotencyKey = idempotencyKey ?: UUID.randomUUID().toString()
         runCatching {
             val project = localDataService.getProject(projectId)
                 ?: throw IllegalStateException("Project not found locally")
@@ -625,7 +655,8 @@ class OfflineSyncRepository(
                 name = roomName,
                 roomTypeId = roomTypeId,
                 levelId = levelServerId,
-                isSource = isSource
+                isSource = isSource,
+                idempotencyKey = resolvedIdempotencyKey
             )
 
             val dto = api.createRoom(locationServerId, request)
@@ -643,7 +674,8 @@ class OfflineSyncRepository(
                 projectId = projectId,
                 roomName = roomName,
                 roomTypeId = roomTypeId,
-                isSource = isSource
+                isSource = isSource,
+                idempotencyKey = resolvedIdempotencyKey
             ) ?: throw error
         }
     }
@@ -679,7 +711,8 @@ class OfflineSyncRepository(
                 roomId = roomId,
                 body = content,
                 photoId = photoId,
-                categoryId = categoryId
+                categoryId = categoryId,
+                idempotencyKey = pending.uuid
             )
             val response = api.createProjectNote(projectId, request)
             response.data.toEntity()?.copy(
@@ -692,7 +725,11 @@ class OfflineSyncRepository(
         }.onSuccess { synced ->
             synced?.let { localDataService.saveNote(it) }
         }.onFailure { error ->
-            Log.w("API", "⚠️ [createNote] Failed to push note to server, keeping pending", error)
+            if (error.isConflict()) {
+                Log.w("API", "⚠️ [createNote] Conflict (409) creating note ${pending.uuid}; leaving pending", error)
+            } else {
+                Log.w("API", "⚠️ [createNote] Failed to push note to server, keeping pending", error)
+            }
         }
 
         localDataService.getPendingNotes(projectId).firstOrNull { it.uuid == pending.uuid } ?: pending
@@ -719,7 +756,8 @@ class OfflineSyncRepository(
                     roomId = note.roomId,
                     body = trimmed,
                     photoId = note.photoId,
-                    categoryId = note.categoryId
+                    categoryId = note.categoryId,
+                    updatedAt = note.updatedAt.toApiTimestamp()
                 )
                 val response = api.updateNote(serverId, request)
                 response.data.toEntity()?.copy(
@@ -733,7 +771,11 @@ class OfflineSyncRepository(
             }.onSuccess { synced ->
                 synced?.let { localDataService.saveNote(it) }
             }.onFailure { error ->
-                Log.w("API", "⚠️ [updateNote] Failed to push note ${note.uuid}", error)
+                if (error.isConflict()) {
+                    Log.w("API", "⚠️ [updateNote] Conflict (409) for note ${note.uuid}; local copy may be stale", error)
+                } else {
+                    Log.w("API", "⚠️ [updateNote] Failed to push note ${note.uuid}", error)
+                }
             }
         }
 
@@ -752,8 +794,15 @@ class OfflineSyncRepository(
 
         val serverId = note.serverId
         if (serverId != null) {
-            runCatching { api.deleteNote(serverId) }
-                .onFailure { Log.w("API", "⚠️ [deleteNote] Failed to delete server note $serverId", it) }
+            val deleteBody = DeleteWithTimestampRequest(updatedAt = note.updatedAt.toApiTimestamp())
+            runCatching { api.deleteNote(serverId, deleteBody) }
+                .onFailure {
+                    if (it.isConflict()) {
+                        Log.w("API", "⚠️ [deleteNote] Conflict (409) deleting note $serverId; local copy may be stale", it)
+                    } else {
+                        Log.w("API", "⚠️ [deleteNote] Failed to delete server note $serverId", it)
+                    }
+                }
         }
     }
 
@@ -1531,7 +1580,10 @@ class OfflineSyncRepository(
             runCatching {
                 if (note.isDeleted) {
                     // If serverId is null, nothing to delete remotely; just mark synced locally
-                    note.serverId?.let { api.deleteNote(it) }
+                    note.serverId?.let {
+                        val body = DeleteWithTimestampRequest(updatedAt = note.updatedAt.toApiTimestamp())
+                        api.deleteNote(it, body)
+                    }
                     localDataService.saveNote(
                         note.copy(
                             isDirty = false,
@@ -1545,7 +1597,9 @@ class OfflineSyncRepository(
                         roomId = note.roomId,
                         body = note.content,
                         photoId = note.photoId,
-                        categoryId = note.categoryId
+                        categoryId = note.categoryId,
+                        idempotencyKey = note.uuid,
+                        updatedAt = note.updatedAt.toApiTimestamp()
                     )
                     val response = if (note.serverId == null) {
                         api.createProjectNote(projectId, request)
@@ -1742,9 +1796,11 @@ class OfflineSyncRepository(
         val addressId = addressDto.id
             ?: throw IllegalStateException("Address creation succeeded but returned null id")
 
+        val idempotencyKey = payload.idempotencyKey ?: payload.projectUuid
         val projectRequest = CreateCompanyProjectRequest(
             projectStatusId = payload.projectStatusId,
-            addressId = addressId
+            addressId = addressId,
+            idempotencyKey = idempotencyKey
         )
 
         val dto = api.createCompanyProject(payload.companyId, projectRequest).data
@@ -1799,11 +1855,13 @@ class OfflineSyncRepository(
             throw IllegalStateException("Unable to resolve location/level for pending room ${payload.roomUuid}")
         }
 
+        val idempotencyKey = payload.idempotencyKey ?: payload.roomUuid
         val request = CreateRoomRequest(
             name = payload.roomName,
             roomTypeId = payload.roomTypeId,
             levelId = levelServerId,
-            isSource = payload.isSource
+            isSource = payload.isSource,
+            idempotencyKey = idempotencyKey
         )
 
         val dto = api.createRoom(locationServerId, request)
@@ -1846,14 +1904,16 @@ class OfflineSyncRepository(
         project: OfflineProjectEntity,
         companyId: Long,
         statusId: Int,
-        addressRequest: CreateAddressRequest
+        addressRequest: CreateAddressRequest,
+        idempotencyKey: String? = null
     ) {
         val payload = PendingProjectCreationPayload(
             localProjectId = project.projectId,
             projectUuid = project.uuid,
             companyId = companyId,
             projectStatusId = statusId,
-            addressRequest = addressRequest
+            addressRequest = addressRequest,
+            idempotencyKey = idempotencyKey
         )
         val operation = OfflineSyncQueueEntity(
             operationId = "project-${project.projectId}-${UUID.randomUUID()}",
@@ -1874,7 +1934,8 @@ class OfflineSyncRepository(
         levelServerId: Long?,
         locationServerId: Long?,
         levelLocalId: Long?,
-        locationLocalId: Long?
+        locationLocalId: Long?,
+        idempotencyKey: String?
     ) {
         val payload = PendingRoomCreationPayload(
             localRoomId = room.roomId,
@@ -1886,7 +1947,8 @@ class OfflineSyncRepository(
             levelServerId = levelServerId,
             locationServerId = locationServerId,
             levelLocalId = levelLocalId,
-            locationLocalId = locationLocalId
+            locationLocalId = locationLocalId,
+            idempotencyKey = idempotencyKey
         )
         val operation = OfflineSyncQueueEntity(
             operationId = "room-${room.roomId}-${UUID.randomUUID()}",
@@ -1904,7 +1966,8 @@ class OfflineSyncRepository(
         companyId: Long,
         statusValue: String,
         projectAddress: ProjectAddressDto?,
-        addressRequest: CreateAddressRequest
+        addressRequest: CreateAddressRequest,
+        idempotencyKey: String? = null
     ): OfflineProjectEntity {
         val timestamp = now()
         val localId = -System.currentTimeMillis()
@@ -1943,7 +2006,8 @@ class OfflineSyncRepository(
         projectId: Long,
         roomName: String,
         roomTypeId: Long,
-        isSource: Boolean
+        isSource: Boolean,
+        idempotencyKey: String
     ): OfflineRoomEntity? {
         val project = localDataService.getProject(projectId)
             ?: throw IllegalStateException("Project not found locally")
@@ -1980,7 +2044,8 @@ class OfflineSyncRepository(
             levelServerId = level.serverId,
             locationServerId = location.serverId,
             levelLocalId = level.locationId,
-            locationLocalId = location.locationId
+            locationLocalId = location.locationId,
+            idempotencyKey = idempotencyKey
         )
         return pending
     }
@@ -2590,7 +2655,8 @@ private data class PendingProjectCreationPayload(
     val projectUuid: String,
     val companyId: Long,
     val projectStatusId: Int,
-    val addressRequest: CreateAddressRequest
+    val addressRequest: CreateAddressRequest,
+    val idempotencyKey: String?
 )
 
 private data class PendingRoomCreationPayload(
@@ -2603,5 +2669,6 @@ private data class PendingRoomCreationPayload(
     val levelServerId: Long?,
     val locationServerId: Long?,
     val levelLocalId: Long?,
-    val locationLocalId: Long?
+    val locationLocalId: Long?,
+    val idempotencyKey: String?
 )
