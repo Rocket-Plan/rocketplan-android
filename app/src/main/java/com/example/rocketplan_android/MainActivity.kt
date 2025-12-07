@@ -292,15 +292,31 @@ class MainActivity : AppCompatActivity() {
 
         val token = uri.getQueryParameter("token")
         val status = uri.getQueryParameter("status")?.toIntOrNull()
+        val incomingState = uri.getQueryParameter("state")
+        val expectedState = authRepository.getStoredOAuthState()
 
         if (BuildConfig.ENABLE_LOGGING) {
-            Log.d(TAG, "OAuth callback - Status: $status, Token present: ${token != null}")
+            Log.d(TAG, "OAuth callback - Status: $status, Token present: ${token != null}, State present: ${incomingState != null}")
+        }
+
+        if (expectedState.isNullOrBlank()) {
+            Log.w(TAG, "OAuth callback received with no pending state; ignoring")
+            Toast.makeText(this, "Sign in failed: invalid session", Toast.LENGTH_LONG).show()
+            return true
+        }
+
+        if (incomingState.isNullOrBlank() || incomingState != expectedState) {
+            Log.w(TAG, "OAuth state mismatch; expected=$expectedState, received=$incomingState")
+            authRepository.clearOAuthState()
+            Toast.makeText(this, "Sign in failed: invalid session", Toast.LENGTH_LONG).show()
+            return true
         }
 
         if (status == 200 && !token.isNullOrEmpty()) {
             // Save token and navigate to home
             lifecycleScope.launch {
                 try {
+                    authRepository.clearOAuthState()
                     authRepository.saveAuthToken(token)
                     if (BuildConfig.ENABLE_LOGGING) {
                         Log.d(TAG, "OAuth token saved successfully")
@@ -334,6 +350,7 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             Log.e(TAG, "OAuth callback failed - Status: $status")
+            authRepository.clearOAuthState()
             Toast.makeText(
                 this,
                 "Sign in failed",

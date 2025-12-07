@@ -36,6 +36,9 @@ import java.io.File
 import java.net.URI
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.TimeUnit
+import okio.source
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okio.BufferedSink
 
 /**
  * Manages sequential processing of image processor assemblies.
@@ -364,23 +367,8 @@ class ImageProcessorQueueManager(
 
         val localPath = photo.localFilePath
             ?: throw IllegalStateException("No local file path for photo ${photo.fileName}")
-
-        val file = try {
-            val uri = URI(localPath)
-            File(uri.path ?: throw IllegalStateException("Invalid URI path: $localPath"))
-        } catch (e: Exception) {
-            throw IllegalStateException("Failed to parse file path: $localPath", e)
-        }
-
-        if (!file.exists()) {
-            throw IllegalStateException("Photo file not found: ${file.absolutePath} (may have been deleted)")
-        }
-
-        // Determine MIME type
-        val mimeType = getMimeType(file)
-
-        // Build request body
-        val requestBody = file.asRequestBody(mimeType.toMediaType())
+        val mimeType = determineMimeType(localPath)
+        val requestBody = buildRequestBody(localPath, mimeType)
 
         // Build URL with filename query parameter (matching iOS behavior)
         val uploadUrl = "$processingUrl/upload".toHttpUrl()
@@ -567,12 +555,45 @@ class ImageProcessorQueueManager(
         dao.updatePhoto(updated)
     }
 
-    private fun getMimeType(file: File): String {
-        return when (file.extension.lowercase()) {
+    private fun determineMimeType(localPath: String): String {
+        val uri = Uri.parse(localPath)
+        val resolved = context.contentResolver.getType(uri)
+        if (!resolved.isNullOrBlank()) {
+            return resolved
+        }
+        val extension = uri.lastPathSegment
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase()
+        return when (extension) {
             "jpg", "jpeg" -> "image/jpeg"
             "png" -> "image/png"
             "heic" -> "image/heic"
             else -> "image/jpeg"
+        }
+    }
+
+    private fun buildRequestBody(localPath: String, mimeType: String): okhttp3.RequestBody {
+        val uri = Uri.parse(localPath)
+        val scheme = uri.scheme?.lowercase()
+        return when (scheme) {
+            null, "file" -> {
+                val file = File(uri.path ?: throw IllegalStateException("Invalid file path"))
+                if (!file.exists()) {
+                    throw IllegalStateException("Photo file not found: ${file.absolutePath} (may have been deleted)")
+                }
+                file.asRequestBody(mimeType.toMediaType())
+            }
+            "content" -> {
+                object : okhttp3.RequestBody() {
+                    override fun contentType() = mimeType.toMediaTypeOrNull()
+                    override fun writeTo(sink: BufferedSink) {
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            sink.writeAll(input.source())
+                        } ?: throw IllegalStateException("Unable to read photo content")
+                    }
+                }
+            }
+            else -> throw IllegalStateException("Unsupported URI scheme for photo: ${uri.scheme}")
         }
     }
 

@@ -16,6 +16,7 @@ import com.example.rocketplan_android.data.model.CurrentUserResponse
 import com.example.rocketplan_android.data.model.Company
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 
 /**
  * Repository for authentication operations
@@ -227,6 +228,21 @@ class AuthRepository(
     suspend fun clearAuthToken() {
         secureStorage.clearAuthToken()
         RetrofitClient.setAuthToken(null)
+    }
+
+    /**
+     * Create and persist an OAuth state/nonce for callback validation.
+     */
+    fun createOAuthState(): String {
+        val state = UUID.randomUUID().toString()
+        secureStorage.saveOAuthState(state)
+        return state
+    }
+
+    fun getStoredOAuthState(): String? = secureStorage.getOAuthState()
+
+    fun clearOAuthState() {
+        secureStorage.clearOAuthState()
     }
 
     // ==================== User Data ====================

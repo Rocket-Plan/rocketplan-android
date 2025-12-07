@@ -602,6 +602,16 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_sync_queue WHERE status = :status ORDER BY priority ASC, createdAt ASC")
     fun observeSyncOperationsByStatus(status: SyncStatus): Flow<List<OfflineSyncQueueEntity>>
 
+    @Query(
+        """
+        SELECT * FROM offline_sync_queue
+        WHERE status = :status
+          AND (scheduledAt IS NULL OR scheduledAt <= :now)
+        ORDER BY priority ASC, createdAt ASC
+        """
+    )
+    suspend fun getSyncOperationsByStatus(status: SyncStatus, now: Long): List<OfflineSyncQueueEntity>
+
     @Query("DELETE FROM offline_sync_queue WHERE operationId = :operationId")
     suspend fun deleteSyncOperation(operationId: String)
     // endregion

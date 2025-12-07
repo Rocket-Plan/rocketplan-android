@@ -33,8 +33,11 @@ object RetrofitClient {
      * Logging interceptor for debugging (only enabled in dev/staging)
      */
     private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        redactHeader("Authorization")
+        redactHeader("x-api-key")
+        redactHeader("Cookie")
         level = if (AppConfig.isLoggingEnabled) {
-            HttpLoggingInterceptor.Level.BODY
+            HttpLoggingInterceptor.Level.BASIC
         } else {
             HttpLoggingInterceptor.Level.NONE
         }

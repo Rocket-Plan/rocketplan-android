@@ -28,6 +28,7 @@ class SecureStorage(private val context: Context) {
         private val BIOMETRIC_ENABLED_KEY = booleanPreferencesKey("biometric_enabled")
         private val USER_ID_KEY = longPreferencesKey("user_id")
         private val COMPANY_ID_KEY = longPreferencesKey("company_id")
+        private const val OAUTH_STATE_KEY = "oauth_state"
 
         // EncryptedSharedPreferences name
         private const val ENCRYPTED_PREFS_NAME = "rocketplan_encrypted_prefs"
@@ -172,6 +173,27 @@ class SecureStorage(private val context: Context) {
      */
     fun clearEncryptedPassword() {
         encryptedPrefs.edit().remove(SAVED_PASSWORD_KEY).apply()
+    }
+
+    // ==================== OAuth State ====================
+
+    /**
+     * Save the pending OAuth state/nonce for callback validation.
+     */
+    fun saveOAuthState(state: String) {
+        encryptedPrefs.edit().putString(OAUTH_STATE_KEY, state).apply()
+    }
+
+    /**
+     * Get the currently stored OAuth state/nonce, if any.
+     */
+    fun getOAuthState(): String? = encryptedPrefs.getString(OAUTH_STATE_KEY, null)
+
+    /**
+     * Clear the stored OAuth state/nonce.
+     */
+    fun clearOAuthState() {
+        encryptedPrefs.edit().remove(OAUTH_STATE_KEY).apply()
     }
 
     // ==================== User Context ====================

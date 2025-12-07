@@ -23,6 +23,8 @@ import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.databinding.FragmentLoginBinding
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 /**
  * Login screen Fragment
@@ -40,6 +42,9 @@ class LoginFragment : Fragment() {
     private val args: LoginFragmentArgs by navArgs()
 
     private val viewModel: LoginViewModel by viewModels()
+    private val authRepository by lazy {
+        (requireActivity().application as RocketPlanApplication).authRepository
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -217,7 +222,9 @@ class LoginFragment : Fragment() {
             else -> "rocketplan-local"
         }
 
-        val oauthUrl = "${BuildConfig.API_BASE_URL}/oauth2/redirect/google?schema=$schema"
+        val state = authRepository.createOAuthState()
+        val encodedState = URLEncoder.encode(state, StandardCharsets.UTF_8.toString())
+        val oauthUrl = "${BuildConfig.API_BASE_URL}/oauth2/redirect/google?schema=$schema&state=$encodedState"
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "OAuth URL: $oauthUrl")

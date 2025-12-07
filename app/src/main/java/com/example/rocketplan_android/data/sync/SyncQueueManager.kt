@@ -62,6 +62,8 @@ class SyncQueueManager(
     private val pendingPhotoSyncs = mutableSetOf<Long>()
     private val _photoSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
     val photoSyncingProjects: StateFlow<Set<Long>> = _photoSyncingProjects
+    @Volatile
+    private var pendingSyncProjectsForce = false
 
     init {
         scope.launch { processLoop() }
@@ -344,6 +346,9 @@ class SyncQueueManager(
                 val hasForeground = mutex.withLock { foregroundProjectId != null }
                 if (hasForeground) {
                     Log.d(TAG, "⏸️ Foreground project sync running; deferring background project queue.")
+                    if (job.force) {
+                        pendingSyncProjectsForce = true
+                    }
                     return
                 }
                 if (job.force) {
@@ -364,6 +369,18 @@ class SyncQueueManager(
                     val message = "Missing company context during sync. Prompting relogin."
                     remoteLogger.log(LogLevel.ERROR, TAG, message)
                     throw IllegalStateException("Please log in again.")
+                }
+
+                val pendingCreated = syncRepository.processPendingCreations()
+                pendingCreated.createdProjects.forEach { created ->
+                    enqueue(
+                        SyncJob.SyncProjectGraph(
+                            projectId = created.localProjectId,
+                            prio = 1,
+                            skipPhotos = true,
+                            mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY
+                        )
+                    )
                 }
 
                 // First, sync projects assigned to the current user (used for My Projects tab)
@@ -516,7 +533,9 @@ class SyncQueueManager(
 
                 if (shouldResumeBackground) {
                     Log.d(TAG, "✅ Foreground project ${job.projectId} completed (including photos), resuming background sync")
-                    enqueue(SyncJob.SyncProjects(force = false))
+                    val forcePending = pendingSyncProjectsForce
+                    pendingSyncProjectsForce = false
+                    enqueue(SyncJob.SyncProjects(force = forcePending))
                 }
             }
         }
@@ -551,6 +570,11 @@ class SyncQueueManager(
     }
 
     private suspend fun focusProjectSync(projectId: Long) {
+        val project = localDataService.getProject(projectId)
+        if (project?.serverId == null) {
+            Log.d(TAG, "⏭️ Skipping foreground sync for unsynced project $projectId (no serverId yet)")
+            return
+        }
         try {
             syncRepository.syncDeletedRecords()
         } catch (ce: CancellationException) {

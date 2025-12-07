@@ -15,7 +15,10 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.databinding.FragmentEmailCheckBinding
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 /**
  * Initial authentication screen that collects the user's email
@@ -34,6 +37,9 @@ class EmailCheckFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: EmailCheckViewModel by viewModels()
+    private val authRepository by lazy {
+        (requireActivity().application as RocketPlanApplication).authRepository
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -140,7 +146,9 @@ class EmailCheckFragment : Fragment() {
             else -> "rocketplan-local"
         }
 
-        val oauthUrl = "${BuildConfig.API_BASE_URL}/oauth2/redirect/$provider?schema=$schema"
+        val state = authRepository.createOAuthState()
+        val encodedState = URLEncoder.encode(state, StandardCharsets.UTF_8.toString())
+        val oauthUrl = "${BuildConfig.API_BASE_URL}/oauth2/redirect/$provider?schema=$schema&state=$encodedState"
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "Starting $provider OAuth flow: $oauthUrl")

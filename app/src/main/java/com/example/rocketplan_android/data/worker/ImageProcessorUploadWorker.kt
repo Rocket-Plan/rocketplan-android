@@ -16,8 +16,12 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.RequestBody
 import java.io.File
-import java.net.URI
+import android.net.Uri
+import okio.source
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okio.BufferedSink
 
 /**
  * Worker that handles image processor photo uploads using simple HTTP uploads (matching iOS).
@@ -132,18 +136,8 @@ class ImageProcessorUploadWorker(
         Log.d(TAG, "📤 Uploading photo ${photo.fileName} for assembly ${assembly.assemblyId}")
 
         val localPath = photo.localFilePath ?: throw IllegalStateException("No local file path")
-        val uri = URI(localPath)
-        val file = File(uri.path)
-
-        if (!file.exists()) {
-            throw IllegalStateException("Photo file not found: ${file.absolutePath}")
-        }
-
-        // Determine MIME type
-        val mimeType = getMimeType(file)
-
-        // Build request body
-        val requestBody = file.asRequestBody(mimeType.toMediaType())
+        val mimeType = determineMimeType(localPath)
+        val requestBody = buildRequestBody(localPath, mimeType)
 
         // Build request with headers (matching iOS)
         val uploadUrl = "$processingUrl/upload"
@@ -163,31 +157,28 @@ class ImageProcessorUploadWorker(
         // Update photo status to uploading
         updatePhotoStatus(photo.photoId, PhotoStatus.UPLOADING, null)
 
-        // Execute upload
-        val response = okHttpClient.newCall(request).execute()
+        okHttpClient.newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                Log.d(TAG, "✅ Photo uploaded: ${photo.fileName}")
+                updatePhotoStatus(photo.photoId, PhotoStatus.COMPLETED, null)
 
-        if (response.isSuccessful) {
-            Log.d(TAG, "✅ Photo uploaded: ${photo.fileName}")
-            updatePhotoStatus(photo.photoId, PhotoStatus.COMPLETED, null)
-
-            remoteLogger?.log(
-                level = LogLevel.INFO,
-                tag = TAG,
-                message = "Photo uploaded successfully",
-                metadata = mapOf(
-                    "assembly_id" to assembly.assemblyId,
-                    "photo_id" to photo.photoId,
-                    "file_name" to photo.fileName,
-                    "file_size" to photo.fileSize.toString()
+                remoteLogger?.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "Photo uploaded successfully",
+                    metadata = mapOf(
+                        "assembly_id" to assembly.assemblyId,
+                        "photo_id" to photo.photoId,
+                        "file_name" to photo.fileName,
+                        "file_size" to photo.fileSize.toString()
+                    )
                 )
-            )
-        } else {
-            val errorMessage = "HTTP ${response.code}: ${response.message}"
-            Log.e(TAG, "❌ Photo upload failed: $errorMessage")
-            throw IllegalStateException(errorMessage)
+            } else {
+                val errorMessage = "HTTP ${response.code}: ${response.message}"
+                Log.e(TAG, "❌ Photo upload failed: $errorMessage")
+                throw IllegalStateException(errorMessage)
+            }
         }
-
-        response.close()
     }
 
     private suspend fun checkIfAssemblyComplete(assemblyId: String) {
@@ -255,12 +246,45 @@ class ImageProcessorUploadWorker(
         dao.updatePhoto(updated)
     }
 
-    private fun getMimeType(file: File): String {
-        return when (file.extension.lowercase()) {
+    private fun determineMimeType(localPath: String): String {
+        val uri = Uri.parse(localPath)
+        val resolved = app.contentResolver.getType(uri)
+        if (!resolved.isNullOrBlank()) {
+            return resolved
+        }
+        val extension = uri.lastPathSegment
+            ?.substringAfterLast('.', missingDelimiterValue = "")
+            ?.lowercase()
+        return when (extension) {
             "jpg", "jpeg" -> "image/jpeg"
             "png" -> "image/png"
             "heic" -> "image/heic"
             else -> "image/jpeg"
+        }
+    }
+
+    private fun buildRequestBody(localPath: String, mimeType: String): RequestBody {
+        val uri = Uri.parse(localPath)
+        val scheme = uri.scheme?.lowercase()
+        return when (scheme) {
+            null, "file" -> {
+                val file = File(uri.path ?: throw IllegalStateException("Invalid file path"))
+                if (!file.exists()) {
+                    throw IllegalStateException("Photo file not found: ${file.absolutePath}")
+                }
+                file.asRequestBody(mimeType.toMediaType())
+            }
+            "content" -> {
+                object : RequestBody() {
+                    override fun contentType() = mimeType.toMediaTypeOrNull()
+                    override fun writeTo(sink: BufferedSink) {
+                        app.contentResolver.openInputStream(uri)?.use { input ->
+                            sink.writeAll(input.source())
+                        } ?: throw IllegalStateException("Unable to read photo content")
+                    }
+                }
+            }
+            else -> throw IllegalStateException("Unsupported URI scheme for photo: ${uri.scheme}")
         }
     }
 }

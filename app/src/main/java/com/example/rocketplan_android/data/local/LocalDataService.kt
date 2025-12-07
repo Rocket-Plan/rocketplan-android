@@ -592,6 +592,11 @@ class LocalDataService private constructor(
     fun observeSyncOperations(status: SyncStatus): Flow<List<OfflineSyncQueueEntity>> =
         dao.observeSyncOperationsByStatus(status)
 
+    suspend fun getPendingSyncOperations(): List<OfflineSyncQueueEntity> = withContext(ioDispatcher) {
+        val now = System.currentTimeMillis()
+        dao.getSyncOperationsByStatus(SyncStatus.PENDING, now)
+    }
+
     suspend fun removeSyncOperation(operationId: String) = withContext(ioDispatcher) {
         dao.deleteSyncOperation(operationId)
     }
