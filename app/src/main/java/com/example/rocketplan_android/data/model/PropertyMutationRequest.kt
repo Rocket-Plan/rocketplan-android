@@ -17,6 +17,8 @@ data class PropertyMutationRequest(
     @SerializedName("year_built")
     val yearBuilt: Int? = null,
     val name: String? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
     @SerializedName("damage_category")
     val damageCategory: Int? = null,
     @SerializedName("loss_class")
@@ -38,5 +40,7 @@ data class PropertyMutationRequest(
     @SerializedName("is_platinum_agent")
     val isPlatinumAgent: Boolean? = null,
     @SerializedName("asbestos_status_id")
-    val asbestosStatusId: Int? = null
+    val asbestosStatusId: Int? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
 )

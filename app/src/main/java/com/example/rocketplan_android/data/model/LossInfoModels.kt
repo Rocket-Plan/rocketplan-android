@@ -120,7 +120,11 @@ data class ClaimMutationRequest(
     @SerializedName("project_id")
     val projectId: Long? = null,
     @SerializedName("location_id")
-    val locationId: Long? = null
+    val locationId: Long? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
 )
 
 /**

@@ -23,12 +23,19 @@ data class CreateCompanyProjectRequest(
     @SerializedName("address_id") val addressId: Long,
     val alias: String? = null,
     @SerializedName("opportunity_id") val opportunityId: String? = null,
-    @SerializedName("project_type_id") val projectTypeId: Int? = null
+    @SerializedName("project_type_id") val projectTypeId: Int? = null,
+    @SerializedName("idempotency_key") val idempotencyKey: String? = null
 )
 
 data class UpdateProjectRequest(
     val alias: String? = null,
-    @SerializedName("project_status_id") val projectStatusId: Int? = null
+    @SerializedName("project_status_id") val projectStatusId: Int? = null,
+    @SerializedName("updated_at") val updatedAt: String? = null
+)
+
+data class DeleteProjectRequest(
+    @SerializedName("project_id") val projectId: Long,
+    @SerializedName("updated_at") val updatedAt: String? = null
 )
 
 data class SingleResourceResponse<T>(

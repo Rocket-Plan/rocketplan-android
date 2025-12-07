@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.util.UUID
 
 data class RoomTypeUiModel(
     val id: Long,
@@ -59,6 +60,9 @@ class RoomTypePickerViewModel(
 
     private val _events = MutableSharedFlow<RoomTypePickerEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<RoomTypePickerEvent> = _events
+
+    private var pendingRoomIdempotencyKey: String? = null
+    private var pendingRoomSignature: Pair<String, Long>? = null
 
     init {
         if (projectId <= 0L) {
@@ -138,6 +142,7 @@ class RoomTypePickerViewModel(
     fun createRoom(roomType: RoomTypeUiModel) {
         if (projectId <= 0L || _uiState.value.isCreating) return
         val roomName = roomType.displayName.ifBlank { "Room ${roomType.id}" }
+        val idempotencyKey = resolveRoomIdempotencyKey(roomName, roomType.id)
         android.util.Log.d("RoomTypePicker", "🆕 createRoom: id=${roomType.id}, displayName='${roomType.displayName}', roomName='$roomName'")
         _uiState.update { it.copy(isCreating = true, errorMessage = null) }
 
@@ -146,10 +151,12 @@ class RoomTypePickerViewModel(
                 projectId = projectId,
                 roomName = roomName,
                 roomTypeId = roomType.id,
-                isSource = false
+                isSource = false,
+                idempotencyKey = idempotencyKey
             )
                 .onSuccess { _ ->
                     _uiState.update { state -> state.copy(isCreating = false) }
+                    clearRoomIdempotencyKey()
                     _events.emit(RoomTypePickerEvent.RoomCreated(roomName))
                 }
                 .onFailure { throwable: Throwable ->
@@ -169,6 +176,22 @@ class RoomTypePickerViewModel(
                     _events.emit(RoomTypePickerEvent.RoomCreationFailed(message))
                 }
         }
+    }
+
+    private fun resolveRoomIdempotencyKey(roomName: String, roomTypeId: Long): String {
+        val signature = roomName to roomTypeId
+        if (pendingRoomSignature == signature && pendingRoomIdempotencyKey != null) {
+            return pendingRoomIdempotencyKey!!
+        }
+        val newKey = UUID.randomUUID().toString()
+        pendingRoomSignature = signature
+        pendingRoomIdempotencyKey = newKey
+        return newKey
+    }
+
+    private fun clearRoomIdempotencyKey() {
+        pendingRoomIdempotencyKey = null
+        pendingRoomSignature = null
     }
 
     private fun RoomTypeDto.toUiModel(): RoomTypeUiModel {

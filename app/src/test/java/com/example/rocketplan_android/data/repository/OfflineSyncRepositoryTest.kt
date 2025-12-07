@@ -3,9 +3,13 @@ package com.example.rocketplan_android.data.repository
 import android.util.Log
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
+import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
+import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
@@ -44,9 +48,12 @@ import io.mockk.runs
 import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.Headers
 import org.junit.Rule
 import org.junit.Test
+import retrofit2.HttpException
 import retrofit2.Response
 import java.util.Date
 
@@ -482,6 +489,89 @@ class OfflineSyncRepositoryTest {
         io.mockk.verify {
             checkpointStore.updateCheckpoint("deleted_records_global", match { it == expected })
         }
+    }
+
+    @Test
+    fun `syncProjectMetadata recreates pending notes when server deleted them`() = runTest {
+        everyLog()
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
+
+        val projectId = 7L
+        val note = OfflineNoteEntity(
+            noteId = 11L,
+            serverId = 22L,
+            uuid = "note-uuid",
+            projectId = projectId,
+            roomId = 5L,
+            userId = 2L,
+            content = "offline update",
+            createdAt = Date(),
+            updatedAt = Date(),
+            syncStatus = SyncStatus.PENDING,
+            isDirty = true
+        )
+
+        val notFoundBody = "missing".toResponseBody("application/json".toMediaType())
+        val notFoundResponse = Response.error<NoteResourceResponse>(404, notFoundBody)
+        coEvery { api.updateNote(note.serverId!!, any()) } throws HttpException(notFoundResponse)
+
+        val recreatedDto = NoteDto(
+            id = 999L,
+            uuid = note.uuid,
+            projectId = projectId,
+            roomId = note.roomId,
+            userId = note.userId,
+            body = note.content,
+            photoId = null,
+            categoryId = null,
+            createdAt = "2025-05-06T18:01:14.000000Z",
+            updatedAt = "2025-05-06T18:01:14.000000Z"
+        )
+        coEvery { api.createProjectNote(projectId, any()) } returns NoteResourceResponse(recreatedDto)
+
+        coEvery { localDataService.getProject(projectId) } returns OfflineProjectEntity(
+            projectId = projectId,
+            serverId = projectId,
+            uuid = "project-uuid",
+            title = "Project",
+            status = "wip",
+            companyId = 1L
+        )
+        coEvery { localDataService.getServerRoomIdsForProject(projectId) } returns emptyList()
+        coEvery { localDataService.getPendingNotes(projectId) } returns listOf(note)
+
+        val savedNotes = mutableListOf<OfflineNoteEntity>()
+        coEvery { localDataService.saveNote(capture(savedNotes)) } returns Unit
+        coEvery { localDataService.saveNotes(any()) } returns Unit
+        coEvery { localDataService.saveEquipment(any()) } returns Unit
+        coEvery { localDataService.saveDamages(any()) } returns Unit
+        coEvery { localDataService.saveAtmosphericLogs(any()) } returns Unit
+
+        every { checkpointStore.getCheckpoint(any()) } returns null
+        coEvery { api.getProjectNotes(projectId, any(), any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getProjectEquipment(projectId) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getProjectDamageMaterials(projectId, any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getProjectAtmosphericLogs(projectId, any()) } returns PaginatedResponse(data = emptyList())
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
+        )
+
+        repository.syncProjectMetadata(projectId)
+
+        assertThat(savedNotes).isNotEmpty()
+        val synced = savedNotes.last()
+        assertThat(synced.serverId).isEqualTo(recreatedDto.id)
+        assertThat(synced.isDirty).isFalse()
+        assertThat(synced.syncStatus).isEqualTo(SyncStatus.SYNCED)
+        assertThat(synced.uuid).isEqualTo(note.uuid)
     }
 }
 

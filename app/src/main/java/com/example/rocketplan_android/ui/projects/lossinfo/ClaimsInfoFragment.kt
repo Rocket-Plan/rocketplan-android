@@ -14,6 +14,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.data.model.ClaimMutationRequest
+import com.example.rocketplan_android.util.DateUtils
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.CircularProgressIndicator
@@ -163,7 +164,8 @@ class ClaimsInfoFragment : Fragment() {
                 adjusterEmail = adjusterEmailInput.valueOrNull(),
                 claimTypeId = item.claim.claimType?.id,
                 projectId = item.claim.projectId,
-                locationId = item.claim.locationId
+                locationId = item.claim.locationId,
+                updatedAt = item.claim.updatedAt?.let(DateUtils::formatApiDate)
             )
             viewModel.updateClaim(item.claim.id, request)
         }

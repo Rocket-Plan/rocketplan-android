@@ -9,5 +9,7 @@ data class CreateRoomRequest(
     @SerializedName("level_id")
     val levelId: Long,
     @SerializedName("is_source")
-    val isSource: Boolean = false
+    val isSource: Boolean = false,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null
 )

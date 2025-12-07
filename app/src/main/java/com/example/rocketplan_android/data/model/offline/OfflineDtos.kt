@@ -146,7 +146,16 @@ data class CreateNoteRequest(
     @SerializedName("photo_id")
     val photoId: Long? = null,
     @SerializedName("category_id")
-    val categoryId: Long? = null
+    val categoryId: Long? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
+)
+
+data class DeleteWithTimestampRequest(
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
 )
 
 data class NoteableDto(

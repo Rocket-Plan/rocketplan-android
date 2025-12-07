@@ -47,6 +47,7 @@ import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.PaginationMeta
+import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
@@ -99,7 +100,7 @@ private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
         if (assignedOnly) "company_projects_${companyId}_assigned" else "company_projects_$companyId"
     private fun userProjectsKey(userId: Long) = "user_projects_$userId"
     private fun roomPhotosKey(roomId: Long) = "room_photos_$roomId"
-    private fun floorPhotosKey(projectId: Long) = "project_floor_photos_$projectId"
+private fun floorPhotosKey(projectId: Long) = "project_floor_photos_$projectId"
 private fun locationPhotosKey(projectId: Long) = "project_location_photos_$projectId"
 private fun unitPhotosKey(projectId: Long) = "project_unit_photos_$projectId"
 private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
@@ -107,6 +108,7 @@ private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
     private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
     private const val OFFLINE_PENDING_STATUS = "pending_offline"
 private fun Throwable.isConflict(): Boolean = (this as? HttpException)?.code() == 409
+private fun Throwable.isMissingOnServer(): Boolean = (this as? HttpException)?.code() in listOf(404, 410)
 private fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
 
 class OfflineSyncRepository(
@@ -771,11 +773,10 @@ class OfflineSyncRepository(
             }.onSuccess { synced ->
                 synced?.let { localDataService.saveNote(it) }
             }.onFailure { error ->
-                if (error.isConflict()) {
-                    Log.w("API", "⚠️ [updateNote] Conflict (409) for note ${note.uuid}; local copy may be stale", error)
-                } else {
-                    Log.w("API", "⚠️ [updateNote] Failed to push note ${note.uuid}", error)
+                if (error.isConflict() || error.isMissingOnServer()) {
+                    pushPendingNoteUpsert(updated)?.let { localDataService.saveNote(it) }
                 }
+                Log.w("API", "⚠️ [updateNote] Failed to push note ${note.uuid}", error)
             }
         }
 
@@ -1571,43 +1572,124 @@ class OfflineSyncRepository(
         localDataService.markWorkScopesDeleted(response.workScopeActions)
     }
 
+    private suspend fun restoreDeletedParents(targets: Map<String, List<Long>>) {
+        targets.forEach { (type, ids) ->
+            val filteredIds = ids.filter { it > 0 }
+            if (filteredIds.isEmpty()) return@forEach
+
+            runCatching {
+                api.restoreDeletedRecords(RestoreRecordsRequest(type = type, ids = filteredIds))
+            }
+                .onSuccess { response ->
+                    Log.d(
+                        "API",
+                        "♻️ [syncRestore] type=$type restored=${response.restored.size}, already_restored=${response.alreadyRestored.size}, not_found=${response.notFound.size}, unauthorized=${response.unauthorized.size}"
+                    )
+                }
+                .onFailure { error ->
+                    Log.w("API", "⚠️ [syncRestore] Failed to restore $type ids=${filteredIds.joinToString()}", error)
+                }
+        }
+    }
+
     private suspend fun syncPendingNotes(projectId: Long) {
         val pending = localDataService.getPendingNotes(projectId)
         if (pending.isEmpty()) return
 
         Log.d("API", "📝 [syncPendingNotes] Pushing ${pending.size} pending notes for project $projectId")
+
+        val projectServerId = resolveServerProjectId(projectId)
+        val roomServerIds = mutableSetOf<Long>()
         pending.forEach { note ->
-            runCatching {
-                if (note.isDeleted) {
-                    // If serverId is null, nothing to delete remotely; just mark synced locally
-                    note.serverId?.let {
-                        val body = DeleteWithTimestampRequest(updatedAt = note.updatedAt.toApiTimestamp())
-                        api.deleteNote(it, body)
-                    }
-                    localDataService.saveNote(
-                        note.copy(
-                            isDirty = false,
-                            syncStatus = SyncStatus.SYNCED,
-                            lastSyncedAt = now()
-                        )
+            note.roomId?.let { roomId ->
+                localDataService.getRoom(roomId)?.serverId?.let { roomServerIds += it }
+            }
+        }
+
+        restoreDeletedParents(
+            buildMap {
+                projectServerId?.let { put("projects", listOf(it)) }
+                if (roomServerIds.isNotEmpty()) {
+                    put("rooms", roomServerIds.toList())
+                }
+            }
+        )
+
+        pending.forEach { note ->
+            val synced = if (note.isDeleted) {
+                pushPendingNoteDeletion(note)
+            } else {
+                pushPendingNoteUpsert(note)
+            }
+
+            synced?.let { localDataService.saveNote(it) }
+        }
+    }
+
+    private suspend fun pushPendingNoteDeletion(note: OfflineNoteEntity): OfflineNoteEntity? {
+        val deleteRequest = DeleteWithTimestampRequest(updatedAt = note.updatedAt.toApiTimestamp())
+        return runCatching {
+            note.serverId?.let { api.deleteNote(it, deleteRequest) }
+            note.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+        }.recoverCatching { error ->
+            when {
+                error.isMissingOnServer() -> note.copy(
+                    isDirty = false,
+                    syncStatus = SyncStatus.SYNCED,
+                    lastSyncedAt = now()
+                )
+                error.isConflict() -> {
+                    note.serverId?.let { api.deleteNote(it, DeleteWithTimestampRequest()) }
+                    note.copy(
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastSyncedAt = now()
                     )
-                } else {
-                    val request = CreateNoteRequest(
-                        projectId = note.projectId,
-                        roomId = note.roomId,
-                        body = note.content,
-                        photoId = note.photoId,
-                        categoryId = note.categoryId,
-                        idempotencyKey = note.uuid,
-                        updatedAt = note.updatedAt.toApiTimestamp()
-                    )
-                    val response = if (note.serverId == null) {
-                        api.createProjectNote(projectId, request)
-                    } else {
-                        api.updateNote(note.serverId, request)
-                    }
+                }
+                else -> throw error
+            }
+        }.onFailure {
+            Log.w("API", "⚠️ [syncPendingNotes] Failed to delete note ${note.uuid}", it)
+        }.getOrNull()
+    }
+
+    private suspend fun pushPendingNoteUpsert(note: OfflineNoteEntity): OfflineNoteEntity? {
+        val baseRequest = CreateNoteRequest(
+            projectId = note.projectId,
+            roomId = note.roomId,
+            body = note.content,
+            photoId = note.photoId,
+            categoryId = note.categoryId,
+            idempotencyKey = note.uuid,
+            updatedAt = note.updatedAt.toApiTimestamp()
+        )
+
+        val synced = runCatching {
+            val response = if (note.serverId == null) {
+                api.createProjectNote(note.projectId, baseRequest.copy(updatedAt = null))
+            } else {
+                api.updateNote(note.serverId, baseRequest)
+            }
+            response.data.toEntity()?.let { entity ->
+                entity.copy(
+                    uuid = note.uuid,
+                    projectId = note.projectId,
+                    roomId = note.roomId ?: entity.roomId,
+                    isDirty = false,
+                    syncStatus = SyncStatus.SYNCED,
+                    isDeleted = false
+                )
+            }
+        }.recoverCatching { error ->
+            when {
+                note.serverId != null && error.isConflict() -> {
+                    val response = api.updateNote(note.serverId, baseRequest.copy(updatedAt = null))
                     response.data.toEntity()?.let { entity ->
-                        val resolved = entity.copy(
+                        entity.copy(
                             uuid = note.uuid,
                             projectId = note.projectId,
                             roomId = note.roomId ?: entity.roomId,
@@ -1615,13 +1697,28 @@ class OfflineSyncRepository(
                             syncStatus = SyncStatus.SYNCED,
                             isDeleted = false
                         )
-                        localDataService.saveNote(resolved)
                     }
                 }
-            }.onFailure { error ->
-                Log.w("API", "⚠️ [syncPendingNotes] Failed to push note ${note.uuid}", error)
+                note.serverId != null && error.isMissingOnServer() -> {
+                    val response = api.createProjectNote(note.projectId, baseRequest.copy(updatedAt = null))
+                    response.data.toEntity()?.let { entity ->
+                        entity.copy(
+                            uuid = note.uuid,
+                            projectId = note.projectId,
+                            roomId = note.roomId ?: entity.roomId,
+                            isDirty = false,
+                            syncStatus = SyncStatus.SYNCED,
+                            isDeleted = false
+                        )
+                    }
+                }
+                else -> throw error
             }
-        }
+        }.onFailure { error ->
+            Log.w("API", "⚠️ [syncPendingNotes] Failed to push note ${note.uuid}", error)
+        }.getOrNull()
+
+        return synced
     }
 
     private data class RoomPhotoPageResult(
@@ -1854,6 +1951,14 @@ class OfflineSyncRepository(
         if (levelServerId == null || locationServerId == null) {
             throw IllegalStateException("Unable to resolve location/level for pending room ${payload.roomUuid}")
         }
+
+        restoreDeletedParents(
+            mapOf(
+                "projects" to listOf(projectServerId),
+                "locations" to listOf(locationServerId),
+                "levels" to listOf(levelServerId)
+            )
+        )
 
         val idempotencyKey = payload.idempotencyKey ?: payload.roomUuid
         val request = CreateRoomRequest(

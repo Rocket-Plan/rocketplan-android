@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 data class ProjectTypeSelectionViewState(
     val isLoading: Boolean = true,
@@ -52,6 +53,7 @@ class ProjectTypeSelectionViewModel(
     private var latestProject: OfflineProjectEntity? = null
     private var hasAttemptedPropertyRecovery: Boolean = false
     private var hasNavigatedToDetail: Boolean = false
+    private var propertyCreationIdempotencyKey: String? = null
 
     init {
         viewModelScope.launch {
@@ -117,10 +119,12 @@ class ProjectTypeSelectionViewModel(
 
             val request = PropertyMutationRequest(propertyTypeId = propertyType.propertyTypeId)
             val result = if (project.propertyId == null) {
+                val idempotencyKey = ensurePropertyCreationIdempotencyKey()
                 offlineSyncRepository.createProjectProperty(
                     projectId = projectId,
-                    request = request,
-                    propertyTypeValue = propertyType.apiValue
+                    request = request.copy(idempotencyKey = idempotencyKey),
+                    propertyTypeValue = propertyType.apiValue,
+                    idempotencyKey = idempotencyKey
                 )
             } else {
                 offlineSyncRepository.updateProjectProperty(
@@ -133,6 +137,7 @@ class ProjectTypeSelectionViewModel(
 
             result.fold(
                 onSuccess = {
+                    propertyCreationIdempotencyKey = null
                     _uiState.update { it.copy(isSelectionInProgress = false) }
                     syncQueueManager.prioritizeProject(projectId)
                     hasNavigatedToDetail = true
@@ -150,6 +155,14 @@ class ProjectTypeSelectionViewModel(
                 }
             )
         }
+    }
+
+    private fun ensurePropertyCreationIdempotencyKey(): String {
+        val current = propertyCreationIdempotencyKey
+        if (current != null) return current
+        val generated = UUID.randomUUID().toString()
+        propertyCreationIdempotencyKey = generated
+        return generated
     }
 
     private fun maybeRecoverMissingProperty(

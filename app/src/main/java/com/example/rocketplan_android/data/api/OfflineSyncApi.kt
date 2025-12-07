@@ -24,6 +24,7 @@ import com.example.rocketplan_android.data.model.AddressResourceResponse
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.NoteResourceResponse
+import com.example.rocketplan_android.data.model.DeleteProjectRequest
 import com.example.rocketplan_android.data.model.PropertyResourceResponse
 import com.example.rocketplan_android.data.model.ProjectResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
@@ -35,6 +36,7 @@ import com.example.rocketplan_android.data.model.offline.RoomTypeDto
 import com.google.gson.JsonObject
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsRequest
+import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import retrofit2.Response
@@ -46,6 +48,8 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
+import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
+import com.example.rocketplan_android.data.model.offline.RestoreRecordsResponse
 
 interface OfflineSyncApi {
 
@@ -74,7 +78,7 @@ interface OfflineSyncApi {
     @HTTP(method = "DELETE", path = "/api/projects/{projectId}", hasBody = true)
     suspend fun deleteProject(
         @Path("projectId") projectId: Long,
-        @Body body: Map<String, Long>
+        @Body body: DeleteProjectRequest
     ): Response<Unit>
 
     @GET("/api/projects/{projectId}/users")
@@ -107,9 +111,10 @@ interface OfflineSyncApi {
         @Body body: CreateNoteRequest
     ): NoteResourceResponse
 
-    @DELETE("/api/notes/{noteId}")
+    @HTTP(method = "DELETE", path = "/api/notes/{noteId}", hasBody = true)
     suspend fun deleteNote(
-        @Path("noteId") noteId: Long
+        @Path("noteId") noteId: Long,
+        @Body body: DeleteWithTimestampRequest
     ): Response<Unit>
 
     @POST("/api/addresses")
@@ -351,4 +356,9 @@ interface OfflineSyncApi {
         @Query("since") since: String,
         @Query("types[]") types: List<String>? = null
     ): Response<DeletedRecordsResponse>
+
+    @POST("/api/sync/restore")
+    suspend fun restoreDeletedRecords(
+        @Body request: RestoreRecordsRequest
+    ): RestoreRecordsResponse
 }

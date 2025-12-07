@@ -349,6 +349,7 @@ class ProjectLossInfoViewModel(
 
     private val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     private val dateTimeFormatter = SimpleDateFormat("MMM d, yyyy h:mm a", Locale.getDefault())
+    private val claimIdempotencyKeys: MutableMap<Long, String> = mutableMapOf()
 
     init {
         refresh()
@@ -448,7 +449,12 @@ class ProjectLossInfoViewModel(
             if (_uiState.value.savingClaimId == claimId) return@launch
             _uiState.update { it.copy(savingClaimId = claimId, errorMessage = null) }
 
-            val result = runCatching { api.updateClaim(claimId, request) }
+            val idempotencyKey = claimIdempotencyKeys.getOrPut(claimId) {
+                request.idempotencyKey ?: UUID.randomUUID().toString()
+            }
+            val requestWithKey = request.copy(idempotencyKey = idempotencyKey)
+
+            val result = runCatching { api.updateClaim(claimId, requestWithKey) }
             result.onSuccess { updated ->
                 _uiState.update { state ->
                     state.copy(
