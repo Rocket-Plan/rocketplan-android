@@ -26,6 +26,8 @@ data class RemoteLogBatch(
     val sessionId: String,
     @SerializedName("app_version")
     val appVersion: String,
+    @SerializedName("build_number")
+    val buildNumber: String?,
     val logs: List<RemoteLogEntry>
 )
 

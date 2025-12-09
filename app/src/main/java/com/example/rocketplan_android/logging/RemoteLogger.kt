@@ -214,6 +214,7 @@ class RemoteLogger(
             companyId = companyId,
             sessionId = sessionId,
             appVersion = AppConfig.versionName,
+            buildNumber = AppConfig.versionCode.toString(),
             logs = entries
         )
 
