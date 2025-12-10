@@ -7,8 +7,6 @@ import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
-import androidx.appcompat.content.res.AppCompatResources
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -159,27 +157,7 @@ class RocketDryFragment : Fragment() {
             moistureButton to RocketDryTab.MOISTURE
         ).forEach { (button, tab) ->
             val isSelected = tab == active
-            val backgroundRes = when (button.id) {
-                R.id.equipmentButton -> if (isSelected) {
-                    R.drawable.rocketdry_tab_left_selected
-                } else {
-                    R.drawable.rocketdry_tab_left_unselected
-                }
-
-                else -> if (isSelected) {
-                    R.drawable.rocketdry_tab_right_selected
-                } else {
-                    R.drawable.rocketdry_tab_right_unselected
-                }
-            }
             button.isChecked = isSelected
-            button.background = AppCompatResources.getDrawable(requireContext(), backgroundRes)
-            button.setTextColor(
-                ContextCompat.getColor(
-                    requireContext(),
-                    if (isSelected) android.R.color.white else R.color.main_purple
-                )
-            )
         }
     }
 

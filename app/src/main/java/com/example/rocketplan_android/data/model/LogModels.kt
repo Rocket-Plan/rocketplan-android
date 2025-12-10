@@ -28,6 +28,7 @@ data class RemoteLogBatch(
     val appVersion: String,
     @SerializedName("build_number")
     val buildNumber: String?,
+    val platform: String = "Android",
     val logs: List<RemoteLogEntry>
 )
 

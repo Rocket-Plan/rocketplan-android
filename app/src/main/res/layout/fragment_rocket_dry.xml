@@ -122,38 +122,24 @@
                 app:singleSelection="true">
 
                 <com.google.android.material.button.MaterialButton
+                    style="@style/Widget.RocketPlan.SegmentedButton"
                     android:id="@+id/equipmentButton"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:background="@drawable/rocketdry_tab_left_selector"
-                    android:insetBottom="0dp"
-                    android:insetLeft="0dp"
-                    android:insetRight="0dp"
-                    android:insetTop="0dp"
                     android:text="@string/equipment"
                     android:textAllCaps="false"
-                    android:textColor="@color/rocketdry_toggle_text_selector"
-                    android:textSize="16sp"
-                    app:cornerRadius="26dp"
-                    app:rippleColor="@color/light_purple" />
+                    android:textSize="16sp" />
 
                 <com.google.android.material.button.MaterialButton
+                    style="@style/Widget.RocketPlan.SegmentedButton"
                     android:id="@+id/moistureButton"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:background="@drawable/rocketdry_tab_right_selector"
-                    android:insetBottom="0dp"
-                    android:insetLeft="0dp"
-                    android:insetRight="0dp"
-                    android:insetTop="0dp"
                     android:text="@string/moisture"
                     android:textAllCaps="false"
-                    android:textColor="@color/rocketdry_toggle_text_selector"
-                    android:textSize="16sp"
-                    app:cornerRadius="26dp"
-                    app:rippleColor="@color/light_purple" />
+                    android:textSize="16sp" />
 
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
