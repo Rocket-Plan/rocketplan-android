@@ -3,8 +3,8 @@
 ## Migration Overview
 
 **Date:** October 9, 2025
-**Source:** `/Users/kilka/GitHub/ios.rocketplantech.com/RocketPlan/Resources/Assets.xcassets/`
-**Target:** `/Users/kilka/GitHub/Rocketplan_android/app/src/main/res/`
+**Source:** `<ios repo>/RocketPlan/Resources/Assets.xcassets/`
+**Target:** `app/src/main/res/`
 **Status:** ✅ COMPLETED SUCCESSFULLY
 
 ---
@@ -288,8 +288,10 @@ app/src/main/res/
 ├── drawable/                    # 127 files (PDFs, SVGs, single-res PNGs)
 ├── drawable-mdpi/               # 150 files (@1x PNGs)
 ├── drawable-xhdpi/              # 162 files (@2x PNGs)
-├── drawable-xxhdpi/             # 162 files (@3x PNGs)
-└── asset_migration_report.txt  # Detailed migration log
+└── drawable-xxhdpi/             # 162 files (@3x PNGs)
+
+docs/
+└── asset_migration_report.txt   # Detailed migration log (not packaged)
 ```
 
 ---
@@ -308,7 +310,7 @@ app/src/main/res/
 
 ## Additional Resources
 
-- **Detailed migration log:** `app/src/main/res/asset_migration_report.txt`
+- **Detailed migration log:** `docs/asset_migration_report.txt`
 - **Migration script:** `migrate_ios_assets.py` (in project root)
 - **Android density guide:** https://developer.android.com/training/multiscreen/screendensities
 - **Vector drawable guide:** https://developer.android.com/guide/topics/graphics/vector-drawable-resources

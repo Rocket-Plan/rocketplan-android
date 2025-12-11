@@ -63,6 +63,3 @@
 -keep class okhttp3.** { *; }
 -dontwarn okhttp3.**
 -dontwarn okio.**
-
-# Keep app classes for debugging
--keep class com.example.rocketplan_android.** { *; }

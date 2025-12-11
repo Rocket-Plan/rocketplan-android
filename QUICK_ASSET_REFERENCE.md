@@ -11,34 +11,34 @@
 
 ### All Drawable Directories
 ```bash
-/Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable/
-/Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable-mdpi/
-/Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable-xhdpi/
-/Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable-xxhdpi/
+app/src/main/res/drawable/
+app/src/main/res/drawable-mdpi/
+app/src/main/res/drawable-xhdpi/
+app/src/main/res/drawable-xxhdpi/
 ```
 
 ## Quick Search Commands
 
 ### Find all PNG files
 ```bash
-find /Users/kilka/GitHub/Rocketplan_android/app/src/main/res -name "*.png" -type f
+find app/src/main/res -name "*.png" -type f
 ```
 
 ### Find all PDF files (need conversion)
 ```bash
-find /Users/kilka/GitHub/Rocketplan_android/app/src/main/res -name "*.pdf" -type f
+find app/src/main/res -name "*.pdf" -type f
 ```
 
 ### Find all SVG files (need conversion)
 ```bash
-find /Users/kilka/GitHub/Rocketplan_android/app/src/main/res -name "*.svg" -type f
+find app/src/main/res -name "*.svg" -type f
 ```
 
 ### Search for specific icon
 ```bash
-find /Users/kilka/GitHub/Rocketplan_android/app/src/main/res -name "*camera*"
-find /Users/kilka/GitHub/Rocketplan_android/app/src/main/res -name "*logo*"
-find /Users/kilka/GitHub/Rocketplan_android/app/src/main/res -name "*bedroom*"
+find app/src/main/res -name "*camera*"
+find app/src/main/res -name "*logo*"
+find app/src/main/res -name "*bedroom*"
 ```
 
 ## Asset Categories Quick Reference
@@ -82,9 +82,9 @@ imageView.setImageResource(R.drawable.bedroom)
 ```
 
 ## Important Files
-- **Detailed Report:** `/Users/kilka/GitHub/Rocketplan_android/app/src/main/res/asset_migration_report.txt`
-- **Migration Script:** `/Users/kilka/GitHub/Rocketplan_android/migrate_ios_assets.py`
-- **Summary:** `/Users/kilka/GitHub/Rocketplan_android/ASSET_MIGRATION_SUMMARY.md`
+- **Detailed Report:** `docs/asset_migration_report.txt`
+- **Migration Script:** `migrate_ios_assets.py`
+- **Summary:** `ASSET_MIGRATION_SUMMARY.md`
 
 ## Next Actions Required
 
@@ -97,11 +97,11 @@ imageView.setImageResource(R.drawable.bedroom)
 
 ```bash
 # Count files in each directory
-ls /Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable/ | wc -l
-ls /Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable-mdpi/ | wc -l
-ls /Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable-xhdpi/ | wc -l
-ls /Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable-xxhdpi/ | wc -l
+ls app/src/main/res/drawable/ | wc -l
+ls app/src/main/res/drawable-mdpi/ | wc -l
+ls app/src/main/res/drawable-xhdpi/ | wc -l
+ls app/src/main/res/drawable-xxhdpi/ | wc -l
 
 # Total count
-find /Users/kilka/GitHub/Rocketplan_android/app/src/main/res/drawable* -type f \( -name "*.png" -o -name "*.pdf" -o -name "*.svg" \) | wc -l
+find app/src/main/res/drawable* -type f \( -name "*.png" -o -name "*.pdf" -o -name "*.svg" \) | wc -l
 ```

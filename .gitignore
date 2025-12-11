@@ -15,6 +15,13 @@
 local.properties
 
 # Debug logs
+debug/
 debug/archive_*.logcat
 debug/*.log
+debug/*.logcat
+debug/*.db*
+debug/*.preferences_pb
+debug/*.sql
 .auto-log.pid
+/dist
+/release.jks

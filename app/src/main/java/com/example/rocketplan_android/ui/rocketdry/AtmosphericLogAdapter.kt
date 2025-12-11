@@ -9,14 +9,16 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import kotlin.math.roundToInt
 
-class AtmosphericLogAdapter : RecyclerView.Adapter<AtmosphericLogAdapter.ViewHolder>() {
+class AtmosphericLogAdapter(
+    private val onAddLogClicked: () -> Unit
+) : RecyclerView.Adapter<AtmosphericLogAdapter.ViewHolder>() {
 
     private val logs: MutableList<AtmosphericLogItem> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_atmospheric_log, parent, false)
-        return ViewHolder(view)
+        return ViewHolder(view, onAddLogClicked)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -31,7 +33,10 @@ class AtmosphericLogAdapter : RecyclerView.Adapter<AtmosphericLogAdapter.ViewHol
         notifyDataSetChanged()
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class ViewHolder(
+        itemView: View,
+        private val onAddLogClicked: () -> Unit
+    ) : RecyclerView.ViewHolder(itemView) {
         private val logDateTime: TextView = itemView.findViewById(R.id.logDateTime)
         private val humidityValue: TextView = itemView.findViewById(R.id.humidityValue)
         private val temperatureValue: TextView = itemView.findViewById(R.id.temperatureValue)
@@ -46,9 +51,7 @@ class AtmosphericLogAdapter : RecyclerView.Adapter<AtmosphericLogAdapter.ViewHol
             pressureValue.text = log.pressure.roundToInt().toString()
             windSpeedValue.text = log.windSpeed.roundToInt().toString()
 
-            addLogButton.setOnClickListener {
-                // TODO: Handle add log action
-            }
+            addLogButton.setOnClickListener { onAddLogClicked() }
         }
     }
 }

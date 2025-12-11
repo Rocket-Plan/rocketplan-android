@@ -1,0 +1,897 @@
+kotlin version: 2.0.21
+error message: org.jetbrains.kotlin.backend.common.BackendException: Backend Internal error: Exception during IR lowering
+File being compiled: /Users/kilka/GitHub/Rocketplan_android/app/src/main/java/com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.kt
+The root cause java.lang.RuntimeException was thrown at: org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException(CodegenUtil.kt:253)
+	at org.jetbrains.kotlin.backend.common.CodegenUtil.reportBackendException$default(CodegenUtil.kt:236)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:65)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:52)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:38)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:27)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:14)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:62)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:371)
+	at org.jetbrains.kotlin.codegen.CodegenFactory.generateModule(CodegenFactory.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateModuleInFrontendIRMode(JvmIrCodegenFactory.kt:433)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.generateCodeFromIr(jvmCompilerPipeline.kt:246)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.compileModulesUsingFrontendIrAndLightTree(jvmCompilerPipeline.kt:142)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:148)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:43)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:103)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:49)
+	at org.jetbrains.kotlin.cli.common.CLITool.exec(CLITool.kt:101)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:464)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:73)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:506)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:423)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:301)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:129)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:675)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:92)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1660)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(UnicastServerRef.java:360)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:200)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:197)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:714)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Transport.java:196)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(TCPTransport.java:598)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(TCPTransport.java:844)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(TCPTransport.java:721)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:400)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(TCPTransport.java:720)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: java.lang.RuntimeException: Exception while generating code for:
+FUN name:processRetryQueue visibility:public modality:FINAL <> ($this:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager, bypassTimeout:kotlin.Boolean) returnType:kotlin.Unit
+  $this: VALUE_PARAMETER name:<this> type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+  VALUE_PARAMETER name:bypassTimeout index:0 type:kotlin.Boolean
+    EXPRESSION_BODY
+      ERROR_EXPR 'Default Stub' type=kotlin.Boolean
+  BLOCK_BODY
+    COMPOSITE type=kotlin.Unit origin=null
+      CALL 'public final fun launch$default (context: kotlin.coroutines.CoroutineContext?, start: kotlinx.coroutines.CoroutineStart?, block: @[ExtensionFunctionType] kotlin.coroutines.SuspendFunction1<kotlinx.coroutines.CoroutineScope, kotlin.Unit>, $mask0: kotlin.Int, $handler: kotlin.Any?): kotlinx.coroutines.Job declared in kotlinx.coroutines.BuildersKt' type=kotlinx.coroutines.Job origin=DEFAULT_DISPATCH_CALL
+        $receiver: GET_FIELD 'FIELD PROPERTY_BACKING_FIELD name:scope type:kotlinx.coroutines.CoroutineScope visibility:private [final]' type=kotlinx.coroutines.CoroutineScope origin=null
+          receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+        context: COMPOSITE type=kotlin.coroutines.CoroutineContext? origin=DEFAULT_VALUE
+          CONST Null type=kotlin.coroutines.CoroutineContext? value=null
+        start: COMPOSITE type=kotlinx.coroutines.CoroutineStart? origin=DEFAULT_VALUE
+          CONST Null type=kotlinx.coroutines.CoroutineStart? value=null
+        block: BLOCK type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+          CLASS SUSPEND_LAMBDA CLASS name:<no name provided> modality:FINAL visibility:public/*package*/ superTypes:[kotlin.coroutines.jvm.internal.SuspendLambda; kotlin.jvm.functions.Function2<kotlinx.coroutines.CoroutineScope, kotlin.coroutines.Continuation<kotlin.Unit>?, kotlin.Any?>]
+            $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>
+            FIELD name:label type:kotlin.Int visibility:public/*package*/
+            CONSTRUCTOR SUSPEND_LAMBDA visibility:public/*package*/ <> ($bypassTimeout:kotlin.Boolean, this$0:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager, $completion:kotlin.coroutines.Continuation<com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>>?) returnType:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> [primary]
+              VALUE_PARAMETER BOUND_VALUE_PARAMETER name:$bypassTimeout index:0 type:kotlin.Boolean
+              VALUE_PARAMETER BOUND_RECEIVER_PARAMETER name:this$0 index:1 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+              VALUE_PARAMETER name:$completion index:2 type:kotlin.coroutines.Continuation<com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>>?
+              BLOCK_BODY
+                SET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:$bypassTimeout type:kotlin.Boolean visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Unit origin=INITIALIZER_OF_FIELD_FOR_CAPTURED_VALUE
+                  receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                  value: GET_VAR '$bypassTimeout: kotlin.Boolean declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.<init>' type=kotlin.Boolean origin=null
+                SET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Unit origin=INITIALIZER_OF_FIELD_FOR_CAPTURED_VALUE
+                  receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                  value: GET_VAR 'this$0: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.<init>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                DELEGATING_CONSTRUCTOR_CALL 'public constructor <init> (arity: kotlin.Int, $completion: kotlin.coroutines.Continuation<kotlin.Any?>?) declared in kotlin.coroutines.jvm.internal.SuspendLambda'
+                  arity: CONST Int type=kotlin.Int value=2
+                  $completion: GET_VAR '$completion: kotlin.coroutines.Continuation<com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>>? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.<init>' type=kotlin.coroutines.Continuation<com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>>? origin=null
+                BLOCK type=kotlin.Unit origin=null
+            FUN name:invokeSuspend visibility:public modality:FINAL <> ($this:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>, $result:kotlin.Result<kotlin.Any?>) returnType:kotlin.Any?
+              overridden:
+                protected abstract fun invokeSuspend ($result: kotlin.Result<kotlin.Any?>): kotlin.Any? declared in kotlin.coroutines.jvm.internal.SuspendLambda
+              $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>
+              VALUE_PARAMETER name:$result index:0 type:kotlin.Result<kotlin.Any?>
+              BLOCK_BODY
+                COMPOSITE type=kotlin.Unit origin=null
+                  TRY type=kotlin.Unit?
+                    try: BLOCK type=kotlin.Unit origin=null
+                      COMPOSITE type=kotlin.Unit origin=null
+                        CALL 'public open fun d (p0: @[EnhancedNullability] kotlin.String?, p1: @[EnhancedNullability] kotlin.String): kotlin.Int declared in android.util.Log' type=kotlin.Int origin=null
+                          p0: CONST String type=kotlin.String value="ImgProcessorQueueMgr"
+                          p1: STRING_CONCATENATION type=kotlin.String
+                            CONST String type=kotlin.String value="\uD83D\uDD04 Processing retry queue (bypassTimeout="
+                            GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:$bypassTimeout type:kotlin.Boolean visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Boolean origin=null
+                              receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                            CONST String type=kotlin.String value=")"
+                        COMPOSITE type=kotlin.Unit origin=null
+                      VAR name:currentTime type:kotlin.Long [val]
+                        CALL 'public open fun currentTimeMillis (): kotlin.Long declared in java.lang.System' type=kotlin.Long origin=null
+                      VAR name:retryableAssemblies type:kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val]
+                        CALL 'public final fun filter <T> (predicate: kotlin.Function1<T of kotlin.collections.CollectionsKt.filter, kotlin.Boolean>): kotlin.collections.List<T of kotlin.collections.CollectionsKt.filter> [inline] declared in kotlin.collections.CollectionsKt' type=kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                          <T>: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
+                          $receiver: CALL 'public abstract fun getRetryableAssemblies (retryableStatuses: kotlin.collections.List<kotlin.String>, currentTimeMillis: kotlin.Long, $completion: kotlin.coroutines.Continuation<kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity>>): kotlin.Any? [suspend] declared in com.example.rocketplan_android.data.local.dao.ImageProcessorDao' type=kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                            $this: CALL 'public final fun access$getDao$p ($this: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager): com.example.rocketplan_android.data.local.dao.ImageProcessorDao declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager' type=com.example.rocketplan_android.data.local.dao.ImageProcessorDao origin=null
+                              $this: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                                receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                            retryableStatuses: CALL 'public final fun listOf <T> (vararg elements: T of kotlin.collections.CollectionsKt.listOf): kotlin.collections.List<T of kotlin.collections.CollectionsKt.listOf> declared in kotlin.collections.CollectionsKt' type=kotlin.collections.List<kotlin.String> origin=null
+                              <T>: kotlin.String
+                              elements: BLOCK type=kotlin.Array<out kotlin.String> origin=null
+                                VAR IR_TEMPORARY_VARIABLE name:tmp0 type:kotlin.Array<out kotlin.String> [val]
+                                  CALL 'public final fun arrayOfNulls <T> (size: kotlin.Int): kotlin.Array<T of kotlin.arrayOfNulls?> declared in kotlin' type=kotlin.Array<out kotlin.String> origin=null
+                                    <T>: kotlin.String
+                                    size: CONST Int type=kotlin.Int value=2
+                                CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                                  $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.Array<out kotlin.String> origin=null
+                                  index: CONST Int type=kotlin.Int value=0
+                                  value: CALL 'public final fun <get-value> (): kotlin.String declared in com.example.rocketplan_android.data.local.entity.AssemblyStatus' type=kotlin.String origin=GET_PROPERTY
+                                    $this: GET_FIELD 'FIELD FIELD_FOR_ENUM_ENTRY name:FAILED type:com.example.rocketplan_android.data.local.entity.AssemblyStatus visibility:public [final,static] declared in com.example.rocketplan_android.data.local.entity.AssemblyStatus' type=com.example.rocketplan_android.data.local.entity.AssemblyStatus origin=null
+                                CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                                  $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.Array<out kotlin.String> origin=null
+                                  index: CONST Int type=kotlin.Int value=1
+                                  value: CALL 'public final fun <get-value> (): kotlin.String declared in com.example.rocketplan_android.data.local.entity.AssemblyStatus' type=kotlin.String origin=GET_PROPERTY
+                                    $this: GET_FIELD 'FIELD FIELD_FOR_ENUM_ENTRY name:WAITING_FOR_CONNECTIVITY type:com.example.rocketplan_android.data.local.entity.AssemblyStatus visibility:public [final,static] declared in com.example.rocketplan_android.data.local.entity.AssemblyStatus' type=com.example.rocketplan_android.data.local.entity.AssemblyStatus origin=null
+                                GET_VAR 'val tmp0: kotlin.Array<out kotlin.String> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.Array<out kotlin.String> origin=null
+                            currentTimeMillis: WHEN type=kotlin.Long origin=IF
+                              BRANCH
+                                if: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:$bypassTimeout type:kotlin.Boolean visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Boolean origin=null
+                                  receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                then: CONST Long type=kotlin.Long value=9223372036854775807
+                              BRANCH
+                                if: CONST Boolean type=kotlin.Boolean value=true
+                                then: GET_VAR 'val currentTime: kotlin.Long [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.Long origin=null
+                            $completion: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                          predicate: BLOCK type=kotlin.Function1<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity, kotlin.Boolean> origin=LAMBDA
+                            COMPOSITE type=kotlin.Unit origin=null
+                            FUNCTION_REFERENCE 'private final fun invokeSuspend$lambda$0 (it: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity): kotlin.Boolean declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Function1<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity, kotlin.Boolean> origin=INLINE_LAMBDA reflectionTarget=null
+                      WHEN type=kotlin.Unit origin=IF
+                        BRANCH
+                          if: CALL 'public abstract fun isEmpty (): kotlin.Boolean declared in kotlin.collections.List' type=kotlin.Boolean origin=null
+                            $this: GET_VAR 'val retryableAssemblies: kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                          then: BLOCK type=kotlin.Unit origin=null
+                            COMPOSITE type=kotlin.Unit origin=null
+                              CALL 'public open fun d (p0: @[EnhancedNullability] kotlin.String?, p1: @[EnhancedNullability] kotlin.String): kotlin.Int declared in android.util.Log' type=kotlin.Int origin=null
+                                p0: CONST String type=kotlin.String value="ImgProcessorQueueMgr"
+                                p1: CONST String type=kotlin.String value="✅ No assemblies ready for retry"
+                              COMPOSITE type=kotlin.Unit origin=null
+                            RETURN type=kotlin.Nothing from='public final fun invokeSuspend ($result: kotlin.Result<kotlin.Any?>): kotlin.Any? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>'
+                              GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:kotlin.Unit visibility:public [final,static] declared in kotlin.Unit' type=kotlin.Unit origin=null
+                      COMPOSITE type=kotlin.Unit origin=null
+                        CALL 'public open fun d (p0: @[EnhancedNullability] kotlin.String?, p1: @[EnhancedNullability] kotlin.String): kotlin.Int declared in android.util.Log' type=kotlin.Int origin=null
+                          p0: CONST String type=kotlin.String value="ImgProcessorQueueMgr"
+                          p1: STRING_CONCATENATION type=kotlin.String
+                            CONST String type=kotlin.String value="\uD83D\uDCCB Found "
+                            CALL 'public abstract fun <get-size> (): kotlin.Int declared in kotlin.collections.List' type=kotlin.Int origin=GET_PROPERTY
+                              $this: GET_VAR 'val retryableAssemblies: kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                            CONST String type=kotlin.String value=" assemblies ready for retry"
+                        COMPOSITE type=kotlin.Unit origin=null
+                      COMPOSITE type=kotlin.Unit origin=null
+                        BLOCK type=kotlin.Unit? origin=FOLDED_SAFE_CALL
+                          WHEN type=kotlin.Unit? origin=FOLDED_SAFE_CALL
+                            BRANCH
+                              if: COMPOSITE type=kotlin.Boolean origin=null
+                                VAR IR_TEMPORARY_VARIABLE name:tmp0_safe_receiver type:com.example.rocketplan_android.logging.RemoteLogger? [val]
+                                  CALL 'public final fun access$getRemoteLogger$p ($this: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager): com.example.rocketplan_android.logging.RemoteLogger? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager' type=com.example.rocketplan_android.logging.RemoteLogger? origin=null
+                                    $this: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                                      receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                                  $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                                    arg0: GET_VAR 'val tmp0_safe_receiver: com.example.rocketplan_android.logging.RemoteLogger? [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.logging.RemoteLogger? origin=null
+                                    arg1: CONST Null type=kotlin.Nothing? value=null
+                              then: CALL 'public final fun log (level: com.example.rocketplan_android.logging.LogLevel, tag: kotlin.String, message: kotlin.String, metadata: kotlin.collections.Map<kotlin.String, kotlin.String>?): kotlin.Unit declared in com.example.rocketplan_android.logging.RemoteLogger' type=kotlin.Unit origin=null
+                                $this: GET_VAR 'val tmp0_safe_receiver: com.example.rocketplan_android.logging.RemoteLogger? [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.logging.RemoteLogger? origin=null
+                                level: GET_FIELD 'FIELD FIELD_FOR_ENUM_ENTRY name:INFO type:com.example.rocketplan_android.logging.LogLevel visibility:public [final,static] declared in com.example.rocketplan_android.logging.LogLevel' type=com.example.rocketplan_android.logging.LogLevel origin=null
+                                tag: CONST String type=kotlin.String value="ImgProcessorQueueMgr"
+                                message: CONST String type=kotlin.String value="Retry queue processing"
+                                metadata: CALL 'public final fun mapOf <K, V> (vararg pairs: kotlin.Pair<K of kotlin.collections.MapsKt.mapOf, V of kotlin.collections.MapsKt.mapOf>): kotlin.collections.Map<K of kotlin.collections.MapsKt.mapOf, V of kotlin.collections.MapsKt.mapOf> declared in kotlin.collections.MapsKt' type=kotlin.collections.Map<kotlin.String, kotlin.String> origin=null
+                                  <K>: kotlin.String
+                                  <V>: kotlin.String
+                                  pairs: BLOCK type=kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> origin=null
+                                    VAR IR_TEMPORARY_VARIABLE name:tmp0 type:kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> [val]
+                                      CALL 'public final fun arrayOfNulls <T> (size: kotlin.Int): kotlin.Array<T of kotlin.arrayOfNulls?> declared in kotlin' type=kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> origin=null
+                                        <T>: kotlin.Pair<kotlin.String, kotlin.String>
+                                        size: CONST Int type=kotlin.Int value=2
+                                    CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                                      $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> origin=null
+                                      index: CONST Int type=kotlin.Int value=0
+                                      value: CALL 'public final fun to <A, B> (that: B of kotlin.TuplesKt.to): kotlin.Pair<A of kotlin.TuplesKt.to, B of kotlin.TuplesKt.to> [infix] declared in kotlin.TuplesKt' type=kotlin.Pair<kotlin.String, kotlin.String> origin=null
+                                        <A>: kotlin.String
+                                        <B>: kotlin.String
+                                        $receiver: CONST String type=kotlin.String value="retryable_count"
+                                        that: CALL 'public final fun valueOf (value: kotlin.Int): kotlin.String declared in java.lang.String' type=kotlin.String origin=null
+                                          value: CALL 'public abstract fun <get-size> (): kotlin.Int declared in kotlin.collections.List' type=kotlin.Int origin=GET_PROPERTY
+                                            $this: GET_VAR 'val retryableAssemblies: kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                                    CALL 'public final fun set (index: kotlin.Int, value: T of kotlin.Array): kotlin.Unit [operator] declared in kotlin.Array' type=kotlin.Unit origin=null
+                                      $this: GET_VAR 'val tmp0: kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> origin=null
+                                      index: CONST Int type=kotlin.Int value=1
+                                      value: CALL 'public final fun to <A, B> (that: B of kotlin.TuplesKt.to): kotlin.Pair<A of kotlin.TuplesKt.to, B of kotlin.TuplesKt.to> [infix] declared in kotlin.TuplesKt' type=kotlin.Pair<kotlin.String, kotlin.String> origin=null
+                                        <A>: kotlin.String
+                                        <B>: kotlin.String
+                                        $receiver: CONST String type=kotlin.String value="bypass_timeout"
+                                        that: CALL 'public final fun valueOf (value: kotlin.Boolean): kotlin.String declared in java.lang.String' type=kotlin.String origin=null
+                                          value: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:$bypassTimeout type:kotlin.Boolean visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Boolean origin=null
+                                            receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                    GET_VAR 'val tmp0: kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.Array<out kotlin.Pair<kotlin.String, kotlin.String>> origin=null
+                            BRANCH
+                              if: CONST Boolean type=kotlin.Boolean value=true
+                              then: CONST Null type=kotlin.Nothing? value=null
+                      BLOCK type=kotlin.Unit origin=FOR_LOOP
+                        VAR FOR_LOOP_ITERATOR name:<iterator> type:kotlin.collections.Iterator<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val]
+                          CALL 'public abstract fun iterator (): kotlin.collections.Iterator<E of kotlin.collections.List> [operator] declared in kotlin.collections.List' type=kotlin.collections.Iterator<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=FOR_LOOP_ITERATOR
+                            $this: GET_VAR 'val retryableAssemblies: kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.collections.List<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                        WHILE label=ImageProcessorQueueManager$processRetryQueue$<no name provided>$invokeSuspend4 origin=FOR_LOOP_INNER_WHILE
+                          condition: CALL 'public abstract fun hasNext (): kotlin.Boolean [operator] declared in kotlin.collections.Iterator' type=kotlin.Boolean origin=FOR_LOOP_HAS_NEXT
+                            $this: GET_VAR 'val <iterator>: kotlin.collections.Iterator<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.collections.Iterator<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                          body: BLOCK type=kotlin.Unit origin=FOR_LOOP_INNER_WHILE
+                            VAR FOR_LOOP_VARIABLE name:assembly type:com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity [val]
+                              CALL 'public abstract fun next (): T of kotlin.collections.Iterator [operator] declared in kotlin.collections.Iterator' type=com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity origin=FOR_LOOP_NEXT
+                                $this: GET_VAR 'val <iterator>: kotlin.collections.Iterator<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.collections.Iterator<com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity> origin=null
+                            COMPOSITE type=kotlin.Unit origin=null
+                              BLOCK type=kotlin.Int origin=null
+                                CALL 'public final fun access$resetFailedPhotosToPending ($this: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager, assemblyId: kotlin.String, $completion: kotlin.coroutines.Continuation<kotlin.Unit>): kotlin.Any? [suspend] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager' type=kotlin.Unit origin=null
+                                  $this: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                                    receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                  assemblyId: CALL 'public final fun <get-assemblyId> (): kotlin.String declared in com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity' type=kotlin.String origin=GET_PROPERTY
+                                    $this: GET_VAR 'val assembly: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity origin=null
+                                  $completion: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                CALL 'public final fun access$updateAssemblyStatus ($this: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager, assemblyId: kotlin.String, status: com.example.rocketplan_android.data.local.entity.AssemblyStatus, errorMessage: kotlin.String?, $completion: kotlin.coroutines.Continuation<kotlin.Unit>): kotlin.Any? [suspend] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager' type=kotlin.Unit origin=null
+                                  $this: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                                    receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                  assemblyId: CALL 'public final fun <get-assemblyId> (): kotlin.String declared in com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity' type=kotlin.String origin=GET_PROPERTY
+                                    $this: GET_VAR 'val assembly: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity origin=null
+                                  status: GET_FIELD 'FIELD FIELD_FOR_ENUM_ENTRY name:RETRYING type:com.example.rocketplan_android.data.local.entity.AssemblyStatus visibility:public [final,static] declared in com.example.rocketplan_android.data.local.entity.AssemblyStatus' type=com.example.rocketplan_android.data.local.entity.AssemblyStatus origin=null
+                                  errorMessage: CONST Null type=kotlin.Nothing? value=null
+                                  $completion: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                CALL 'public final fun access$updateAssemblyStatus ($this: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager, assemblyId: kotlin.String, status: com.example.rocketplan_android.data.local.entity.AssemblyStatus, errorMessage: kotlin.String?, $completion: kotlin.coroutines.Continuation<kotlin.Unit>): kotlin.Any? [suspend] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager' type=kotlin.Unit origin=null
+                                  $this: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                                    receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                  assemblyId: CALL 'public final fun <get-assemblyId> (): kotlin.String declared in com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity' type=kotlin.String origin=GET_PROPERTY
+                                    $this: GET_VAR 'val assembly: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity origin=null
+                                  status: GET_FIELD 'FIELD FIELD_FOR_ENUM_ENTRY name:CREATED type:com.example.rocketplan_android.data.local.entity.AssemblyStatus visibility:public [final,static] declared in com.example.rocketplan_android.data.local.entity.AssemblyStatus' type=com.example.rocketplan_android.data.local.entity.AssemblyStatus origin=null
+                                  errorMessage: CONST Null type=kotlin.Nothing? value=null
+                                  $completion: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                CALL 'public open fun d (p0: @[EnhancedNullability] kotlin.String?, p1: @[EnhancedNullability] kotlin.String): kotlin.Int declared in android.util.Log' type=kotlin.Int origin=null
+                                  p0: CONST String type=kotlin.String value="ImgProcessorQueueMgr"
+                                  p1: STRING_CONCATENATION type=kotlin.String
+                                    CONST String type=kotlin.String value="\uD83D\uDD04 Queued assembly "
+                                    CALL 'public final fun <get-assemblyId> (): kotlin.String declared in com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity' type=kotlin.String origin=GET_PROPERTY
+                                      $this: GET_VAR 'val assembly: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity origin=null
+                                    CONST String type=kotlin.String value=" for retry"
+                              COMPOSITE type=kotlin.Unit origin=null
+                      CALL 'public final fun processNextQueuedAssembly (): kotlin.Unit declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager' type=kotlin.Unit origin=null
+                        $this: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                          receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                    CATCH parameter=val e: java.lang.Exception [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend
+                      VAR CATCH_PARAMETER name:e type:java.lang.Exception [val]
+                      BLOCK type=kotlin.Unit? origin=null
+                        COMPOSITE type=kotlin.Unit origin=null
+                          CALL 'public open fun e (p0: @[EnhancedNullability] kotlin.String?, p1: @[EnhancedNullability] kotlin.String?, p2: @[EnhancedNullability] kotlin.Throwable?): kotlin.Int declared in android.util.Log' type=kotlin.Int origin=null
+                            p0: CONST String type=kotlin.String value="ImgProcessorQueueMgr"
+                            p1: CONST String type=kotlin.String value="❌ Error processing retry queue"
+                            p2: GET_VAR 'val e: java.lang.Exception [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=java.lang.Exception origin=null
+                          COMPOSITE type=kotlin.Unit origin=null
+                        BLOCK type=kotlin.Unit? origin=FOLDED_SAFE_CALL
+                          WHEN type=kotlin.Unit? origin=FOLDED_SAFE_CALL
+                            BRANCH
+                              if: COMPOSITE type=kotlin.Boolean origin=null
+                                VAR IR_TEMPORARY_VARIABLE name:tmp1_safe_receiver type:com.example.rocketplan_android.logging.RemoteLogger? [val]
+                                  CALL 'public final fun access$getRemoteLogger$p ($this: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager): com.example.rocketplan_android.logging.RemoteLogger? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager' type=com.example.rocketplan_android.logging.RemoteLogger? origin=null
+                                    $this: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                                      receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                                CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                                  $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                                    arg0: GET_VAR 'val tmp1_safe_receiver: com.example.rocketplan_android.logging.RemoteLogger? [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.logging.RemoteLogger? origin=null
+                                    arg1: CONST Null type=kotlin.Nothing? value=null
+                              then: CALL 'public final fun log (level: com.example.rocketplan_android.logging.LogLevel, tag: kotlin.String, message: kotlin.String, metadata: kotlin.collections.Map<kotlin.String, kotlin.String>?): kotlin.Unit declared in com.example.rocketplan_android.logging.RemoteLogger' type=kotlin.Unit origin=null
+                                $this: GET_VAR 'val tmp1_safe_receiver: com.example.rocketplan_android.logging.RemoteLogger? [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=com.example.rocketplan_android.logging.RemoteLogger? origin=null
+                                level: GET_FIELD 'FIELD FIELD_FOR_ENUM_ENTRY name:ERROR type:com.example.rocketplan_android.logging.LogLevel visibility:public [final,static] declared in com.example.rocketplan_android.logging.LogLevel' type=com.example.rocketplan_android.logging.LogLevel origin=null
+                                tag: CONST String type=kotlin.String value="ImgProcessorQueueMgr"
+                                message: STRING_CONCATENATION type=kotlin.String
+                                  CONST String type=kotlin.String value="Retry queue processing failed: "
+                                  CALL 'public open fun <get-message> (): kotlin.String? [fake_override] declared in java.lang.Exception' type=kotlin.String? origin=GET_PROPERTY
+                                    $this: GET_VAR 'val e: java.lang.Exception [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=java.lang.Exception origin=null
+                                metadata: CALL 'public final fun mapOf <K, V> (pair: kotlin.Pair<K of kotlin.collections.MapsKt.mapOf, V of kotlin.collections.MapsKt.mapOf>): kotlin.collections.Map<K of kotlin.collections.MapsKt.mapOf, V of kotlin.collections.MapsKt.mapOf> declared in kotlin.collections.MapsKt' type=kotlin.collections.Map<kotlin.String, kotlin.String> origin=null
+                                  <K>: kotlin.String
+                                  <V>: kotlin.String
+                                  pair: CALL 'public final fun to <A, B> (that: B of kotlin.TuplesKt.to): kotlin.Pair<A of kotlin.TuplesKt.to, B of kotlin.TuplesKt.to> [infix] declared in kotlin.TuplesKt' type=kotlin.Pair<kotlin.String, kotlin.String> origin=null
+                                    <A>: kotlin.String
+                                    <B>: kotlin.String
+                                    $receiver: CONST String type=kotlin.String value="error"
+                                    that: BLOCK type=kotlin.String origin=FOLDED_ELVIS
+                                      WHEN type=kotlin.String origin=FOLDED_ELVIS
+                                        BRANCH
+                                          if: COMPOSITE type=kotlin.Boolean origin=null
+                                            VAR IR_TEMPORARY_VARIABLE name:tmp2_elvis_lhs type:kotlin.String? [val]
+                                              CALL 'public open fun <get-message> (): kotlin.String? [fake_override] declared in java.lang.Exception' type=kotlin.String? origin=GET_PROPERTY
+                                                $this: GET_VAR 'val e: java.lang.Exception [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=java.lang.Exception origin=null
+                                            CALL 'public final fun not (): kotlin.Boolean [operator] declared in kotlin.Boolean' type=kotlin.Boolean origin=null
+                                              $this: CALL 'public final fun EQEQ (arg0: kotlin.Any?, arg1: kotlin.Any?): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=null
+                                                arg0: GET_VAR 'val tmp2_elvis_lhs: kotlin.String? [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.String? origin=null
+                                                arg1: CONST Null type=kotlin.Nothing? value=null
+                                          then: GET_VAR 'val tmp2_elvis_lhs: kotlin.String? [val] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend' type=kotlin.String? origin=null
+                                        BRANCH
+                                          if: CONST Boolean type=kotlin.Boolean value=true
+                                          then: CONST String type=kotlin.String value="unknown"
+                            BRANCH
+                              if: CONST Boolean type=kotlin.Boolean value=true
+                              then: CONST Null type=kotlin.Nothing? value=null
+            FUN name:create visibility:public modality:FINAL <> ($this:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>, value:kotlin.Any?, $completion:kotlin.coroutines.Continuation<kotlin.Nothing>) returnType:kotlin.coroutines.Continuation<kotlin.Unit>
+              overridden:
+                public open fun create (value: kotlin.Any?, $completion: kotlin.coroutines.Continuation<kotlin.Nothing>): kotlin.coroutines.Continuation<kotlin.Unit> declared in kotlin.coroutines.jvm.internal.SuspendLambda
+              $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>
+              VALUE_PARAMETER name:value index:0 type:kotlin.Any?
+              VALUE_PARAMETER name:$completion index:1 type:kotlin.coroutines.Continuation<kotlin.Nothing>
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun create (value: kotlin.Any?, $completion: kotlin.coroutines.Continuation<kotlin.Nothing>): kotlin.coroutines.Continuation<kotlin.Unit> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>'
+                  CONSTRUCTOR_CALL 'public/*package*/ constructor <init> ($bypassTimeout: kotlin.Boolean, this$0: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager, $completion: kotlin.coroutines.Continuation<com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>>?) [primary] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                    $bypassTimeout: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:$bypassTimeout type:kotlin.Boolean visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Boolean origin=null
+                      receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.create' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                    this$0: GET_FIELD 'FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+                      receiver: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.create' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                    $completion: GET_VAR '$completion: kotlin.coroutines.Continuation<kotlin.Nothing> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.create' type=kotlin.coroutines.Continuation<kotlin.Nothing> origin=null
+            FUN name:invoke visibility:public modality:FINAL <> ($this:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>, p1:kotlinx.coroutines.CoroutineScope, p2:kotlin.coroutines.Continuation<kotlin.Unit>?) returnType:kotlin.Any?
+              overridden:
+                public abstract fun invoke (p1: P1 of kotlin.jvm.functions.Function2, p2: P2 of kotlin.jvm.functions.Function2): R of kotlin.jvm.functions.Function2 declared in kotlin.jvm.functions.Function2
+              $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>
+              VALUE_PARAMETER name:p1 index:0 type:kotlinx.coroutines.CoroutineScope
+              VALUE_PARAMETER name:p2 index:1 type:kotlin.coroutines.Continuation<kotlin.Unit>?
+              BLOCK_BODY
+                RETURN type=kotlin.Nothing from='public final fun invoke (p1: kotlinx.coroutines.CoroutineScope, p2: kotlin.coroutines.Continuation<kotlin.Unit>?): kotlin.Any? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>'
+                  CALL 'public final fun invokeSuspend ($result: kotlin.Result<kotlin.Any?>): kotlin.Any? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Any? origin=null
+                    $this: TYPE_OP type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=IMPLICIT_CAST typeOperand=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>
+                      CALL 'public final fun create (value: kotlin.Any?, $completion: kotlin.coroutines.Continuation<kotlin.Nothing>): kotlin.coroutines.Continuation<kotlin.Unit> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.coroutines.Continuation<kotlin.Unit> origin=null
+                        $this: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invoke' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                        value: GET_VAR 'p1: kotlinx.coroutines.CoroutineScope declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invoke' type=kotlinx.coroutines.CoroutineScope origin=null
+                        $completion: GET_VAR 'p2: kotlin.coroutines.Continuation<kotlin.Unit>? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invoke' type=kotlin.coroutines.Continuation<kotlin.Unit>? origin=null
+                    $result: CALL 'public final fun <unsafe-coerce> <T, R> (v: T of kotlin.jvm.internal.<unsafe-coerce>): R of kotlin.jvm.internal.<unsafe-coerce> declared in kotlin.jvm.internal' type=kotlin.Result<kotlin.Any?> origin=null
+                      <T>: kotlin.Any?
+                      <R>: kotlin.Result<kotlin.Any?>
+                      v: GET_FIELD 'FIELD FIELD_FOR_OBJECT_INSTANCE name:INSTANCE type:kotlin.Unit visibility:public [final,static] declared in kotlin.Unit' type=kotlin.Unit origin=null
+            FIELD FIELD_FOR_CAPTURED_VALUE name:$bypassTimeout type:kotlin.Boolean visibility:public/*package*/ [final]
+            FIELD FIELD_FOR_CAPTURED_VALUE name:this$0 type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager visibility:public/*package*/ [final]
+            FUN INLINE_LAMBDA name:invokeSuspend$lambda$0 visibility:private modality:FINAL <> (it:com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity) returnType:kotlin.Boolean
+              VALUE_PARAMETER name:it index:0 type:com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
+              BLOCK_BODY
+                VAR name:$i$a$-filter-ImageProcessorQueueManager$processRetryQueue$1$retryableAssemblies$1 type:kotlin.Int [val]
+                  CONST Int type=kotlin.Int value=0
+                RETURN type=kotlin.Nothing from='private final fun invokeSuspend$lambda$0 (it: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity): kotlin.Boolean declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>'
+                  CALL 'public final fun less (arg0: kotlin.Int, arg1: kotlin.Int): kotlin.Boolean declared in kotlin.internal.ir' type=kotlin.Boolean origin=LT
+                    arg0: CALL 'public final fun <get-failsCount> (): kotlin.Int declared in com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity' type=kotlin.Int origin=GET_PROPERTY
+                      $this: GET_VAR 'it: com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invokeSuspend$lambda$0' type=com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity origin=null
+                    arg1: CONST Int type=kotlin.Int value=13
+            FUN BRIDGE name:invoke visibility:public modality:OPEN <> ($this:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>, p1:kotlin.Any?, p2:kotlin.Any?) returnType:kotlin.Any?
+              $this: VALUE_PARAMETER INSTANCE_RECEIVER name:<this> type:com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>
+              VALUE_PARAMETER BRIDGE name:p1 index:0 type:kotlin.Any?
+              VALUE_PARAMETER BRIDGE name:p2 index:1 type:kotlin.Any?
+              EXPRESSION_BODY
+                RETURN type=kotlin.Nothing from='public open fun invoke (p1: kotlin.Any?, p2: kotlin.Any?): kotlin.Any? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>'
+                  CALL 'public final fun invoke (p1: kotlinx.coroutines.CoroutineScope, p2: kotlin.coroutines.Continuation<kotlin.Unit>?): kotlin.Any? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=kotlin.Any? origin=BRIDGE_DELEGATION
+                    $this: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invoke' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+                    p1: TYPE_OP type=kotlinx.coroutines.CoroutineScope origin=IMPLICIT_CAST typeOperand=kotlinx.coroutines.CoroutineScope
+                      GET_VAR 'p1: kotlin.Any? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invoke' type=kotlin.Any? origin=null
+                    p2: TYPE_OP type=kotlin.coroutines.Continuation<*> origin=IMPLICIT_CAST typeOperand=kotlin.coroutines.Continuation<*>
+                      GET_VAR 'p2: kotlin.Any? declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>.invoke' type=kotlin.Any? origin=null
+          CONSTRUCTOR_CALL 'public/*package*/ constructor <init> ($bypassTimeout: kotlin.Boolean, this$0: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager, $completion: kotlin.coroutines.Continuation<com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>>?) [primary] declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided>' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue.<no name provided> origin=null
+            $bypassTimeout: GET_VAR 'bypassTimeout: kotlin.Boolean declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue' type=kotlin.Boolean origin=null
+            this$0: GET_VAR '<this>: com.example.rocketplan_android.data.queue.ImageProcessorQueueManager declared in com.example.rocketplan_android.data.queue.ImageProcessorQueueManager.processRetryQueue' type=com.example.rocketplan_android.data.queue.ImageProcessorQueueManager origin=null
+            $completion: CONST Null type=kotlin.Nothing? value=null
+        $mask0: CONST Int type=kotlin.Int value=3
+        $handler: CONST Null type=kotlin.Any? value=null
+      COMPOSITE type=kotlin.Unit origin=null
+
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate$default(FunctionCodegen.kt:40)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethodNode(ClassCodegen.kt:406)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:423)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:168)
+	at org.jetbrains.kotlin.backend.jvm.FileCodegen.lower(JvmPhases.kt:39)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt.createFilePhase$lambda$4(PhaseFactories.kt:71)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseBuildersKt$createSimpleNamedCompilerPhase$1.phaseBody(PhaseBuilders.kt:69)
+	at org.jetbrains.kotlin.backend.common.phaser.SimpleNamedCompilerPhase.phaseBody(CompilerPhase.kt:226)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:62)
+	... 43 more
+Caused by: org.jetbrains.kotlin.codegen.CompilationException: Back-end (JVM) Internal error: Couldn't transform method node:
+invokeSuspend (Ljava/lang/Object;)Ljava/lang/Object;:
+    // annotable parameter count: 1 (visible)
+    // annotable parameter count: 1 (invisible)
+    TRYCATCHBLOCK L0 L1 L2 java/lang/Exception
+    TRYCATCHBLOCK L3 L4 L2 java/lang/Exception
+    TRYCATCHBLOCK L5 L6 L2 java/lang/Exception
+    TRYCATCHBLOCK L7 L8 L2 java/lang/Exception
+    TRYCATCHBLOCK L9 L10 L2 java/lang/Exception
+   L11
+   L12
+    LINENUMBER 220 L12
+   L13
+   L0
+    NOP
+   L14
+    LINENUMBER 221 L14
+    LDC "ImgProcessorQueueMgr"
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.$bypassTimeout : Z
+    INVOKEDYNAMIC makeConcatWithConstants(Z)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "\ud83d\udd04 Processing retry queue (bypassTimeout=\u0001)"
+    ]
+    INVOKESTATIC android/util/Log.d (Ljava/lang/String;Ljava/lang/String;)I
+    POP
+   L15
+    LINENUMBER 223 L15
+    INVOKESTATIC java/lang/System.currentTimeMillis ()J
+    LSTORE 2
+   L16
+   L17
+    LINENUMBER 224 L17
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.this$0 : Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;
+    INVOKESTATIC com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.access$getDao$p (Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;)Lcom/example/rocketplan_android/data/local/dao/ImageProcessorDao;
+   L18
+    LINENUMBER 226 L18
+    ICONST_2
+    ANEWARRAY java/lang/String
+    ASTORE 5
+   L19
+    ALOAD 5
+    ICONST_0
+    GETSTATIC com/example/rocketplan_android/data/local/entity/AssemblyStatus.FAILED : Lcom/example/rocketplan_android/data/local/entity/AssemblyStatus;
+    INVOKEVIRTUAL com/example/rocketplan_android/data/local/entity/AssemblyStatus.getValue ()Ljava/lang/String;
+    AASTORE
+    ALOAD 5
+    ICONST_1
+   L20
+    LINENUMBER 227 L20
+    GETSTATIC com/example/rocketplan_android/data/local/entity/AssemblyStatus.WAITING_FOR_CONNECTIVITY : Lcom/example/rocketplan_android/data/local/entity/AssemblyStatus;
+    INVOKEVIRTUAL com/example/rocketplan_android/data/local/entity/AssemblyStatus.getValue ()Ljava/lang/String;
+    AASTORE
+   L21
+    LINENUMBER 226 L21
+    ALOAD 5
+   L22
+   L23
+    LINENUMBER 225 L23
+    INVOKESTATIC kotlin/collections/CollectionsKt.listOf ([Ljava/lang/Object;)Ljava/util/List;
+   L24
+    LINENUMBER 229 L24
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.$bypassTimeout : Z
+    IFEQ L25
+    LDC 9223372036854775807
+    GOTO L26
+   L25
+    LLOAD 2
+   L26
+    ALOAD 0
+    CHECKCAST kotlin/coroutines/Continuation
+   L27
+    LINENUMBER 224 L27
+    ICONST_0
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+    INVOKEINTERFACE com/example/rocketplan_android/data/local/dao/ImageProcessorDao.getRetryableAssemblies (Ljava/util/List;JLkotlin/coroutines/Continuation;)Ljava/lang/Object; (itf)
+    ICONST_1
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+   L1
+    NOP
+   L3
+    CHECKCAST java/lang/Iterable
+    ASTORE 5
+   L28
+    LINENUMBER 230 L28
+    NOP
+   L29
+    ICONST_0
+    ISTORE 6
+   L30
+    LINENUMBER 748 L30
+    ALOAD 5
+    ASTORE 7
+    NEW java/util/ArrayList
+    DUP
+    INVOKESPECIAL java/util/ArrayList.<init> ()V
+    CHECKCAST java/util/Collection
+    ASTORE 8
+   L31
+    ICONST_0
+    ISTORE 9
+   L32
+    LINENUMBER 749 L32
+    ALOAD 7
+    INVOKEINTERFACE java/lang/Iterable.iterator ()Ljava/util/Iterator; (itf)
+    ASTORE 10
+   L33
+    ALOAD 10
+    INVOKEINTERFACE java/util/Iterator.hasNext ()Z (itf)
+    IFEQ L34
+    ALOAD 10
+    INVOKEINTERFACE java/util/Iterator.next ()Ljava/lang/Object; (itf)
+    ASTORE 11
+   L35
+    ALOAD 11
+    CHECKCAST com/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity
+    ASTORE 12
+   L36
+    ICONST_0
+    ISTORE 13
+   L37
+    LINENUMBER 230 L37
+    ALOAD 12
+    INVOKEVIRTUAL com/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity.getFailsCount ()I
+    BIPUSH 13
+    IF_ICMPGE L38
+    ICONST_1
+    GOTO L39
+   L38
+    ICONST_0
+   L39
+    NOP
+    GOTO L40
+   L41
+   L42
+   L40
+    INVOKESTATIC kotlin/coroutines/jvm/internal/Boxing.boxBoolean (Z)Ljava/lang/Boolean;
+   L43
+    LINENUMBER 749 L43
+    CHECKCAST java/lang/Boolean
+    INVOKEVIRTUAL java/lang/Boolean.booleanValue ()Z
+    IFEQ L33
+    ALOAD 8
+    ALOAD 11
+    INVOKEINTERFACE java/util/Collection.add (Ljava/lang/Object;)Z (itf)
+    POP
+   L44
+    GOTO L33
+   L34
+    LINENUMBER 750 L34
+    ALOAD 8
+   L45
+    CHECKCAST java/util/List
+   L46
+    LINENUMBER 748 L46
+    NOP
+    GOTO L47
+   L48
+   L49
+   L47
+   L50
+    LINENUMBER 230 L50
+   L51
+    LINENUMBER 224 L51
+    ASTORE 4
+   L52
+   L53
+    LINENUMBER 232 L53
+    ALOAD 4
+    INVOKEINTERFACE java/util/List.isEmpty ()Z (itf)
+    IFEQ L54
+   L55
+    LINENUMBER 233 L55
+    LDC "ImgProcessorQueueMgr"
+    LDC "\u2705 No assemblies ready for retry"
+    INVOKESTATIC android/util/Log.d (Ljava/lang/String;Ljava/lang/String;)I
+    POP
+   L56
+    LINENUMBER 234 L56
+    GETSTATIC kotlin/Unit.INSTANCE : Lkotlin/Unit;
+    ARETURN
+   L57
+   L54
+   L58
+   L59
+    LINENUMBER 237 L59
+    LDC "ImgProcessorQueueMgr"
+    ALOAD 4
+    INVOKEINTERFACE java/util/List.size ()I (itf)
+    INVOKEDYNAMIC makeConcatWithConstants(I)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "\ud83d\udccb Found \u0001 assemblies ready for retry"
+    ]
+    INVOKESTATIC android/util/Log.d (Ljava/lang/String;Ljava/lang/String;)I
+    POP
+   L60
+    LINENUMBER 239 L60
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.this$0 : Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;
+    INVOKESTATIC com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.access$getRemoteLogger$p (Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;)Lcom/example/rocketplan_android/logging/RemoteLogger;
+    ASTORE 5
+   L61
+    ALOAD 5
+    IFNULL L62
+    ALOAD 5
+   L63
+    LINENUMBER 240 L63
+    GETSTATIC com/example/rocketplan_android/logging/LogLevel.INFO : Lcom/example/rocketplan_android/logging/LogLevel;
+   L64
+    LINENUMBER 241 L64
+    LDC "ImgProcessorQueueMgr"
+   L65
+    LINENUMBER 242 L65
+    LDC "Retry queue processing"
+   L66
+    LINENUMBER 244 L66
+    ICONST_2
+    ANEWARRAY kotlin/Pair
+    ASTORE 6
+   L67
+    ALOAD 6
+    ICONST_0
+    LDC "retryable_count"
+    ALOAD 4
+    INVOKEINTERFACE java/util/List.size ()I (itf)
+    INVOKESTATIC java/lang/String.valueOf (I)Ljava/lang/String;
+    INVOKESTATIC kotlin/TuplesKt.to (Ljava/lang/Object;Ljava/lang/Object;)Lkotlin/Pair;
+    AASTORE
+    ALOAD 6
+    ICONST_1
+   L68
+    LINENUMBER 245 L68
+    LDC "bypass_timeout"
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.$bypassTimeout : Z
+    INVOKESTATIC java/lang/String.valueOf (Z)Ljava/lang/String;
+    INVOKESTATIC kotlin/TuplesKt.to (Ljava/lang/Object;Ljava/lang/Object;)Lkotlin/Pair;
+    AASTORE
+   L69
+    LINENUMBER 244 L69
+    ALOAD 6
+   L70
+   L71
+    LINENUMBER 243 L71
+    INVOKESTATIC kotlin/collections/MapsKt.mapOf ([Lkotlin/Pair;)Ljava/util/Map;
+   L72
+    LINENUMBER 239 L72
+    INVOKEVIRTUAL com/example/rocketplan_android/logging/RemoteLogger.log (Lcom/example/rocketplan_android/logging/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
+    GETSTATIC kotlin/Unit.INSTANCE : Lkotlin/Unit;
+    GOTO L73
+   L62
+    NOP
+    ACONST_NULL
+   L73
+   L74
+    POP
+   L75
+    LINENUMBER 250 L75
+    ALOAD 4
+    INVOKEINTERFACE java/util/List.iterator ()Ljava/util/Iterator; (itf)
+    ASTORE 5
+   L76
+   L77
+    ALOAD 5
+    INVOKEINTERFACE java/util/Iterator.hasNext ()Z (itf)
+    IFEQ L78
+    ALOAD 5
+    INVOKEINTERFACE java/util/Iterator.next ()Ljava/lang/Object; (itf)
+    CHECKCAST com/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity
+    ASTORE 6
+   L79
+   L80
+    LINENUMBER 252 L80
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.this$0 : Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;
+    ALOAD 6
+    INVOKEVIRTUAL com/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity.getAssemblyId ()Ljava/lang/String;
+    ALOAD 0
+    CHECKCAST kotlin/coroutines/Continuation
+    ICONST_0
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+    INVOKESTATIC com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.access$resetFailedPhotosToPending (Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+    ICONST_1
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+   L4
+    NOP
+   L5
+    POP
+   L81
+    LINENUMBER 254 L81
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.this$0 : Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;
+   L82
+    LINENUMBER 255 L82
+    ALOAD 6
+    INVOKEVIRTUAL com/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity.getAssemblyId ()Ljava/lang/String;
+   L83
+    LINENUMBER 256 L83
+    GETSTATIC com/example/rocketplan_android/data/local/entity/AssemblyStatus.RETRYING : Lcom/example/rocketplan_android/data/local/entity/AssemblyStatus;
+   L84
+    LINENUMBER 257 L84
+    ACONST_NULL
+    ALOAD 0
+    CHECKCAST kotlin/coroutines/Continuation
+   L85
+    LINENUMBER 254 L85
+    ICONST_0
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+    INVOKESTATIC com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.access$updateAssemblyStatus (Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;Ljava/lang/String;Lcom/example/rocketplan_android/data/local/entity/AssemblyStatus;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+    ICONST_1
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+   L6
+    NOP
+   L7
+    POP
+   L86
+    LINENUMBER 259 L86
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.this$0 : Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;
+   L87
+    LINENUMBER 260 L87
+    ALOAD 6
+    INVOKEVIRTUAL com/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity.getAssemblyId ()Ljava/lang/String;
+   L88
+    LINENUMBER 261 L88
+    GETSTATIC com/example/rocketplan_android/data/local/entity/AssemblyStatus.CREATED : Lcom/example/rocketplan_android/data/local/entity/AssemblyStatus;
+   L89
+    LINENUMBER 262 L89
+    ACONST_NULL
+    ALOAD 0
+    CHECKCAST kotlin/coroutines/Continuation
+   L90
+    LINENUMBER 259 L90
+    ICONST_0
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+    INVOKESTATIC com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.access$updateAssemblyStatus (Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;Ljava/lang/String;Lcom/example/rocketplan_android/data/local/entity/AssemblyStatus;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+    ICONST_1
+    INVOKESTATIC kotlin/jvm/internal/InlineMarker.mark (I)V
+   L8
+    NOP
+   L9
+    POP
+   L91
+    LINENUMBER 264 L91
+    LDC "ImgProcessorQueueMgr"
+    ALOAD 6
+    INVOKEVIRTUAL com/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity.getAssemblyId ()Ljava/lang/String;
+    INVOKEDYNAMIC makeConcatWithConstants(Ljava/lang/String;)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "\ud83d\udd04 Queued assembly \u0001 for retry"
+    ]
+    INVOKESTATIC android/util/Log.d (Ljava/lang/String;Ljava/lang/String;)I
+    POP
+   L92
+    GOTO L77
+   L78
+   L93
+   L94
+    LINENUMBER 268 L94
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.this$0 : Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;
+    INVOKEVIRTUAL com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.processNextQueuedAssembly ()V
+   L95
+    GETSTATIC kotlin/Unit.INSTANCE : Lkotlin/Unit;
+    ASTORE 2
+   L10
+    GOTO L96
+   L2
+   L97
+    LINENUMBER 269 L97
+    ASTORE 3
+   L98
+   L99
+    LINENUMBER 270 L99
+    LDC "ImgProcessorQueueMgr"
+    LDC "\u274c Error processing retry queue"
+    ALOAD 3
+    CHECKCAST java/lang/Throwable
+    INVOKESTATIC android/util/Log.e (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;)I
+    POP
+   L100
+    LINENUMBER 271 L100
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1.this$0 : Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;
+    INVOKESTATIC com/example/rocketplan_android/data/queue/ImageProcessorQueueManager.access$getRemoteLogger$p (Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager;)Lcom/example/rocketplan_android/logging/RemoteLogger;
+    ASTORE 4
+   L101
+    ALOAD 4
+    IFNULL L102
+    ALOAD 4
+   L103
+    LINENUMBER 272 L103
+    GETSTATIC com/example/rocketplan_android/logging/LogLevel.ERROR : Lcom/example/rocketplan_android/logging/LogLevel;
+   L104
+    LINENUMBER 273 L104
+    LDC "ImgProcessorQueueMgr"
+   L105
+    LINENUMBER 274 L105
+    ALOAD 3
+    INVOKEVIRTUAL java/lang/Exception.getMessage ()Ljava/lang/String;
+    INVOKEDYNAMIC makeConcatWithConstants(Ljava/lang/String;)Ljava/lang/String; [
+      // handle kind 0x6 : INVOKESTATIC
+      java/lang/invoke/StringConcatFactory.makeConcatWithConstants(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/invoke/CallSite;
+      // arguments:
+      "Retry queue processing failed: \u0001"
+    ]
+   L106
+    LINENUMBER 275 L106
+    LDC "error"
+    ALOAD 3
+    INVOKEVIRTUAL java/lang/Exception.getMessage ()Ljava/lang/String;
+    ASTORE 5
+   L107
+    ALOAD 5
+    IFNULL L108
+    ALOAD 5
+    GOTO L109
+   L108
+    NOP
+    LDC "unknown"
+   L109
+   L110
+    INVOKESTATIC kotlin/TuplesKt.to (Ljava/lang/Object;Ljava/lang/Object;)Lkotlin/Pair;
+    INVOKESTATIC kotlin/collections/MapsKt.mapOf (Lkotlin/Pair;)Ljava/util/Map;
+   L111
+    LINENUMBER 271 L111
+    INVOKEVIRTUAL com/example/rocketplan_android/logging/RemoteLogger.log (Lcom/example/rocketplan_android/logging/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/util/Map;)V
+    GETSTATIC kotlin/Unit.INSTANCE : Lkotlin/Unit;
+    GOTO L112
+   L102
+    NOP
+    ACONST_NULL
+   L112
+   L113
+    ASTORE 2
+   L114
+   L96
+   L115
+    LINENUMBER 278 L115
+    NOP
+    GETSTATIC kotlin/Unit.INSTANCE : Lkotlin/Unit;
+    ARETURN
+   L116
+    LOCALVARIABLE $i$a$-filter-ImageProcessorQueueManager$processRetryQueue$1$retryableAssemblies$1\3\749\0 I L37 L42 13
+    LOCALVARIABLE it\3 Lcom/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity; L36 L42 12
+    LOCALVARIABLE element\2 Ljava/lang/Object; L35 L44 11
+    LOCALVARIABLE $i$f$filterTo\2\748 I L32 L45 9
+    LOCALVARIABLE $this$filterTo\2 Ljava/lang/Iterable; L31 L45 7
+    LOCALVARIABLE destination\2 Ljava/util/Collection; L31 L45 8
+    LOCALVARIABLE $i$f$filter\1\230 I L30 L49 6
+    LOCALVARIABLE $this$filter\1 Ljava/lang/Iterable; L29 L49 5
+    LOCALVARIABLE assembly Lcom/example/rocketplan_android/data/local/entity/ImageProcessorAssemblyEntity; L79 L92 6
+    LOCALVARIABLE currentTime J L16 L95 2
+    LOCALVARIABLE retryableAssemblies Ljava/util/List; L52 L95 4
+    LOCALVARIABLE e Ljava/lang/Exception; L98 L114 3
+    LOCALVARIABLE this Lcom/example/rocketplan_android/data/queue/ImageProcessorQueueManager$processRetryQueue$1; L11 L116 0
+    LOCALVARIABLE $result Ljava/lang/Object; L11 L116 1
+    MAXSTACK = 8
+    MAXLOCALS = 14
+
+File is unknown
+The root cause java.lang.OutOfMemoryError was thrown at: unknown
+	at org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:89)
+	at org.jetbrains.org.objectweb.asm.tree.MethodNode.accept(MethodNode.java:772)
+	at org.jetbrains.kotlin.backend.jvm.codegen.CoroutineCodegenKt.acceptWithStateMachine(CoroutineCodegen.kt:76)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:440)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:168)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitClass(ExpressionCodegen.kt:1000)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitClass(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.declarations.IrClass.accept(IrClass.kt:72)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:593)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitBlock(IrElementVisitor.kt:122)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlock(ExpressionCodegen.kt:413)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlock(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlock.accept(IrBlock.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.gen(ExpressionCodegen.kt:217)
+	at org.jetbrains.kotlin.backend.jvm.codegen.IrCallGenerator.genValueAndPut(IrCallGenerator.kt:48)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall$handleParameter(ExpressionCodegen.kt:616)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:644)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitCall(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrCall.accept(IrCall.kt:24)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:593)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitContainerExpression(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.visitors.IrElementVisitor$DefaultImpls.visitComposite(IrElementVisitor.kt:125)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitComposite(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrComposite.accept(IrComposite.kt:18)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitStatementContainer(ExpressionCodegen.kt:579)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:584)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.visitBlockBody(ExpressionCodegen.kt:138)
+	at org.jetbrains.kotlin.ir.expressions.IrBlockBody.accept(IrBlockBody.kt:20)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen.generate(ExpressionCodegen.kt:240)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.doGenerate(FunctionCodegen.kt:123)
+	at org.jetbrains.kotlin.backend.jvm.codegen.FunctionCodegen.generate(FunctionCodegen.kt:44)
+	... 53 more
+Caused by: java.lang.OutOfMemoryError: Java heap space
+
+

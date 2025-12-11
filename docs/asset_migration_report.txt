@@ -1,0 +1,676 @@
+iOS to Android Asset Migration Report
+================================================================================
+
+Total files copied: 601
+PNG files: 497
+PDF files: 99
+SVG files: 5
+
+Files by Category:
+  - Country Flags: 15 files
+  - Damage Illustrations: 32 files
+  - Damage Type Illustrations: 29 files
+  - Equipment Type Illustrations: 10 files
+  - FLIR Images: 6 files
+  - Feature Illustrations: 10 files
+  - Functional Icons: 135 files
+  - General Images: 12 files
+  - Logos: 18 files
+  - Navigation Icons: 15 files
+  - Object Icons: 56 files
+  - Object Illustrations: 9 files
+  - Photos TabBar Icons: 3 files
+  - Property Illustrations: 45 files
+  - Room Illustrations: 124 files
+  - ServiceTitan Assets: 1 files
+  - Social Media Logos: 6 files
+  - TabBar Icons: 30 files
+  - White Room Illustrations: 45 files
+
+Files by Density:
+  - drawable: 127 files
+  - drawable-mdpi: 150 files
+  - drawable-xhdpi: 162 files
+  - drawable-xxhdpi: 162 files
+
+Detailed File List:
+================================================================================
+
+Country Flags:
+  country-au@1x.png → ./app/src/main/res/drawable-mdpi/country_au.png
+  country-au@2x.png → ./app/src/main/res/drawable-xhdpi/country_au.png
+  country-au@3x.png → ./app/src/main/res/drawable-xxhdpi/country_au.png
+  country-ca@1x.png → ./app/src/main/res/drawable-mdpi/country_ca.png
+  country-ca@2x.png → ./app/src/main/res/drawable-xhdpi/country_ca.png
+  country-ca@3x.png → ./app/src/main/res/drawable-xxhdpi/country_ca.png
+  country-gb@1x.png → ./app/src/main/res/drawable-mdpi/country_gb.png
+  country-gb@2x.png → ./app/src/main/res/drawable-xhdpi/country_gb.png
+  country-gb@3x.png → ./app/src/main/res/drawable-xxhdpi/country_gb.png
+  country-nz@1x.png → ./app/src/main/res/drawable-mdpi/country_nz.png
+  country-nz@2x.png → ./app/src/main/res/drawable-xhdpi/country_nz.png
+  country-nz@3x.png → ./app/src/main/res/drawable-xxhdpi/country_nz.png
+  country-us@1x.png → ./app/src/main/res/drawable-mdpi/country_us.png
+  country-us@2x.png → ./app/src/main/res/drawable-xhdpi/country_us.png
+  country-us@3x.png → ./app/src/main/res/drawable-xxhdpi/country_us.png
+
+Damage Illustrations:
+  appliances@1x.png → ./app/src/main/res/drawable-mdpi/appliances.png
+  appliances@2x.png → ./app/src/main/res/drawable-xhdpi/appliances.png
+  appliances@3x.png → ./app/src/main/res/drawable-xxhdpi/appliances.png
+  carpentry.pdf → ./app/src/main/res/drawable/carpentry.pdf
+  ceiling@1x.png → ./app/src/main/res/drawable-mdpi/ceiling.png
+  ceiling@2x.png → ./app/src/main/res/drawable-xhdpi/ceiling.png
+  ceiling@3x.png → ./app/src/main/res/drawable-xxhdpi/ceiling.png
+  cleaning.pdf → ./app/src/main/res/drawable/cleaning.pdf
+  electrical-fixtures@1x.png → ./app/src/main/res/drawable-mdpi/electrical_fixtures.png
+  electrical-fixtures@2x.png → ./app/src/main/res/drawable-xhdpi/electrical_fixtures.png
+  electrical-fixtures@3x.png → ./app/src/main/res/drawable-xxhdpi/electrical_fixtures.png
+  exterior@1x.png → ./app/src/main/res/drawable-mdpi/exterior.png
+  exterior@2x.png → ./app/src/main/res/drawable-xhdpi/exterior.png
+  exterior@3x.png → ./app/src/main/res/drawable-xxhdpi/exterior.png
+  floors@1x.png → ./app/src/main/res/drawable-mdpi/floors.png
+  floors@2x.png → ./app/src/main/res/drawable-xhdpi/floors.png
+  floors@3x.png → ./app/src/main/res/drawable-xxhdpi/floors.png
+  image_damage.pdf → ./app/src/main/res/drawable/image_damage.pdf
+  misc.pdf → ./app/src/main/res/drawable/misc.pdf
+  plumbing_fixtures@1x.png → ./app/src/main/res/drawable-mdpi/plumbing_fixtures.png
+  plumbing_fixtures@2x.png → ./app/src/main/res/drawable-xhdpi/plumbing_fixtures.png
+  plumbing_fixtures@3x.png → ./app/src/main/res/drawable-xxhdpi/plumbing_fixtures.png
+  protection.pdf → ./app/src/main/res/drawable/protection.pdf
+  roofing@1x.png → ./app/src/main/res/drawable-mdpi/roofing.png
+  roofing@2x.png → ./app/src/main/res/drawable-xhdpi/roofing.png
+  roofing@3x.png → ./app/src/main/res/drawable-xxhdpi/roofing.png
+  structural@1x.png → ./app/src/main/res/drawable-mdpi/structural.png
+  structural@2x.png → ./app/src/main/res/drawable-xhdpi/structural.png
+  structural@3x.png → ./app/src/main/res/drawable-xxhdpi/structural.png
+  walls@1x.png → ./app/src/main/res/drawable-mdpi/walls.png
+  walls@2x.png → ./app/src/main/res/drawable-xhdpi/walls.png
+  walls@3x.png → ./app/src/main/res/drawable-xxhdpi/walls.png
+
+Damage Type Illustrations:
+  Frame 4008.png → ./app/src/main/res/drawable/frame_4008.png
+  Frame 4008@2x.png → ./app/src/main/res/drawable-xhdpi/frame_4008.png
+  Frame 4008@3x.png → ./app/src/main/res/drawable-xxhdpi/frame_4008.png
+  add custom.png → ./app/src/main/res/drawable/add_custom.png
+  add custom@2x.png → ./app/src/main/res/drawable-xhdpi/add_custom.png
+  add custom@3x.png → ./app/src/main/res/drawable-xxhdpi/add_custom.png
+  asbestos@1x.png → ./app/src/main/res/drawable-mdpi/asbestos.png
+  asbestos@2x.png → ./app/src/main/res/drawable-xhdpi/asbestos.png
+  asbestos@3x.png → ./app/src/main/res/drawable-xxhdpi/asbestos.png
+  fire@1x.png → ./app/src/main/res/drawable-mdpi/fire.png
+  fire@2x.png → ./app/src/main/res/drawable-xhdpi/fire.png
+  fire@3x.png → ./app/src/main/res/drawable-xxhdpi/fire.png
+  impact@1x.png → ./app/src/main/res/drawable-mdpi/impact.png
+  impact@2x.png → ./app/src/main/res/drawable-xhdpi/impact.png
+  impact@3x.png → ./app/src/main/res/drawable-xxhdpi/impact.png
+  inspection@1x.png → ./app/src/main/res/drawable-mdpi/inspection.png
+  inspection@2x.png → ./app/src/main/res/drawable-xhdpi/inspection.png
+  inspection@3x.png → ./app/src/main/res/drawable-xxhdpi/inspection.png
+  mold@1x.png → ./app/src/main/res/drawable-mdpi/mold.png
+  mold@2x.png → ./app/src/main/res/drawable-xhdpi/mold.png
+  mold@3x.png → ./app/src/main/res/drawable-xxhdpi/mold.png
+  natural.pdf → ./app/src/main/res/drawable/natural.pdf
+  parking garage.png → ./app/src/main/res/drawable/parking_garage.png
+  parking garage@2x.png → ./app/src/main/res/drawable-xhdpi/parking_garage.png
+  parking garage@3x.png → ./app/src/main/res/drawable-xxhdpi/parking_garage.png
+  smoke.pdf → ./app/src/main/res/drawable/smoke.pdf
+  water@1x.png → ./app/src/main/res/drawable-mdpi/water.png
+  water@2x.png → ./app/src/main/res/drawable-xhdpi/water.png
+  water@3x.png → ./app/src/main/res/drawable-xxhdpi/water.png
+
+Equipment Type Illustrations:
+  air_mover.pdf → ./app/src/main/res/drawable/air_mover.pdf
+  air_mover_white.pdf → ./app/src/main/res/drawable/air_mover_white.pdf
+  air_scrubber.pdf → ./app/src/main/res/drawable/air_scrubber.pdf
+  air_scrubber_white.pdf → ./app/src/main/res/drawable/air_scrubber_white.pdf
+  dehumidifier.pdf → ./app/src/main/res/drawable/dehumidifier.pdf
+  dehumidifier_white.pdf → ./app/src/main/res/drawable/dehumidifier_white.pdf
+  drying_mat.pdf → ./app/src/main/res/drawable/drying_mat.pdf
+  drying_mat_white.pdf → ./app/src/main/res/drawable/drying_mat_white.pdf
+  inject_drier.pdf → ./app/src/main/res/drawable/inject_drier.pdf
+  inject_drier_white.pdf → ./app/src/main/res/drawable/inject_drier_white.pdf
+
+FLIR Images:
+  flir-disconnected@1x.png → ./app/src/main/res/drawable-mdpi/flir_disconnected.png
+  flir-disconnected@2x.png → ./app/src/main/res/drawable-xhdpi/flir_disconnected.png
+  flir-disconnected@3x.png → ./app/src/main/res/drawable-xxhdpi/flir_disconnected.png
+  image_error@1x.png → ./app/src/main/res/drawable-mdpi/image_error.png
+  image_error@2x.png → ./app/src/main/res/drawable-xhdpi/image_error.png
+  image_error@3x.png → ./app/src/main/res/drawable-xxhdpi/image_error.png
+
+Feature Illustrations:
+  icon_clock_in.pdf → ./app/src/main/res/drawable/icon_clock_in.pdf
+  icon_inaccessible_unit.pdf → ./app/src/main/res/drawable/icon_inaccessible_unit.pdf
+  img_add_common.pdf → ./app/src/main/res/drawable/img_add_common.pdf
+  img_add_exterior@1x.png → ./app/src/main/res/drawable-mdpi/img_add_exterior.png
+  img_add_exterior@2x.png → ./app/src/main/res/drawable-xhdpi/img_add_exterior.png
+  img_add_exterior@3x.png → ./app/src/main/res/drawable-xxhdpi/img_add_exterior.png
+  img_add_room@1x.png → ./app/src/main/res/drawable-mdpi/img_add_room.png
+  img_add_room@2x.png → ./app/src/main/res/drawable-xhdpi/img_add_room.png
+  img_add_room@3x.png → ./app/src/main/res/drawable-xxhdpi/img_add_room.png
+  img_clock_in.pdf → ./app/src/main/res/drawable/img_clock_in.pdf
+
+Functional Icons:
+  Path.svg → ./app/src/main/res/drawable/path.svg
+  eye_hide@1x.png → ./app/src/main/res/drawable-mdpi/eye_hide.png
+  eye_hide@2x.png → ./app/src/main/res/drawable-xhdpi/eye_hide.png
+  eye_hide@3x.png → ./app/src/main/res/drawable-xxhdpi/eye_hide.png
+  eye_show@1x.png → ./app/src/main/res/drawable-mdpi/eye_show.png
+  eye_show@2x.png → ./app/src/main/res/drawable-xhdpi/eye_show.png
+  eye_show@3x.png → ./app/src/main/res/drawable-xxhdpi/eye_show.png
+  ic_selected@1x.png → ./app/src/main/res/drawable-mdpi/ic_selected.png
+  ic_selected@2x.png → ./app/src/main/res/drawable-xhdpi/ic_selected.png
+  ic_selected@3x.png → ./app/src/main/res/drawable-xxhdpi/ic_selected.png
+  icon_add_locations@1x.png → ./app/src/main/res/drawable-mdpi/icon_add_locations.png
+  icon_add_locations@2x.png → ./app/src/main/res/drawable-xhdpi/icon_add_locations.png
+  icon_add_locations@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_add_locations.png
+  icon_add_note@1x.png → ./app/src/main/res/drawable-mdpi/icon_add_note.png
+  icon_add_note@1x.png → ./app/src/main/res/drawable-mdpi/icon_add_note.png
+  icon_add_note@2x.png → ./app/src/main/res/drawable-xhdpi/icon_add_note.png
+  icon_add_note@2x.png → ./app/src/main/res/drawable-xhdpi/icon_add_note.png
+  icon_add_note@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_add_note.png
+  icon_add_note@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_add_note.png
+  icon_all_locations@1x.png → ./app/src/main/res/drawable-mdpi/icon_all_locations.png
+  icon_all_locations@2x.png → ./app/src/main/res/drawable-xhdpi/icon_all_locations.png
+  icon_all_locations@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_all_locations.png
+  icon_arrow_up@1x.png → ./app/src/main/res/drawable-mdpi/icon_arrow_up.png
+  icon_arrow_up@2x.png → ./app/src/main/res/drawable-xhdpi/icon_arrow_up.png
+  icon_arrow_up@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_arrow_up.png
+  icon_camera@1x.png → ./app/src/main/res/drawable-mdpi/icon_camera.png
+  icon_camera@2x.png → ./app/src/main/res/drawable-xhdpi/icon_camera.png
+  icon_camera@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_camera.png
+  icon_checked@1x.png → ./app/src/main/res/drawable-mdpi/icon_checked.png
+  icon_checked@2x.png → ./app/src/main/res/drawable-xhdpi/icon_checked.png
+  icon_checked@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_checked.png
+  icon_chevron_up@1x.png → ./app/src/main/res/drawable-mdpi/icon_chevron_up.png
+  icon_chevron_up@2x.png → ./app/src/main/res/drawable-xhdpi/icon_chevron_up.png
+  icon_chevron_up@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_chevron_up.png
+  icon_circle_plus.pdf → ./app/src/main/res/drawable/icon_circle_plus.pdf
+  icon_copy@1x.png → ./app/src/main/res/drawable-mdpi/icon_copy.png
+  icon_copy@2x.png → ./app/src/main/res/drawable-xhdpi/icon_copy.png
+  icon_copy@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_copy.png
+  icon_create_project@1x.png → ./app/src/main/res/drawable-mdpi/icon_create_project.png
+  icon_create_project@2x.png → ./app/src/main/res/drawable-xhdpi/icon_create_project.png
+  icon_create_project@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_create_project.png
+  icon_flash@1x.png → ./app/src/main/res/drawable-mdpi/icon_flash.png
+  icon_flash@2x.png → ./app/src/main/res/drawable-xhdpi/icon_flash.png
+  icon_flash@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_flash.png
+  icon_flash_auto@1x.png → ./app/src/main/res/drawable-mdpi/icon_flash_auto.png
+  icon_flash_auto@2x.png → ./app/src/main/res/drawable-xhdpi/icon_flash_auto.png
+  icon_flash_auto@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_flash_auto.png
+  icon_flash_off@1x.png → ./app/src/main/res/drawable-mdpi/icon_flash_off.png
+  icon_flash_off@2x.png → ./app/src/main/res/drawable-xhdpi/icon_flash_off.png
+  icon_flash_off@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_flash_off.png
+  icon_gallery@1x.png → ./app/src/main/res/drawable-mdpi/icon_gallery.png
+  icon_gallery@2x.png → ./app/src/main/res/drawable-xhdpi/icon_gallery.png
+  icon_gallery@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_gallery.png
+  icon_hand_paper@1x.png → ./app/src/main/res/drawable-mdpi/icon_hand_paper.png
+  icon_hand_paper@2x.png → ./app/src/main/res/drawable-xhdpi/icon_hand_paper.png
+  icon_hand_paper@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_hand_paper.png
+  icon_has_notes@1x.png → ./app/src/main/res/drawable-mdpi/icon_has_notes.png
+  icon_has_notes@2x.png → ./app/src/main/res/drawable-xhdpi/icon_has_notes.png
+  icon_has_notes@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_has_notes.png
+  icon_info.pdf → ./app/src/main/res/drawable/icon_info.pdf
+  icon_intercom@1x.png → ./app/src/main/res/drawable-mdpi/icon_intercom.png
+  icon_intercom@2x.png → ./app/src/main/res/drawable-xhdpi/icon_intercom.png
+  icon_intercom@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_intercom.png
+  icon_link@1x.png → ./app/src/main/res/drawable-mdpi/icon_link.png
+  icon_link@2x.png → ./app/src/main/res/drawable-xhdpi/icon_link.png
+  icon_link@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_link.png
+  icon_location@1x.png → ./app/src/main/res/drawable-mdpi/icon_location.png
+  icon_location@2x.png → ./app/src/main/res/drawable-xhdpi/icon_location.png
+  icon_location@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_location.png
+  icon_location_button@1x.png → ./app/src/main/res/drawable-mdpi/icon_location_button.png
+  icon_location_button@2x.png → ./app/src/main/res/drawable-xhdpi/icon_location_button.png
+  icon_location_button@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_location_button.png
+  icon_note_added@1x.png → ./app/src/main/res/drawable-mdpi/icon_note_added.png
+  icon_note_added@2x.png → ./app/src/main/res/drawable-xhdpi/icon_note_added.png
+  icon_note_added@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_note_added.png
+  icon_person_clear@1x.png → ./app/src/main/res/drawable-mdpi/icon_person_clear.png
+  icon_person_clear@2x.png → ./app/src/main/res/drawable-xhdpi/icon_person_clear.png
+  icon_person_clear@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_person_clear.png
+  icon_photo_options@1x.png → ./app/src/main/res/drawable-mdpi/icon_photo_options.png
+  icon_photo_options@2x.png → ./app/src/main/res/drawable-xhdpi/icon_photo_options.png
+  icon_photo_options@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_photo_options.png
+  icon_pin_address@1x.png → ./app/src/main/res/drawable-mdpi/icon_pin_address.png
+  icon_pin_address@2x.png → ./app/src/main/res/drawable-xhdpi/icon_pin_address.png
+  icon_pin_address@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_pin_address.png
+  icon_pin_project@1x.png → ./app/src/main/res/drawable-mdpi/icon_pin_project.png
+  icon_pin_project@2x.png → ./app/src/main/res/drawable-xhdpi/icon_pin_project.png
+  icon_pin_project@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_pin_project.png
+  icon_plus@1x.png → ./app/src/main/res/drawable-mdpi/icon_plus.png
+  icon_plus@2x.png → ./app/src/main/res/drawable-xhdpi/icon_plus.png
+  icon_plus@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_plus.png
+  icon_plus_thin@1x.png → ./app/src/main/res/drawable-mdpi/icon_plus_thin.png
+  icon_plus_thin@2x.png → ./app/src/main/res/drawable-xhdpi/icon_plus_thin.png
+  icon_plus_thin@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_plus_thin.png
+  icon_project@1x.png → ./app/src/main/res/drawable-mdpi/icon_project.png
+  icon_project@2x.png → ./app/src/main/res/drawable-xhdpi/icon_project.png
+  icon_project@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_project.png
+  icon_report.pdf → ./app/src/main/res/drawable/icon_report.pdf
+  icon_search@1x.png → ./app/src/main/res/drawable-mdpi/icon_search.png
+  icon_search@2x.png → ./app/src/main/res/drawable-xhdpi/icon_search.png
+  icon_search@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_search.png
+  icon_share@1x.png → ./app/src/main/res/drawable-mdpi/icon_share.png
+  icon_share@2x.png → ./app/src/main/res/drawable-xhdpi/icon_share.png
+  icon_share@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_share.png
+  icon_switch_camera@1x.png → ./app/src/main/res/drawable-mdpi/icon_switch_camera.png
+  icon_switch_camera@2x.png → ./app/src/main/res/drawable-xhdpi/icon_switch_camera.png
+  icon_switch_camera@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_switch_camera.png
+  icon_three_dots@1x.png → ./app/src/main/res/drawable-mdpi/icon_three_dots.png
+  icon_three_dots@2x.png → ./app/src/main/res/drawable-xhdpi/icon_three_dots.png
+  icon_three_dots@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_three_dots.png
+  icon_trash_disabled.pdf → ./app/src/main/res/drawable/icon_trash_disabled.pdf
+  icon_unchecked@1x.png → ./app/src/main/res/drawable-mdpi/icon_unchecked.png
+  icon_unchecked@2x.png → ./app/src/main/res/drawable-xhdpi/icon_unchecked.png
+  icon_unchecked@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_unchecked.png
+  icondelete_project@1x.png → ./app/src/main/res/drawable-mdpi/icondelete_project.png
+  icondelete_project@2x.png → ./app/src/main/res/drawable-xhdpi/icondelete_project.png
+  icondelete_project@3x.png → ./app/src/main/res/drawable-xxhdpi/icondelete_project.png
+  iconedit_address@1x.png → ./app/src/main/res/drawable-mdpi/iconedit_address.png
+  iconedit_address@2x.png → ./app/src/main/res/drawable-xhdpi/iconedit_address.png
+  iconedit_address@3x.png → ./app/src/main/res/drawable-xxhdpi/iconedit_address.png
+  icons8-remove-100.png → ./app/src/main/res/drawable/icons8_remove_100.png
+  magnifying_glass@1x.png → ./app/src/main/res/drawable-mdpi/magnifying_glass.png
+  magnifying_glass@2x.png → ./app/src/main/res/drawable-xhdpi/magnifying_glass.png
+  magnifying_glass@3x.png → ./app/src/main/res/drawable-xxhdpi/magnifying_glass.png
+  purple_add_button@1x.png → ./app/src/main/res/drawable-mdpi/purple_add_button.png
+  purple_add_button@2x.png → ./app/src/main/res/drawable-xhdpi/purple_add_button.png
+  purple_add_button@3x.png → ./app/src/main/res/drawable-xxhdpi/purple_add_button.png
+  round_checkmark@1x.png → ./app/src/main/res/drawable-mdpi/round_checkmark.png
+  round_checkmark@2x.png → ./app/src/main/res/drawable-xhdpi/round_checkmark.png
+  round_checkmark@3x.png → ./app/src/main/res/drawable-xxhdpi/round_checkmark.png
+  selectorproject_completed@1x.png → ./app/src/main/res/drawable-mdpi/selectorproject_completed.png
+  selectorproject_completed@2x.png → ./app/src/main/res/drawable-xhdpi/selectorproject_completed.png
+  selectorproject_completed@3x.png → ./app/src/main/res/drawable-xxhdpi/selectorproject_completed.png
+  selectorreactivate_project@1x.png → ./app/src/main/res/drawable-mdpi/selectorreactivate_project.png
+  selectorreactivate_project@2x.png → ./app/src/main/res/drawable-xhdpi/selectorreactivate_project.png
+  selectorreactivate_project@3x.png → ./app/src/main/res/drawable-xxhdpi/selectorreactivate_project.png
+
+General Images:
+  Update_Rocket@1x.png → ./app/src/main/res/drawable-mdpi/update_rocket.png
+  Update_Rocket@2x.png → ./app/src/main/res/drawable-xhdpi/update_rocket.png
+  Update_Rocket@3x.png → ./app/src/main/res/drawable-xxhdpi/update_rocket.png
+  flir-disconnected@1x.png → ./app/src/main/res/drawable-mdpi/flir_disconnected.png
+  flir-disconnected@2x.png → ./app/src/main/res/drawable-xhdpi/flir_disconnected.png
+  flir-disconnected@3x.png → ./app/src/main/res/drawable-xxhdpi/flir_disconnected.png
+  image_error@1x.png → ./app/src/main/res/drawable-mdpi/image_error.png
+  image_error@2x.png → ./app/src/main/res/drawable-xhdpi/image_error.png
+  image_error@3x.png → ./app/src/main/res/drawable-xxhdpi/image_error.png
+  image_in_progress@1x.png → ./app/src/main/res/drawable-mdpi/image_in_progress.png
+  image_in_progress@2x.png → ./app/src/main/res/drawable-xhdpi/image_in_progress.png
+  image_in_progress@3x.png → ./app/src/main/res/drawable-xxhdpi/image_in_progress.png
+
+Logos:
+  icon_facebook@1x.png → ./app/src/main/res/drawable-mdpi/icon_facebook.png
+  icon_facebook@2x.png → ./app/src/main/res/drawable-xhdpi/icon_facebook.png
+  icon_facebook@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_facebook.png
+  logo_black.svg → ./app/src/main/res/drawable/logo_black.svg
+  logo_circle.svg → ./app/src/main/res/drawable/logo_circle.svg
+  logo_google@1x.png → ./app/src/main/res/drawable-mdpi/logo_google.png
+  logo_google@2x.png → ./app/src/main/res/drawable-xhdpi/logo_google.png
+  logo_google@3x.png → ./app/src/main/res/drawable-xxhdpi/logo_google.png
+  logo_horizontal@1x.png → ./app/src/main/res/drawable-mdpi/logo_horizontal.png
+  logo_horizontal@2x.png → ./app/src/main/res/drawable-xhdpi/logo_horizontal.png
+  logo_horizontal@3x.png → ./app/src/main/res/drawable-xxhdpi/logo_horizontal.png
+  logo_rocket_launching@1x.png → ./app/src/main/res/drawable-mdpi/logo_rocket_launching.png
+  logo_rocket_launching@2x.png → ./app/src/main/res/drawable-xhdpi/logo_rocket_launching.png
+  logo_rocket_launching@3x.png → ./app/src/main/res/drawable-xxhdpi/logo_rocket_launching.png
+  logo_vertical@1x.png → ./app/src/main/res/drawable-mdpi/logo_vertical.png
+  logo_vertical@2x.png → ./app/src/main/res/drawable-xhdpi/logo_vertical.png
+  logo_vertical@3x.png → ./app/src/main/res/drawable-xxhdpi/logo_vertical.png
+  logo_white.svg → ./app/src/main/res/drawable/logo_white.svg
+
+Navigation Icons:
+  chevron_left@1x.png → ./app/src/main/res/drawable-mdpi/chevron_left.png
+  chevron_left@2x.png → ./app/src/main/res/drawable-xhdpi/chevron_left.png
+  chevron_left@3x.png → ./app/src/main/res/drawable-xxhdpi/chevron_left.png
+  icon_arrow_right@1x.png → ./app/src/main/res/drawable-mdpi/icon_arrow_right.png
+  icon_arrow_right@2x.png → ./app/src/main/res/drawable-xhdpi/icon_arrow_right.png
+  icon_arrow_right@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_arrow_right.png
+  icon_chevron_down.pdf → ./app/src/main/res/drawable/icon_chevron_down.pdf
+  icon_chevron_right@1x.png → ./app/src/main/res/drawable-mdpi/icon_chevron_right.png
+  icon_chevron_right@2x.png → ./app/src/main/res/drawable-xhdpi/icon_chevron_right.png
+  icon_chevron_right@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_chevron_right.png
+  icon_chevron_up.pdf → ./app/src/main/res/drawable/icon_chevron_up.pdf
+  icon_xmark@1x.png → ./app/src/main/res/drawable-mdpi/icon_xmark.png
+  icon_xmark@2x.png → ./app/src/main/res/drawable-xhdpi/icon_xmark.png
+  icon_xmark@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_xmark.png
+  icon_xmark_white.pdf → ./app/src/main/res/drawable/icon_xmark_white.pdf
+
+Object Icons:
+  MailShip Icon.png → ./app/src/main/res/drawable/mailship_icon.png
+  MailShip Icon@2x.png → ./app/src/main/res/drawable-xhdpi/mailship_icon.png
+  MailShip Icon@3x.png → ./app/src/main/res/drawable-xxhdpi/mailship_icon.png
+  feather_edit-3 1.png → ./app/src/main/res/drawable/feather_edit_3_1.png
+  feather_edit-3 2.png → ./app/src/main/res/drawable/feather_edit_3_2.png
+  feather_edit-3.png → ./app/src/main/res/drawable/feather_edit_3.png
+  icon_all_project_notes.png → ./app/src/main/res/drawable/icon_all_project_notes.png
+  icon_all_project_notes@2x.png → ./app/src/main/res/drawable-xhdpi/icon_all_project_notes.png
+  icon_all_project_notes@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_all_project_notes.png
+  icon_calendar@1x.png → ./app/src/main/res/drawable-mdpi/icon_calendar.png
+  icon_calendar@2x.png → ./app/src/main/res/drawable-xhdpi/icon_calendar.png
+  icon_calendar@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_calendar.png
+  icon_circle_search@1x.png → ./app/src/main/res/drawable-mdpi/icon_circle_search.png
+  icon_circle_search@2x.png → ./app/src/main/res/drawable-xhdpi/icon_circle_search.png
+  icon_circle_search@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_circle_search.png
+  icon_email@1x.png → ./app/src/main/res/drawable-mdpi/icon_email.png
+  icon_email@2x.png → ./app/src/main/res/drawable-xhdpi/icon_email.png
+  icon_email@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_email.png
+  icon_envelope_heavy@1x.png → ./app/src/main/res/drawable-mdpi/icon_envelope_heavy.png
+  icon_envelope_heavy@2x.png → ./app/src/main/res/drawable-xhdpi/icon_envelope_heavy.png
+  icon_envelope_heavy@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_envelope_heavy.png
+  icon_exclamation_circle_red@1x.png → ./app/src/main/res/drawable-mdpi/icon_exclamation_circle_red.png
+  icon_exclamation_circle_red@2x.png → ./app/src/main/res/drawable-xhdpi/icon_exclamation_circle_red.png
+  icon_exclamation_circle_red@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_exclamation_circle_red.png
+  icon_not_found@1x.png → ./app/src/main/res/drawable-mdpi/icon_not_found.png
+  icon_not_found@2x.png → ./app/src/main/res/drawable-xhdpi/icon_not_found.png
+  icon_not_found@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_not_found.png
+  icon_pencil@1x.png → ./app/src/main/res/drawable-mdpi/icon_pencil.png
+  icon_pencil@2x.png → ./app/src/main/res/drawable-xhdpi/icon_pencil.png
+  icon_pencil@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_pencil.png
+  icon_pencil_paper@1x.png → ./app/src/main/res/drawable-mdpi/icon_pencil_paper.png
+  icon_pencil_paper@2x.png → ./app/src/main/res/drawable-xhdpi/icon_pencil_paper.png
+  icon_pencil_paper@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_pencil_paper.png
+  icon_people@1x.png → ./app/src/main/res/drawable-mdpi/icon_people.png
+  icon_people@2x.png → ./app/src/main/res/drawable-xhdpi/icon_people.png
+  icon_people@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_people.png
+  icon_person@1x.png → ./app/src/main/res/drawable-mdpi/icon_person.png
+  icon_person@1x.png → ./app/src/main/res/drawable-mdpi/icon_person.png
+  icon_person@2x.png → ./app/src/main/res/drawable-xhdpi/icon_person.png
+  icon_person@2x.png → ./app/src/main/res/drawable-xhdpi/icon_person.png
+  icon_person@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_person.png
+  icon_person@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_person.png
+  icon_sms_bubble@1x.png → ./app/src/main/res/drawable-mdpi/icon_sms_bubble.png
+  icon_sms_bubble@2x.png → ./app/src/main/res/drawable-xhdpi/icon_sms_bubble.png
+  icon_sms_bubble@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_sms_bubble.png
+  icon_trash@1x.png → ./app/src/main/res/drawable-mdpi/icon_trash.png
+  icon_trash@2x.png → ./app/src/main/res/drawable-xhdpi/icon_trash.png
+  icon_trash@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_trash.png
+  icon_watch@1x.png → ./app/src/main/res/drawable-mdpi/icon_watch.png
+  icon_watch@2x.png → ./app/src/main/res/drawable-xhdpi/icon_watch.png
+  icon_watch@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_watch.png
+  image_equipment.pdf → ./app/src/main/res/drawable/image_equipment.pdf
+  phone@1x.png → ./app/src/main/res/drawable-mdpi/phone.png
+  phone@2x.png → ./app/src/main/res/drawable-xhdpi/phone.png
+  phone@3x.png → ./app/src/main/res/drawable-xxhdpi/phone.png
+  project.svg → ./app/src/main/res/drawable/project.svg
+
+Object Illustrations:
+  rp_flir@1x.png → ./app/src/main/res/drawable-mdpi/rp_flir.png
+  rp_flir@2x.png → ./app/src/main/res/drawable-xhdpi/rp_flir.png
+  rp_flir@3x.png → ./app/src/main/res/drawable-xxhdpi/rp_flir.png
+  rp_iphone@1x.png → ./app/src/main/res/drawable-mdpi/rp_iphone.png
+  rp_iphone@2x.png → ./app/src/main/res/drawable-xhdpi/rp_iphone.png
+  rp_iphone@3x.png → ./app/src/main/res/drawable-xxhdpi/rp_iphone.png
+  telescope@1x.png → ./app/src/main/res/drawable-mdpi/telescope.png
+  telescope@2x.png → ./app/src/main/res/drawable-xhdpi/telescope.png
+  telescope@3x.png → ./app/src/main/res/drawable-xxhdpi/telescope.png
+
+Photos TabBar Icons:
+  menu_rectangle@1x.png → ./app/src/main/res/drawable-mdpi/menu_rectangle.png
+  menu_rectangle@2x.png → ./app/src/main/res/drawable-xhdpi/menu_rectangle.png
+  menu_rectangle@3x.png → ./app/src/main/res/drawable-xxhdpi/menu_rectangle.png
+
+Property Illustrations:
+  Combined.png → ./app/src/main/res/drawable/combined.png
+  addCircle.png → ./app/src/main/res/drawable/addcircle.png
+  addIcon.png → ./app/src/main/res/drawable/addicon.png
+  blueprint@1x.png → ./app/src/main/res/drawable-mdpi/blueprint.png
+  blueprint@2x.png → ./app/src/main/res/drawable-xhdpi/blueprint.png
+  blueprint@3x.png → ./app/src/main/res/drawable-xxhdpi/blueprint.png
+  circle.png → ./app/src/main/res/drawable/circle.png
+  contact@1x.png → ./app/src/main/res/drawable-mdpi/contact.png
+  contact@2x.png → ./app/src/main/res/drawable-xhdpi/contact.png
+  contact@3x.png → ./app/src/main/res/drawable-xxhdpi/contact.png
+  crew.png → ./app/src/main/res/drawable/crew.png
+  crew@2x.png → ./app/src/main/res/drawable-xhdpi/crew.png
+  crew@3x.png → ./app/src/main/res/drawable-xxhdpi/crew.png
+  cross.png → ./app/src/main/res/drawable/cross.png
+  damaged_property@1x.png → ./app/src/main/res/drawable-mdpi/damaged_property.png
+  damaged_property@2x.png → ./app/src/main/res/drawable-xhdpi/damaged_property.png
+  damaged_property@3x.png → ./app/src/main/res/drawable-xxhdpi/damaged_property.png
+  icon_credit_card@1x.png → ./app/src/main/res/drawable-mdpi/icon_credit_card.png
+  icon_credit_card@2x.png → ./app/src/main/res/drawable-xhdpi/icon_credit_card.png
+  icon_credit_card@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_credit_card.png
+  icon_crew@1x.png → ./app/src/main/res/drawable-mdpi/icon_crew.png
+  icon_crew@2x.png → ./app/src/main/res/drawable-xhdpi/icon_crew.png
+  icon_crew@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_crew.png
+  image 13.png → ./app/src/main/res/drawable/image_13.png
+  image_circle_photo@1x.png → ./app/src/main/res/drawable-mdpi/image_circle_photo.png
+  image_circle_photo@2x.png → ./app/src/main/res/drawable-xhdpi/image_circle_photo.png
+  image_circle_photo@3x.png → ./app/src/main/res/drawable-xxhdpi/image_circle_photo.png
+  insurance@1x.png → ./app/src/main/res/drawable-mdpi/insurance.png
+  insurance@2x.png → ./app/src/main/res/drawable-xhdpi/insurance.png
+  insurance@3x.png → ./app/src/main/res/drawable-xxhdpi/insurance.png
+  location@1x.png → ./app/src/main/res/drawable-mdpi/location.png
+  location@2x.png → ./app/src/main/res/drawable-xhdpi/location.png
+  location@3x.png → ./app/src/main/res/drawable-xxhdpi/location.png
+  multi_unit.png → ./app/src/main/res/drawable/multi_unit.png
+  multi_unit@2x.png → ./app/src/main/res/drawable-xhdpi/multi_unit.png
+  multi_unit@3x.png → ./app/src/main/res/drawable-xxhdpi/multi_unit.png
+  property@1x.png → ./app/src/main/res/drawable-mdpi/property.png
+  property@2x.png → ./app/src/main/res/drawable-xhdpi/property.png
+  property@3x.png → ./app/src/main/res/drawable-xxhdpi/property.png
+  single_unit@1x.png → ./app/src/main/res/drawable-mdpi/single_unit.png
+  single_unit@2x.png → ./app/src/main/res/drawable-xhdpi/single_unit.png
+  single_unit@3x.png → ./app/src/main/res/drawable-xxhdpi/single_unit.png
+  unit@1x.png → ./app/src/main/res/drawable-mdpi/unit.png
+  unit@2x.png → ./app/src/main/res/drawable-xhdpi/unit.png
+  unit@3x.png → ./app/src/main/res/drawable-xxhdpi/unit.png
+
+Room Illustrations:
+  Bike Locker@1x.png → ./app/src/main/res/drawable-mdpi/bike_locker.png
+  Bike Locker@2x.png → ./app/src/main/res/drawable-xhdpi/bike_locker.png
+  Bike Locker@3x.png → ./app/src/main/res/drawable-xxhdpi/bike_locker.png
+  Boiler Room@1x.png → ./app/src/main/res/drawable-mdpi/boiler_room.png
+  Boiler Room@2x.png → ./app/src/main/res/drawable-xhdpi/boiler_room.png
+  Boiler Room@3x.png → ./app/src/main/res/drawable-xxhdpi/boiler_room.png
+  Cinema@1x.png → ./app/src/main/res/drawable-mdpi/cinema.png
+  Cinema@2x.png → ./app/src/main/res/drawable-xhdpi/cinema.png
+  Cinema@3x.png → ./app/src/main/res/drawable-xxhdpi/cinema.png
+  Closet@1x.png → ./app/src/main/res/drawable-mdpi/closet.png
+  Closet@2x.png → ./app/src/main/res/drawable-xhdpi/closet.png
+  Closet@3x.png → ./app/src/main/res/drawable-xxhdpi/closet.png
+  Elevator@1x.png → ./app/src/main/res/drawable-mdpi/elevator.png
+  Elevator@2x.png → ./app/src/main/res/drawable-xhdpi/elevator.png
+  Elevator@3x.png → ./app/src/main/res/drawable-xxhdpi/elevator.png
+  Gym@1x.png → ./app/src/main/res/drawable-mdpi/gym.png
+  Gym@2x.png → ./app/src/main/res/drawable-xhdpi/gym.png
+  Gym@3x.png → ./app/src/main/res/drawable-xxhdpi/gym.png
+  Hallway@1x.png → ./app/src/main/res/drawable-mdpi/hallway.png
+  Hallway@2x.png → ./app/src/main/res/drawable-xhdpi/hallway.png
+  Hallway@3x.png → ./app/src/main/res/drawable-xxhdpi/hallway.png
+  Icon.pdf → ./app/src/main/res/drawable/icon.pdf
+  Library@1x.png → ./app/src/main/res/drawable-mdpi/library.png
+  Library@2x.png → ./app/src/main/res/drawable-xhdpi/library.png
+  Library@3x.png → ./app/src/main/res/drawable-xxhdpi/library.png
+  Lounge 1@1x.png → ./app/src/main/res/drawable-mdpi/lounge_1.png
+  Lounge 1@2x.png → ./app/src/main/res/drawable-xhdpi/lounge_1.png
+  Lounge 1@3x.png → ./app/src/main/res/drawable-xxhdpi/lounge_1.png
+  Lounge 2@1x.png → ./app/src/main/res/drawable-mdpi/lounge_2.png
+  Lounge 2@2x.png → ./app/src/main/res/drawable-xhdpi/lounge_2.png
+  Lounge 2@3x.png → ./app/src/main/res/drawable-xxhdpi/lounge_2.png
+  Play Room@1x.png → ./app/src/main/res/drawable-mdpi/play_room.png
+  Play Room@2x.png → ./app/src/main/res/drawable-xhdpi/play_room.png
+  Play Room@3x.png → ./app/src/main/res/drawable-xxhdpi/play_room.png
+  Power Room@1x.png → ./app/src/main/res/drawable-mdpi/power_room.png
+  Power Room@2x.png → ./app/src/main/res/drawable-xhdpi/power_room.png
+  Power Room@3x.png → ./app/src/main/res/drawable-xxhdpi/power_room.png
+  Prep Kitchen@1x.png → ./app/src/main/res/drawable-mdpi/prep_kitchen.png
+  Prep Kitchen@2x.png → ./app/src/main/res/drawable-xhdpi/prep_kitchen.png
+  Prep Kitchen@3x.png → ./app/src/main/res/drawable-xxhdpi/prep_kitchen.png
+  Riser Cupboard@1x.png → ./app/src/main/res/drawable-mdpi/riser_cupboard.png
+  Riser Cupboard@2x.png → ./app/src/main/res/drawable-xhdpi/riser_cupboard.png
+  Riser Cupboard@3x.png → ./app/src/main/res/drawable-xxhdpi/riser_cupboard.png
+  Stairwell@1x.png → ./app/src/main/res/drawable-mdpi/stairwell.png
+  Stairwell@2x.png → ./app/src/main/res/drawable-xhdpi/stairwell.png
+  Stairwell@3x.png → ./app/src/main/res/drawable-xxhdpi/stairwell.png
+  Study Room@1x.png → ./app/src/main/res/drawable-mdpi/study_room.png
+  Study Room@2x.png → ./app/src/main/res/drawable-xhdpi/study_room.png
+  Study Room@3x.png → ./app/src/main/res/drawable-xxhdpi/study_room.png
+  Under Stair Cupboard@1x.png → ./app/src/main/res/drawable-mdpi/under_stair_cupboard.png
+  Under Stair Cupboard@2x.png → ./app/src/main/res/drawable-xhdpi/under_stair_cupboard.png
+  Under Stair Cupboard@3x.png → ./app/src/main/res/drawable-xxhdpi/under_stair_cupboard.png
+  Utility Room@1x.png → ./app/src/main/res/drawable-mdpi/utility_room.png
+  Utility Room@2x.png → ./app/src/main/res/drawable-xhdpi/utility_room.png
+  Utility Room@3x.png → ./app/src/main/res/drawable-xxhdpi/utility_room.png
+  Walk-In Wardrobe@1x.png → ./app/src/main/res/drawable-mdpi/walk_in_wardrobe.png
+  Walk-In Wardrobe@2x.png → ./app/src/main/res/drawable-xhdpi/walk_in_wardrobe.png
+  Walk-In Wardrobe@3x.png → ./app/src/main/res/drawable-xxhdpi/walk_in_wardrobe.png
+  Wet Room@1x.png → ./app/src/main/res/drawable-mdpi/wet_room.png
+  Wet Room@2x.png → ./app/src/main/res/drawable-xhdpi/wet_room.png
+  Wet Room@3x.png → ./app/src/main/res/drawable-xxhdpi/wet_room.png
+  attic@1x.png → ./app/src/main/res/drawable-mdpi/attic.png
+  attic@2x.png → ./app/src/main/res/drawable-xhdpi/attic.png
+  attic@3x.png → ./app/src/main/res/drawable-xxhdpi/attic.png
+  balcony.pdf → ./app/src/main/res/drawable/balcony.pdf
+  basement.pdf → ./app/src/main/res/drawable/basement.pdf
+  bathroom@1x.png → ./app/src/main/res/drawable-mdpi/bathroom.png
+  bathroom@2x.png → ./app/src/main/res/drawable-xhdpi/bathroom.png
+  bathroom@3x.png → ./app/src/main/res/drawable-xxhdpi/bathroom.png
+  bathroom_commercial.pdf → ./app/src/main/res/drawable/bathroom_commercial.pdf
+  bay.pdf → ./app/src/main/res/drawable/bay.pdf
+  bedroom@1x.png → ./app/src/main/res/drawable-mdpi/bedroom.png
+  bedroom@2x.png → ./app/src/main/res/drawable-xhdpi/bedroom.png
+  bedroom@3x.png → ./app/src/main/res/drawable-xxhdpi/bedroom.png
+  commercial.pdf → ./app/src/main/res/drawable/commercial.pdf
+  custom@1x.png → ./app/src/main/res/drawable-mdpi/custom.png
+  custom@2x.png → ./app/src/main/res/drawable-xhdpi/custom.png
+  custom@3x.png → ./app/src/main/res/drawable-xxhdpi/custom.png
+  den.pdf → ./app/src/main/res/drawable/den.pdf
+  dining room@1x.png → ./app/src/main/res/drawable-mdpi/dining_room.png
+  dining room@2x.png → ./app/src/main/res/drawable-xhdpi/dining_room.png
+  dining room@3x.png → ./app/src/main/res/drawable-xxhdpi/dining_room.png
+  east_facing.pdf → ./app/src/main/res/drawable/east_facing.pdf
+  en suit@1x.png → ./app/src/main/res/drawable-mdpi/en_suit.png
+  en suit@2x.png → ./app/src/main/res/drawable-xhdpi/en_suit.png
+  en suit@3x.png → ./app/src/main/res/drawable-xxhdpi/en_suit.png
+  entryway.pdf → ./app/src/main/res/drawable/entryway.pdf
+  floor_common_area@1x.png → ./app/src/main/res/drawable-mdpi/floor_common_area.png
+  floor_common_area@2x.png → ./app/src/main/res/drawable-xhdpi/floor_common_area.png
+  floor_common_area@3x.png → ./app/src/main/res/drawable-xxhdpi/floor_common_area.png
+  games_room.pdf → ./app/src/main/res/drawable/games_room.pdf
+  garage@1x.png → ./app/src/main/res/drawable-mdpi/garage.png
+  garage@2x.png → ./app/src/main/res/drawable-xhdpi/garage.png
+  garage@3x.png → ./app/src/main/res/drawable-xxhdpi/garage.png
+  kitchen@1x.png → ./app/src/main/res/drawable-mdpi/kitchen.png
+  kitchen@2x.png → ./app/src/main/res/drawable-xhdpi/kitchen.png
+  kitchen@3x.png → ./app/src/main/res/drawable-xxhdpi/kitchen.png
+  laundry@1x.png → ./app/src/main/res/drawable-mdpi/laundry.png
+  laundry@2x.png → ./app/src/main/res/drawable-xhdpi/laundry.png
+  laundry@3x.png → ./app/src/main/res/drawable-xxhdpi/laundry.png
+  living room@1x.png → ./app/src/main/res/drawable-mdpi/living_room.png
+  living room@2x.png → ./app/src/main/res/drawable-xhdpi/living_room.png
+  living room@3x.png → ./app/src/main/res/drawable-xxhdpi/living_room.png
+  lunch_room.pdf → ./app/src/main/res/drawable/lunch_room.pdf
+  master_bedroom.pdf → ./app/src/main/res/drawable/master_bedroom.pdf
+  mechanical_room.pdf → ./app/src/main/res/drawable/mechanical_room.pdf
+  meeting_room.pdf → ./app/src/main/res/drawable/meeting_room.pdf
+  north_facing.pdf → ./app/src/main/res/drawable/north_facing.pdf
+  office + den@1x.png → ./app/src/main/res/drawable-mdpi/office_den.png
+  office + den@2x.png → ./app/src/main/res/drawable-xhdpi/office_den.png
+  office + den@3x.png → ./app/src/main/res/drawable-xxhdpi/office_den.png
+  office.pdf → ./app/src/main/res/drawable/office.pdf
+  parking_garage.pdf → ./app/src/main/res/drawable/parking_garage.pdf
+  plaza.pdf → ./app/src/main/res/drawable/plaza.pdf
+  pool.pdf → ./app/src/main/res/drawable/pool.pdf
+  private_office.pdf → ./app/src/main/res/drawable/private_office.pdf
+  reading room@1x.png → ./app/src/main/res/drawable-mdpi/reading_room.png
+  reading room@2x.png → ./app/src/main/res/drawable-xhdpi/reading_room.png
+  reading room@3x.png → ./app/src/main/res/drawable-xxhdpi/reading_room.png
+  south_facing.pdf → ./app/src/main/res/drawable/south_facing.pdf
+  storefront.pdf → ./app/src/main/res/drawable/storefront.pdf
+  utility_room.pdf → ./app/src/main/res/drawable/utility_room.pdf
+  walkway.pdf → ./app/src/main/res/drawable/walkway.pdf
+  west_facing.pdf → ./app/src/main/res/drawable/west_facing.pdf
+
+ServiceTitan Assets:
+  st_logo.png → ./app/src/main/res/drawable/st_logo.png
+
+Social Media Logos:
+  icon_facebook@1x.png → ./app/src/main/res/drawable-mdpi/icon_facebook.png
+  icon_facebook@2x.png → ./app/src/main/res/drawable-xhdpi/icon_facebook.png
+  icon_facebook@3x.png → ./app/src/main/res/drawable-xxhdpi/icon_facebook.png
+  logo_google@1x.png → ./app/src/main/res/drawable-mdpi/logo_google.png
+  logo_google@2x.png → ./app/src/main/res/drawable-xhdpi/logo_google.png
+  logo_google@3x.png → ./app/src/main/res/drawable-xxhdpi/logo_google.png
+
+TabBar Icons:
+  map.png → ./app/src/main/res/drawable/map.png
+  map@2x.png → ./app/src/main/res/drawable-xhdpi/map.png
+  map@3x.png → ./app/src/main/res/drawable-xxhdpi/map.png
+  map_fill@1x.png → ./app/src/main/res/drawable-mdpi/map_fill.png
+  map_fill@2x.png → ./app/src/main/res/drawable-xhdpi/map_fill.png
+  map_fill@3x.png → ./app/src/main/res/drawable-xxhdpi/map_fill.png
+  messaging.png → ./app/src/main/res/drawable/messaging.png
+  messaging@2x.png → ./app/src/main/res/drawable-xhdpi/messaging.png
+  messaging@3x.png → ./app/src/main/res/drawable-xxhdpi/messaging.png
+  messaging_fill@1x.png → ./app/src/main/res/drawable-mdpi/messaging_fill.png
+  messaging_fill@2x.png → ./app/src/main/res/drawable-xhdpi/messaging_fill.png
+  messaging_fill@3x.png → ./app/src/main/res/drawable-xxhdpi/messaging_fill.png
+  notification.png → ./app/src/main/res/drawable/notification.png
+  notification@2x.png → ./app/src/main/res/drawable-xhdpi/notification.png
+  notification@3x.png → ./app/src/main/res/drawable-xxhdpi/notification.png
+  notification_fill@1x.png → ./app/src/main/res/drawable-mdpi/notification_fill.png
+  notification_fill@2x.png → ./app/src/main/res/drawable-xhdpi/notification_fill.png
+  notification_fill@3x.png → ./app/src/main/res/drawable-xxhdpi/notification_fill.png
+  people.png → ./app/src/main/res/drawable/people.png
+  people@2x.png → ./app/src/main/res/drawable-xhdpi/people.png
+  people@3x.png → ./app/src/main/res/drawable-xxhdpi/people.png
+  people_fill@1x.png → ./app/src/main/res/drawable-mdpi/people_fill.png
+  people_fill@2x.png → ./app/src/main/res/drawable-xhdpi/people_fill.png
+  people_fill@3x.png → ./app/src/main/res/drawable-xxhdpi/people_fill.png
+  projects.png → ./app/src/main/res/drawable/projects.png
+  projects@2x.png → ./app/src/main/res/drawable-xhdpi/projects.png
+  projects@3x.png → ./app/src/main/res/drawable-xxhdpi/projects.png
+  projects_fill@1x.png → ./app/src/main/res/drawable-mdpi/projects_fill.png
+  projects_fill@2x.png → ./app/src/main/res/drawable-xhdpi/projects_fill.png
+  projects_fill@3x.png → ./app/src/main/res/drawable-xxhdpi/projects_fill.png
+
+White Room Illustrations:
+  attic_white.pdf → ./app/src/main/res/drawable/attic_white.pdf
+  bathroom_white.pdf → ./app/src/main/res/drawable/bathroom_white.pdf
+  bedroom_white.pdf → ./app/src/main/res/drawable/bedroom_white.pdf
+  bike_locker_white.pdf → ./app/src/main/res/drawable/bike_locker_white.pdf
+  boiler_room_white.pdf → ./app/src/main/res/drawable/boiler_room_white.pdf
+  business_center_white.pdf → ./app/src/main/res/drawable/business_center_white.pdf
+  cinema_white.pdf → ./app/src/main/res/drawable/cinema_white.pdf
+  closet_white.pdf → ./app/src/main/res/drawable/closet_white.pdf
+  courtyard_white.pdf → ./app/src/main/res/drawable/courtyard_white.pdf
+  custom_white.pdf → ./app/src/main/res/drawable/custom_white.pdf
+  dining_room_white.pdf → ./app/src/main/res/drawable/dining_room_white.pdf
+  elevator_white.pdf → ./app/src/main/res/drawable/elevator_white.pdf
+  en_suit_white.pdf → ./app/src/main/res/drawable/en_suit_white.pdf
+  floor_common_area_white.pdf → ./app/src/main/res/drawable/floor_common_area_white.pdf
+  games_room_white.pdf → ./app/src/main/res/drawable/games_room_white.pdf
+  garage_white.pdf → ./app/src/main/res/drawable/garage_white.pdf
+  gym_white.pdf → ./app/src/main/res/drawable/gym_white.pdf
+  hallway_white.pdf → ./app/src/main/res/drawable/hallway_white.pdf
+  kitchen_white.pdf → ./app/src/main/res/drawable/kitchen_white.pdf
+  laundry_white.pdf → ./app/src/main/res/drawable/laundry_white.pdf
+  library_white.pdf → ./app/src/main/res/drawable/library_white.pdf
+  living_room_white.pdf → ./app/src/main/res/drawable/living_room_white.pdf
+  lobby_white.pdf → ./app/src/main/res/drawable/lobby_white.pdf
+  lounge_1_white.pdf → ./app/src/main/res/drawable/lounge_1_white.pdf
+  lounge_2_white.pdf → ./app/src/main/res/drawable/lounge_2_white.pdf
+  lunch_room_white.pdf → ./app/src/main/res/drawable/lunch_room_white.pdf
+  meeting_room_white.pdf → ./app/src/main/res/drawable/meeting_room_white.pdf
+  office+den_white.pdf → ./app/src/main/res/drawable/office_den_white.pdf
+  parking_white.pdf → ./app/src/main/res/drawable/parking_white.pdf
+  party_area_white.pdf → ./app/src/main/res/drawable/party_area_white.pdf
+  play_room_white.pdf → ./app/src/main/res/drawable/play_room_white.pdf
+  pool_white.pdf → ./app/src/main/res/drawable/pool_white.pdf
+  power_room_white.pdf → ./app/src/main/res/drawable/power_room_white.pdf
+  prep_kitchen_white.pdf → ./app/src/main/res/drawable/prep_kitchen_white.pdf
+  private_office_white.pdf → ./app/src/main/res/drawable/private_office_white.pdf
+  reading_room_white.pdf → ./app/src/main/res/drawable/reading_room_white.pdf
+  riser_cupboard_white.pdf → ./app/src/main/res/drawable/riser_cupboard_white.pdf
+  stairwell_white.pdf → ./app/src/main/res/drawable/stairwell_white.pdf
+  study_room_white.pdf → ./app/src/main/res/drawable/study_room_white.pdf
+  under_stair_cupboard_white.pdf → ./app/src/main/res/drawable/under_stair_cupboard_white.pdf
+  unit+stair__white.pdf → ./app/src/main/res/drawable/unit_stair_white.pdf
+  utility_room_white.pdf → ./app/src/main/res/drawable/utility_room_white.pdf
+  walk-in_wardrobe_white.pdf → ./app/src/main/res/drawable/walk_in_wardrobe_white.pdf
+  wc_white.pdf → ./app/src/main/res/drawable/wc_white.pdf
+  wet_room_white.pdf → ./app/src/main/res/drawable/wet_room_white.pdf

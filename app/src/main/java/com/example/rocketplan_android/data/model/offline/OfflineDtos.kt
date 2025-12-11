@@ -158,6 +158,28 @@ data class DeleteWithTimestampRequest(
     val updatedAt: String? = null
 )
 
+data class EquipmentRequest(
+    @SerializedName("project_id")
+    val projectId: Long,
+    @SerializedName("room_id")
+    val roomId: Long? = null,
+    val type: String,
+    val brand: String? = null,
+    val model: String? = null,
+    @SerializedName("serial_number")
+    val serialNumber: String? = null,
+    val quantity: Int = 1,
+    val status: String,
+    @SerializedName("start_date")
+    val startDate: String? = null,
+    @SerializedName("end_date")
+    val endDate: String? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
+)
+
 data class NoteableDto(
     val id: Long,
     val uuid: String?,

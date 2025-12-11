@@ -36,6 +36,7 @@ import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
+import com.example.rocketplan_android.data.model.offline.EquipmentRequest
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.NoteDto
@@ -911,6 +912,76 @@ class OfflineSyncRepository(
         PendingCreationResult(createdProjects = createdProjects, syncedRoomIds = syncedRoomIds)
     }
 
+    suspend fun upsertEquipmentOffline(
+        projectId: Long,
+        roomId: Long?,
+        type: String,
+        brand: String? = null,
+        model: String? = null,
+        serialNumber: String? = null,
+        quantity: Int = 1,
+        status: String = "active",
+        startDate: Date? = null,
+        endDate: Date? = null,
+        equipmentId: Long? = null,
+        uuid: String? = null
+    ): OfflineEquipmentEntity = withContext(ioDispatcher) {
+        val timestamp = now()
+        val existing = equipmentId?.let { localDataService.getEquipment(it) }
+            ?: uuid?.let { localDataService.getEquipmentByUuid(it) }
+
+        val resolvedId = existing?.equipmentId ?: equipmentId ?: -System.currentTimeMillis()
+        val resolvedUuid = existing?.uuid ?: uuid ?: UUID.randomUUID().toString()
+
+        val entity = OfflineEquipmentEntity(
+            equipmentId = resolvedId,
+            serverId = existing?.serverId,
+            uuid = resolvedUuid,
+            projectId = existing?.projectId ?: projectId,
+            roomId = roomId ?: existing?.roomId,
+            type = type,
+            brand = brand,
+            model = model,
+            serialNumber = serialNumber,
+            quantity = quantity,
+            status = status,
+            startDate = startDate ?: existing?.startDate,
+            endDate = endDate ?: existing?.endDate,
+            createdAt = existing?.createdAt ?: timestamp,
+            updatedAt = timestamp,
+            lastSyncedAt = existing?.lastSyncedAt,
+            syncStatus = SyncStatus.PENDING,
+            syncVersion = existing?.syncVersion ?: 0,
+            isDirty = true,
+            isDeleted = false
+        )
+
+        localDataService.saveEquipment(listOf(entity))
+        val saved = localDataService.getEquipmentByUuid(resolvedUuid)
+        saved ?: entity
+    }
+
+    suspend fun deleteEquipmentOffline(
+        equipmentId: Long? = null,
+        uuid: String? = null
+    ): OfflineEquipmentEntity? = withContext(ioDispatcher) {
+        val existing = when {
+            equipmentId != null -> localDataService.getEquipment(equipmentId)
+            uuid != null -> localDataService.getEquipmentByUuid(uuid)
+            else -> null
+        } ?: return@withContext null
+
+        val timestamp = now()
+        val updated = existing.copy(
+            isDeleted = true,
+            isDirty = true,
+            syncStatus = SyncStatus.PENDING,
+            updatedAt = timestamp
+        )
+        localDataService.saveEquipment(listOf(updated))
+        updated
+    }
+
     private suspend fun syncWorkScopesForProject(projectId: Long): Int {
         val start = System.currentTimeMillis()
         val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
@@ -1046,6 +1117,8 @@ class OfflineSyncRepository(
 
         runCatching { syncPendingNotes(projectId) }
             .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending notes", it) }
+        runCatching { syncPendingEquipment(projectId) }
+            .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending equipment", it) }
 
         val notesCheckpointKey = projectNotesKey(projectId)
         val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
@@ -1590,6 +1663,139 @@ class OfflineSyncRepository(
                     Log.w("API", "⚠️ [syncRestore] Failed to restore $type ids=${filteredIds.joinToString()}", error)
                 }
         }
+    }
+
+    private suspend fun syncPendingEquipment(projectId: Long) {
+        val pending = localDataService.getPendingEquipment(projectId)
+        if (pending.isEmpty()) return
+
+        val projectServerId = resolveServerProjectId(projectId)
+            ?: throw IllegalStateException("Project $projectId has not been synced to server")
+
+        val roomServerIds = mutableSetOf<Long>()
+        pending.forEach { item ->
+            item.roomId?.let { roomId ->
+                localDataService.getRoom(roomId)?.serverId?.let { roomServerIds += it }
+            }
+        }
+
+        restoreDeletedParents(
+            buildMap {
+                put("projects", listOf(projectServerId))
+                if (roomServerIds.isNotEmpty()) {
+                    put("rooms", roomServerIds.toList())
+                }
+            }
+        )
+
+        pending.forEach { equipment ->
+            val synced = if (equipment.isDeleted) {
+                pushPendingEquipmentDeletion(equipment)
+            } else {
+                pushPendingEquipmentUpsert(equipment, projectServerId)
+            }
+            synced?.let { localDataService.saveEquipment(listOf(it)) }
+        }
+    }
+
+    private suspend fun pushPendingEquipmentDeletion(
+        equipment: OfflineEquipmentEntity
+    ): OfflineEquipmentEntity? {
+        if (equipment.serverId == null) {
+            // Never reached server; treat as resolved locally
+            return equipment.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+        }
+
+        val deleteRequest = DeleteWithTimestampRequest(updatedAt = equipment.updatedAt.toApiTimestamp())
+        return runCatching {
+            api.deleteEquipment(equipment.serverId, deleteRequest)
+            equipment.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+        }.recoverCatching { error ->
+            when {
+                error.isMissingOnServer() -> equipment.copy(
+                    isDirty = false,
+                    syncStatus = SyncStatus.SYNCED,
+                    lastSyncedAt = now()
+                )
+                error.isConflict() -> {
+                    api.deleteEquipment(equipment.serverId, DeleteWithTimestampRequest())
+                    equipment.copy(
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastSyncedAt = now()
+                    )
+                }
+                else -> throw error
+            }
+        }.onFailure {
+            Log.w("API", "⚠️ [syncPendingEquipment] Failed to delete equipment ${equipment.uuid}", it)
+        }.getOrNull()
+    }
+
+    private suspend fun pushPendingEquipmentUpsert(
+        equipment: OfflineEquipmentEntity,
+        projectServerId: Long
+    ): OfflineEquipmentEntity? {
+        val request = equipment.toRequest(projectServerId)
+        val synced = runCatching {
+            val dto = if (equipment.serverId == null) {
+                api.createProjectEquipment(projectServerId, request.copy(updatedAt = null))
+            } else {
+                api.updateEquipment(equipment.serverId, request)
+            }
+            dto.toEntity().copy(
+                equipmentId = equipment.equipmentId,
+                uuid = equipment.uuid,
+                projectId = equipment.projectId,
+                roomId = equipment.roomId ?: dto.roomId,
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                isDeleted = false,
+                lastSyncedAt = now()
+            )
+        }.recoverCatching { error ->
+            when {
+                equipment.serverId != null && error.isMissingOnServer() -> {
+                    val created = api.createProjectEquipment(projectServerId, request.copy(updatedAt = null))
+                    created.toEntity().copy(
+                        equipmentId = equipment.equipmentId,
+                        uuid = equipment.uuid,
+                        projectId = equipment.projectId,
+                        roomId = equipment.roomId ?: created.roomId,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        isDeleted = false,
+                        lastSyncedAt = now()
+                    )
+                }
+                equipment.serverId != null && error.isConflict() -> {
+                    val updated = api.updateEquipment(equipment.serverId, request.copy(updatedAt = null))
+                    updated.toEntity().copy(
+                        equipmentId = equipment.equipmentId,
+                        uuid = equipment.uuid,
+                        projectId = equipment.projectId,
+                        roomId = equipment.roomId ?: updated.roomId,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        isDeleted = false,
+                        lastSyncedAt = now()
+                    )
+                }
+                else -> throw error
+            }
+        }.onFailure { error ->
+            Log.w("API", "⚠️ [syncPendingEquipment] Failed to push equipment ${equipment.uuid}", error)
+        }.getOrNull()
+
+        return synced
     }
 
     private suspend fun syncPendingNotes(projectId: Long) {
@@ -2631,6 +2837,22 @@ private fun EquipmentDto.toEntity(): OfflineEquipmentEntity {
         isDeleted = false
     )
 }
+
+private fun OfflineEquipmentEntity.toRequest(projectServerId: Long): EquipmentRequest =
+    EquipmentRequest(
+        projectId = projectServerId,
+        roomId = roomId,
+        type = type,
+        brand = brand,
+        model = model,
+        serialNumber = serialNumber,
+        quantity = quantity,
+        status = status,
+        startDate = startDate.toApiTimestamp(),
+        endDate = endDate.toApiTimestamp(),
+        idempotencyKey = uuid,
+        updatedAt = updatedAt.toApiTimestamp()
+    )
 
 private fun NoteDto.toEntity(): OfflineNoteEntity? {
     val timestamp = now()

@@ -1,0 +1,497 @@
+kotlin version: 2.0.21
+error message: org.jetbrains.kotlin.codegen.CompilationException: Back-end (JVM) Internal error: Couldn't transform method node:
+getConfiguration-gIAlu-s (ZLkotlin/coroutines/Continuation;)Ljava/lang/Object;:
+  @Lorg/jetbrains/annotations/Nullable;() // invisible
+    // annotable parameter count: 2 (visible)
+    // annotable parameter count: 2 (invisible)
+    @Lorg/jetbrains/annotations/NotNull;() // invisible, parameter 1
+    TRYCATCHBLOCK L0 L1 L2 null
+    TRYCATCHBLOCK L3 L4 L2 null
+    TRYCATCHBLOCK L5 L6 L2 null
+    TRYCATCHBLOCK L7 L8 L2 null
+    TRYCATCHBLOCK L9 L10 L2 null
+    TRYCATCHBLOCK L2 L11 L2 null
+    ALOAD 2
+    INSTANCEOF com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1
+    IFEQ L12
+    ALOAD 2
+    CHECKCAST com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1
+    ASTORE 17
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.label : I
+    LDC -2147483648
+    IAND
+    IFEQ L12
+    ALOAD 17
+    DUP
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.label : I
+    LDC -2147483648
+    ISUB
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.label : I
+    GOTO L13
+   L12
+    NEW com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1
+    DUP
+    ALOAD 0
+    ALOAD 2
+    INVOKESPECIAL com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.<init> (Lcom/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository;Lkotlin/coroutines/Continuation;)V
+    ASTORE 17
+   L13
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.result : Ljava/lang/Object;
+    ASTORE 16
+   L14
+    INVOKESTATIC kotlin/coroutines/intrinsics/IntrinsicsKt.getCOROUTINE_SUSPENDED ()Ljava/lang/Object;
+   L15
+    LINENUMBER 33 L15
+    ASTORE 18
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.label : I
+    TABLESWITCH
+      0: L16
+      1: L17
+      2: L18
+      3: L19
+      default: L20
+   L16
+    ALOAD 16
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+   L21
+   L22
+    LINENUMBER 34 L22
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository.mutex : Lkotlinx/coroutines/sync/Mutex;
+    ASTORE 3
+    NOP
+   L23
+    LINENUMBER 111 L23
+   L24
+    LINENUMBER 112 L24
+    ACONST_NULL
+    ASTORE 4
+   L25
+    LINENUMBER 111 L25
+    ICONST_0
+    ISTORE 5
+   L26
+    LINENUMBER 116 L26
+    ALOAD 3
+    ALOAD 4
+    ALOAD 17
+    ALOAD 17
+    ALOAD 0
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$0 : Ljava/lang/Object;
+    ALOAD 17
+    ALOAD 3
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$1 : Ljava/lang/Object;
+    ALOAD 17
+    ILOAD 1
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.Z$0 : Z
+    ALOAD 17
+    ICONST_1
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.label : I
+    INVOKEINTERFACE kotlinx/coroutines/sync/Mutex.lock (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object; (itf)
+   L27
+    DUP
+    ALOAD 18
+    IF_ACMPNE L28
+   L29
+    LINENUMBER 33 L29
+    ALOAD 18
+    ARETURN
+   L17
+    ICONST_0
+    ISTORE 5
+   L30
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.Z$0 : Z
+    ISTORE 1
+   L31
+    ACONST_NULL
+    ASTORE 4
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$1 : Ljava/lang/Object;
+    CHECKCAST kotlinx/coroutines/sync/Mutex
+    ASTORE 3
+   L32
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository
+    ASTORE 0
+   L33
+   L34
+    NOP
+    ALOAD 16
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 16
+   L28
+    LINENUMBER 117 L28
+    POP
+   L35
+   L36
+   L0
+    NOP
+   L37
+    LINENUMBER 118 L37
+    NOP
+   L38
+    ICONST_0
+    ISTORE 6
+   L39
+    LINENUMBER 35 L39
+    ILOAD 1
+    IFNE L40
+   L41
+    LINENUMBER 36 L41
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository._configuration : Lkotlinx/coroutines/flow/MutableStateFlow;
+    INVOKEINTERFACE kotlinx/coroutines/flow/MutableStateFlow.getValue ()Ljava/lang/Object; (itf)
+    CHECKCAST com/example/rocketplan_android/data/model/ImageProcessingConfiguration
+    ASTORE 7
+   L42
+    ALOAD 7
+    IFNULL L43
+    ALOAD 7
+    ASTORE 8
+    NOP
+   L44
+    NOP
+    ALOAD 8
+    CHECKCAST com/example/rocketplan_android/data/model/ImageProcessingConfiguration
+    ASTORE 9
+   L45
+    LINENUMBER 119 L45
+   L46
+    ICONST_0
+    ISTORE 10
+   L47
+    LINENUMBER 36 L47
+    GETSTATIC kotlin/Result.Companion : Lkotlin/Result$Companion;
+    POP
+    ALOAD 9
+    INVOKESTATIC kotlin/Result.constructor-impl (Ljava/lang/Object;)Ljava/lang/Object;
+    GOTO L48
+   L48
+    LINENUMBER 36 L48
+   L49
+    ASTORE 15
+   L1
+   L50
+    LINENUMBER 120 L50
+    ALOAD 3
+    ALOAD 4
+    INVOKEINTERFACE kotlinx/coroutines/sync/Mutex.unlock (Ljava/lang/Object;)V (itf)
+    ALOAD 15
+   L51
+    ARETURN
+   L52
+   L53
+   L54
+   L3
+   L55
+   L56
+   L57
+   L58
+   L43
+    NOP
+    ACONST_NULL
+   L59
+    POP
+   L60
+    LINENUMBER 37 L60
+    ALOAD 0
+    ALOAD 17
+    ALOAD 17
+    ALOAD 0
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$0 : Ljava/lang/Object;
+    ALOAD 17
+    ALOAD 3
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$1 : Ljava/lang/Object;
+    ALOAD 17
+    ICONST_2
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.label : I
+    INVOKESPECIAL com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository.loadFromCacheLocked (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L4
+    DUP
+    ALOAD 18
+    IF_ACMPNE L61
+   L62
+    LINENUMBER 33 L62
+    ALOAD 18
+    ARETURN
+   L18
+    ICONST_0
+    ISTORE 6
+   L63
+    ICONST_0
+    ISTORE 5
+   L64
+    ACONST_NULL
+    ASTORE 4
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$1 : Ljava/lang/Object;
+    CHECKCAST kotlinx/coroutines/sync/Mutex
+    ASTORE 3
+   L65
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$0 : Ljava/lang/Object;
+    CHECKCAST com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository
+    ASTORE 0
+   L66
+   L5
+    NOP
+    ALOAD 16
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 16
+   L61
+    LINENUMBER 37 L61
+    CHECKCAST com/example/rocketplan_android/data/model/ImageProcessingConfiguration
+    ASTORE 7
+   L67
+    ALOAD 7
+    IFNULL L68
+    ALOAD 7
+    ASTORE 8
+    NOP
+   L69
+    NOP
+    ALOAD 8
+    CHECKCAST com/example/rocketplan_android/data/model/ImageProcessingConfiguration
+    ASTORE 9
+   L70
+    ICONST_0
+    ISTORE 10
+   L71
+    LINENUMBER 38 L71
+    ALOAD 0
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository._configuration : Lkotlinx/coroutines/flow/MutableStateFlow;
+    ALOAD 9
+    INVOKEINTERFACE kotlinx/coroutines/flow/MutableStateFlow.setValue (Ljava/lang/Object;)V (itf)
+   L72
+    LINENUMBER 39 L72
+    GETSTATIC kotlin/Result.Companion : Lkotlin/Result$Companion;
+    POP
+    ALOAD 9
+    INVOKESTATIC kotlin/Result.constructor-impl (Ljava/lang/Object;)Ljava/lang/Object;
+    GOTO L73
+   L73
+    LINENUMBER 39 L73
+   L74
+    ASTORE 14
+   L6
+   L75
+    LINENUMBER 120 L75
+    ALOAD 3
+    ALOAD 4
+    INVOKEINTERFACE kotlinx/coroutines/sync/Mutex.unlock (Ljava/lang/Object;)V (itf)
+    ALOAD 14
+   L76
+    ARETURN
+   L77
+   L78
+   L79
+   L7
+   L80
+   L81
+   L82
+   L83
+   L68
+    NOP
+    ACONST_NULL
+   L84
+    POP
+   L40
+   L85
+    LINENUMBER 43 L85
+    ALOAD 0
+    ALOAD 17
+    ALOAD 17
+    ALOAD 3
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$0 : Ljava/lang/Object;
+    ALOAD 17
+    ACONST_NULL
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$1 : Ljava/lang/Object;
+    ALOAD 17
+    ICONST_3
+    PUTFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.label : I
+    INVOKESPECIAL com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository.fetchAndCacheLocked-IoAF18A (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+   L8
+    DUP
+    ALOAD 18
+    IF_ACMPNE L86
+   L87
+    LINENUMBER 33 L87
+    ALOAD 18
+    ARETURN
+   L19
+    ICONST_0
+    ISTORE 6
+   L88
+    ICONST_0
+    ISTORE 5
+   L89
+    ACONST_NULL
+    ASTORE 4
+    ALOAD 17
+    GETFIELD com/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository$getConfiguration$1.L$0 : Ljava/lang/Object;
+    CHECKCAST kotlinx/coroutines/sync/Mutex
+    ASTORE 3
+   L90
+   L9
+    NOP
+    ALOAD 16
+    INVOKESTATIC kotlin/ResultKt.throwOnFailure (Ljava/lang/Object;)V
+    ALOAD 16
+    CHECKCAST kotlin/Result
+    INVOKEVIRTUAL kotlin/Result.unbox-impl ()Ljava/lang/Object;
+   L86
+    LINENUMBER 43 L86
+    CHECKCAST java/lang/Object
+   L91
+    ASTORE 13
+   L10
+   L92
+    LINENUMBER 120 L92
+    ALOAD 3
+    ALOAD 4
+    INVOKEINTERFACE kotlinx/coroutines/sync/Mutex.unlock (Ljava/lang/Object;)V (itf)
+    ALOAD 13
+   L93
+    ARETURN
+   L94
+   L95
+   L96
+   L97
+   L98
+   L99
+   L100
+   L101
+   L102
+   L103
+   L104
+   L2
+    LINENUMBER 120 L2
+    ASTORE 12
+   L11
+    ALOAD 3
+    ALOAD 4
+    INVOKEINTERFACE kotlinx/coroutines/sync/Mutex.unlock (Ljava/lang/Object;)V (itf)
+    ALOAD 12
+    ATHROW
+   L105
+   L106
+   L107
+   L108
+   L109
+   L110
+   L111
+   L112
+   L113
+   L20
+    LINENUMBER 33 L20
+    NEW java/lang/IllegalStateException
+    DUP
+    LDC "call to 'resume' before 'invoke' with coroutine"
+    INVOKESPECIAL java/lang/IllegalStateException.<init> (Ljava/lang/String;)V
+    ATHROW
+    RETURN
+    LOCALVARIABLE $i$a$-let-ImageProcessingConfigurationRepository$getConfiguration$2$1\3\36\2 I L47 L49 10
+    LOCALVARIABLE it\3 Lcom/example/rocketplan_android/data/model/ImageProcessingConfiguration; L46 L49 9
+    LOCALVARIABLE $i$a$-let-ImageProcessingConfigurationRepository$getConfiguration$2$2\4\37\2 I L71 L74 10
+    LOCALVARIABLE cached\4 Lcom/example/rocketplan_android/data/model/ImageProcessingConfiguration; L70 L74 9
+    LOCALVARIABLE $i$a$-withLock$default-ImageProcessingConfigurationRepository$getConfiguration$2\2\118\0 I L39 L49 6
+    LOCALVARIABLE $i$f$withLock\1\34 I L26 L17 5
+    LOCALVARIABLE $i$f$withLock\1\34 I L96 L108 5
+    LOCALVARIABLE $this$withLock_u24default\1 Lkotlinx/coroutines/sync/Mutex; L96 L108 3
+    LOCALVARIABLE owner\1 Ljava/lang/Object; L96 L108 4
+    LOCALVARIABLE $i$f$withLock\1\34 I L79 L19 5
+    LOCALVARIABLE $i$a$-withLock$default-ImageProcessingConfigurationRepository$getConfiguration$2\2\118\0 I L79 L19 6
+    LOCALVARIABLE $i$f$withLock\1\34 I L54 L18 5
+    LOCALVARIABLE $i$a$-withLock$default-ImageProcessingConfigurationRepository$getConfiguration$2\2\118\0 I L54 L18 6
+    LOCALVARIABLE $completion Lkotlin/coroutines/Continuation; L21 L112 2
+    LOCALVARIABLE $continuation Lkotlin/coroutines/Continuation; L13 L113 17
+    LOCALVARIABLE $result Ljava/lang/Object; L14 L113 16
+    LOCALVARIABLE this Lcom/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository; L21 L17 0
+    LOCALVARIABLE $this$withLock_u24default\1 Lkotlinx/coroutines/sync/Mutex; L23 L17 3
+    LOCALVARIABLE $this$withLock_u24default\1 Lkotlinx/coroutines/sync/Mutex; L32 L49 3
+    LOCALVARIABLE owner\1 Ljava/lang/Object; L25 L17 4
+    LOCALVARIABLE owner\1 Ljava/lang/Object; L35 L49 4
+    LOCALVARIABLE forceRefresh Z L21 L17 1
+    LOCALVARIABLE forceRefresh Z L31 L112 1
+    LOCALVARIABLE this Lcom/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository; L33 L18 0
+    LOCALVARIABLE this Lcom/example/rocketplan_android/data/repository/ImageProcessingConfigurationRepository; L66 L112 0
+    LOCALVARIABLE $this$withLock_u24default\1 Lkotlinx/coroutines/sync/Mutex; L54 L18 3
+    LOCALVARIABLE $this$withLock_u24default\1 Lkotlinx/coroutines/sync/Mutex; L65 L74 3
+    LOCALVARIABLE owner\1 Ljava/lang/Object; L54 L18 4
+    LOCALVARIABLE owner\1 Ljava/lang/Object; L67 L74 4
+    LOCALVARIABLE $this$withLock_u24default\1 Lkotlinx/coroutines/sync/Mutex; L79 L19 3
+    LOCALVARIABLE $this$withLock_u24default\1 Lkotlinx/coroutines/sync/Mutex; L90 L91 3
+    LOCALVARIABLE owner\1 Ljava/lang/Object; L79 L19 4
+    LOCALVARIABLE owner\1 Ljava/lang/Object; L91 L91 4
+    LOCALVARIABLE $i$f$withLock\1\34 I L30 L49 5
+    LOCALVARIABLE $i$f$withLock\1\34 I L64 L74 5
+    LOCALVARIABLE $i$a$-withLock$default-ImageProcessingConfigurationRepository$getConfiguration$2\2\118\0 I L63 L74 6
+    LOCALVARIABLE $i$f$withLock\1\34 I L89 L91 5
+    LOCALVARIABLE $i$a$-withLock$default-ImageProcessingConfigurationRepository$getConfiguration$2\2\118\0 I L88 L91 6
+    MAXSTACK = 4
+    MAXLOCALS = 19
+
+File is unknown
+The root cause java.lang.OutOfMemoryError was thrown at: unknown
+	at org.jetbrains.kotlin.codegen.TransformationMethodVisitor.visitEnd(TransformationMethodVisitor.kt:89)
+	at org.jetbrains.org.objectweb.asm.tree.MethodNode.accept(MethodNode.java:772)
+	at org.jetbrains.kotlin.backend.jvm.codegen.CoroutineCodegenKt.acceptWithStateMachine(CoroutineCodegen.kt:76)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generateMethod(ClassCodegen.kt:440)
+	at org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen.generate(ClassCodegen.kt:168)
+	at org.jetbrains.kotlin.backend.jvm.FileCodegen.lower(JvmPhases.kt:39)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseFactoriesKt.createFilePhase$lambda$4(PhaseFactories.kt:71)
+	at org.jetbrains.kotlin.backend.common.phaser.PhaseBuildersKt$createSimpleNamedCompilerPhase$1.phaseBody(PhaseBuilders.kt:69)
+	at org.jetbrains.kotlin.backend.common.phaser.SimpleNamedCompilerPhase.phaseBody(CompilerPhase.kt:226)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invokeSequential(performByIrFile.kt:62)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:52)
+	at org.jetbrains.kotlin.backend.common.phaser.PerformByIrFilePhase.invoke(performByIrFile.kt:38)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:27)
+	at org.jetbrains.kotlin.backend.common.phaser.CompositePhase.invoke(PhaseBuilders.kt:14)
+	at org.jetbrains.kotlin.backend.common.phaser.NamedCompilerPhase.phaseBody(CompilerPhase.kt:166)
+	at org.jetbrains.kotlin.backend.common.phaser.AbstractNamedCompilerPhase.invoke(CompilerPhase.kt:113)
+	at org.jetbrains.kotlin.backend.common.phaser.CompilerPhaseKt.invokeToplevel(CompilerPhase.kt:62)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.invokeCodegen(JvmIrCodegenFactory.kt:371)
+	at org.jetbrains.kotlin.codegen.CodegenFactory.generateModule(CodegenFactory.kt:47)
+	at org.jetbrains.kotlin.backend.jvm.JvmIrCodegenFactory.generateModuleInFrontendIRMode(JvmIrCodegenFactory.kt:433)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.generateCodeFromIr(jvmCompilerPipeline.kt:246)
+	at org.jetbrains.kotlin.cli.jvm.compiler.pipeline.JvmCompilerPipelineKt.compileModulesUsingFrontendIrAndLightTree(jvmCompilerPipeline.kt:142)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:148)
+	at org.jetbrains.kotlin.cli.jvm.K2JVMCompiler.doExecute(K2JVMCompiler.kt:43)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:103)
+	at org.jetbrains.kotlin.cli.common.CLICompiler.execImpl(CLICompiler.kt:49)
+	at org.jetbrains.kotlin.cli.common.CLITool.exec(CLITool.kt:101)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:464)
+	at org.jetbrains.kotlin.incremental.IncrementalJvmCompilerRunner.runCompiler(IncrementalJvmCompilerRunner.kt:73)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.doCompile(IncrementalCompilerRunner.kt:506)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileImpl(IncrementalCompilerRunner.kt:423)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compileNonIncrementally(IncrementalCompilerRunner.kt:301)
+	at org.jetbrains.kotlin.incremental.IncrementalCompilerRunner.compile(IncrementalCompilerRunner.kt:129)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.execIncrementalCompiler(CompileServiceImpl.kt:675)
+	at org.jetbrains.kotlin.daemon.CompileServiceImplBase.access$execIncrementalCompiler(CompileServiceImpl.kt:92)
+	at org.jetbrains.kotlin.daemon.CompileServiceImpl.compile(CompileServiceImpl.kt:1660)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.rmi/sun.rmi.server.UnicastServerRef.dispatch(UnicastServerRef.java:360)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:200)
+	at java.rmi/sun.rmi.transport.Transport$1.run(Transport.java:197)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:714)
+	at java.rmi/sun.rmi.transport.Transport.serviceCall(Transport.java:196)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport.handleMessages(TCPTransport.java:598)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run0(TCPTransport.java:844)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.lambda$run$0(TCPTransport.java:721)
+	at java.base/java.security.AccessController.doPrivileged(AccessController.java:400)
+	at java.rmi/sun.rmi.transport.tcp.TCPTransport$ConnectionHandler.run(TCPTransport.java:720)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1144)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:642)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+Caused by: java.lang.OutOfMemoryError: Java heap space
+
+

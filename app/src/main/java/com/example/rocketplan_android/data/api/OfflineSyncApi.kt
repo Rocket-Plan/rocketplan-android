@@ -11,6 +11,7 @@ import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
+import com.example.rocketplan_android.data.model.offline.EquipmentRequest
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.NoteDto
@@ -319,6 +320,24 @@ interface OfflineSyncApi {
     suspend fun getRoomEquipment(
         @Path("roomId") roomId: Long
     ): List<EquipmentDto>
+
+    @POST("/api/projects/{projectId}/equipment")
+    suspend fun createProjectEquipment(
+        @Path("projectId") projectId: Long,
+        @Body body: EquipmentRequest
+    ): EquipmentDto
+
+    @PUT("/api/equipment/{equipmentId}")
+    suspend fun updateEquipment(
+        @Path("equipmentId") equipmentId: Long,
+        @Body body: EquipmentRequest
+    ): EquipmentDto
+
+    @HTTP(method = "DELETE", path = "/api/equipment/{equipmentId}", hasBody = true)
+    suspend fun deleteEquipment(
+        @Path("equipmentId") equipmentId: Long,
+        @Body body: DeleteWithTimestampRequest
+    ): Response<Unit>
 
     // Claims
     @GET("/api/projects/{projectId}/claims")

@@ -40,9 +40,6 @@
     <string name="image_processor_assembly_destination_format">Project #%1$d • %2$s</string>
     <string name="image_processor_assembly_date_format">%1$s • %2$s</string>
 
-    <string name="menu_home">Home</string>
-    <string name="menu_gallery">Gallery</string>
-    <string name="menu_slideshow">Slideshow</string>
     <string name="bottom_nav_map">Map</string>
     <string name="bottom_nav_projects">Projects</string>
     <string name="bottom_nav_notifications">Notifications</string>
@@ -85,16 +82,6 @@
     <string name="error_opening_provider_sign_in">Unable to start %1$s sign-in. Please try again.</string>
     <string name="oauth_webview_default_title">Secure Sign-In</string>
     <string name="external_browser_blocked">Opening links outside the app is not allowed on this device.</string>
-    <string name="library_permission_needed">Grant access to DCIM so we can show the allowed media library (JPEG and MP4 only).</string>
-    <string name="library_request_permission">Allow Library Access</string>
-    <string name="library_filter_hint">Showing only JPEG images and MP4 videos from DCIM.</string>
-    <string name="library_empty_state">No JPEG or MP4 files found in DCIM.</string>
-    <string name="library_load_error">Unable to load library content.</string>
-    <string name="library_retry">Retry</string>
-    <string name="library_unknown_file">Unknown file</string>
-    <string name="library_thumbnail_content_description">Library thumbnail</string>
-    <string name="media_type_image">Image</string>
-    <string name="media_type_video">Video</string>
 
     <!-- Company Info -->
     <string name="company_info_title">Company Info</string>
@@ -153,6 +140,18 @@
     <string name="moisture">Moisture</string>
     <string name="room">Room</string>
     <string name="external_atmospheric_log">External Atmospheric Log</string>
+    <string name="rocketdry_add_external_log_title">Add External Atmospheric Log</string>
+    <string name="rocketdry_external_log_title">External Log - %1$s</string>
+    <string name="rocketdry_step_indicator">Step %1$d of %2$d</string>
+    <string name="rocketdry_next">Next</string>
+    <string name="rocketdry_back">Back</string>
+    <string name="rocketdry_start_atmospheric_log_title">Start Atmospheric Log</string>
+    <string name="rocketdry_start_atmospheric_log_cta">Start</string>
+    <string name="rocketdry_relative_humidity_label">Relative humidity (%)</string>
+    <string name="rocketdry_temperature_label">Temperature (°F)</string>
+    <string name="rocketdry_pressure_label">Pressure (kPa)</string>
+    <string name="rocketdry_wind_speed_label">Wind speed (mph)</string>
+    <string name="rocketdry_add_external_log_error">Enter a value for each field.</string>
     <string name="add_log">Add Log</string>
     <string name="r_humidity_short">R. Humidi…</string>
     <string name="percent">%</string>
@@ -176,6 +175,7 @@
     <string name="scope_picker_custom_item">Custom item</string>
     <string name="scope_picker_empty_message">No scope items available yet. Add a custom item instead.</string>
     <string name="scope_picker_add_error">Could not add scope items. Check your connection and try again.</string>
+    <string name="scope_picker_search_hint">Search scope items</string>
     <string name="rocketdry_equipment_overview">Total Equipment</string>
     <string name="rocketdry_equipment_list_title">Equipment List</string>
     <plurals name="rocketdry_equipment_units">

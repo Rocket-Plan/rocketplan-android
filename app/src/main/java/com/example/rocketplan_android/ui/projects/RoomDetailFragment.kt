@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.ImageView
-import android.widget.CheckedTextView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
@@ -37,6 +36,7 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.flow.collectLatest
@@ -85,6 +85,12 @@ class RoomDetailFragment : Fragment() {
     private lateinit var photosLoadingSpinner: View
     private lateinit var loadingOverlay: View
     private lateinit var addScopeCard: View
+    private lateinit var scopePickerContainer: View
+    private lateinit var scopePickerSearchInput: TextInputEditText
+    private lateinit var scopePickerRecyclerView: RecyclerView
+    private lateinit var scopePickerAddButton: MaterialButton
+    private lateinit var scopePickerCustomButton: MaterialButton
+    private lateinit var scopePickerCancelButton: MaterialButton
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
     private var latestDamages: List<RoomDamageItem> = emptyList()
@@ -127,6 +133,8 @@ class RoomDetailFragment : Fragment() {
     private val photoLoadStateAdapter by lazy {
         RoomPhotoLoadStateAdapter { photoAdapter.retry() }
     }
+
+    private var scopePickerAdapter: ScopePickerAdapter? = null
 
 
     override fun onCreateView(
@@ -187,6 +195,12 @@ class RoomDetailFragment : Fragment() {
         photosLoadingSpinner = root.findViewById(R.id.photosLoadingSpinner)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
         addScopeCard = root.findViewById(R.id.addScopeCard)
+        scopePickerContainer = root.findViewById(R.id.scopePickerContainer)
+        scopePickerSearchInput = root.findViewById(R.id.scopePickerSearchInput)
+        scopePickerRecyclerView = root.findViewById(R.id.scopePickerRecycler)
+        scopePickerAddButton = root.findViewById(R.id.scopePickerAddButton)
+        scopePickerCustomButton = root.findViewById(R.id.scopePickerCustomButton)
+        scopePickerCancelButton = root.findViewById(R.id.scopePickerCancelButton)
 
         addPhotoChip.isChecked = initialTab == RoomDetailTab.PHOTOS
         addPhotoCard.isVisible = initialTab == RoomDetailTab.PHOTOS
@@ -252,6 +266,12 @@ class RoomDetailFragment : Fragment() {
                 DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
             )
             isVisible = false
+        }
+
+        scopePickerRecyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            setHasFixedSize(false)
+            isNestedScrollingEnabled = false
         }
     }
 
@@ -348,7 +368,16 @@ class RoomDetailFragment : Fragment() {
                 tabToggleGroup.check(R.id.roomScopeTabButton)
             }
             viewModel.refreshWorkScopesIfStale()
-            showScopePicker()
+            showScopePickerInline()
+        }
+        scopePickerAddButton.setOnClickListener { submitInlineScopeSelection() }
+        scopePickerCustomButton.setOnClickListener {
+            hideScopePickerInline()
+            showAddScopeDialog()
+        }
+        scopePickerCancelButton.setOnClickListener { hideScopePickerInline() }
+        scopePickerSearchInput.addTextChangedListener { text ->
+            scopePickerAdapter?.filter(text?.toString().orEmpty())
         }
         noteCard.setOnClickListener {
             val categoryId = resolveNoteCategoryId()
@@ -428,9 +457,9 @@ class RoomDetailFragment : Fragment() {
         dialog.show()
     }
 
-    private fun showScopePicker() {
+    private fun showScopePickerInline() {
         viewLifecycleOwner.lifecycleScope.launch {
-            Log.d(TAG, "📋 showScopePicker() loading catalog")
+            Log.d(TAG, "📋 showScopePickerInline() loading catalog")
             val catalog = viewModel.loadScopeCatalog()
             if (catalog.isEmpty()) {
                 Log.w(TAG, "⚠️ Scope catalog empty, showing custom scope dialog")
@@ -443,62 +472,51 @@ class RoomDetailFragment : Fragment() {
                 return@launch
             }
             Log.d(TAG, "📋 Scope catalog loaded: ${catalog.size} items")
-            showScopePickerDialog(catalog)
+            scopePickerAdapter = ScopePickerAdapter(catalog)
+            scopePickerRecyclerView.adapter = scopePickerAdapter
+            scopePickerSearchInput.setText("")
+            scopePickerContainer.isVisible = true
         }
     }
 
-    private fun showScopePickerDialog(options: List<ScopeCatalogItem>) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_scope_picker, null)
-        val searchInput = dialogView.findViewById<TextInputEditText>(R.id.scopeSearchInput)
-        val recycler = dialogView.findViewById<RecyclerView>(R.id.scopePickerRecycler)
-        val adapter = ScopePickerAdapter(options)
-        recycler.layoutManager = LinearLayoutManager(requireContext())
-        recycler.adapter = adapter
+    private fun hideScopePickerInline() {
+        scopePickerContainer.isVisible = false
+        scopePickerRecyclerView.adapter = null
+        scopePickerAdapter = null
+        scopePickerSearchInput.setText("")
+    }
 
-        searchInput.addTextChangedListener { text ->
-            adapter.filter(text?.toString().orEmpty())
+    private fun submitInlineScopeSelection() {
+        val selected = scopePickerAdapter?.selectedItems().orEmpty()
+        if (selected.isEmpty()) {
+            hideScopePickerInline()
+            return
         }
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle(getString(R.string.add_scope_sheet))
-            .setView(dialogView)
-            .setPositiveButton(R.string.scope_picker_add_selected, null)
-            .setNeutralButton(R.string.scope_picker_custom_item) { dlg, _ ->
-                dlg.dismiss()
-                showAddScopeDialog()
+        scopePickerAddButton.isEnabled = false
+        viewLifecycleOwner.lifecycleScope.launch {
+            val success = runCatching { viewModel.addCatalogItems(selected) }
+                .onFailure { Log.e(TAG, "❌ Failed to add catalog scope items", it) }
+                .getOrDefault(false)
+            scopePickerAddButton.isEnabled = true
+            if (!success) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.scope_picker_add_error),
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
             }
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val selected = adapter.selectedItems()
-                if (selected.isEmpty()) {
-                    dialog.dismiss()
-                    return@setOnClickListener
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    val success = viewModel.addCatalogItems(selected)
-                    if (!success) {
-                        Toast.makeText(
-                            requireContext(),
-                            getString(R.string.scope_picker_add_error),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                    dialog.dismiss()
-                }
-            }
+            hideScopePickerInline()
         }
-
-        dialog.show()
     }
 
     private inner class ScopePickerAdapter(
         private val allItems: List<ScopeCatalogItem>
     ) : RecyclerView.Adapter<ScopePickerAdapter.ScopePickerViewHolder>() {
         private val selectedIds = mutableSetOf<Long>()
+        private val selectedQuantities = mutableMapOf<Long, Double>()
         private var filtered: List<ScopeCatalogItem> = allItems
+        private val itemLookup = allItems.associateBy { it.id }
 
         fun filter(query: String) {
             val q = query.trim().lowercase(Locale.US)
@@ -519,13 +537,17 @@ class RoomDetailFragment : Fragment() {
             notifyDataSetChanged()
         }
 
-        fun selectedItems(): List<ScopeCatalogItem> {
-            return allItems.filter { selectedIds.contains(it.id) }
+        fun selectedItems(): List<ScopeCatalogSelection> {
+            return selectedIds.mapNotNull { id ->
+                val item = itemLookup[id] ?: return@mapNotNull null
+                val qty = selectedQuantities[id]?.coerceAtLeast(1.0) ?: 1.0
+                ScopeCatalogSelection(item, qty)
+            }
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScopePickerViewHolder {
             val view = LayoutInflater.from(parent.context)
-                .inflate(android.R.layout.simple_list_item_multiple_choice, parent, false)
+                .inflate(R.layout.item_scope_picker, parent, false)
             return ScopePickerViewHolder(view)
         }
 
@@ -535,22 +557,69 @@ class RoomDetailFragment : Fragment() {
 
         override fun getItemCount(): Int = filtered.size
 
+        private fun formatQuantity(value: Double): String {
+            val intValue = value.toInt()
+            return if (value == intValue.toDouble()) intValue.toString() else String.format(Locale.US, "%.2f", value)
+        }
+
         inner class ScopePickerViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-            private val checkBox = itemView.findViewById<CheckedTextView>(android.R.id.text1)
+            private val checkBox = itemView.findViewById<MaterialCheckBox>(R.id.scopeCheckBox)
+            private val title = itemView.findViewById<TextView>(R.id.scopeTitle)
+            private val meta = itemView.findViewById<TextView>(R.id.scopeMeta)
+            private val minus = itemView.findViewById<MaterialButton>(R.id.scopeQuantityMinus)
+            private val plus = itemView.findViewById<MaterialButton>(R.id.scopeQuantityPlus)
+            private val quantityValue = itemView.findViewById<TextView>(R.id.scopeQuantityValue)
 
             fun bind(item: ScopeCatalogItem) {
-                val code = listOfNotNull(item.codePart1, item.codePart2).joinToString("")
-                val leading = if (code.isNotBlank()) "$code — " else ""
-                checkBox.text = "$leading${item.description}"
-                checkBox.isChecked = selectedIds.contains(item.id)
-                itemView.setOnClickListener {
-                    if (selectedIds.contains(item.id)) {
-                        selectedIds.remove(item.id)
-                        checkBox.isChecked = false
-                    } else {
-                        selectedIds.add(item.id)
-                        checkBox.isChecked = true
-                    }
+                val isSelected = selectedIds.contains(item.id)
+                val quantity = (selectedQuantities[item.id] ?: 1.0).coerceAtLeast(1.0)
+                selectedQuantities[item.id] = quantity
+
+                val code = listOfNotNull(item.codePart1.takeIf { it.isNotBlank() }, item.codePart2.takeIf { it.isNotBlank() })
+                    .joinToString("")
+                val titleText = if (code.isNotBlank()) "$code — ${item.description}" else item.description
+                title.text = titleText
+
+                val metaParts = mutableListOf<String>()
+                if (item.unit.isNotBlank()) metaParts.add(item.unit)
+                if (item.category.isNotBlank()) metaParts.add(item.category)
+                item.rate?.takeIf { it.isNotBlank() }?.let { metaParts.add("$${it}") }
+                meta.text = metaParts.joinToString(" • ")
+                meta.isVisible = meta.text.isNotBlank()
+
+                checkBox.isChecked = isSelected
+                quantityValue.text = formatQuantity(quantity)
+
+                itemView.setOnClickListener { toggleSelection(item, checkBox) }
+                checkBox.setOnClickListener { toggleSelection(item, checkBox) }
+                minus.setOnClickListener { adjustQuantity(item, -1.0, quantityValue, checkBox) }
+                plus.setOnClickListener { adjustQuantity(item, 1.0, quantityValue, checkBox) }
+            }
+
+            private fun toggleSelection(item: ScopeCatalogItem, box: MaterialCheckBox) {
+                if (selectedIds.contains(item.id)) {
+                    selectedIds.remove(item.id)
+                    box.isChecked = false
+                } else {
+                    selectedIds.add(item.id)
+                    selectedQuantities.putIfAbsent(item.id, 1.0)
+                    box.isChecked = true
+                }
+            }
+
+            private fun adjustQuantity(
+                item: ScopeCatalogItem,
+                delta: Double,
+                quantityView: TextView,
+                box: MaterialCheckBox
+            ) {
+                val current = selectedQuantities[item.id] ?: 1.0
+                val newValue = (current + delta).coerceAtLeast(1.0)
+                selectedQuantities[item.id] = newValue
+                quantityView.text = formatQuantity(newValue)
+                if (!selectedIds.contains(item.id)) {
+                    selectedIds.add(item.id)
+                    box.isChecked = true
                 }
             }
         }
@@ -699,6 +768,7 @@ class RoomDetailFragment : Fragment() {
         photosLoadingSpinner.isVisible = false
         addPhotoCard.isVisible = false
         addScopeCard.isVisible = false
+        hideScopePickerInline()
         filterChipGroup.isVisible = false
         damageCategoryGroup.isVisible = false
     }
@@ -738,6 +808,7 @@ class RoomDetailFragment : Fragment() {
                 noteSummary.isVisible = true
                 damagesRecyclerView.isVisible = false
                 scopeRecyclerView.isVisible = false
+                hideScopePickerInline()
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
                 albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
                 updatePhotoVisibility()
@@ -756,6 +827,7 @@ class RoomDetailFragment : Fragment() {
                 filterChipGroup.isVisible = false
                 totalEquipmentButton.isVisible = false
                 photosRecyclerView.isVisible = false
+                hideScopePickerInline()
                 photosLoadingSpinner.isVisible = false
                 loadingOverlay.isVisible = false
                 updateDamageVisibility()

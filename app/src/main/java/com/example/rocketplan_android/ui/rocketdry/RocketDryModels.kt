@@ -15,7 +15,8 @@ data class LocationLevel(
 
 data class LocationItem(
     val name: String,
-    val materialCount: Int
+    val materialCount: Int,
+    val iconRes: Int
 )
 
 data class EquipmentTotals(

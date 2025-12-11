@@ -1,7 +1,9 @@
 package com.example.rocketplan_android
 
 import android.app.Application
+import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import java.util.concurrent.TimeUnit
@@ -195,16 +197,22 @@ class RocketPlanApplication : Application() {
             dao = imageProcessorDao,
             offlineDao = offlineDao,
             uploadStore = imageProcessorUploadStore,
+            api = imageProcessorApi,
             configRepository = imageProcessingConfigurationRepository,
             secureStorage = secureStorage,
             remoteLogger = remoteLogger
         )
 
         // Schedule periodic retry worker (every 15 minutes)
+        val retryConstraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
         val retryWorkRequest = PeriodicWorkRequestBuilder<com.example.rocketplan_android.data.worker.ImageProcessorRetryWorker>(
             repeatInterval = 15,
             repeatIntervalTimeUnit = TimeUnit.MINUTES
         )
+            .setConstraints(retryConstraints)
             .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
@@ -251,7 +259,5 @@ class RocketPlanApplication : Application() {
     }
 
     private companion object {
-        // Modest backoff to avoid hammering network/services on failures
-        private const val RETRY_BACKOFF_MS = 5_000L
     }
 }

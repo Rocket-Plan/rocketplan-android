@@ -468,6 +468,18 @@ class LocalDataService private constructor(
         dao.upsertEquipment(items)
     }
 
+    suspend fun getEquipment(equipmentId: Long): OfflineEquipmentEntity? = withContext(ioDispatcher) {
+        dao.getEquipment(equipmentId)
+    }
+
+    suspend fun getEquipmentByUuid(uuid: String): OfflineEquipmentEntity? = withContext(ioDispatcher) {
+        dao.getEquipmentByUuid(uuid)
+    }
+
+    suspend fun getPendingEquipment(projectId: Long): List<OfflineEquipmentEntity> = withContext(ioDispatcher) {
+        dao.getPendingEquipment(projectId)
+    }
+
     suspend fun saveMoistureLogs(logs: List<OfflineMoistureLogEntity>) = withContext(ioDispatcher) {
         dao.upsertMoistureLogs(logs)
     }

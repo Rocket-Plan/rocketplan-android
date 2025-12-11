@@ -3,6 +3,7 @@ package com.example.rocketplan_android.ui.rocketdry
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -71,9 +72,12 @@ class LocationCardAdapter : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val locationName: TextView = itemView.findViewById(R.id.locationName)
         private val materialCount: TextView = itemView.findViewById(R.id.materialCount)
+        private val locationIcon: ImageView = itemView.findViewById(R.id.locationIcon)
 
         fun bind(location: LocationItem) {
             locationName.text = location.name
+            locationIcon.setImageResource(location.iconRes)
+            locationIcon.contentDescription = location.name
             materialCount.text = if (location.materialCount == 1) {
                 itemView.context.getString(R.string.material_count, location.materialCount)
             } else {

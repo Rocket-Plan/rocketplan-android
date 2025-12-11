@@ -407,7 +407,7 @@ class RoomDetailViewModel(
         return null
     }
 
-    suspend fun addCatalogItems(options: List<ScopeCatalogItem>): Boolean = withContext(Dispatchers.IO) {
+    suspend fun addCatalogItems(options: List<ScopeCatalogSelection>): Boolean = withContext(Dispatchers.IO) {
         val room = _resolvedRoom.value
         if (room == null) {
             Log.w(TAG, "⚠️ Cannot add catalog scopes; room is not resolved yet")
@@ -420,15 +420,16 @@ class RoomDetailViewModel(
         }
 
         val requestItems = options.map { option ->
+            val quantity = if (option.quantity > 0) option.quantity else 1.0
             WorkScopeItemRequest(
-                sheetId = option.sheetId,
-                description = option.description,
-                quantity = 1.0,
-                category = option.category,
-                codePart1 = option.codePart1,
-                codePart2 = option.codePart2,
-                unit = option.unit,
-                rate = option.rate?.toDoubleOrNull() ?: 0.0
+                sheetId = option.item.sheetId,
+                description = option.item.description,
+                quantity = quantity,
+                category = option.item.category,
+                codePart1 = option.item.codePart1,
+                codePart2 = option.item.codePart2,
+                unit = option.item.unit,
+                rate = option.item.rate?.toDoubleOrNull() ?: 0.0
             )
         }
 
@@ -801,6 +802,11 @@ data class ScopeCatalogItem(
     val description: String,
     val unit: String,
     val rate: String?
+)
+
+data class ScopeCatalogSelection(
+    val item: ScopeCatalogItem,
+    val quantity: Double
 )
 
 enum class RoomDetailTab {

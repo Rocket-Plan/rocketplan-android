@@ -135,7 +135,3 @@ data class ResetPasswordResponse(
  * OAuth callback data parsed from deep link
  * Format: rocketplan://oauth2/redirect?token={JWT_TOKEN}&status=200
  */
-data class OAuthCallbackData(
-    val token: String,
-    val status: Int
-)

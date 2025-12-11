@@ -52,3 +52,56 @@ data class FileToUpload(
     val filename: String,
     val deleteOnCompletion: Boolean = false
 )
+
+/**
+ * Status payload returned by the image processor completion endpoints.
+ * Handles both plain resource responses and { data: { ... } } envelopes.
+ */
+data class ImageProcessorStatusResponse(
+    val data: ImageProcessorStatusPayload? = null,
+    @SerializedName("status")
+    val status: String? = null,
+    @SerializedName("completed_files")
+    val completedFiles: Int? = null,
+    @SerializedName("remaining_files")
+    val remainingFiles: Int? = null,
+    @SerializedName("is_complete")
+    val isComplete: Boolean? = null
+) {
+    fun toSnapshot(): ImageProcessorStatusSnapshot? {
+        val payload = data ?: ImageProcessorStatusPayload(
+            status = status,
+            completedFiles = completedFiles,
+            remainingFiles = remainingFiles,
+            isComplete = isComplete
+        )
+        if (payload.isEmpty()) return null
+        return ImageProcessorStatusSnapshot(
+            status = payload.status,
+            completedFiles = payload.completedFiles,
+            remainingFiles = payload.remainingFiles,
+            isComplete = payload.isComplete
+        )
+    }
+}
+
+data class ImageProcessorStatusPayload(
+    @SerializedName("status")
+    val status: String? = null,
+    @SerializedName("completed_files")
+    val completedFiles: Int? = null,
+    @SerializedName("remaining_files")
+    val remainingFiles: Int? = null,
+    @SerializedName("is_complete")
+    val isComplete: Boolean? = null
+) {
+    fun isEmpty(): Boolean =
+        status == null && completedFiles == null && remainingFiles == null && isComplete == null
+}
+
+data class ImageProcessorStatusSnapshot(
+    val status: String?,
+    val completedFiles: Int?,
+    val remainingFiles: Int?,
+    val isComplete: Boolean?
+)

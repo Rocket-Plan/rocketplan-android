@@ -7,13 +7,14 @@ import androidx.work.BackoffPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.rocketplan_android.data.api.ImageProcessorApi
 import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
 import com.example.rocketplan_android.data.local.entity.PhotoStatus
-import com.example.rocketplan_android.data.model.FileToUpload
+import com.example.rocketplan_android.data.model.ImageProcessorStatusSnapshot
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.storage.ImageProcessorUploadStore
 import com.example.rocketplan_android.data.storage.SecureStorage
@@ -49,6 +50,7 @@ class ImageProcessorQueueManager(
     private val dao: ImageProcessorDao,
     private val offlineDao: OfflineDao,
     private val uploadStore: ImageProcessorUploadStore,
+    private val api: ImageProcessorApi,
     private val configRepository: ImageProcessingConfigurationRepository,
     private val secureStorage: SecureStorage,
     private val remoteLogger: RemoteLogger?
@@ -293,12 +295,18 @@ class ImageProcessorQueueManager(
                 return
             }
 
+            // Get photos for this assembly
+            val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
+
+            // If the backend already marks this assembly complete, skip re-uploads
+            if (reconcileWithBackendStatus(assembly, photos)) {
+                return
+            }
+
             // Assembly is already CREATED (backend POST done in ImageProcessorRepository.createAssembly)
             // Update status to UPLOADING to indicate photo uploads are starting
             updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.UPLOADING, null)
 
-            // Get photos for this assembly
-            val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
             val pendingPhotos = photos.filter { it.status == PhotoStatus.PENDING.value }
 
             if (pendingPhotos.isEmpty()) {
@@ -415,6 +423,88 @@ class ImageProcessorQueueManager(
                 Log.e(TAG, "❌ Photo upload failed: $errorMessage")
                 throw IllegalStateException(errorMessage)
             }
+        }
+    }
+
+    private suspend fun reconcileWithBackendStatus(
+        assembly: ImageProcessorAssemblyEntity,
+        photos: List<ImageProcessorPhotoEntity>
+    ): Boolean {
+        val status = fetchBackendStatus(assembly) ?: return false
+        val completedCount = status.completedFiles ?: 0
+        val isComplete = status.isComplete == true ||
+            (assembly.totalFiles > 0 && completedCount >= assembly.totalFiles)
+
+        if (!isComplete) return false
+
+        val now = System.currentTimeMillis()
+        photos.forEach { photo ->
+            if (photo.status != PhotoStatus.COMPLETED.value) {
+                val updated = photo.copy(
+                    status = PhotoStatus.COMPLETED.value,
+                    lastUpdatedAt = now,
+                    errorMessage = null
+                )
+                dao.updatePhoto(updated)
+            }
+        }
+
+        updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.COMPLETED, null)
+
+        remoteLogger?.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Assembly already complete on backend, skipping uploads",
+            metadata = mapOf(
+                "assembly_id" to assembly.assemblyId,
+                "completed_files" to completedCount.toString(),
+                "total_files" to assembly.totalFiles.toString(),
+                "status" to (status.status ?: "unknown")
+            )
+        )
+
+        onAssemblyCompleted(assembly.assemblyId, success = true, errorMessage = null)
+        return true
+    }
+
+    private suspend fun fetchBackendStatus(
+        assembly: ImageProcessorAssemblyEntity
+    ): ImageProcessorStatusSnapshot? {
+        return runCatching {
+            val serverRoomId = assembly.roomId?.let { roomId ->
+                offlineDao.getRoom(roomId)?.serverId
+            }
+
+            val response = when {
+                serverRoomId != null -> api.getRoomAssemblyStatus(serverRoomId, assembly.assemblyId)
+                else -> api.getAssemblyStatus(assembly.assemblyId)
+            }
+
+            if (!response.isSuccessful) {
+                remoteLogger?.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Failed to fetch assembly status",
+                    metadata = mapOf(
+                        "assembly_id" to assembly.assemblyId,
+                        "code" to response.code().toString()
+                    )
+                )
+                return@runCatching null
+            }
+
+            response.body()?.toSnapshot()
+        }.getOrElse { error ->
+            remoteLogger?.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "Error fetching assembly status",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "error" to (error.message ?: "unknown")
+                )
+            )
+            null
         }
     }
 

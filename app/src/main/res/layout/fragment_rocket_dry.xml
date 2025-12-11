@@ -4,66 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
-
-    <!-- Top App Bar -->
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/white"
-        app:elevation="0dp">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="64dp"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp">
-
-            <ImageButton
-                android:id="@+id/backButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="@string/back"
-                android:src="@drawable/ic_arrow_back"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:tint="@color/icon_colour" />
-
-            <TextView
-                android:id="@+id/titleText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_marginEnd="8dp"
-                android:gravity="start|center_vertical"
-                android:text="@string/project_home"
-                android:textColor="@color/dark_text_rp"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toStartOf="@+id/menuButton"
-                app:layout_constraintStart_toEndOf="@+id/backButton"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <ImageButton
-                android:id="@+id/menuButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/bg_icon_circle_light"
-                android:padding="12dp"
-                android:contentDescription="@string/menu"
-                android:src="@drawable/ic_more_vert"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintTop_toTopOf="parent"
-                app:tint="@color/icon_colour" />
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-
-    </com.google.android.material.appbar.AppBarLayout>
+    android:background="@color/background">
 
     <!-- Main Content -->
     <androidx.core.widget.NestedScrollView
@@ -181,8 +122,7 @@
                                 android:background="@drawable/bg_icon_circle_purple"
                                 android:contentDescription="@string/room"
                                 android:padding="18dp"
-                                android:src="@drawable/ic_door"
-                                app:tint="@color/icon_colour" />
+                                android:src="@drawable/img_add_room" />
 
                             <ImageView
                                 android:layout_width="28dp"
@@ -232,8 +172,7 @@
                                 android:background="@drawable/bg_icon_circle_purple"
                                 android:contentDescription="@string/exterior_space"
                                 android:padding="18dp"
-                                android:src="@drawable/ic_exterior"
-                                app:tint="@color/icon_colour" />
+                                android:src="@drawable/img_add_exterior" />
 
                             <ImageView
                                 android:layout_width="28dp"
@@ -380,16 +319,78 @@
                 android:orientation="vertical">
 
                 <!-- External Atmospheric Log Section -->
-                <TextView
-                    android:layout_width="wrap_content"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="12dp"
-                    android:text="@string/external_atmospheric_log"
-                    android:textColor="@color/dark_text_rp"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/external_atmospheric_log"
+                        android:textColor="@color/dark_text_rp"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <ImageButton
+                        android:id="@+id/addExternalLogButton"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_add_button"
+                        android:contentDescription="@string/add_log"
+                        android:padding="4dp"
+                        android:src="@drawable/ic_add"
+                        app:tint="@color/main_purple" />
+
+                </LinearLayout>
 
                 <!-- Atmospheric Log RecyclerView -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/atmosphericEmptyStateCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/light_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/rocketdry_start_atmospheric_log_title"
+                            android:textColor="@color/dark_text_rp"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/startAtmosphericLogButton"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/rocketdry_start_atmospheric_log_cta"
+                            android:textAllCaps="false"
+                            android:textColor="@color/main_purple"
+                            app:backgroundTint="@color/white"
+                            app:strokeColor="@color/main_purple"
+                            app:strokeWidth="1dp" />
+
+                    </LinearLayout>
+
+                </com.google.android.material.card.MaterialCardView>
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/atmosphericLogsRecyclerView"
                     android:layout_width="match_parent"

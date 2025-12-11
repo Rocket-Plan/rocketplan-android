@@ -11,8 +11,13 @@ from pathlib import Path
 from collections import defaultdict
 
 # Directories
-IOS_ASSETS_DIR = "/Users/kilka/GitHub/ios.rocketplantech.com/RocketPlan/Resources/Assets.xcassets"
-ANDROID_RES_DIR = "/Users/kilka/GitHub/Rocketplan_android/app/src/main/res"
+ROOT_DIR = Path(__file__).parent.resolve()
+IOS_ASSETS_DIR = os.environ.get(
+    "IOS_ASSETS_DIR",
+    "/Users/kilka/GitHub/ios.rocketplantech.com/RocketPlan/Resources/Assets.xcassets",
+)
+ANDROID_RES_DIR = ROOT_DIR / "app" / "src" / "main" / "res"
+REPORT_PATH = ROOT_DIR / "docs" / "asset_migration_report.txt"
 
 # Stats tracking
 stats = {
@@ -76,16 +81,16 @@ def copy_asset(src_path, category_name):
 
     # Determine target directory
     density_folder = get_density_folder(filename)
-    target_dir = os.path.join(ANDROID_RES_DIR, density_folder)
+    target_dir = ANDROID_RES_DIR / density_folder
 
     # Sanitize filename
     android_name = sanitize_android_name(filename)
     target_filename = android_name + file_ext
-    target_path = os.path.join(target_dir, target_filename)
+    target_path = target_dir / target_filename
 
     try:
         # Ensure target directory exists
-        os.makedirs(target_dir, exist_ok=True)
+        target_dir.mkdir(parents=True, exist_ok=True)
 
         # Copy file
         shutil.copy2(src_path, target_path)
@@ -102,7 +107,8 @@ def copy_asset(src_path, category_name):
         elif file_ext == '.svg':
             stats['svg_files'] += 1
 
-        return True, target_path
+        relative_target = target_path.resolve().relative_to(ROOT_DIR)
+        return True, relative_target
     except Exception as e:
         error_msg = f"Error copying {src_path}: {str(e)}"
         stats['errors'].append(error_msg)
@@ -157,6 +163,7 @@ def main():
     print("="*80)
 
     all_migrated_files = {}
+    ios_assets_root = Path(IOS_ASSETS_DIR).expanduser()
 
     # Define all categories to migrate
     categories = [
@@ -183,8 +190,8 @@ def main():
 
     # Process each category
     for rel_path, display_name in categories:
-        full_path = os.path.join(IOS_ASSETS_DIR, rel_path)
-        if os.path.exists(full_path):
+        full_path = ios_assets_root / rel_path
+        if full_path.exists():
             migrated = migrate_category(full_path, display_name)
             if migrated:
                 all_migrated_files[display_name] = migrated
@@ -230,8 +237,8 @@ def main():
     print("="*80)
 
     # Save detailed report
-    report_path = os.path.join(ANDROID_RES_DIR, "asset_migration_report.txt")
-    with open(report_path, 'w') as f:
+    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(REPORT_PATH, 'w') as f:
         f.write("iOS to Android Asset Migration Report\n")
         f.write("="*80 + "\n\n")
         f.write(f"Total files copied: {stats['total_files']}\n")
@@ -259,7 +266,7 @@ def main():
             for src_name, target_path in sorted(files):
                 f.write(f"  {src_name} → {target_path}\n")
 
-    print(f"\nDetailed report saved to: {report_path}")
+    print(f"\nDetailed report saved to: {REPORT_PATH}")
 
 if __name__ == "__main__":
     main()

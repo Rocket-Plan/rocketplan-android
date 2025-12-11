@@ -7,12 +7,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -20,6 +23,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 private const val DEFAULT_LEVEL_LABEL = "General"
 private const val UNASSIGNED_LABEL = "Unassigned"
@@ -56,7 +60,9 @@ class RocketDryViewModel(
                     val equipmentByRoom = equipment.groupBy { it.roomId }
                     RocketDryUiState.Ready(
                         projectAddress = buildProjectAddress(project),
-                        atmosphericLogs = data.atmosphericLogs.map { it.toUiItem() },
+                        atmosphericLogs = data.atmosphericLogs
+                            .filter { it.isExternal }
+                            .map { it.toUiItem() },
                         locationLevels = locationLevels,
                         equipmentTotals = buildEquipmentTotals(equipment),
                         equipmentByType = buildEquipmentTypeSummaries(equipment),
@@ -78,6 +84,32 @@ class RocketDryViewModel(
         val moistureLogs: List<OfflineMoistureLogEntity>
     )
 
+    fun addExternalAtmosphericLog(
+        humidity: Double,
+        temperature: Double,
+        pressure: Double,
+        windSpeed: Double
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val now = Date()
+            val log = OfflineAtmosphericLogEntity(
+                uuid = UUID.randomUUID().toString(),
+                projectId = projectId,
+                date = now,
+                relativeHumidity = humidity,
+                temperature = temperature,
+                pressure = pressure,
+                windSpeed = windSpeed,
+                isExternal = true,
+                createdAt = now,
+                updatedAt = now,
+                syncStatus = SyncStatus.PENDING,
+                isDirty = true
+            )
+            localDataService.saveAtmosphericLogs(listOf(log))
+        }
+    }
+
     private fun buildProjectAddress(project: OfflineProjectEntity): String {
         val address = project.addressLine1?.takeIf { it.isNotBlank() }
         val title = project.title.takeIf { it.isNotBlank() }
@@ -98,11 +130,17 @@ class RocketDryViewModel(
             val roomItems = levelRooms.map { room ->
                 LocationItem(
                     name = room.title,
-                    materialCount = moistureByRoom[room.roomId]?.size ?: 0
+                    materialCount = moistureByRoom[room.roomId]?.size ?: 0,
+                    iconRes = resolveRoomIcon(room)
                 )
             }.sortedBy { it.name.lowercase(Locale.getDefault()) }
             LocationLevel(levelName = levelName, locations = roomItems)
         }.sortedBy { it.levelName.lowercase(Locale.getDefault()) }
+    }
+
+    private fun resolveRoomIcon(room: OfflineRoomEntity): Int {
+        val iconName = room.roomType?.takeIf { it.isNotBlank() } ?: room.title
+        return RoomTypeCatalog.resolveIconRes(rocketPlanApp, room.roomTypeId, iconName)
     }
 
     private fun OfflineAtmosphericLogEntity.toUiItem(): AtmosphericLogItem =

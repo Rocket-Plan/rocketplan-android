@@ -30,8 +30,6 @@ import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import kotlinx.coroutines.launch
-import androidx.navigation.fragment.NavHostFragment
-import com.example.rocketplan_android.ui.projects.ProjectDetailFragment
 
 class MainActivity : AppCompatActivity() {
 
@@ -137,12 +135,6 @@ class MainActivity : AppCompatActivity() {
                     window.setSoftInputMode(hiddenSoftInputMode)
                 }
                 destination.id == R.id.photoViewerFragment -> {
-                    bottomNavigation.isVisible = false
-                    supportActionBar?.hide()
-                    drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-                    window.setSoftInputMode(hiddenSoftInputMode)
-                }
-                destination.id == R.id.rocketDryFragment -> {
                     bottomNavigation.isVisible = false
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
@@ -469,37 +461,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun reloadImageProcessorConfiguration() {
-        lifecycleScope.launch {
-            val result = imageProcessingConfigurationRepository.getConfiguration(forceRefresh = true)
-            result.onSuccess { config ->
-                Log.d(TAG, "📸 Image processor config from server: $config")
-                Toast.makeText(
-                    this@MainActivity,
-                    getString(R.string.toast_image_processor_config_loaded, config.service),
-                    Toast.LENGTH_LONG
-                ).show()
-            }.onFailure { error ->
-                Log.e(TAG, "❌ Failed to load image processor config", error)
-                val reason = error.message ?: getString(R.string.toast_image_processor_config_unknown_error)
-                Toast.makeText(
-                    this@MainActivity,
-                    getString(R.string.toast_image_processor_config_failed, reason),
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        }
-    }
-
-    private fun handleDeleteProjectRequest(): Boolean {
-        val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? NavHostFragment
-        val currentFragment = navHostFragment?.childFragmentManager?.primaryNavigationFragment
-        return if (currentFragment is ProjectDetailFragment) {
-            currentFragment.promptDeleteProject()
-            true
-        } else {
-            Toast.makeText(this, R.string.delete_project_not_available, Toast.LENGTH_SHORT).show()
-            false
-        }
-    }
 }

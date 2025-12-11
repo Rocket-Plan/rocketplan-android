@@ -455,6 +455,24 @@ interface OfflineDao {
     suspend fun markEquipmentDeleted(serverIds: List<Long>)
     // endregion
 
+    @Query("SELECT * FROM offline_equipment WHERE equipmentId = :equipmentId LIMIT 1")
+    suspend fun getEquipment(equipmentId: Long): OfflineEquipmentEntity?
+
+    @Query("SELECT * FROM offline_equipment WHERE uuid = :uuid LIMIT 1")
+    suspend fun getEquipmentByUuid(uuid: String): OfflineEquipmentEntity?
+
+    @Query(
+        """
+        SELECT * FROM offline_equipment
+        WHERE projectId = :projectId AND (isDirty = 1 OR syncStatus != :synced)
+        ORDER BY updatedAt DESC
+        """
+    )
+    suspend fun getPendingEquipment(
+        projectId: Long,
+        synced: SyncStatus = SyncStatus.SYNCED
+    ): List<OfflineEquipmentEntity>
+
     @Query("DELETE FROM offline_equipment WHERE roomId = :roomId")
     suspend fun deleteEquipmentByRoomId(roomId: Long): Int
 

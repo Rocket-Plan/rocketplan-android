@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="12dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:background="?attr/colorSurface"
+    android:foreground="?attr/selectableItemBackground">
+
+    <com.google.android.material.checkbox.MaterialCheckBox
+        android:id="@+id/scopeCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:focusable="false"
+        android:clickable="false"
+        app:useMaterialThemeColors="true" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/scopeTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?attr/textAppearanceSubtitle1"
+            android:textColor="?android:attr/textColorPrimary"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/scopeMeta"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textAppearance="?attr/textAppearanceBody2"
+            android:textColor="?android:attr/textColorSecondary"
+            android:maxLines="2"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/scopeQuantityMinus"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:text="-"
+            android:textSize="18sp" />
+
+        <TextView
+            android:id="@+id/scopeQuantityValue"
+            android:layout_width="48dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="6dp"
+            android:gravity="center"
+            android:text="1"
+            android:textAppearance="?attr/textAppearanceSubtitle1" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/scopeQuantityPlus"
+            style="?attr/materialButtonOutlinedStyle"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:text="+"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+</LinearLayout>
