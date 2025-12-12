@@ -98,30 +98,104 @@ class PhotoCacheManager(
     private fun generateThumbnail(originalFile: File, mimeType: String): File? {
         if (!mimeType.lowercase().startsWith("image")) return null
         return runCatching {
-            val bitmap = BitmapFactory.decodeFile(originalFile.absolutePath) ?: return null
-            val (width, height) = bitmap.width to bitmap.height
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(originalFile.absolutePath, bounds)
+            val (width, height) = bounds.outWidth to bounds.outHeight
+            if (width <= 0 || height <= 0) return null
             if (width <= THUMBNAIL_MAX_DIMENSION && height <= THUMBNAIL_MAX_DIMENSION) {
                 return null // original small enough
             }
-            val scale = THUMBNAIL_MAX_DIMENSION.toFloat() / maxOf(width, height)
-            val thumbWidth = (width * scale).toInt().coerceAtLeast(64)
-            val thumbHeight = (height * scale).toInt().coerceAtLeast(64)
-            val thumbnail = Bitmap.createScaledBitmap(bitmap, thumbWidth, thumbHeight, true)
+
+            val sampleSize = calculateInSampleSize(width, height, THUMBNAIL_MAX_DIMENSION)
+            val decodeOptions = BitmapFactory.Options().apply {
+                inSampleSize = sampleSize
+                inPreferredConfig = Bitmap.Config.RGB_565
+            }
+            val sampled = BitmapFactory.decodeFile(originalFile.absolutePath, decodeOptions) ?: return null
+
+            val maxDimension = maxOf(sampled.width, sampled.height)
+            val scaled = if (maxDimension > THUMBNAIL_MAX_DIMENSION) {
+                val scale = THUMBNAIL_MAX_DIMENSION.toFloat() / maxDimension
+                val thumbWidth = (sampled.width * scale).toInt().coerceAtLeast(64)
+                val thumbHeight = (sampled.height * scale).toInt().coerceAtLeast(64)
+                Bitmap.createScaledBitmap(sampled, thumbWidth, thumbHeight, true)
+            } else {
+                sampled
+            }
+
             val thumbnailFile = File(originalFile.parentFile, "${originalFile.nameWithoutExtension}_thumb.jpg")
             FileOutputStream(thumbnailFile).use { output ->
-                thumbnail.compress(Bitmap.CompressFormat.JPEG, 85, output)
+                scaled.compress(Bitmap.CompressFormat.JPEG, 85, output)
             }
-            bitmap.recycle()
-            if (thumbnail != bitmap) {
-                thumbnail.recycle()
+            if (scaled != sampled) {
+                scaled.recycle()
             }
+            sampled.recycle()
             thumbnailFile
         }.getOrNull()
     }
 
     suspend fun cleanUpUnused(threshold: Date, maxBytes: Long) = withContext(ioDispatcher) {
-        // TODO: implement LRU cleanup respecting threshold and maxBytes
+        if (maxBytes <= 0) return@withContext
+
+        val cached = localDataService.getCachedPhotos()
+        if (cached.isEmpty()) return@withContext
+
+        val entries = cached.map { photo ->
+            val original = photo.cachedOriginalPath?.let(::File)
+            val thumb = photo.cachedThumbnailPath?.let(::File)
+            val originalSize = original?.takeIf { it.exists() }?.length() ?: 0L
+            val thumbSize = thumb?.takeIf { it.exists() }?.length() ?: 0L
+            CachedFiles(photo, original, thumb, originalSize + thumbSize)
+        }
+
+        val victims = LinkedHashSet<CachedFiles>()
+
+        // Expire old or missing files first
+        entries.forEach { entry ->
+            val lastAccess = entry.photo.lastAccessedAt ?: entry.photo.updatedAt
+            val expired = lastAccess?.before(threshold) == true
+            if (expired || entry.totalBytes == 0L) {
+                victims.add(entry)
+            }
+        }
+
+        var totalBytes = entries.sumOf { it.totalBytes }
+
+        // Enforce maxBytes using LRU (oldest lastAccessedAt first)
+        if (totalBytes > maxBytes) {
+            val lru = entries
+                .filterNot { victims.contains(it) }
+                .sortedBy { it.photo.lastAccessedAt?.time ?: 0L }
+
+            lru.forEach { entry ->
+                if (totalBytes <= maxBytes) return@forEach
+                victims.add(entry)
+                totalBytes -= entry.totalBytes
+            }
+        }
+
+        victims.forEach { entry ->
+            entry.original?.takeIf { it.exists() }?.delete()
+            entry.thumbnail?.takeIf { it.exists() }?.delete()
+            localDataService.markPhotoCacheFailed(entry.photo.photoId)
+        }
     }
+
+    private fun calculateInSampleSize(width: Int, height: Int, maxDimension: Int): Int {
+        var sampleSize = 1
+        while (width / sampleSize > maxDimension * 2 || height / sampleSize > maxDimension * 2) {
+            sampleSize *= 2
+        }
+        return sampleSize
+    }
+
+    private data class CachedFiles(
+        val photo: OfflinePhotoEntity,
+        val original: File?,
+        val thumbnail: File?,
+        val totalBytes: Long
+    )
 
     private fun fileExtension(mimeType: String): String =
         when (mimeType.lowercase()) {

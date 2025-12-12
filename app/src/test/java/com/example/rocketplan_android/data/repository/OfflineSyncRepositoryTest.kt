@@ -9,6 +9,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
@@ -459,6 +460,50 @@ class OfflineSyncRepositoryTest {
         repository.syncRoomPhotos(projectId, roomId)
 
         io.mockk.verify(exactly = 0) { checkpointStore.updateCheckpoint(any(), any()) }
+    }
+
+    @Test
+    fun `syncRoomWorkScopes saves scopes with local project id`() = runTest {
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
+
+        val localProjectId = 12L
+        val serverProjectId = 999L
+        val roomId = 123L
+        val scopeDto = WorkScopeDto(
+            id = 55L,
+            uuid = "scope-uuid",
+            projectId = serverProjectId,
+            roomId = roomId,
+            name = "Demo Scope",
+            description = "From catalog",
+            createdAt = "2024-01-01T00:00:00Z",
+            updatedAt = "2024-01-02T00:00:00Z"
+        )
+
+        mockkStatic(Log::class)
+        everyLog()
+        coEvery { api.getRoomWorkScope(roomId) } returns PaginatedResponse(data = listOf(scopeDto))
+        val savedScopes = mutableListOf<List<OfflineWorkScopeEntity>>()
+        coEvery { localDataService.saveWorkScopes(capture(savedScopes)) } just runs
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
+        )
+
+        val savedCount = repository.syncRoomWorkScopes(localProjectId, roomId)
+
+        assertThat(savedCount).isEqualTo(1)
+        val savedScope = savedScopes.single().single()
+        assertThat(savedScope.projectId).isEqualTo(localProjectId)
+        assertThat(savedScope.serverId).isEqualTo(scopeDto.id)
+        assertThat(savedScope.roomId).isEqualTo(roomId)
     }
 
     @Test

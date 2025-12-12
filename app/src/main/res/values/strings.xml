@@ -165,7 +165,6 @@
     <string name="damages_coming_soon">Damages coming soon</string>
     <string name="sketch_coming_soon">Sketch coming soon</string>
     <string name="room_damages_empty_state">No damages captured for this room yet.</string>
-    <string name="room_damages_scope_empty_state">No scope items yet. Add a new scope item.</string>
     <string name="add_scope_sheet">Add scope item</string>
     <string name="add_scope_sheet_subtitle">Add a scope of work item for this room.</string>
     <string name="add_scope_sheet_title_hint">Scope item title</string>
@@ -176,6 +175,11 @@
     <string name="scope_picker_empty_message">No scope items available yet. Add a custom item instead.</string>
     <string name="scope_picker_add_error">Could not add scope items. Check your connection and try again.</string>
     <string name="scope_picker_search_hint">Search scope items</string>
+    <plurals name="scope_group_line_items">
+        <item quantity="one">%d line item</item>
+        <item quantity="other">%d line items</item>
+    </plurals>
+    <string name="expand">Expand</string>
     <string name="rocketdry_equipment_overview">Total Equipment</string>
     <string name="rocketdry_equipment_list_title">Equipment List</string>
     <plurals name="rocketdry_equipment_units">

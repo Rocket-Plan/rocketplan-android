@@ -284,6 +284,19 @@ interface OfflineDao {
 
     @Query(
         """
+        SELECT * FROM offline_photos
+        WHERE cacheStatus = :status
+          AND isDeleted = 0
+          AND cachedOriginalPath IS NOT NULL
+        ORDER BY COALESCE(lastAccessedAt, updatedAt) DESC
+        """
+    )
+    suspend fun getCachedPhotos(
+        status: PhotoCacheStatus = PhotoCacheStatus.READY
+    ): List<OfflinePhotoEntity>
+
+    @Query(
+        """
         SELECT
             roomId,
             CAST(COUNT(*) AS INTEGER) AS photoCount,

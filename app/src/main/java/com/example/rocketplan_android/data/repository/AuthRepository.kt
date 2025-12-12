@@ -67,10 +67,13 @@ class AuthRepository(
                 saveAuthToken(loginResponse.token)
                 secureStorage.saveUserEmail(email)
 
-                // Save credentials if Remember Me is enabled
+                // Save credentials if Remember Me is enabled, otherwise clear stored secrets
                 if (rememberMe) {
                     secureStorage.setRememberMe(true)
                     secureStorage.saveEncryptedPassword(password)
+                } else {
+                    secureStorage.setRememberMe(false)
+                    secureStorage.clearEncryptedPassword()
                 }
 
                 val userContextResult = refreshUserContext()

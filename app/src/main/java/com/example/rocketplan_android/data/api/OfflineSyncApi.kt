@@ -293,7 +293,7 @@ interface OfflineSyncApi {
     suspend fun getRoomDamageMaterials(
         @Path("roomId") roomId: Long,
         @Query("filter[updated_date]") updatedSince: String? = null
-    ): List<DamageMaterialDto>
+    ): PaginatedResponse<DamageMaterialDto>
 
     @GET("/api/work-scope/{companyId}")
     suspend fun getWorkScopeCatalog(

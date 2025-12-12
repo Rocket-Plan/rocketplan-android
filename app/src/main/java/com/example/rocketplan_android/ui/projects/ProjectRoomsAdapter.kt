@@ -14,6 +14,9 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.rocketplan_android.R
+import java.text.NumberFormat
+import java.util.Locale
+import kotlin.math.abs
 
 sealed class RoomListItem {
     data class Header(val title: String) : RoomListItem()
@@ -90,7 +93,9 @@ class ProjectRoomsAdapter(
         private val title: TextView = view.findViewById(R.id.roomTitle)
         private val photoCount: TextView = view.findViewById(R.id.photoCount)
         private val spinner: View = view.findViewById(R.id.loadingSpinner)
+        private val roomIconContainer: View = view.findViewById(R.id.roomIconContainer)
         private val roomTypeIcon: ImageView = view.findViewById(R.id.roomTypeIcon)
+        private val roomScopeTotal: TextView = view.findViewById(R.id.roomScopeTotal)
         private val gradientOverlay: View = view.findViewById(R.id.roomGradientOverlay)
 
         fun bind(room: RoomCard) {
@@ -112,7 +117,9 @@ class ProjectRoomsAdapter(
             gradientOverlay.isVisible = !isDamages
 
             if (isDamages) {
+                roomIconContainer.isVisible = true
                 roomTypeIcon.isVisible = true
+                roomScopeTotal.isVisible = true
                 roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_white)
                 val count = room.damageCount
                 photoCount.text = itemView.resources.getQuantityString(
@@ -120,6 +127,7 @@ class ProjectRoomsAdapter(
                     count,
                     count
                 )
+                roomScopeTotal.text = formatScopeTotal(room.scopeTotal)
                 spinner.isVisible = false
                 val shouldResetPlaceholder = previousRoom == null ||
                     previousRoom.roomId != room.roomId ||
@@ -136,6 +144,8 @@ class ProjectRoomsAdapter(
                 return
             }
 
+            roomIconContainer.isVisible = false
+            roomScopeTotal.isVisible = false
             roomTypeIcon.isVisible = false
             photoCount.text = itemView.resources.getQuantityString(
                 R.plurals.photo_count,
@@ -162,6 +172,18 @@ class ProjectRoomsAdapter(
             itemView.setOnClickListener { onRoomClick(room) }
         }
 
+        private fun formatScopeTotal(amount: Double): String {
+            if (amount.isNaN() || amount.isInfinite() || amount <= 0.0) return "$0"
+            val absolute = abs(amount)
+            return when {
+                absolute >= 1_000_000 -> String.format(Locale.US, "$%.1fM", amount / 1_000_000)
+                absolute >= 10_000 -> String.format(Locale.US, "$%.0fK", amount / 1_000)
+                absolute >= 1_000 -> String.format(Locale.US, "$%.1fK", amount / 1_000)
+                absolute >= 100 -> currencyNoCents.format(amount)
+                else -> currencyWithCents.format(amount)
+            }
+        }
+
         private fun hasVisualDifferences(old: RoomCard, new: RoomCard): Boolean {
             return old.roomId != new.roomId ||
                 old.thumbnailUrl != new.thumbnailUrl ||
@@ -171,6 +193,12 @@ class ProjectRoomsAdapter(
 
     companion object {
         private const val TAG = "ProjectRoomsAdapter"
+        private val currencyWithCents: NumberFormat = NumberFormat.getCurrencyInstance(Locale.US)
+        private val currencyNoCents: NumberFormat =
+            NumberFormat.getCurrencyInstance(Locale.US).apply {
+                maximumFractionDigits = 0
+                minimumFractionDigits = 0
+            }
         const val VIEW_TYPE_HEADER = 1
         const val VIEW_TYPE_ROOM = 2
     }

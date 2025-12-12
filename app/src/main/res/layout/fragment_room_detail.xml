@@ -114,7 +114,8 @@
                         android:layout_weight="1"
                         android:text="@string/scope_sheet"
                         android:textAllCaps="false"
-                        android:textSize="16sp" />
+                        android:textSize="16sp"
+                        android:visibility="gone" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
             </com.google.android.material.card.MaterialCardView>
 
@@ -512,7 +513,7 @@
                         android:textColor="@color/light_text_rp"
                         android:textSize="20sp"
                         android:textStyle="bold"
-                        tools:text="No scope items yet. Add a new scope item." />
+                        tools:text="No damages yet. Add a new damage." />
 
                     <ImageView
                         android:id="@+id/photosPlaceholderImage"

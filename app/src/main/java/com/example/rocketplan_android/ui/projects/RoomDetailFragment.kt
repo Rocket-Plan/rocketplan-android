@@ -94,7 +94,7 @@ class RoomDetailFragment : Fragment() {
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
     private var latestDamages: List<RoomDamageItem> = emptyList()
-    private var latestScopes: List<RoomScopeItem> = emptyList()
+    private var latestScopeGroups: List<RoomScopeGroup> = emptyList()
     private var photoLoadStartTime: Long = 0L
     private var latestLoadState: LoadState? = null
     private var snapshotRefreshInProgress: Boolean = false
@@ -103,7 +103,7 @@ class RoomDetailFragment : Fragment() {
     private val initialTab: RoomDetailTab by lazy {
         when (args.startTab.lowercase(Locale.US)) {
             "damages" -> RoomDetailTab.DAMAGES
-            "scope", "scope_sheet", "sketch" -> RoomDetailTab.SCOPE
+            "scope", "scope_sheet", "sketch" -> RoomDetailTab.DAMAGES
             else -> RoomDetailTab.PHOTOS
         }
     }
@@ -202,16 +202,17 @@ class RoomDetailFragment : Fragment() {
         scopePickerCustomButton = root.findViewById(R.id.scopePickerCustomButton)
         scopePickerCancelButton = root.findViewById(R.id.scopePickerCancelButton)
 
+        scopeTabButton.isVisible = false
         addPhotoChip.isChecked = initialTab == RoomDetailTab.PHOTOS
         addPhotoCard.isVisible = initialTab == RoomDetailTab.PHOTOS
-        addScopeCard.isVisible = initialTab != RoomDetailTab.PHOTOS
+        addScopeCard.isVisible = initialTab == RoomDetailTab.DAMAGES
         damageCategoryGroup.check(R.id.damageFilterAll)
-        damageCategoryGroup.isVisible = initialTab == RoomDetailTab.DAMAGES || initialTab == RoomDetailTab.SCOPE
+        damageCategoryGroup.isVisible = initialTab == RoomDetailTab.DAMAGES
         filterChipGroup.isVisible = initialTab == RoomDetailTab.PHOTOS
         gridSectionTitle.text = when (initialTab) {
             RoomDetailTab.PHOTOS -> getString(R.string.damage_assessment)
             RoomDetailTab.DAMAGES -> getString(R.string.damages)
-            RoomDetailTab.SCOPE -> getString(R.string.scope_sheet)
+            RoomDetailTab.SCOPE -> getString(R.string.damages)
         }
         noteCardLabel.text = getString(R.string.add_note_with_plus)
     }
@@ -262,9 +263,6 @@ class RoomDetailFragment : Fragment() {
         scopeRecyclerView.apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = scopeAdapter
-            addItemDecoration(
-                DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
-            )
             isVisible = false
         }
 
@@ -279,24 +277,20 @@ class RoomDetailFragment : Fragment() {
         viewModel.selectTab(initial)
         val initialButtonId = when (initial) {
             RoomDetailTab.PHOTOS -> R.id.roomPhotosTabButton
-            RoomDetailTab.DAMAGES -> R.id.roomDamagesTabButton
-            RoomDetailTab.SCOPE -> R.id.roomScopeTabButton
+            RoomDetailTab.DAMAGES, RoomDetailTab.SCOPE -> R.id.roomDamagesTabButton
         }
         tabToggleGroup.check(initialButtonId)
-        if (initial == RoomDetailTab.SCOPE) {
-            viewModel.refreshWorkScopesIfStale()
-        }
         updateToggleStyles(initial)
         tabToggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
             val tab = when (checkedId) {
                 R.id.roomPhotosTabButton -> RoomDetailTab.PHOTOS
-                R.id.roomDamagesTabButton -> RoomDetailTab.DAMAGES
-                R.id.roomScopeTabButton -> RoomDetailTab.SCOPE
+                R.id.roomDamagesTabButton, R.id.roomScopeTabButton -> RoomDetailTab.DAMAGES
                 else -> RoomDetailTab.PHOTOS
             }
             viewModel.selectTab(tab)
-            if (tab == RoomDetailTab.SCOPE) viewModel.refreshWorkScopesIfStale()
+            if (tab == RoomDetailTab.DAMAGES) viewModel.refreshDamagesIfStale()
+            if (tab == RoomDetailTab.DAMAGES) viewModel.refreshWorkScopesIfStale()
             updateToggleStyles(tab)
         }
     }
@@ -311,8 +305,7 @@ class RoomDetailFragment : Fragment() {
 
         listOf(
             photosTabButton to RoomDetailTab.PHOTOS,
-            damagesTabButton to RoomDetailTab.DAMAGES,
-            scopeTabButton to RoomDetailTab.SCOPE
+            damagesTabButton to RoomDetailTab.DAMAGES
         ).forEach { (button, tab) ->
             val isSelected = tab == active
             button.backgroundTintList = if (isSelected) selectedBackground else unselectedBackground
@@ -334,11 +327,12 @@ class RoomDetailFragment : Fragment() {
         damagesRecyclerView.isVisible = hasDamages
         placeholderContainer.isVisible = !hasDamages
         placeholderImage.isVisible = !hasDamages
-        placeholderText.text = if (hasDamages) "" else getString(R.string.room_damages_scope_empty_state)
+        placeholderText.text = if (hasDamages) "" else getString(R.string.room_damages_empty_state)
     }
 
     private fun updateScopeVisibility() {
-        val isActive = viewModel.selectedTab.value == RoomDetailTab.SCOPE
+        val isActive = viewModel.selectedTab.value == RoomDetailTab.SCOPE ||
+            viewModel.selectedTab.value == RoomDetailTab.DAMAGES
         if (!isActive) {
             scopeRecyclerView.isVisible = false
             placeholderContainer.isVisible = false
@@ -346,7 +340,7 @@ class RoomDetailFragment : Fragment() {
             return
         }
 
-        val hasScopes = latestScopes.isNotEmpty()
+        val hasScopes = latestScopeGroups.isNotEmpty()
         scopeRecyclerView.isVisible = hasScopes
         placeholderContainer.isVisible = !hasScopes
         placeholderImage.isVisible = !hasScopes
@@ -364,9 +358,6 @@ class RoomDetailFragment : Fragment() {
         }
         totalEquipmentButton.setOnClickListener { openEquipmentTotals() }
         addScopeCard.setOnClickListener {
-            if (viewModel.selectedTab.value != RoomDetailTab.SCOPE) {
-                tabToggleGroup.check(R.id.roomScopeTabButton)
-            }
             viewModel.refreshWorkScopesIfStale()
             showScopePickerInline()
         }
@@ -731,8 +722,8 @@ class RoomDetailFragment : Fragment() {
                     }
                 }
                 launch {
-                    viewModel.roomScopes.collect { scopes ->
-                        latestScopes = scopes
+                    viewModel.roomScopeGroups.collect { scopes ->
+                        latestScopeGroups = scopes
                         scopeAdapter.submitList(scopes)
                         updateScopeVisibility()
                     }
@@ -818,7 +809,7 @@ class RoomDetailFragment : Fragment() {
                 addScopeCard.isVisible = false
                 damageCategoryGroup.isVisible = false
             }
-            RoomDetailTab.DAMAGES -> {
+            RoomDetailTab.DAMAGES, RoomDetailTab.SCOPE -> {
                 gridSectionTitle.text = getString(R.string.damages)
                 gridSectionTitle.isVisible = true
                 noteSummary.isVisible = false
@@ -832,27 +823,10 @@ class RoomDetailFragment : Fragment() {
                 loadingOverlay.isVisible = false
                 updateDamageVisibility()
                 photosLoadingSpinner.isVisible = false
-                scopeRecyclerView.isVisible = false
                 addPhotoCard.isVisible = false
                 addScopeCard.isVisible = true
                 damageCategoryGroup.isVisible = true
-            }
-            RoomDetailTab.SCOPE -> {
-                gridSectionTitle.text = getString(R.string.scope_sheet)
-                gridSectionTitle.isVisible = true
-                noteSummary.isVisible = false
-                albumsHeader.isVisible = false
-                albumsRecyclerView.isVisible = false
-                filterChipGroup.isVisible = false
-                totalEquipmentButton.isVisible = false
-                photosRecyclerView.isVisible = false
-                damagesRecyclerView.isVisible = false
-                photosLoadingSpinner.isVisible = false
-                loadingOverlay.isVisible = false
                 updateScopeVisibility()
-                addPhotoCard.isVisible = false
-                addScopeCard.isVisible = true
-                damageCategoryGroup.isVisible = true
             }
         }
     }

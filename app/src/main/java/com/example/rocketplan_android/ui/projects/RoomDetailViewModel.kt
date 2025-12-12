@@ -88,6 +88,8 @@ class RoomDetailViewModel(
     private var lastSyncedServerRoomId: Long? = null
     private var lastScopeSyncedRoomId: Long? = null
     private var lastScopeSyncAt = 0L
+    private var lastDamagesSyncedRoomId: Long? = null
+    private var lastDamagesSyncAt = 0L
     private var currentPhotoLookupRoomId: Long? = null
     private var lastSnapshotRoomId: Long? = null
     private val _resolvedRoom = MutableStateFlow<OfflineRoomEntity?>(null)
@@ -115,8 +117,10 @@ class RoomDetailViewModel(
                 add(resolvedRoom.roomId)
                 resolvedRoom.serverId?.let { add(it) }
             }
-            damages
-                .filter { damage -> damage.roomId != null && damage.roomId in roomIds }
+            Log.d(TAG, "🔍 roomDamages: totalDamages=${damages.size}, roomIds=$roomIds")
+            val filtered = damages.filter { damage -> damage.roomId != null && damage.roomId in roomIds }
+            Log.d(TAG, "🔍 roomDamages: filteredCount=${filtered.size}, damageRoomIds=${damages.take(5).map { it.roomId }}")
+            filtered
                 .sortedByDescending { it.updatedAt }
                 .map { damage ->
                     val updatedAt = damage.updatedAt ?: damage.createdAt
@@ -133,8 +137,7 @@ class RoomDetailViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
-
-    val roomScopes: StateFlow<List<RoomScopeItem>> =
+    val roomScopeGroups: StateFlow<List<RoomScopeGroup>> =
         combine(_resolvedRoom, localDataService.observeWorkScopes(projectId)) { room, scopes ->
             val resolvedRoom = room ?: return@combine emptyList()
             val formatter = requireNotNull(damageDateFormatter.get())
@@ -145,17 +148,62 @@ class RoomDetailViewModel(
             Log.d(TAG, "🔍 roomScopes: totalScopes=${scopes.size}, roomIds=$roomIds")
             val filtered = scopes.filter { scope -> scope.roomId != null && scope.roomId in roomIds }
             Log.d(TAG, "🔍 roomScopes: filteredCount=${filtered.size}, scopeRoomIds=${scopes.take(5).map { it.roomId }}")
-            filtered
-                .sortedByDescending { it.updatedAt }
+            val items = filtered
+                .sortedByDescending { it.updatedAt ?: it.createdAt }
                 .map { scope ->
                     val updatedAt = scope.updatedAt ?: scope.createdAt
+                    val code = listOfNotNull(scope.codePart1?.trim(), scope.codePart2?.trim())
+                        .joinToString(separator = "")
+                        .takeIf { it.isNotBlank() }
+                    val lineTotal = scope.lineTotal ?: scope.rate?.let { rate ->
+                        val qty = scope.quantity ?: 1.0
+                        rate * qty
+                    }
+                    val groupTitle = scope.tabName?.takeIf { it.isNotBlank() }
+                        ?: scope.category?.takeIf { it.isNotBlank() }
+                        ?: scope.description?.takeIf { it.isNotBlank() }
+                        ?: scope.name.takeIf { it.isNotBlank() }
+                        ?: "Work Scope"
+                    val lineTitle = scope.description?.takeIf { it.isNotBlank() }
+                        ?: scope.name.takeIf { it.isNotBlank() }
+                        ?: groupTitle
                     RoomScopeItem(
                         id = scope.workScopeId,
-                        title = scope.name,
-                        description = scope.description,
-                        updatedOn = updatedAt?.let { formatter.format(it) }
+                        title = lineTitle,
+                        description = scope.name
+                            ?.takeIf { it.isNotBlank() && it != lineTitle },
+                        updatedOn = updatedAt?.let { formatter.format(it) },
+                        tabName = scope.tabName?.takeIf { it.isNotBlank() },
+                        category = scope.category?.takeIf { it.isNotBlank() },
+                        code = code,
+                        quantity = scope.quantity,
+                        unit = scope.unit,
+                        rate = scope.rate,
+                        lineTotal = lineTotal,
+                        updatedAtMillis = updatedAt?.time,
+                        groupTitle = groupTitle
                     )
                 }
+
+            items
+                .groupBy { item -> item.groupTitle }
+                .map { (title, groupedItems) ->
+                    val total = groupedItems.mapNotNull { item ->
+                        item.lineTotal ?: item.rate?.let { rate ->
+                            val qty = item.quantity ?: 1.0
+                            rate * qty
+                        }
+                    }.takeIf { it.isNotEmpty() }?.sum()
+                    val groupId = "${title.lowercase(Locale.US)}-${groupedItems.joinToString { it.id.toString() }.hashCode()}"
+                    RoomScopeGroup(
+                        id = groupId,
+                        title = title,
+                        total = total,
+                        itemCount = groupedItems.size,
+                        items = groupedItems.sortedByDescending { it.updatedAtMillis ?: 0L }
+                    )
+                }
+                .sortedBy { it.title.lowercase(Locale.US) }
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
@@ -257,6 +305,7 @@ class RoomDetailViewModel(
                     Log.d(TAG, "⚡️ Server room id resolved ($serverId); forcing photo refresh")
                     ensureRoomPhotosFresh(force = true)
                     ensureWorkScopesFresh(serverId, force = true)
+                    ensureDamagesFresh(serverId, force = true)
                 }
             }
         }
@@ -273,6 +322,11 @@ class RoomDetailViewModel(
         ensureWorkScopesFresh(serverRoomId)
     }
 
+    fun refreshDamagesIfStale() {
+        val serverRoomId = _resolvedRoom.value?.serverId ?: return
+        ensureDamagesFresh(serverRoomId)
+    }
+
     private fun ensureWorkScopesFresh(serverRoomId: Long, force: Boolean = false) {
         val now = SystemClock.elapsedRealtime()
         if (!force && serverRoomId == lastScopeSyncedRoomId && now - lastScopeSyncAt < ROOM_REFRESH_INTERVAL_MS) {
@@ -285,6 +339,27 @@ class RoomDetailViewModel(
             runCatching { offlineSyncRepository.syncRoomWorkScopes(projectId, serverRoomId) }
                 .onFailure { error ->
                     Log.w(TAG, "⚠️ Failed to sync work scopes for room $serverRoomId", error)
+                }
+        }
+    }
+
+    private fun ensureDamagesFresh(serverRoomId: Long, force: Boolean = false) {
+        val now = SystemClock.elapsedRealtime()
+        if (!force && serverRoomId == lastDamagesSyncedRoomId && now - lastDamagesSyncAt < ROOM_REFRESH_INTERVAL_MS) {
+            return
+        }
+
+        lastDamagesSyncedRoomId = serverRoomId
+        lastDamagesSyncAt = now
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching { offlineSyncRepository.syncRoomDamages(projectId, serverRoomId) }
+                .onFailure { error ->
+                    Log.w(TAG, "⚠️ Failed to sync damages for room $serverRoomId", error)
+                    remoteLogger.log(
+                        level = LogLevel.WARN,
+                        tag = TAG,
+                        message = "Failed to sync damages for roomId=$serverRoomId projectId=$projectId: ${error.message}"
+                    )
                 }
         }
     }
@@ -783,7 +858,24 @@ data class RoomScopeItem(
     val id: Long,
     val title: String,
     val description: String?,
-    val updatedOn: String?
+    val updatedOn: String?,
+    val tabName: String? = null,
+    val category: String? = null,
+    val code: String? = null,
+    val quantity: Double? = null,
+    val unit: String? = null,
+    val rate: Double? = null,
+    val lineTotal: Double? = null,
+    val updatedAtMillis: Long? = null,
+    val groupTitle: String
+)
+
+data class RoomScopeGroup(
+    val id: String,
+    val title: String,
+    val total: Double?,
+    val itemCount: Int,
+    val items: List<RoomScopeItem>
 )
 
 data class ScopeTemplateOption(

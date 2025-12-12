@@ -7,41 +7,69 @@
     android:layout_marginBottom="12dp"
     app:cardBackgroundColor="@color/white"
     app:cardCornerRadius="12dp"
-    app:cardElevation="2dp"
+    app:cardElevation="0dp"
     app:strokeColor="@color/light_border"
     app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/scopeGroupTitle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="Service Call" />
+
+            <TextView
+                android:id="@+id/scopeGroupTotal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:textColor="@color/main_purple"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                tools:text="$2,695.00" />
+
+            <ImageView
+                android:id="@+id/scopeGroupChevron"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:contentDescription="@string/expand"
+                android:src="@drawable/ic_chevron_down"
+                android:tint="@color/light_text_rp" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/scopeUpdatedLabel"
+            android:id="@+id/scopeGroupCount"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/light_text_rp"
-            android:textSize="12sp"
-            tools:text="Updated Jan 12" />
-
-        <TextView
-            android:id="@+id/scopeTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/dark_text_rp"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            tools:text="Scope Item" />
-
-        <TextView
-            android:id="@+id/scopeDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="14sp"
-            tools:text="Remove affected drywall and prep area for remediation." />
+            android:textSize="13sp"
+            tools:text="4 line items" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/scopeLineItemsRecycler"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:nestedScrollingEnabled="false"
+            tools:listitem="@layout/item_room_scope_line_item" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

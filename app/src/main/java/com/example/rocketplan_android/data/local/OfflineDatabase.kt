@@ -57,7 +57,7 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         ImageProcessorAssemblyEntity::class,
         ImageProcessorPhotoEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -78,6 +78,19 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN tabName TEXT")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN category TEXT")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN codePart1 TEXT")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN codePart2 TEXT")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN unit TEXT")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN rate REAL")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN quantity REAL")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN lineTotal REAL")
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -85,7 +98,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
                 .fallbackToDestructiveMigration()
                 .build()
     }

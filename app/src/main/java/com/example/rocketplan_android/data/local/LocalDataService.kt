@@ -172,6 +172,9 @@ class LocalDataService private constructor(
     suspend fun getPhotosNeedingCache(limit: Int = 25): List<OfflinePhotoEntity> =
         withContext(ioDispatcher) { dao.getPhotosNeedingCache(limit = limit) }
 
+    suspend fun getCachedPhotos(): List<OfflinePhotoEntity> =
+        withContext(ioDispatcher) { dao.getCachedPhotos() }
+
     suspend fun refreshRoomPhotoSnapshot(roomId: Long) = withContext(ioDispatcher) {
         database.withTransaction {
             val photos = dao.getPhotosForRoomSnapshot(roomId)

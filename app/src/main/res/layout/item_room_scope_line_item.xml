@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingVertical="6dp">
+
+    <TextView
+        android:id="@+id/scopeLineTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/dark_text_rp"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        tools:text="WTRESRVD – Emergency service call - during business hours" />
+
+    <TextView
+        android:id="@+id/scopeLineDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/light_text_rp"
+        android:textSize="13sp"
+        tools:text="Work Scope 2884" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/scopeLineMeta"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="@color/light_text_rp"
+            android:textSize="13sp"
+            tools:text="1 EA • $245.00" />
+
+        <TextView
+            android:id="@+id/scopeLineTotal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:textColor="@color/main_purple"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="$245.00" />
+    </LinearLayout>
+</LinearLayout>

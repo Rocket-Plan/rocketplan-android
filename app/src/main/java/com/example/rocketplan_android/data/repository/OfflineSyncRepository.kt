@@ -1004,6 +1004,26 @@ class OfflineSyncRepository(
         return total
     }
 
+    private suspend fun syncDamagesForProject(projectId: Long): Int {
+        val start = System.currentTimeMillis()
+        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
+        if (roomIds.isEmpty()) {
+            Log.d("API", "ℹ️ [syncDamages] No server room IDs for project $projectId; skipping damage sync")
+            return 0
+        }
+        var total = 0
+        roomIds.forEach { roomId ->
+            coroutineContext.ensureActive()
+            total += syncRoomDamages(projectId, roomId)
+        }
+        val duration = System.currentTimeMillis() - start
+        Log.d(
+            "API",
+            "✅ [syncDamages] Synced $total damages across ${roomIds.size} rooms for project $projectId in ${duration}ms"
+        )
+        return total
+    }
+
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> = withContext(ioDispatcher) {
         val start = System.currentTimeMillis()
         runCatching { api.getWorkScopeCatalog(companyId).data }
@@ -1161,17 +1181,36 @@ class OfflineSyncRepository(
         val damagesCheckpointKey = projectDamagesKey(projectId)
         val damagesSince = syncCheckpointStore.updatedSinceParam(damagesCheckpointKey)
         // Damages
-        runCatching { api.getProjectDamageMaterials(serverProjectId, updatedSince = damagesSince) }
+        val projectDamagesFetched = runCatching { api.getProjectDamageMaterials(serverProjectId, updatedSince = damagesSince) }
             .onSuccess { response ->
                 val damages = response.data
-                localDataService.saveDamages(damages.mapNotNull { it.toEntity(defaultProjectId = projectId) })
-                itemCount += damages.size
-                Log.d("API", "⚠️ [syncProjectMetadata] Saved ${damages.size} damages")
+                Log.d("API", "🔍 [syncProjectMetadata] Raw damages from API: ${damages.size}, roomIds=${damages.take(5).map { it.roomId }}")
+                val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId) }
+                localDataService.saveDamages(entities)
+                itemCount += entities.size
+                Log.d("API", "⚠️ [syncProjectMetadata] Saved ${entities.size} damages (from ${damages.size} API results)")
                 damages.latestTimestamp { it.updatedAt }
                     ?.let { syncCheckpointStore.updateCheckpoint(damagesCheckpointKey, it) }
             }
-            .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch damages", it) }
+            .onFailure { error ->
+                Log.e("API", "❌ [syncProjectMetadata] Failed to fetch damages", error)
+            }
+            .isSuccess
         ensureActive()
+
+        // If project-level damages did not include room IDs, fall back to per-room fetch.
+        if (!projectDamagesFetched) {
+            Log.w("API", "⚠️ [syncProjectMetadata] Project damage fetch failed; falling back to per-room damage sync")
+        }
+        val damagesFromProject = localDataService.observeDamages(projectId).first().takeIf { it.isNotEmpty() }
+        val hasRoomScopedDamages = damagesFromProject?.any { it.roomId != null } == true
+        if (!hasRoomScopedDamages) {
+            if (projectDamagesFetched) {
+                Log.w("API", "⚠️ [syncProjectMetadata] Project damages missing roomIds; falling back to per-room damage sync (projectId=$projectId)")
+            }
+            val damageCount = syncDamagesForProject(projectId)
+            itemCount += damageCount
+        }
 
         val workScopeCount = syncWorkScopesForProject(projectId)
         itemCount += workScopeCount
@@ -1203,7 +1242,7 @@ class OfflineSyncRepository(
             .onFailure { Log.e("API", "❌ [syncRoomWorkScopes] Failed for roomId=$roomId (projectId=$projectId)", it) }
             .getOrNull() ?: return@withContext 0
 
-        val entities = response.data.mapNotNull { it.toEntity() }
+        val entities = response.data.mapNotNull { it.toEntity(defaultProjectId = projectId, defaultRoomId = roomId) }
         if (entities.isNotEmpty()) {
             localDataService.saveWorkScopes(entities)
         }
@@ -1211,6 +1250,32 @@ class OfflineSyncRepository(
         Log.d(
             "API",
             "🛠️ [syncRoomWorkScopes] Saved ${entities.size} scope items for roomId=$roomId (projectId=$projectId) in ${duration}ms"
+        )
+        entities.size
+    }
+
+    suspend fun syncRoomDamages(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
+        val startTime = System.currentTimeMillis()
+        val response = runCatching { api.getRoomDamageMaterials(roomId) }
+            .onFailure { error ->
+                Log.e("API", "❌ [syncRoomDamages] Failed for roomId=$roomId (projectId=$projectId)", error)
+            }
+            .getOrNull() ?: return@withContext 0
+
+        val damages = response.data
+        if (damages.isEmpty()) {
+            Log.d("API", "ℹ️ [syncRoomDamages] No damages returned for roomId=$roomId (projectId=$projectId)")
+            return@withContext 0
+        }
+
+        val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId, defaultRoomId = roomId) }
+        if (entities.isNotEmpty()) {
+            localDataService.saveDamages(entities)
+        }
+        val duration = System.currentTimeMillis() - startTime
+        Log.d(
+            "API",
+            "🛠️ [syncRoomDamages] Saved ${entities.size} damages for roomId=$roomId (projectId=$projectId) in ${duration}ms"
         )
         entities.size
     }
@@ -2876,15 +2941,16 @@ private fun NoteDto.toEntity(): OfflineNoteEntity? {
     )
 }
 
-private fun DamageMaterialDto.toEntity(defaultProjectId: Long? = projectId): OfflineDamageEntity? {
+private fun DamageMaterialDto.toEntity(defaultProjectId: Long? = projectId, defaultRoomId: Long? = null): OfflineDamageEntity? {
     val project = defaultProjectId ?: projectId ?: return null
+    val resolvedRoomId = roomId ?: defaultRoomId
     val timestamp = now()
     return OfflineDamageEntity(
         damageId = id,
         serverId = id,
         uuid = uuid ?: UUID.randomUUID().toString(),
         projectId = project,
-        roomId = roomId,
+        roomId = resolvedRoomId,
         title = title ?: "Damage $id",
         description = description,
         severity = severity,
@@ -2898,16 +2964,40 @@ private fun DamageMaterialDto.toEntity(defaultProjectId: Long? = projectId): Off
     )
 }
 
-private fun WorkScopeDto.toEntity(): OfflineWorkScopeEntity? {
+private fun WorkScopeDto.toEntity(defaultProjectId: Long? = null, defaultRoomId: Long? = null): OfflineWorkScopeEntity? {
+    val resolvedProjectId = defaultProjectId ?: projectId
+    val resolvedRoomId = roomId ?: defaultRoomId
     val timestamp = now()
+    val numericRate = rate
+        ?.replace(Regex("[^0-9.\\-]"), "")
+        ?.toDoubleOrNull()
+    val numericQuantity = quantity
+    val numericLineTotal = lineTotal
+        ?.replace(Regex("[^0-9.\\-]"), "")
+        ?.toDoubleOrNull() ?: numericRate?.let { rateValue ->
+        val qty = numericQuantity ?: 1.0
+        rateValue * qty
+    }
+    val resolvedName = name?.takeIf { it.isNotBlank() }
+        ?: description?.takeIf { it.isNotBlank() }
+        ?: "Work Scope $id"
+    val resolvedDescription = description?.takeIf { it.isNotBlank() } ?: name
     return OfflineWorkScopeEntity(
         workScopeId = id,
         serverId = id,
         uuid = uuid ?: UUID.randomUUID().toString(),
-        projectId = projectId,
-        roomId = roomId,
-        name = name ?: "Work Scope $id",
-        description = description,
+        projectId = resolvedProjectId,
+        roomId = resolvedRoomId,
+        name = resolvedName,
+        description = resolvedDescription,
+        tabName = tabName,
+        category = category,
+        codePart1 = codePart1,
+        codePart2 = codePart2,
+        unit = unit,
+        rate = numericRate,
+        quantity = numericQuantity,
+        lineTotal = numericLineTotal,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,

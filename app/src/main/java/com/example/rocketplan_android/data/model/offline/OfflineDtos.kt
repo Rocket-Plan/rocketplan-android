@@ -583,6 +583,18 @@ data class WorkScopeDto(
     val roomId: Long?,
     val name: String?,
     val description: String?,
+    @SerializedName("tab_name")
+    val tabName: String? = null,
+    val category: String? = null,
+    @SerializedName("code_part_1")
+    val codePart1: String? = null,
+    @SerializedName("code_part_2")
+    val codePart2: String? = null,
+    val quantity: Double? = null,
+    val unit: String? = null,
+    val rate: String? = null,
+    @SerializedName("line_total")
+    val lineTotal: String? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")

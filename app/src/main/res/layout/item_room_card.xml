@@ -27,17 +27,40 @@
             android:layout_height="match_parent"
             android:background="@drawable/room_card_gradient" />
 
-        <ImageView
-            android:id="@+id/roomTypeIcon"
+        <FrameLayout
+            android:id="@+id/roomIconContainer"
             android:layout_width="96dp"
             android:layout_height="96dp"
-            android:layout_gravity="center"
-            android:background="@drawable/bg_icon_circle_white"
-            android:adjustViewBounds="true"
-            android:contentDescription="@string/location_icon"
-            android:padding="16dp"
-            android:scaleType="centerInside"
-            android:src="@drawable/ic_door" />
+            android:layout_gravity="center">
+
+            <ImageView
+                android:id="@+id/roomTypeIcon"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_icon_circle_white"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/location_icon"
+                android:padding="16dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/ic_door" />
+
+            <TextView
+                android:id="@+id/roomScopeTotal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|center_horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:textColor="@color/main_purple"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:visibility="gone"
+                tools:text="$1.2k" />
+        </FrameLayout>
 
         <ProgressBar
             android:id="@+id/loadingSpinner"

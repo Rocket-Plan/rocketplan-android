@@ -14,6 +14,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,6 +36,7 @@ class ProjectDetailViewModel(
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
     private val syncQueueManager = rocketPlanApp.syncQueueManager
+    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
 
     private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
     val uiState: StateFlow<ProjectDetailUiState> = _uiState
@@ -59,12 +61,15 @@ class ProjectDetailViewModel(
             }.combine(
                 combine(
                     syncQueueManager.photoSyncingProjects,
-                    localDataService.observeDamages(projectId)
-                ) { photoSyncingProjects, damages -> photoSyncingProjects to damages }
+                    localDataService.observeDamages(projectId),
+                    localDataService.observeWorkScopes(projectId)
+                ) { photoSyncingProjects, damages, workScopes ->
+                    Triple(photoSyncingProjects, damages, workScopes)
+                }
             ) { data, extra -> data to extra }
             .mapLatest { (data, extra) ->
                 val (projects, rooms, photos, notes, albums) = data
-                val (photoSyncingProjects, damages) = extra
+                val (photoSyncingProjects, damages, workScopes) = extra
 
                 Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
                 val project = projects.firstOrNull { it.projectId == projectId }
@@ -78,6 +83,7 @@ class ProjectDetailViewModel(
                     val sections = rooms.toSections(
                         photos = photos,
                         damages = damages,
+                        workScopes = workScopes,
                         isProjectPhotoSyncing = isProjectPhotoSyncing
                     )
                     val roomCreationStatus = project.resolveRoomCreationStatus(localDataService)
@@ -126,15 +132,16 @@ class ProjectDetailViewModel(
         }
     }
 
-    suspend fun deleteProject(): Boolean {
-        return try {
-            localDataService.deleteProject(projectId)
-            true
-        } catch (t: Throwable) {
-            Log.e("ProjectDetailVM", "Failed to delete project $projectId", t)
-            false
-        }
-    }
+    suspend fun deleteProject(): Boolean =
+        runCatching {
+            offlineSyncRepository.deleteProject(projectId)
+        }.fold(
+            onSuccess = { true },
+            onFailure = { error ->
+                Log.e("ProjectDetailVM", "Failed to delete project $projectId", error)
+                false
+            }
+        )
 
     private fun OfflineProjectEntity.toHeader(noteCount: Int): ProjectDetailHeader {
         val titleCandidates = listOfNotNull(
@@ -160,6 +167,7 @@ class ProjectDetailViewModel(
     private fun List<OfflineRoomEntity>.toSections(
         photos: List<OfflinePhotoEntity>,
         damages: List<OfflineDamageEntity>,
+        workScopes: List<OfflineWorkScopeEntity>,
         isProjectPhotoSyncing: Boolean
     ): List<RoomLevelSection> {
         if (isEmpty()) {
@@ -169,6 +177,16 @@ class ProjectDetailViewModel(
         Log.d("ProjectDetailVM", "🏠 Loading ${this.size} rooms: ${this.map { "[${it.serverId}] ${it.title}" }}")
         val photosByRoom = photos.groupBy { it.roomId }
         val damagesByRoom = damages.groupBy { it.roomId }
+        val scopesByRoom = workScopes.groupBy { it.roomId }
+        val scopeTotalsByRoom = scopesByRoom.mapValues { (_, scopes) ->
+            scopes.sumOf { scope ->
+                val lineTotal = scope.lineTotal ?: 0.0
+                val quantity = scope.quantity ?: 0.0
+                val rate = scope.rate ?: 0.0
+                val computedTotal = if (lineTotal > 0.0) lineTotal else quantity * rate
+                if (!computedTotal.isNaN() && !computedTotal.isInfinite() && computedTotal > 0.0) computedTotal else 0.0
+            }
+        }
         return this
             .groupBy { room ->
                 room.level?.takeIf { it.isNotBlank() } ?: "Unassigned"
@@ -195,6 +213,9 @@ class ProjectDetailViewModel(
                             val rid = damage.roomId ?: return@count false
                             relatedRoomIds.contains(rid)
                         }
+                        val scopeTotal = relatedRoomIds.sumOf { id ->
+                            scopeTotalsByRoom[id] ?: 0.0
+                        }
                         val iconRes = RoomTypeCatalog.resolveIconRes(
                             context = getApplication(),
                             typeId = room.roomTypeId,
@@ -206,6 +227,7 @@ class ProjectDetailViewModel(
                             level = level,
                             photoCount = resolvedPhotoCount,
                             damageCount = damageCount,
+                            scopeTotal = scopeTotal,
                             thumbnailUrl = resolvedThumbnail,
                             isLoadingPhotos = isLoadingPhotos,
                             iconRes = iconRes
@@ -313,6 +335,7 @@ data class RoomCard(
     val level: String,
     val photoCount: Int,
     val damageCount: Int,
+    val scopeTotal: Double,
     val thumbnailUrl: String?,
     val isLoadingPhotos: Boolean,
     val iconRes: Int
