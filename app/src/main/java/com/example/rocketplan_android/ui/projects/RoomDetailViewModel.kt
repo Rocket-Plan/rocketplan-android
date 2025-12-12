@@ -137,6 +137,109 @@ class RoomDetailViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+    val roomDamageSections: StateFlow<List<RoomDamageSection>> =
+        combine(
+            localDataService.observeRooms(projectId),
+            localDataService.observeNotes(projectId),
+            localDataService.observeWorkScopes(projectId),
+            localDataService.observeDamages(projectId)
+        ) { rooms, notes, scopes, damages ->
+            val formatter = requireNotNull(damageDateFormatter.get())
+            rooms.map { room ->
+                val roomIds = buildSet {
+                    add(room.roomId)
+                    room.serverId?.let { add(it) }
+                }
+                val noteCount = notes.count { note ->
+                    val noteRoomId = note.roomId
+                    noteRoomId != null && noteRoomId in roomIds
+                }
+                val damageItems = damages
+                    .filter { damage -> damage.roomId != null && damage.roomId in roomIds }
+                    .sortedByDescending { it.updatedAt ?: it.createdAt }
+                    .map { damage ->
+                        val updatedAt = damage.updatedAt ?: damage.createdAt
+                        RoomDamageItem(
+                            id = damage.damageId,
+                            title = damage.title,
+                            description = damage.description,
+                            severity = damage.severity,
+                            updatedOn = updatedAt?.let { formatter.format(it) }
+                        )
+                    }
+
+                val scopeItems = scopes
+                    .filter { scope -> scope.roomId != null && scope.roomId in roomIds }
+                    .sortedByDescending { it.updatedAt ?: it.createdAt }
+                    .map { scope ->
+                        val updatedAt = scope.updatedAt ?: scope.createdAt
+                        val code = listOfNotNull(scope.codePart1?.trim(), scope.codePart2?.trim())
+                            .joinToString(separator = "")
+                            .takeIf { it.isNotBlank() }
+                        val lineTotal = scope.lineTotal ?: scope.rate?.let { rate ->
+                            val qty = scope.quantity ?: 1.0
+                            rate * qty
+                        }
+                        val groupTitle = scope.tabName?.takeIf { it.isNotBlank() }
+                            ?: scope.category?.takeIf { it.isNotBlank() }
+                            ?: scope.description?.takeIf { it.isNotBlank() }
+                            ?: scope.name.takeIf { it.isNotBlank() }
+                            ?: "Work Scope"
+                        val lineTitle = scope.description?.takeIf { it.isNotBlank() }
+                            ?: scope.name.takeIf { it.isNotBlank() }
+                            ?: groupTitle
+                        RoomScopeItem(
+                            id = scope.workScopeId,
+                            title = lineTitle,
+                            description = scope.name
+                                ?.takeIf { it.isNotBlank() && it != lineTitle },
+                            updatedOn = updatedAt?.let { formatter.format(it) },
+                            tabName = scope.tabName?.takeIf { it.isNotBlank() },
+                            category = scope.category?.takeIf { it.isNotBlank() },
+                            code = code,
+                            quantity = scope.quantity,
+                            unit = scope.unit,
+                            rate = scope.rate,
+                            lineTotal = lineTotal,
+                            updatedAtMillis = updatedAt?.time,
+                            groupTitle = groupTitle
+                        )
+                    }
+
+                val scopeGroups = scopeItems
+                    .groupBy { item -> item.groupTitle }
+                    .map { (title, groupedItems) ->
+                        val total = groupedItems.mapNotNull { item ->
+                            item.lineTotal ?: item.rate?.let { rate ->
+                                val qty = item.quantity ?: 1.0
+                                rate * qty
+                            }
+                        }.takeIf { it.isNotEmpty() }?.sum()
+                        val groupId = "${title.lowercase(Locale.US)}-${groupedItems.joinToString { it.id.toString() }.hashCode()}"
+                        RoomScopeGroup(
+                            id = groupId,
+                            title = title,
+                            total = total,
+                            itemCount = groupedItems.size,
+                            items = groupedItems.sortedByDescending { it.updatedAtMillis ?: 0L }
+                        )
+                    }
+                    .sortedBy { it.title.lowercase(Locale.US) }
+
+                RoomDamageSection(
+                    roomId = room.roomId,
+                    serverRoomId = room.serverId,
+                    title = room.title,
+                    noteSummary = noteSummaryForCount(noteCount),
+                    scopeGroups = scopeGroups,
+                    damageItems = damageItems
+                )
+            }.sortedBy { it.title.lowercase(Locale.US) }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
     val roomScopeGroups: StateFlow<List<RoomScopeGroup>> =
         combine(_resolvedRoom, localDataService.observeWorkScopes(projectId)) { room, scopes ->
             val resolvedRoom = room ?: return@combine emptyList()
@@ -636,16 +739,18 @@ class RoomDetailViewModel(
             .cachedIn(viewModelScope)
 
     private fun OfflineRoomEntity.toHeader(notes: List<OfflineNoteEntity>): RoomDetailHeader {
-        val noteCount = notes.size
-        val summary = when (noteCount) {
-            0 -> "No Notes"
-            1 -> "1 Note"
-            else -> "$noteCount Notes"
-        }
         return RoomDetailHeader(
             title = title,
-            noteSummary = summary
+            noteSummary = noteSummaryForCount(notes.size)
         )
+    }
+
+    private fun noteSummaryForCount(count: Int): String {
+        return when (count) {
+            0 -> "No Notes"
+            1 -> "1 Note"
+            else -> "$count Notes"
+        }
     }
 
     private fun OfflineRoomPhotoSnapshotEntity.toPhotoItem(formatter: SimpleDateFormat): RoomPhotoItem =
@@ -876,6 +981,15 @@ data class RoomScopeGroup(
     val total: Double?,
     val itemCount: Int,
     val items: List<RoomScopeItem>
+)
+
+data class RoomDamageSection(
+    val roomId: Long,
+    val serverRoomId: Long?,
+    val title: String,
+    val noteSummary: String,
+    val scopeGroups: List<RoomScopeGroup>,
+    val damageItems: List<RoomDamageItem>
 )
 
 data class ScopeTemplateOption(
