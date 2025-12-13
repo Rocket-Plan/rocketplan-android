@@ -166,6 +166,7 @@
     <string name="sketch_coming_soon">Sketch coming soon</string>
     <string name="room_damages_empty_state">No damages captured for this room yet.</string>
     <string name="add_scope_sheet">Add scope item</string>
+    <string name="add_scope_item">Add scope item</string>
     <string name="add_scope_sheet_subtitle">Add a scope of work item for this room.</string>
     <string name="add_scope_sheet_title_hint">Scope item title</string>
     <string name="add_scope_sheet_description_hint">Description (optional)</string>
@@ -175,6 +176,19 @@
     <string name="scope_picker_empty_message">No scope items available yet. Add a custom item instead.</string>
     <string name="scope_picker_add_error">Could not add scope items. Check your connection and try again.</string>
     <string name="scope_picker_search_hint">Search scope items</string>
+    <string name="scope_line_item_edit">Edit line item</string>
+    <string name="scope_line_item_delete">Delete line item</string>
+    <string name="scope_edit_title_hint">Line item title</string>
+    <string name="scope_edit_description_hint">Description (optional)</string>
+    <string name="scope_edit_quantity_hint">Quantity</string>
+    <string name="scope_edit_unit_hint">Unit (optional)</string>
+    <string name="scope_edit_rate_hint">Rate (optional)</string>
+    <string name="scope_edit_title_required">Title is required.</string>
+    <string name="scope_edit_invalid_quantity">Enter a quantity greater than zero.</string>
+    <string name="scope_edit_invalid_rate">Enter a valid rate or leave blank.</string>
+    <string name="scope_delete_confirmation">Delete \"%1$s\" from this room?</string>
+    <string name="scope_edit_saved">Line item updated</string>
+    <string name="scope_delete_success">Line item deleted</string>
     <plurals name="scope_group_line_items">
         <item quantity="one">%d line item</item>
         <item quantity="other">%d line items</item>

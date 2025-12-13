@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="14dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:background="?attr/colorSurface"
-    android:foreground="?attr/selectableItemBackground">
+    android:paddingVertical="10dp"
+    android:paddingHorizontal="12dp">
 
     <com.google.android.material.checkbox.MaterialCheckBox
-        android:id="@+id/scopeCheckBox"
+        android:id="@+id/fullScopeCheckBox"
         android:layout_width="24dp"
         android:layout_height="24dp"
-        android:layout_marginEnd="14dp"
+        android:layout_marginEnd="12dp"
         android:focusable="false"
         android:clickable="false"
         app:useMaterialThemeColors="true" />
@@ -25,24 +25,26 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/scopeTitle"
+            android:id="@+id/fullScopeTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
-            android:textColor="?android:attr/textColorPrimary"
+            android:textColor="@color/black"
+            android:textSize="15sp"
             android:textStyle="bold"
             android:maxLines="2"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            tools:text="WTRESRVD – Emergency service call - during business hours" />
 
         <TextView
-            android:id="@+id/scopeMeta"
+            android:id="@+id/fullScopeMeta"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textSize="14sp"
-            android:textColor="?android:attr/textColorSecondary"
+            android:layout_marginTop="2dp"
+            android:textColor="@color/light_text_rp"
+            android:textSize="13sp"
             android:maxLines="2"
-            android:ellipsize="end" />
+            android:ellipsize="end"
+            tools:text="EA • Service Call • $245.00" />
     </LinearLayout>
 
     <LinearLayout
@@ -53,34 +55,33 @@
         android:gravity="center_vertical">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/scopeQuantityMinus"
+            android:id="@+id/fullScopeMinus"
             style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:text="-"
-            android:textSize="20sp" />
+            android:textSize="18sp" />
 
         <TextView
-            android:id="@+id/scopeQuantityValue"
+            android:id="@+id/fullScopeQuantity"
             android:layout_width="48dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="6dp"
             android:gravity="center"
             android:text="1"
-            android:textSize="16sp"
-            android:textColor="?android:attr/textColorPrimary" />
+            android:textColor="@color/black"
+            android:textSize="15sp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/scopeQuantityPlus"
+            android:id="@+id/fullScopePlus"
             style="?attr/materialButtonOutlinedStyle"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:text="+"
-            android:textSize="20sp" />
+            android:textSize="18sp" />
     </LinearLayout>
-
 </LinearLayout>

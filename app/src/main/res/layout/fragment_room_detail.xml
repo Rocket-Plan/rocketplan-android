@@ -80,8 +80,9 @@
                     android:id="@+id/roomIcon"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:background="@drawable/bg_icon_circle_purple"
-                    android:padding="12dp"
+                    android:background="@drawable/bg_icon_circle_light"
+                    android:padding="8dp"
+                    android:scaleType="centerInside"
                     android:src="@drawable/ic_door" />
 
                 <LinearLayout
@@ -116,8 +117,7 @@
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/edit_room"
-                    android:src="@drawable/ic_edit"
-                    app:tint="@color/icon_colour" />
+                    android:src="@drawable/icon_pencil" />
             </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView
@@ -138,16 +138,16 @@
             android:orientation="horizontal"
             android:padding="16dp">
 
-            <ImageView
-                android:id="@+id/roomNoteIcon"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
-                android:layout_marginEnd="12dp"
-                android:background="@drawable/bg_icon_circle_light"
-                android:contentDescription="@string/add_note"
-                android:padding="8dp"
-                android:src="@drawable/ic_add"
-                android:tint="@color/main_purple" />
+                <ImageView
+                    android:id="@+id/roomNoteIcon"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="@drawable/bg_icon_circle_light"
+                    android:contentDescription="@string/add_note"
+                    android:padding="8dp"
+                    android:scaleType="centerInside"
+                    android:src="@drawable/icon_add_note" />
 
             <TextView
                 android:id="@+id/roomNoteLabel"
@@ -167,14 +167,14 @@
                 android:textSize="14sp"
                 tools:text="No Notes" />
 
-            <ImageView
-                android:id="@+id/roomNoteEditIcon"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_marginStart="8dp"
-                android:contentDescription="@string/add_note"
-                android:src="@drawable/ic_edit"
-                android:tint="@color/main_purple" />
+                <ImageView
+                    android:id="@+id/roomNoteEditIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="8dp"
+                    android:contentDescription="@string/add_note"
+                    android:src="@drawable/icon_pencil"
+                    android:tint="@color/light_text_rp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -204,7 +204,8 @@
                             android:layout_height="24dp"
                             android:layout_gravity="center"
                             android:contentDescription="@string/add_photo"
-                            android:src="@drawable/icon_photo"
+                            android:scaleType="centerInside"
+                            android:src="@drawable/icon_camera"
                             android:tint="@color/main_purple" />
                     </FrameLayout>
 
@@ -243,28 +244,29 @@
                 android:background="@drawable/scope_add_background"
                 android:clickable="true"
                 android:focusable="true"
-                android:padding="12dp">
+                android:padding="10dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:padding="12dp">
+                    android:padding="10dp">
 
                     <FrameLayout
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:background="@drawable/bg_icon_circle_light">
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_icon_circle_light">
 
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
-                            android:layout_gravity="center"
-                            android:contentDescription="@string/add_scope_of_work_items"
-                            android:src="@drawable/ic_add"
-                            android:tint="@color/main_purple" />
-                    </FrameLayout>
+                            android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:layout_gravity="center"
+                        android:contentDescription="@string/add_scope_of_work_items"
+                        android:scaleType="centerInside"
+                        android:src="@drawable/telescope"
+                        android:tint="@null" />
+                </FrameLayout>
 
                     <LinearLayout
                         android:layout_width="0dp"
@@ -323,6 +325,26 @@
                     android:layout_marginTop="12dp"
                     android:nestedScrollingEnabled="false"
                     tools:listitem="@layout/item_scope_picker" />
+
+                <ProgressBar
+                    android:id="@+id/scopePickerLoading"
+                    style="?android:attr/progressBarStyleSmall"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/scopePickerEmpty"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/scope_picker_empty_message"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
 
                 <LinearLayout
                     android:layout_width="match_parent"

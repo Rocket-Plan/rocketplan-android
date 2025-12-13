@@ -58,11 +58,14 @@ class RocketDryViewModel(
                     val moistureByRoom = data.moistureLogs.groupBy { it.roomId }
                     val locationLevels = buildLocationLevels(data.rooms, locationLookup, moistureByRoom)
                     val equipmentByRoom = equipment.groupBy { it.roomId }
+                    // Prefer external logs, but fallback to any available reading so the UI is never blank.
+                    val atmosphericLogsToShow = data.atmosphericLogs.let { logs ->
+                        val externalLogs = logs.filter { it.isExternal }
+                        if (externalLogs.isNotEmpty()) externalLogs else logs
+                    }
                     RocketDryUiState.Ready(
                         projectAddress = buildProjectAddress(project),
-                        atmosphericLogs = data.atmosphericLogs
-                            .filter { it.isExternal }
-                            .map { it.toUiItem() },
+                        atmosphericLogs = atmosphericLogsToShow.map { it.toUiItem() },
                         locationLevels = locationLevels,
                         equipmentTotals = buildEquipmentTotals(equipment),
                         equipmentByType = buildEquipmentTypeSummaries(equipment),

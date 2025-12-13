@@ -5,7 +5,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.core.view.doOnLayout
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 
@@ -36,12 +37,15 @@ class LocationLevelAdapter : RecyclerView.Adapter<LocationLevelAdapter.ViewHolde
         private val locationsInLevelRecyclerView: RecyclerView =
             itemView.findViewById(R.id.locationsInLevelRecyclerView)
         private val locationAdapter = LocationCardAdapter()
+        private val gridLayoutManager = GridLayoutManager(itemView.context, 2)
+
+        init {
+            locationsInLevelRecyclerView.layoutManager = gridLayoutManager
+            locationsInLevelRecyclerView.adapter = locationAdapter
+        }
 
         fun bind(level: LocationLevel) {
             levelName.text = level.levelName
-
-            locationsInLevelRecyclerView.layoutManager = LinearLayoutManager(itemView.context)
-            locationsInLevelRecyclerView.adapter = locationAdapter
             locationAdapter.submitLocations(level.locations)
         }
     }
@@ -82,6 +86,14 @@ class LocationCardAdapter : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>
                 itemView.context.getString(R.string.material_count, location.materialCount)
             } else {
                 itemView.context.getString(R.string.materials_count, location.materialCount)
+            }
+            itemView.doOnLayout { view ->
+                val params = view.layoutParams ?: return@doOnLayout
+                val targetSize = view.width
+                if (targetSize > 0 && params.height != targetSize) {
+                    params.height = targetSize
+                    view.layoutParams = params
+                }
             }
         }
     }

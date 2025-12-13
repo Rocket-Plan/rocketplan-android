@@ -21,6 +21,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
 import java.util.Date
 import java.util.Locale
@@ -231,6 +232,11 @@ class RoomDetailViewModel(
                     serverRoomId = room.serverId,
                     title = room.title,
                     noteSummary = noteSummaryForCount(noteCount),
+                    iconRes = RoomTypeCatalog.resolveIconRes(
+                        application,
+                        typeId = room.roomTypeId,
+                        iconName = room.roomType ?: room.title
+                    ),
                     scopeGroups = scopeGroups,
                     damageItems = damageItems
                 )
@@ -659,6 +665,75 @@ class RoomDetailViewModel(
         }
     }
 
+    fun updateScopeItem(
+        itemId: Long,
+        title: String,
+        description: String?,
+        quantity: Double?,
+        unit: String?,
+        rate: Double?
+    ) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val scope = localDataService.getWorkScopeById(itemId)
+            if (scope == null) {
+                Log.w(TAG, "⚠️ Cannot update scope; item $itemId not found")
+                return@launch
+            }
+
+            val normalizedTitle = title.trim()
+            if (normalizedTitle.isBlank()) {
+                Log.w(TAG, "⚠️ Cannot update scope; blank title provided for item $itemId")
+                return@launch
+            }
+
+            val now = Date()
+            val normalizedDescription = description?.trim().takeUnless { it.isNullOrBlank() }
+            val normalizedUnit = unit?.trim().takeUnless { it.isNullOrBlank() }
+            val normalizedQuantity = quantity?.takeIf { it > 0 }
+            val normalizedRate = rate?.takeIf { it >= 0 }
+            val resolvedQuantity = normalizedQuantity ?: scope.quantity
+            val resolvedRate = normalizedRate ?: scope.rate
+            val computedLineTotal = resolvedRate?.let { rateValue ->
+                val qty = resolvedQuantity ?: 1.0
+                rateValue * qty
+            } ?: scope.lineTotal
+
+            val updated = scope.copy(
+                name = normalizedTitle,
+                description = normalizedDescription,
+                quantity = normalizedQuantity ?: scope.quantity,
+                unit = normalizedUnit,
+                rate = resolvedRate,
+                lineTotal = computedLineTotal,
+                updatedAt = now,
+                isDirty = true,
+                syncStatus = SyncStatus.PENDING
+            )
+            localDataService.saveWorkScopes(listOf(updated))
+            Log.d(TAG, "✏️ Updated scope item id=$itemId for roomId=${scope.roomId}")
+        }
+    }
+
+    fun deleteScopeItem(itemId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val scope = localDataService.getWorkScopeById(itemId)
+            if (scope == null) {
+                Log.w(TAG, "⚠️ Cannot delete scope; item $itemId not found")
+                return@launch
+            }
+
+            val now = Date()
+            val deleted = scope.copy(
+                isDeleted = true,
+                isDirty = true,
+                syncStatus = SyncStatus.PENDING,
+                updatedAt = now
+            )
+            localDataService.saveWorkScopes(listOf(deleted))
+            Log.d(TAG, "🗑️ Marked scope item id=$itemId deleted for roomId=${scope.roomId}")
+        }
+    }
+
     private fun currentRoomIds(room: OfflineRoomEntity): Set<Long> = buildSet {
         add(room.roomId)
         room.serverId?.let { add(it) }
@@ -741,7 +816,12 @@ class RoomDetailViewModel(
     private fun OfflineRoomEntity.toHeader(notes: List<OfflineNoteEntity>): RoomDetailHeader {
         return RoomDetailHeader(
             title = title,
-            noteSummary = noteSummaryForCount(notes.size)
+            noteSummary = noteSummaryForCount(notes.size),
+            iconRes = RoomTypeCatalog.resolveIconRes(
+                getApplication(),
+                typeId = roomTypeId,
+                iconName = roomType ?: title
+            )
         )
     }
 
@@ -933,7 +1013,8 @@ sealed class RoomDetailUiState {
 
 data class RoomDetailHeader(
     val title: String,
-    val noteSummary: String
+    val noteSummary: String,
+    val iconRes: Int
 )
 
 data class RoomPhotoItem(
@@ -988,6 +1069,7 @@ data class RoomDamageSection(
     val serverRoomId: Long?,
     val title: String,
     val noteSummary: String,
+    val iconRes: Int,
     val scopeGroups: List<RoomScopeGroup>,
     val damageItems: List<RoomDamageItem>
 )

@@ -1,18 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="18dp">
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/scopeSheetTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/add_scope_item"
+            android:textColor="@color/black"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/scopeSheetTotal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="$0.00" />
+    </LinearLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
         android:hint="@string/scope_picker_search_hint">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/dialogScopeSearchInput"
+            android:id="@+id/fullScopeSearchInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:imeOptions="actionDone"
@@ -20,9 +49,24 @@
             android:textSize="16sp" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:overScrollMode="never"
+        android:scrollbars="none">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/fullScopeChipGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            app:singleSelection="true" />
+    </HorizontalScrollView>
+
     <ProgressBar
-        android:id="@+id/dialogScopeLoading"
-        style="?android:attr/progressBarStyleSmall"
+        android:id="@+id/fullScopeLoading"
+        style="?android:attr/progressBarStyleLarge"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
@@ -30,7 +74,7 @@
         android:visibility="gone" />
 
     <TextView
-        android:id="@+id/dialogScopeEmpty"
+        android:id="@+id/fullScopeEmpty"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal"
@@ -41,12 +85,13 @@
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/dialogScopeRecycler"
+        android:id="@+id/fullScopeRecycler"
         android:layout_width="match_parent"
-        android:layout_height="320dp"
+        android:layout_height="0dp"
         android:layout_marginTop="12dp"
-        android:nestedScrollingEnabled="false"
-        tools:listitem="@layout/item_scope_picker" />
+        android:layout_weight="1"
+        android:nestedScrollingEnabled="true"
+        tools:listitem="@layout/item_scope_picker_full_row" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -56,7 +101,7 @@
         android:orientation="horizontal">
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/dialogScopeCancel"
+            android:id="@+id/fullScopeCancel"
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -65,7 +110,7 @@
             android:textSize="15sp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/dialogScopeCustom"
+            android:id="@+id/fullScopeCustom"
             style="@style/Widget.MaterialComponents.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -75,7 +120,7 @@
             android:textSize="15sp" />
 
         <com.google.android.material.button.MaterialButton
-            android:id="@+id/dialogScopeAdd"
+            android:id="@+id/fullScopeAdd"
             style="@style/Widget.MaterialComponents.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

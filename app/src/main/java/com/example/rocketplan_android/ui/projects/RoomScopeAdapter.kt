@@ -14,8 +14,9 @@ import com.example.rocketplan_android.R
 import java.text.NumberFormat
 import java.util.Locale
 
-class RoomScopeAdapter :
-    ListAdapter<RoomScopeGroup, RoomScopeAdapter.ScopeGroupViewHolder>(diffCallback) {
+class RoomScopeAdapter(
+    private val onLineItemClick: (RoomScopeItem) -> Unit
+) : ListAdapter<RoomScopeGroup, RoomScopeAdapter.ScopeGroupViewHolder>(diffCallback) {
 
     private val expandedIds = mutableSetOf<String>()
     private val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
@@ -44,7 +45,7 @@ class RoomScopeAdapter :
         private val count: TextView = itemView.findViewById(R.id.scopeGroupCount)
         private val chevron: ImageView = itemView.findViewById(R.id.scopeGroupChevron)
         private val itemsRecycler: RecyclerView = itemView.findViewById(R.id.scopeLineItemsRecycler)
-        private val lineItemAdapter = RoomScopeLineItemAdapter(currencyFormatter)
+        private val lineItemAdapter = RoomScopeLineItemAdapter(currencyFormatter, onLineItemClick)
 
         init {
             itemsRecycler.layoutManager = LinearLayoutManager(itemView.context)
@@ -76,7 +77,7 @@ class RoomScopeAdapter :
                 group.itemCount
             )
             itemsRecycler.isVisible = expanded
-            chevron.rotation = if (expanded) 180f else 0f
+            chevron.rotation = if (expanded) 90f else 0f
             lineItemAdapter.submitList(group.items)
         }
     }
@@ -95,13 +96,14 @@ class RoomScopeAdapter :
 }
 
 private class RoomScopeLineItemAdapter(
-    private val currencyFormatter: NumberFormat
+    private val currencyFormatter: NumberFormat,
+    private val onClick: (RoomScopeItem) -> Unit
 ) : ListAdapter<RoomScopeItem, RoomScopeLineItemAdapter.LineItemViewHolder>(lineDiff) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): LineItemViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_room_scope_line_item, parent, false)
-        return LineItemViewHolder(view, currencyFormatter)
+        return LineItemViewHolder(view, currencyFormatter, onClick)
     }
 
     override fun onBindViewHolder(holder: LineItemViewHolder, position: Int) {
@@ -110,7 +112,8 @@ private class RoomScopeLineItemAdapter(
 
     class LineItemViewHolder(
         itemView: View,
-        private val currencyFormatter: NumberFormat
+        private val currencyFormatter: NumberFormat,
+        private val onClick: (RoomScopeItem) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
         private val title: TextView = itemView.findViewById(R.id.scopeLineTitle)
         private val description: TextView = itemView.findViewById(R.id.scopeLineDescription)
@@ -141,6 +144,8 @@ private class RoomScopeLineItemAdapter(
             val totalText = lineTotal?.let { formatCurrency(it) }.orEmpty()
             total.text = totalText
             total.isVisible = totalText.isNotEmpty()
+
+            itemView.setOnClickListener { onClick(item) }
         }
 
         private fun formatQuantity(value: Double): String {

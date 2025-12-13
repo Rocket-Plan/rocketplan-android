@@ -3,7 +3,7 @@ package com.example.rocketplan_android.ui.projects
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
@@ -17,13 +17,13 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 class RoomDamageSectionAdapter(
     private val onAddNote: (RoomDamageSection) -> Unit,
     private val onAddScope: (RoomDamageSection) -> Unit,
-    private val onEditRoom: (RoomDamageSection) -> Unit
+    private val onScopeLineItemClick: (RoomScopeItem) -> Unit
 ) : ListAdapter<RoomDamageSection, RoomDamageSectionAdapter.SectionViewHolder>(diffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SectionViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_room_damage_section, parent, false)
-        return SectionViewHolder(view, onAddNote, onAddScope, onEditRoom)
+        return SectionViewHolder(view, onAddNote, onAddScope, onScopeLineItemClick)
     }
 
     override fun onBindViewHolder(holder: SectionViewHolder, position: Int) {
@@ -34,7 +34,7 @@ class RoomDamageSectionAdapter(
         itemView: View,
         private val onAddNote: (RoomDamageSection) -> Unit,
         private val onAddScope: (RoomDamageSection) -> Unit,
-        private val onEditRoom: (RoomDamageSection) -> Unit
+        private val onScopeLineItemClick: (RoomScopeItem) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val title: TextView = itemView.findViewById(R.id.sectionRoomTitle)
@@ -43,10 +43,10 @@ class RoomDamageSectionAdapter(
         private val addScopeCard: View = itemView.findViewById(R.id.sectionAddScopeCard)
         private val scopeRecycler: RecyclerView = itemView.findViewById(R.id.sectionScopeRecycler)
         private val emptyScopes: TextView = itemView.findViewById(R.id.sectionScopeEmptyText)
-        private val editButton: ImageButton = itemView.findViewById(R.id.sectionEditButton)
+        private val roomIcon: ImageView = itemView.findViewById(R.id.sectionRoomIcon)
         private val filterAll: MaterialButton = itemView.findViewById(R.id.sectionFilterAll)
         private val filterGroup: MaterialButtonToggleGroup = itemView.findViewById(R.id.sectionFilterGroup)
-        private val scopeAdapter = RoomScopeAdapter()
+        private val scopeAdapter = RoomScopeAdapter { item -> onScopeLineItemClick(item) }
 
         init {
             scopeRecycler.layoutManager = LinearLayoutManager(itemView.context)
@@ -57,16 +57,17 @@ class RoomDamageSectionAdapter(
         fun bind(section: RoomDamageSection) {
             title.text = section.title
             noteSummary.text = section.noteSummary
+            roomIcon.setImageResource(section.iconRes)
 
             noteCard.setOnClickListener { onAddNote(section) }
             addScopeCard.setOnClickListener { onAddScope(section) }
-            editButton.setOnClickListener { onEditRoom(section) }
             filterGroup.check(filterAll.id)
 
             scopeAdapter.submitList(section.scopeGroups)
             val hasScopes = section.scopeGroups.isNotEmpty()
             scopeRecycler.isVisible = hasScopes
-            emptyScopes.isVisible = !hasScopes
+            // Hide the placeholder text when there are no scopes/damages to match the iOS design
+            emptyScopes.isVisible = false
         }
     }
 

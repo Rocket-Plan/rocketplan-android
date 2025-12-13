@@ -111,6 +111,17 @@
                     android:textSize="16sp" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
+            <TextView
+                android:id="@+id/damageCountLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/black"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:text="3 Damages" />
+
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/noteCard"
                 android:layout_width="match_parent"

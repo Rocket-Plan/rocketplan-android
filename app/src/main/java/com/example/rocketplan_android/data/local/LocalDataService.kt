@@ -250,6 +250,10 @@ class LocalDataService private constructor(
     fun observeWorkScopes(projectId: Long): Flow<List<OfflineWorkScopeEntity>> =
         dao.observeWorkScopesForProject(projectId)
 
+    suspend fun getWorkScopeById(id: Long): OfflineWorkScopeEntity? = withContext(ioDispatcher) {
+        dao.getWorkScopeById(id)
+    }
+
     fun observeMaterials(): Flow<List<OfflineMaterialEntity>> = dao.observeMaterials()
     // endregion
 

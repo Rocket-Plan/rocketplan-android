@@ -14,7 +14,7 @@
         android:id="@+id/wizardTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="12dp"
+        android:layout_marginBottom="8dp"
         android:gravity="start"
         android:text="@string/rocketdry_add_external_log_title"
         android:textColor="@color/dark_text_rp"
@@ -24,13 +24,59 @@
     <View
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="12dp"
         android:background="@color/light_border" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/previousStepButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/rocketdry_back"
+        android:textAllCaps="false"
+        android:textColor="@color/main_purple"
+        app:icon="@drawable/chevron_left"
+        app:iconGravity="textStart"
+        app:iconPadding="6dp"
+        app:iconTint="@color/main_purple" />
+
+        <TextView
+            android:id="@+id/stepPosition"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/light_text_rp"
+            android:textSize="14sp"
+            tools:text="Step 1 of 4" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/nextStepButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/rocketdry_next"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        app:backgroundTint="@color/main_purple"
+        app:icon="@drawable/icon_chevron_right"
+        app:iconGravity="textEnd"
+        app:iconPadding="6dp"
+        app:iconTint="@color/white" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/stepLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
         android:gravity="center_horizontal"
         android:textColor="@color/icon_colour"
         android:textSize="18sp"
@@ -41,84 +87,50 @@
         android:id="@+id/stepPreview"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
         android:textColor="@color/main_purple"
-        android:textSize="32sp"
+        android:textSize="28sp"
         android:textStyle="bold"
         tools:text="- %" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/stepInputLayout"
-        android:layout_width="match_parent"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.Dense"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
         android:layout_marginTop="12dp"
-        android:hint="@string/rocketdry_relative_humidity_label">
+        android:hint="@string/rocketdry_relative_humidity_label"
+        android:maxWidth="320dp"
+        android:minWidth="220dp"
+        app:boxBackgroundMode="outline"
+        app:boxCornerRadiusBottomEnd="8dp"
+        app:boxCornerRadiusBottomStart="8dp"
+        app:boxCornerRadiusTopEnd="8dp"
+        app:boxCornerRadiusTopStart="8dp">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/stepInput"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="44dp"
+            android:gravity="center"
+            android:imeOptions="actionNext"
             android:inputType="numberDecimal"
             android:maxLines="1"
-            android:imeOptions="actionNext" />
+            android:textSize="16sp" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
-    <TextView
-        android:id="@+id/stepPosition"
-        android:layout_width="match_parent"
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/cancelWizardButton"
+        style="@style/Widget.MaterialComponents.Button.TextButton"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center_horizontal"
-        android:textColor="@color/light_text_rp"
-        android:textSize="14sp"
-        tools:text="Step 1 of 4" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/previousStepButton"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/rocketdry_back"
-            android:textAllCaps="false"
-            android:textColor="@color/main_purple" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="1" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/cancelWizardButton"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/cancel"
-            android:textAllCaps="false"
-            android:textColor="@color/main_purple"
-            app:strokeColor="@color/main_purple"
-            app:strokeWidth="1dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nextStepButton"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:text="@string/rocketdry_next"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
-            app:backgroundTint="@color/main_purple" />
-
-    </LinearLayout>
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:text="@string/cancel"
+        android:textAllCaps="false"
+        android:textColor="@color/light_text_rp" />
 
 </LinearLayout>

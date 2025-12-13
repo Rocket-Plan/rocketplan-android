@@ -3,49 +3,62 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="170dp"
+    android:layout_marginHorizontal="8dp"
     android:layout_marginBottom="12dp"
     app:cardBackgroundColor="@color/white"
-    app:cardCornerRadius="12dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
     app:strokeColor="@color/light_border"
     app:strokeWidth="1dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:padding="24dp">
+        android:layout_height="match_parent"
+        android:padding="16dp">
 
         <TextView
             android:id="@+id/locationName"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
-            android:textColor="@color/black"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="@color/dark_text_rp"
             android:textSize="18sp"
             android:textStyle="bold"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             tools:text="Basement" />
 
         <ImageView
             android:id="@+id/locationIcon"
-            android:layout_width="52dp"
-            android:layout_height="52dp"
-            android:layout_marginBottom="12dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
             android:background="@drawable/bg_icon_circle_purple"
             android:contentDescription="@string/location_icon"
-            android:padding="12dp"
-            android:src="@drawable/ic_material" />
+            android:padding="16dp"
+            android:src="@drawable/ic_material"
+            app:layout_constraintBottom_toTopOf="@id/materialCount"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/locationName"
+            app:layout_constraintVertical_bias="0.45" />
 
         <TextView
             android:id="@+id/materialCount"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:textColor="@color/light_text_rp"
             android:textSize="14sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/locationIcon"
             tools:text="1 Material" />
 
-    </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>

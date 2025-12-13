@@ -41,6 +41,7 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var projectTitle: TextView
     private lateinit var projectCode: TextView
     private lateinit var noteSummary: TextView
+    private lateinit var damageCountLabel: TextView
     private lateinit var noteCard: View
     private lateinit var addRoomCard: View
     private lateinit var addExteriorCard: View
@@ -103,6 +104,7 @@ class ProjectDetailFragment : Fragment() {
         projectTitle = root.findViewById(R.id.projectTitle)
         projectCode = root.findViewById(R.id.projectCode)
         noteSummary = root.findViewById(R.id.noteSummary)
+        damageCountLabel = root.findViewById(R.id.damageCountLabel)
         noteCard = root.findViewById(R.id.noteCard)
         addRoomCard = root.findViewById(R.id.addRoomCard)
         addExteriorCard = root.findViewById(R.id.addExteriorCard)
@@ -245,6 +247,9 @@ class ProjectDetailFragment : Fragment() {
         projectCode.isVisible = state.header.projectCode.isNotBlank()
         projectCode.text = state.header.projectCode
         noteSummary.text = state.header.noteSummary
+        val damageCount = state.header.damageCountTotal
+        damageCountLabel.text = resources.getQuantityString(R.plurals.damage_count, damageCount, damageCount)
+        damageCountLabel.isVisible = viewModel.selectedTab.value == ProjectDetailTab.DAMAGES
 
         // Albums
         Log.d("ProjectDetailFrag", "📚 Submitting ${state.albums.size} albums to albumsAdapter")
@@ -274,12 +279,14 @@ class ProjectDetailFragment : Fragment() {
                 tabPlaceholder.isVisible = false
                 albumsHeader.isVisible = albumsAdapter.currentList.isNotEmpty()
                 albumsRecyclerView.isVisible = albumsAdapter.currentList.isNotEmpty()
+                damageCountLabel.isVisible = false
                 updateRoomsSectionVisibility(ProjectDetailTab.PHOTOS)
             }
             ProjectDetailTab.DAMAGES -> {
                 roomsAdapter.statMode = RoomStatMode.DAMAGES
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
+                damageCountLabel.isVisible = true
                 updateRoomsSectionVisibility(ProjectDetailTab.DAMAGES)
                 tabPlaceholder.isVisible = false
             }
@@ -287,6 +294,7 @@ class ProjectDetailFragment : Fragment() {
                 roomsAdapter.statMode = RoomStatMode.PHOTOS
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false
+                damageCountLabel.isVisible = false
                 updateRoomsSectionVisibility(ProjectDetailTab.SKETCH)
                 tabPlaceholder.isVisible = true
                 tabPlaceholder.text = getString(R.string.sketch_coming_soon)

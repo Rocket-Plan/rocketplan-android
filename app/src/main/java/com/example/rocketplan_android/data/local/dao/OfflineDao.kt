@@ -549,6 +549,9 @@ interface OfflineDao {
     @Upsert
     suspend fun upsertWorkScopes(scopes: List<OfflineWorkScopeEntity>)
 
+    @Query("SELECT * FROM offline_work_scopes WHERE workScopeId = :id LIMIT 1")
+    suspend fun getWorkScopeById(id: Long): OfflineWorkScopeEntity?
+
     @Query("SELECT * FROM offline_work_scopes WHERE projectId = :projectId AND isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeWorkScopesForProject(projectId: Long): Flow<List<OfflineWorkScopeEntity>>
 

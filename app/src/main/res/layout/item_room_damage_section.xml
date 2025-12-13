@@ -17,8 +17,9 @@
             android:id="@+id/sectionRoomIcon"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:background="@drawable/bg_icon_circle_purple"
-            android:padding="12dp"
+            android:background="@drawable/bg_icon_circle_light"
+            android:padding="8dp"
+            android:scaleType="centerInside"
             android:src="@drawable/ic_door" />
 
         <LinearLayout
@@ -38,14 +39,6 @@
                 tools:text="Basement Damages" />
         </LinearLayout>
 
-        <ImageButton
-            android:id="@+id/sectionEditButton"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="@string/edit_room"
-            android:src="@drawable/ic_edit"
-            app:tint="@color/icon_colour" />
     </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView
@@ -71,8 +64,7 @@
                 android:layout_height="20dp"
                 android:layout_marginEnd="12dp"
                 android:contentDescription="@string/add_note"
-                android:src="@drawable/ic_add"
-                android:tint="@color/main_purple" />
+                android:src="@drawable/icon_add_note" />
 
             <TextView
                 android:layout_width="0dp"
@@ -96,8 +88,8 @@
                 android:layout_height="18dp"
                 android:layout_marginStart="8dp"
                 android:contentDescription="@string/add_note"
-                android:src="@drawable/ic_edit"
-                android:tint="@color/main_purple" />
+                android:src="@drawable/icon_pencil"
+                android:tint="@color/light_text_rp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
@@ -109,27 +101,28 @@
         android:background="@drawable/scope_add_background"
         android:clickable="true"
         android:focusable="true"
-        android:padding="12dp">
+        android:padding="10dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="12dp">
+            android:padding="10dp">
 
             <FrameLayout
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="@drawable/bg_icon_circle_light">
 
                 <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
                     android:layout_gravity="center"
                     android:contentDescription="@string/add_scope_of_work_items"
-                    android:src="@drawable/ic_add"
-                    android:tint="@color/main_purple" />
+                    android:scaleType="centerInside"
+                    android:src="@drawable/telescope"
+                    android:tint="@null" />
             </FrameLayout>
 
             <TextView

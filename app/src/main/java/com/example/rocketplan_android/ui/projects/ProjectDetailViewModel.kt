@@ -78,7 +78,6 @@ class ProjectDetailViewModel(
                     ProjectDetailUiState.Loading
                 } else {
                     Log.d("ProjectDetailVM", "✅ Project found: ${project.title}")
-                    val header = project.toHeader(notes.size)
                     val isProjectPhotoSyncing = photoSyncingProjects.contains(projectId)
                     val sections = rooms.toSections(
                         photos = photos,
@@ -86,6 +85,8 @@ class ProjectDetailViewModel(
                         workScopes = workScopes,
                         isProjectPhotoSyncing = isProjectPhotoSyncing
                     )
+                    val damageTotal = sections.sumOf { section -> section.rooms.sumOf { it.damageCount } }
+                    val header = project.toHeader(notes.size, damageTotal)
                     val roomCreationStatus = project.resolveRoomCreationStatus(localDataService)
                     ProjectDetailUiState.Ready(
                         header = header,
@@ -143,7 +144,7 @@ class ProjectDetailViewModel(
             }
         )
 
-    private fun OfflineProjectEntity.toHeader(noteCount: Int): ProjectDetailHeader {
+    private fun OfflineProjectEntity.toHeader(noteCount: Int, damageCountTotal: Int): ProjectDetailHeader {
         val titleCandidates = listOfNotNull(
             addressLine1?.takeIf { it.isNotBlank() },
             title.takeIf { it.isNotBlank() },
@@ -160,7 +161,8 @@ class ProjectDetailViewModel(
             projectTitle = titleText,
             projectCode = codeText,
             noteSummary = noteSummary,
-            noteCount = noteCount
+            noteCount = noteCount,
+            damageCountTotal = damageCountTotal
         )
     }
 
@@ -313,7 +315,8 @@ data class ProjectDetailHeader(
     val projectTitle: String,
     val projectCode: String,
     val noteSummary: String,
-    val noteCount: Int
+    val noteCount: Int,
+    val damageCountTotal: Int
 )
 
 data class RoomLevelSection(
