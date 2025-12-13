@@ -44,6 +44,7 @@ class ProjectLossInfoFragment : Fragment() {
         viewPager = view.findViewById(R.id.lossInfoViewPager)
 
         viewPager.adapter = ProjectLossInfoPagerAdapter(this, args.projectId)
+        viewPager.offscreenPageLimit = 2 // Keep all three tabs alive for smoother switching
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
                 0 -> getString(R.string.loss_info_tab_property)

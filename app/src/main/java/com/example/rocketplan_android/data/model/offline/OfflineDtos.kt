@@ -180,6 +180,33 @@ data class EquipmentRequest(
     val updatedAt: String? = null
 )
 
+data class DamageMaterialRequest(
+    val name: String,
+    @SerializedName("damage_type_id")
+    val damageTypeId: Long,
+    val description: String? = null,
+    @SerializedName("drying_goal")
+    val dryingGoal: Double? = null,
+    val quantity: Double? = null,
+    @SerializedName("unit_of_measurement")
+    val unitOfMeasurement: Long? = null,
+    val action: Long? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
+)
+
+data class MoistureLogRequest(
+    val reading: Double? = null,
+    val removed: Boolean? = null,
+    val location: String? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
+)
+
 data class NoteableDto(
     val id: Long,
     val uuid: String?,
@@ -517,17 +544,23 @@ data class MoistureLogDto(
     val roomId: Long,
     @SerializedName("material_id")
     val materialId: Long?,
+    @SerializedName("damage_material")
+    val damageMaterial: DamageMaterialDto? = null,
     val date: String?,
     @SerializedName("moisture_content")
-    val moistureContent: Double?,
-    val location: String?,
-    val depth: String?,
+    val moistureContent: Double? = null,
+    @SerializedName("reading")
+    val reading: Double? = null,
+    @SerializedName("removed")
+    val removed: Boolean? = null,
+    val location: String? = null,
+    val depth: String? = null,
     @SerializedName("photo_url")
-    val photoUrl: String?,
+    val photoUrl: String? = null,
     @SerializedName("photo_local_path")
-    val photoLocalPath: String?,
+    val photoLocalPath: String? = null,
     @SerializedName("photo_upload_status")
-    val photoUploadStatus: String?,
+    val photoUploadStatus: String? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
@@ -565,6 +598,8 @@ data class DamageMaterialDto(
     val projectId: Long?,
     @SerializedName("room_id")
     val roomId: Long?,
+    @SerializedName("damage_type_id")
+    val damageTypeId: Long? = null,
     val title: String?,
     val description: String?,
     val severity: String?,

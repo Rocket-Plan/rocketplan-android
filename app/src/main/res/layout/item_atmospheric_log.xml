@@ -37,10 +37,11 @@
 
             <ImageButton
                 android:id="@+id/addLogButton"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="@dimen/rocketdry_add_button_size"
+                android:layout_height="@dimen/rocketdry_add_button_size"
                 android:background="@drawable/bg_add_button"
                 android:contentDescription="@string/add_log"
+                android:padding="@dimen/rocketdry_add_button_padding"
                 android:src="@drawable/ic_add"
                 app:tint="@color/main_purple" />
 

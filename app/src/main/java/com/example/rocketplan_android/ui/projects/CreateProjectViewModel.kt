@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.app.Application
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONArray
 
 /**
  * Shared view model for the create-project flow. Handles validation, submission and navigation
@@ -26,6 +28,10 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
     private val authRepository = rocketPlanApp.authRepository
     private val syncQueueManager = rocketPlanApp.syncQueueManager
     private val localDataService = rocketPlanApp.localDataService
+    private val recentAddressPrefs = application.getSharedPreferences(
+        PREF_RECENT_ADDRESS,
+        Context.MODE_PRIVATE
+    )
 
     private val _uiState = MutableStateFlow(CreateProjectUiState())
     val uiState: StateFlow<CreateProjectUiState> = _uiState
@@ -40,13 +46,21 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
         loadRecentAddresses()
     }
 
-    fun createProjectFromQuickAddress(address: String?) {
+    fun createProjectFromQuickAddress(
+        address: String?,
+        latitude: Double? = null,
+        longitude: Double? = null
+    ) {
         val cleanedAddress = address?.trim().orEmpty()
         if (cleanedAddress.isEmpty()) {
             _validationEvents.tryEmit(CreateProjectValidation.AddressRequired)
             return
         }
-        val addressRequest = CreateAddressRequest(address = cleanedAddress)
+        val addressRequest = CreateAddressRequest(
+            address = cleanedAddress,
+            latitude = latitude,
+            longitude = longitude
+        )
         submitProject(addressRequest)
     }
 
@@ -164,13 +178,16 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
 
     private fun loadRecentAddresses() {
         viewModelScope.launch {
-            val addresses = runCatching {
+            val addressesFromDb = runCatching {
                 localDataService.getRecentAddresses(RECENT_ADDRESS_LIMIT)
             }.onFailure { error ->
                 Log.w("CreateProjectVM", "Failed to load recent addresses", error)
             }.getOrDefault(emptyList())
 
-            _uiState.update { it.copy(recentAddresses = addresses) }
+            val persisted = loadPersistedRecentAddresses()
+            val merged = (persisted + addressesFromDb).distinct().take(RECENT_ADDRESS_LIMIT)
+            persistRecentAddresses(merged)
+            _uiState.update { it.copy(recentAddresses = merged) }
         }
     }
 
@@ -180,8 +197,14 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
 
         _uiState.update { state ->
             val merged = listOf(normalized) + state.recentAddresses
-            state.copy(recentAddresses = merged.distinct().take(RECENT_ADDRESS_LIMIT))
+            val limited = merged.distinct().take(RECENT_ADDRESS_LIMIT)
+            persistRecentAddresses(limited)
+            state.copy(recentAddresses = limited)
         }
+    }
+
+    fun primeRecentAddress(address: String?) {
+        addRecentAddress(address)
     }
 
     private fun formatAddressForCache(request: CreateAddressRequest): String? {
@@ -203,6 +226,27 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
     companion object {
         private const val DEFAULT_PROJECT_STATUS_ID = 1
         private const val RECENT_ADDRESS_LIMIT = 10
+        private const val PREF_RECENT_ADDRESS = "recent_address_cache"
+        private const val PREF_RECENT_ADDRESS_KEY = "recent_addresses"
+    }
+
+    private fun persistRecentAddresses(addresses: List<String>) {
+        val json = JSONArray()
+        addresses.forEach { json.put(it) }
+        recentAddressPrefs.edit().putString(PREF_RECENT_ADDRESS_KEY, json.toString()).apply()
+    }
+
+    private fun loadPersistedRecentAddresses(): List<String> {
+        val raw = recentAddressPrefs.getString(PREF_RECENT_ADDRESS_KEY, null) ?: return emptyList()
+        return runCatching {
+            val array = JSONArray(raw)
+            buildList {
+                for (i in 0 until array.length()) {
+                    val value = array.optString(i, null)
+                    if (!value.isNullOrBlank()) add(value)
+                }
+            }
+        }.getOrDefault(emptyList())
     }
 }
 

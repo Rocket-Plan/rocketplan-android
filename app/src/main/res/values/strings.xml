@@ -145,6 +145,10 @@
     <string name="rocketdry_step_indicator">Step %1$d of %2$d</string>
     <string name="rocketdry_next">Next</string>
     <string name="rocketdry_back">Back</string>
+    <string name="rocketdry_atmos_room_external">External</string>
+    <string name="rocketdry_atmos_room_unknown">Unknown area</string>
+    <string name="rocketdry_atmospheric_area_chip">%1$s (%2$d)</string>
+    <string name="rocketdry_atmospheric_log_for_area">Atmospheric Logs · %1$s</string>
     <string name="rocketdry_start_atmospheric_log_title">Start Atmospheric Log</string>
     <string name="rocketdry_start_atmospheric_log_cta">Start</string>
     <string name="rocketdry_relative_humidity_label">Relative humidity (%)</string>
@@ -153,6 +157,29 @@
     <string name="rocketdry_wind_speed_label">Wind speed (mph)</string>
     <string name="rocketdry_add_external_log_error">Enter a value for each field.</string>
     <string name="add_log">Add Log</string>
+    <string name="rocketdry_room_atmospheric_log_title">Room Atmospheric Log</string>
+    <plurals name="rocketdry_atmospheric_log_count">
+        <item quantity="one">%d atmospheric log</item>
+        <item quantity="other">%d atmospheric logs</item>
+    </plurals>
+    <string name="rocketdry_room_log_title">%1$s · %2$s</string>
+    <string name="rocketdry_atmospheric_log_added">Atmospheric log added for %1$s</string>
+    <string name="rocketdry_room_material_goals_title">Material Drying Goals</string>
+    <string name="rocketdry_add_material_goal_cta">Add new material</string>
+    <string name="rocketdry_goal_list_empty">No drying goals yet.</string>
+    <string name="rocketdry_goal_add_title">Add drying goal</string>
+    <string name="rocketdry_goal_material_hint">Material name</string>
+    <string name="rocketdry_goal_target_hint">Target moisture (%)</string>
+    <string name="rocketdry_goal_material_required">Enter a material name</string>
+    <string name="rocketdry_goal_target_invalid">Enter a valid moisture target.</string>
+    <string name="rocketdry_material_goal_added">Drying goal added for %1$s</string>
+    <string name="rocketdry_material_goal_error">Unable to add material goal. Try again.</string>
+    <string name="rocketdry_goal_last_updated">Updated %1$s</string>
+    <string name="rocketdry_goal_target_value">Target %1$.1f%%</string>
+    <plurals name="rocketdry_goal_logs_count">
+        <item quantity="one">%d log</item>
+        <item quantity="other">%d logs</item>
+    </plurals>
     <string name="r_humidity_short">R. Humidi…</string>
     <string name="percent">%</string>
     <string name="temperature_short">Temperat…</string>
@@ -183,6 +210,7 @@
     <string name="scope_edit_quantity_hint">Quantity</string>
     <string name="scope_edit_unit_hint">Unit (optional)</string>
     <string name="scope_edit_rate_hint">Rate (optional)</string>
+    <string name="scope_edit_quantity_only_helper">Only quantity can be updated for this line item.</string>
     <string name="scope_edit_title_required">Title is required.</string>
     <string name="scope_edit_invalid_quantity">Enter a quantity greater than zero.</string>
     <string name="scope_edit_invalid_rate">Enter a valid rate or leave blank.</string>
@@ -206,6 +234,37 @@
     <string name="rocketdry_no_equipment">No equipment added</string>
     <string name="rocketdry_open">Open</string>
     <string name="rocketdry_add">Add</string>
+    <string name="rocketdry_materials_title">Drying materials</string>
+    <string name="rocketdry_materials_empty">No drying materials added yet.</string>
+    <string name="rocketdry_add_material">Add material</string>
+    <string name="rocketdry_material_fallback_name">Material</string>
+    <string name="rocketdry_material_goal_description">Target moisture: %1$.1f%%</string>
+    <string name="rocketdry_material_goal_location">Target</string>
+    <string name="rocketdry_material_last_updated">Updated %1$s</string>
+    <string name="rocketdry_material_target_label">Latest reading: %1$.1f%%</string>
+    <plurals name="rocketdry_material_logs_count">
+        <item quantity="one">%d log</item>
+        <item quantity="other">%d logs</item>
+    </plurals>
+    <string name="rocketdry_material_add_title">Add drying material</string>
+    <string name="rocketdry_material_name_label">Material name</string>
+    <string name="rocketdry_material_target_hint">Target moisture (%)</string>
+    <string name="rocketdry_material_invalid_target">Enter a valid number or leave blank.</string>
+    <string name="rocketdry_material_reading_hint">Moisture reading (%)</string>
+    <string name="rocketdry_material_location_hint">Location (optional)</string>
+    <string name="rocketdry_material_add_log_title">Add reading for %1$s</string>
+    <string name="rocketdry_material_reading_location">Reading</string>
+    <string name="rocketdry_material_log_added">Moisture log added for %1$s</string>
+    <string name="rocketdry_material_invalid_reading">Enter a valid moisture reading.</string>
+    <plurals name="rocketdry_atmospheric_logs_count">
+        <item quantity="one">%d atmospheric log</item>
+        <item quantity="other">%d atmospheric logs</item>
+    </plurals>
+    <string name="rocketdry_material_target_helper">Optional: set a moisture target to track progress.</string>
+    <string name="rocketdry_material_save_error">Unable to save material. Please try again.</string>
+    <string name="rocketdry_material_target_missing">Target not set</string>
+    <string name="rocketdry_material_no_readings">No readings yet.</string>
+    <string name="rocketdry_material_latest_reading">Latest %1$.1f%% · %2$s</string>
     <plurals name="damage_count">
         <item quantity="one">%d Damage</item>
         <item quantity="other">%d Damages</item>

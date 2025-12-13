@@ -38,6 +38,7 @@ class RocketDryViewModel(
 
     private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
     val uiState: StateFlow<RocketDryUiState> = _uiState
+    private val selectedAtmosphericRoomId = MutableStateFlow<Long?>(null)
 
     init {
         viewModelScope.launch {
@@ -49,8 +50,11 @@ class RocketDryViewModel(
                 localDataService.observeMoistureLogsForProject(projectId)
             ) { projects, atmosphericLogs, rooms, locations, moistureLogs ->
                 Data(projects, atmosphericLogs, rooms, locations, moistureLogs)
+            }.combine(selectedAtmosphericRoomId) { data, selectedRoomId ->
+                data.copy(selectedAtmosphericRoomId = selectedRoomId)
             }.combine(localDataService.observeEquipmentForProject(projectId)) { data, equipment ->
                 val project = data.projects.firstOrNull { it.projectId == projectId }
+                android.util.Log.d("RocketDryVM", "🌡️ projectId=$projectId, atmosphericLogs.size=${data.atmosphericLogs.size}, projectIds=${data.atmosphericLogs.map { it.projectId }.distinct()}")
                 if (project == null) {
                     RocketDryUiState.Loading
                 } else {
@@ -58,14 +62,24 @@ class RocketDryViewModel(
                     val moistureByRoom = data.moistureLogs.groupBy { it.roomId }
                     val locationLevels = buildLocationLevels(data.rooms, locationLookup, moistureByRoom)
                     val equipmentByRoom = equipment.groupBy { it.roomId }
-                    // Prefer external logs, but fallback to any available reading so the UI is never blank.
-                    val atmosphericLogsToShow = data.atmosphericLogs.let { logs ->
-                        val externalLogs = logs.filter { it.isExternal }
-                        if (externalLogs.isNotEmpty()) externalLogs else logs
+                    val roomsById = data.rooms.associateBy { it.roomId }
+                    val atmosphericLogItems = data.atmosphericLogs.map { it.toUiItem(roomsById) }
+                    val logsByRoom = atmosphericLogItems.groupBy { it.roomId }
+                    val areaOptions = buildAtmosphericAreas(logsByRoom, roomsById)
+                    val resolvedSelection = resolveAtmosphericSelection(
+                        requestedRoomId = data.selectedAtmosphericRoomId,
+                        availableRoomIds = logsByRoom.keys.toList(),
+                        areaOptions = areaOptions
+                    )
+                    if (resolvedSelection != data.selectedAtmosphericRoomId) {
+                        selectedAtmosphericRoomId.value = resolvedSelection
                     }
+                    val atmosphericLogsToShow = logsByRoom[resolvedSelection].orEmpty()
                     RocketDryUiState.Ready(
                         projectAddress = buildProjectAddress(project),
-                        atmosphericLogs = atmosphericLogsToShow.map { it.toUiItem() },
+                        atmosphericLogs = atmosphericLogsToShow,
+                        atmosphericAreas = areaOptions,
+                        selectedAtmosphericRoomId = resolvedSelection,
                         locationLevels = locationLevels,
                         equipmentTotals = buildEquipmentTotals(equipment),
                         equipmentByType = buildEquipmentTypeSummaries(equipment),
@@ -84,20 +98,28 @@ class RocketDryViewModel(
         val atmosphericLogs: List<OfflineAtmosphericLogEntity>,
         val rooms: List<OfflineRoomEntity>,
         val locations: List<OfflineLocationEntity>,
-        val moistureLogs: List<OfflineMoistureLogEntity>
+        val moistureLogs: List<OfflineMoistureLogEntity>,
+        val selectedAtmosphericRoomId: Long? = null
     )
+
+    fun selectAtmosphericRoom(roomId: Long?) {
+        android.util.Log.d("RocketDryVM", "🎛 selectAtmosphericRoom roomId=$roomId")
+        selectedAtmosphericRoomId.value = roomId
+    }
 
     fun addExternalAtmosphericLog(
         humidity: Double,
         temperature: Double,
         pressure: Double,
-        windSpeed: Double
+        windSpeed: Double,
+        roomId: Long?
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val now = Date()
             val log = OfflineAtmosphericLogEntity(
                 uuid = UUID.randomUUID().toString(),
                 projectId = projectId,
+                roomId = roomId,
                 date = now,
                 relativeHumidity = humidity,
                 temperature = temperature,
@@ -109,7 +131,24 @@ class RocketDryViewModel(
                 syncStatus = SyncStatus.PENDING,
                 isDirty = true
             )
-            localDataService.saveAtmosphericLogs(listOf(log))
+            android.util.Log.d(
+                "RocketDryVM",
+                "🧪 Saving external atmospheric log: uuid=${log.uuid} projectId=$projectId roomId=$roomId rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed"
+            )
+            runCatching { localDataService.saveAtmosphericLogs(listOf(log)) }
+                .onSuccess {
+                    android.util.Log.d(
+                        "RocketDryVM",
+                        "✅ External atmospheric log saved: uuid=${log.uuid}"
+                    )
+                }
+                .onFailure {
+                    android.util.Log.e(
+                        "RocketDryVM",
+                        "❌ Failed to save external atmospheric log uuid=${log.uuid}",
+                        it
+                    )
+                }
         }
     }
 
@@ -132,6 +171,7 @@ class RocketDryViewModel(
         return roomsByLevel.map { (levelName, levelRooms) ->
             val roomItems = levelRooms.map { room ->
                 LocationItem(
+                    roomId = room.roomId,
                     name = room.title,
                     materialCount = moistureByRoom[room.roomId]?.size ?: 0,
                     iconRes = resolveRoomIcon(room)
@@ -146,14 +186,51 @@ class RocketDryViewModel(
         return RoomTypeCatalog.resolveIconRes(rocketPlanApp, room.roomTypeId, iconName)
     }
 
-    private fun OfflineAtmosphericLogEntity.toUiItem(): AtmosphericLogItem =
+    private fun OfflineAtmosphericLogEntity.toUiItem(
+        rooms: Map<Long, OfflineRoomEntity>
+    ): AtmosphericLogItem =
         AtmosphericLogItem(
+            roomId = roomId,
+            roomName = roomId?.let { rooms[it]?.title },
             dateTime = formatDateTime(date),
             humidity = relativeHumidity,
             temperature = temperature,
             pressure = pressure ?: 0.0,
             windSpeed = windSpeed ?: 0.0
         )
+
+    private fun buildAtmosphericAreas(
+        logsByRoom: Map<Long?, List<AtmosphericLogItem>>,
+        rooms: Map<Long, OfflineRoomEntity>
+    ): List<AtmosphericLogArea> {
+        if (logsByRoom.isEmpty()) return emptyList()
+        return logsByRoom.entries.map { (roomId, logs) ->
+            val roomLabel = roomId?.let { id ->
+                rooms[id]?.title?.takeIf { it.isNotBlank() }
+            }
+            val label = when {
+                roomId == null -> rocketPlanApp.getString(R.string.rocketdry_atmos_room_external)
+                roomLabel != null -> roomLabel
+                else -> rocketPlanApp.getString(R.string.rocketdry_atmos_room_unknown)
+            }
+            AtmosphericLogArea(
+                roomId = roomId,
+                label = label,
+                logCount = logs.size
+            )
+        }.sortedBy { it.label.lowercase(Locale.getDefault()) }
+    }
+
+    private fun resolveAtmosphericSelection(
+        requestedRoomId: Long?,
+        availableRoomIds: List<Long?>,
+        areaOptions: List<AtmosphericLogArea>
+    ): Long? {
+        if (availableRoomIds.isEmpty()) return requestedRoomId
+        if (requestedRoomId in availableRoomIds) return requestedRoomId
+        if (availableRoomIds.contains(null)) return null
+        return areaOptions.firstOrNull()?.roomId ?: availableRoomIds.first()
+    }
 
     private fun buildEquipmentTotals(equipment: List<OfflineEquipmentEntity>): EquipmentTotals {
         val total = equipment.sumOf { it.quantity }

@@ -244,6 +244,10 @@ class LocalDataService private constructor(
         dao.getPendingNotes(projectId)
     }
 
+    suspend fun getPendingMoistureLogs(projectId: Long): List<OfflineMoistureLogEntity> = withContext(ioDispatcher) {
+        dao.getPendingMoistureLogs(projectId)
+    }
+
     fun observeDamages(projectId: Long): Flow<List<OfflineDamageEntity>> =
         dao.observeDamagesForProject(projectId)
 
@@ -255,6 +259,14 @@ class LocalDataService private constructor(
     }
 
     fun observeMaterials(): Flow<List<OfflineMaterialEntity>> = dao.observeMaterials()
+
+    suspend fun getMaterialByUuid(uuid: String): OfflineMaterialEntity? = withContext(ioDispatcher) {
+        dao.getMaterialByUuid(uuid)
+    }
+
+    suspend fun getMaterial(materialId: Long): OfflineMaterialEntity? = withContext(ioDispatcher) {
+        dao.getMaterial(materialId)
+    }
     // endregion
 
     // region Mutations
@@ -584,6 +596,11 @@ class LocalDataService private constructor(
     suspend fun markAtmosphericLogsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
         dao.markAtmosphericLogsDeleted(serverIds)
+    }
+
+    suspend fun markMoistureLogsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markMoistureLogsDeleted(serverIds)
     }
 
     suspend fun markWorkScopesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {

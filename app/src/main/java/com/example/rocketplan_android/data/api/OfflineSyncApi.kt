@@ -9,11 +9,13 @@ import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
+import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
+import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.NoteableDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
@@ -279,8 +281,53 @@ interface OfflineSyncApi {
 
     @GET("/api/rooms/{roomId}/damage-materials/logs")
     suspend fun getRoomMoistureLogs(
-        @Path("roomId") roomId: Long
+        @Path("roomId") roomId: Long,
+        @Query("include") include: String? = null
     ): List<MoistureLogDto>
+
+    @POST("/api/projects/{projectId}/damage-materials")
+    suspend fun createProjectDamageMaterial(
+        @Path("projectId") projectId: Long,
+        @Body body: DamageMaterialRequest
+    ): DamageMaterialDto
+
+    @PUT("/api/damage-materials/{damageMaterialId}")
+    suspend fun updateDamageMaterial(
+        @Path("damageMaterialId") damageMaterialId: Long,
+        @Body body: DamageMaterialRequest
+    ): DamageMaterialDto
+
+    @HTTP(method = "DELETE", path = "/api/damage-materials/{damageMaterialId}", hasBody = true)
+    suspend fun deleteDamageMaterial(
+        @Path("damageMaterialId") damageMaterialId: Long,
+        @Body body: DeleteWithTimestampRequest
+    ): Response<Unit>
+
+    @POST("/api/rooms/{roomId}/damage-materials/{damageMaterialId}")
+    suspend fun attachDamageMaterialToRoom(
+        @Path("roomId") roomId: Long,
+        @Path("damageMaterialId") damageMaterialId: Long,
+        @Body body: DamageMaterialRequest
+    ): Response<Unit>
+
+    @POST("/api/rooms/{roomId}/damage-materials/{damageMaterialId}/logs")
+    suspend fun createMoistureLog(
+        @Path("roomId") roomId: Long,
+        @Path("damageMaterialId") damageMaterialId: Long,
+        @Body body: MoistureLogRequest
+    ): MoistureLogDto
+
+    @PUT("/api/damage-material-room-log/{logId}")
+    suspend fun updateMoistureLog(
+        @Path("logId") logId: Long,
+        @Body body: MoistureLogRequest
+    ): MoistureLogDto
+
+    @HTTP(method = "DELETE", path = "/api/damage-material-room-log/{logId}", hasBody = true)
+    suspend fun deleteMoistureLog(
+        @Path("logId") logId: Long,
+        @Body body: DeleteWithTimestampRequest
+    ): Response<Unit>
 
     // Damage, work scope, equipment
     @GET("/api/projects/{projectId}/damage-materials")

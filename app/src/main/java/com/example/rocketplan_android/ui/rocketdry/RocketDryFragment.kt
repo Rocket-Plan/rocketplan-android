@@ -4,11 +4,11 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
-import android.view.inputmethod.EditorInfo
 import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
+import android.util.Log
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
@@ -16,18 +16,17 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.chip.Chip
+import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
-import java.text.DecimalFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -53,6 +52,7 @@ class RocketDryFragment : Fragment() {
     private lateinit var moistureButton: MaterialButton
     private lateinit var equipmentContentGroup: View
     private lateinit var moistureContentGroup: View
+    private lateinit var atmosphericSectionTitle: TextView
     private lateinit var equipmentTotalCount: TextView
     private lateinit var equipmentStatusBreakdown: TextView
     private lateinit var equipmentSummaryRecyclerView: RecyclerView
@@ -60,6 +60,8 @@ class RocketDryFragment : Fragment() {
     private lateinit var roomCard: View
     private lateinit var exteriorSpaceCard: View
     private lateinit var addExternalLogButton: ImageButton
+    private lateinit var atmosphericRoomFilterContainer: View
+    private lateinit var atmosphericRoomFilterGroup: ChipGroup
     private lateinit var atmosphericEmptyStateCard: View
     private lateinit var startAtmosphericLogButton: MaterialButton
     private lateinit var atmosphericLogsRecyclerView: RecyclerView
@@ -71,6 +73,8 @@ class RocketDryFragment : Fragment() {
     private lateinit var equipmentLevelAdapter: EquipmentLevelAdapter
     private var suppressToggleChanges = false
     private lateinit var currentTab: RocketDryTab
+    private var lastRenderedAtmosphericAreas: List<AtmosphericLogArea> = emptyList()
+    private var latestAtmosphericSelection: Long? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -98,6 +102,7 @@ class RocketDryFragment : Fragment() {
         moistureButton = view.findViewById(R.id.moistureButton)
         equipmentContentGroup = view.findViewById(R.id.equipmentContentGroup)
         moistureContentGroup = view.findViewById(R.id.moistureContentGroup)
+        atmosphericSectionTitle = view.findViewById(R.id.atmosphericSectionTitle)
         equipmentTotalCount = view.findViewById(R.id.equipmentTotalCount)
         equipmentStatusBreakdown = view.findViewById(R.id.equipmentStatusBreakdown)
         equipmentSummaryRecyclerView = view.findViewById(R.id.equipmentSummaryRecyclerView)
@@ -105,6 +110,8 @@ class RocketDryFragment : Fragment() {
         roomCard = view.findViewById(R.id.roomCard)
         exteriorSpaceCard = view.findViewById(R.id.exteriorSpaceCard)
         addExternalLogButton = view.findViewById(R.id.addExternalLogButton)
+        atmosphericRoomFilterContainer = view.findViewById(R.id.atmosphericRoomFilterContainer)
+        atmosphericRoomFilterGroup = view.findViewById(R.id.atmosphericRoomFilterGroup)
         atmosphericEmptyStateCard = view.findViewById(R.id.atmosphericEmptyStateCard)
         startAtmosphericLogButton = view.findViewById(R.id.startAtmosphericLogButton)
         atmosphericLogsRecyclerView = view.findViewById(R.id.atmosphericLogsRecyclerView)
@@ -127,6 +134,7 @@ class RocketDryFragment : Fragment() {
 
     private fun setupClickListeners() {
         editAddressButton.setOnClickListener {
+            Log.d(TAG, "✏️ Edit address tapped (not implemented)")
             Toast.makeText(context, "Edit Address", Toast.LENGTH_SHORT).show()
         }
 
@@ -136,26 +144,32 @@ class RocketDryFragment : Fragment() {
                 R.id.equipmentButton -> RocketDryTab.EQUIPMENT
                 else -> RocketDryTab.MOISTURE
             }
+            Log.d(TAG, "🔀 Tab selected: $selectedTab")
             onTabSelected(selectedTab)
         }
 
         roomCard.setOnClickListener {
+            Log.d(TAG, "➕ Add Room card tapped")
             Toast.makeText(context, "Add Room", Toast.LENGTH_SHORT).show()
         }
 
         exteriorSpaceCard.setOnClickListener {
+            Log.d(TAG, "➕ Add Exterior Space card tapped")
             Toast.makeText(context, "Add Exterior Space", Toast.LENGTH_SHORT).show()
         }
 
         addExternalLogButton.setOnClickListener {
+            Log.d(TAG, "➕ Add external atmospheric log tapped (button)")
             showAddExternalLogDialog()
         }
 
         atmosphericEmptyStateCard.setOnClickListener {
+            Log.d(TAG, "➕ Add external atmospheric log tapped (empty state card)")
             showAddExternalLogDialog()
         }
 
         startAtmosphericLogButton.setOnClickListener {
+            Log.d(TAG, "➕ Add external atmospheric log tapped (start button)")
             showAddExternalLogDialog()
         }
     }
@@ -198,9 +212,22 @@ class RocketDryFragment : Fragment() {
         equipmentLocationsRecyclerView.adapter = equipmentLevelAdapter
 
         // Locations RecyclerView
-        locationLevelAdapter = LocationLevelAdapter()
+        locationLevelAdapter = LocationLevelAdapter { location ->
+            Log.d(TAG, "➡️ Location card tapped: roomId=${location.roomId}, name='${location.name}'")
+            openRoomDry(location.roomId)
+        }
         locationsRecyclerView.layoutManager = LinearLayoutManager(context)
         locationsRecyclerView.adapter = locationLevelAdapter
+    }
+
+    private fun openRoomDry(roomId: Long) {
+        Log.d(TAG, "➡️ Navigating to room dry details for roomId=$roomId")
+        val action = RocketDryFragmentDirections
+            .actionRocketDryFragmentToRocketDryRoomFragment(
+                projectId = args.projectId,
+                roomId = roomId
+            )
+        findNavController().navigate(action)
     }
 
     private fun observeViewModel() {
@@ -218,6 +245,7 @@ class RocketDryFragment : Fragment() {
 
     private fun showLoadingState() {
         projectAddress.text = getString(R.string.loading_project)
+        renderAtmosphericAreaFilters(emptyList(), null)
         updateAtmosphericLogs(emptyList())
         locationLevelAdapter.submitLevels(emptyList())
         equipmentSummaryAdapter.submitItems(emptyList())
@@ -229,6 +257,7 @@ class RocketDryFragment : Fragment() {
 
     private fun renderState(state: RocketDryUiState.Ready) {
         projectAddress.text = state.projectAddress
+        renderAtmosphericAreaFilters(state.atmosphericAreas, state.selectedAtmosphericRoomId)
         updateAtmosphericLogs(state.atmosphericLogs)
         locationLevelAdapter.submitLevels(state.locationLevels)
         equipmentSummaryAdapter.submitItems(state.equipmentByType)
@@ -254,172 +283,91 @@ class RocketDryFragment : Fragment() {
         atmosphericEmptyStateCard.isVisible = !hasLogs
     }
 
+    private fun renderAtmosphericAreaFilters(
+        areas: List<AtmosphericLogArea>,
+        selectedRoomId: Long?
+    ) {
+        latestAtmosphericSelection = selectedRoomId
+        val selectedArea = areas.firstOrNull { it.roomId == selectedRoomId }
+        val headerText = when {
+            selectedArea?.roomId != null ->
+                getString(R.string.rocketdry_atmospheric_log_for_area, selectedArea.label)
+            else -> getString(R.string.external_atmospheric_log)
+        }
+        atmosphericSectionTitle.text = headerText
+        atmosphericRoomFilterContainer.isVisible = areas.isNotEmpty()
+        if (areas.isEmpty()) {
+            atmosphericRoomFilterGroup.setOnCheckedStateChangeListener(null)
+            atmosphericRoomFilterGroup.removeAllViews()
+            lastRenderedAtmosphericAreas = emptyList()
+            return
+        }
+
+        val hasChanged = areas != lastRenderedAtmosphericAreas
+        if (hasChanged) {
+            atmosphericRoomFilterGroup.setOnCheckedStateChangeListener(null)
+            atmosphericRoomFilterGroup.removeAllViews()
+
+            val context = atmosphericRoomFilterGroup.context
+            areas.forEach { area ->
+                val chip = Chip(context).apply {
+                    id = View.generateViewId()
+                    tag = area.roomId
+                    text = getString(R.string.rocketdry_atmospheric_area_chip, area.label, area.logCount)
+                    isCheckable = true
+                    isChecked = area.roomId == selectedRoomId
+                    isClickable = true
+                    isFocusable = true
+                    chipBackgroundColor = ContextCompat.getColorStateList(context, R.color.chip_background_selector)
+                    setTextColor(ContextCompat.getColorStateList(context, R.color.chip_text_selector))
+                    isCheckedIconVisible = false
+                    rippleColor = ContextCompat.getColorStateList(context, android.R.color.transparent)
+                }
+                atmosphericRoomFilterGroup.addView(chip)
+            }
+
+            atmosphericRoomFilterGroup.setOnCheckedStateChangeListener { group, checkedIds ->
+                val checkedChipId = checkedIds.firstOrNull()
+                val chip = checkedChipId?.let { id -> group.findViewById<Chip>(id) }
+                val roomId = chip?.tag as? Long
+                Log.d(
+                    TAG,
+                    "✅ Atmospheric area selected roomId=$roomId label='${chip?.text}'"
+                )
+                viewModel.selectAtmosphericRoom(roomId)
+            }
+            lastRenderedAtmosphericAreas = areas
+        } else {
+            for (index in 0 until atmosphericRoomFilterGroup.childCount) {
+                val chip = atmosphericRoomFilterGroup.getChildAt(index) as? Chip ?: continue
+                chip.isChecked = chip.tag as? Long == selectedRoomId
+            }
+        }
+    }
+
     private fun showAddExternalLogDialog() {
-        data class InputStep(
-            val labelRes: Int,
-            val unit: String,
-            val getter: () -> Double?,
-            val setter: (Double) -> Unit
-        )
-
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_external_log, null)
-        val wizardTitle = dialogView.findViewById<TextView>(R.id.wizardTitle)
-        val stepLabel = dialogView.findViewById<TextView>(R.id.stepLabel)
-        val stepPreview = dialogView.findViewById<TextView>(R.id.stepPreview)
-        val stepPosition = dialogView.findViewById<TextView>(R.id.stepPosition)
-        val stepInputLayout = dialogView.findViewById<TextInputLayout>(R.id.stepInputLayout)
-        val stepInput = dialogView.findViewById<TextInputEditText>(R.id.stepInput)
-        val previousStepButton = dialogView.findViewById<MaterialButton>(R.id.previousStepButton)
-        val cancelWizardButton = dialogView.findViewById<MaterialButton>(R.id.cancelWizardButton)
-        val nextStepButton = dialogView.findViewById<MaterialButton>(R.id.nextStepButton)
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-
-        dialog.window?.setSoftInputMode(
-            WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-        )
-
         val now = Date()
-        wizardTitle.text = getString(
+        val title = getString(
             R.string.rocketdry_external_log_title,
             formatLogDate(now)
         )
-
-        var humidity: Double? = null
-        var temperature: Double? = null
-        var pressure: Double? = null
-        var windSpeed: Double? = null
-
-        val numberFormatter = DecimalFormat("#.##")
-        val steps = listOf(
-            InputStep(
-                labelRes = R.string.rocketdry_relative_humidity_label,
-                unit = getString(R.string.percent),
-                getter = { humidity },
-                setter = { humidity = it }
-            ),
-            InputStep(
-                labelRes = R.string.rocketdry_temperature_label,
-                unit = getString(R.string.fahrenheit),
-                getter = { temperature },
-                setter = { temperature = it }
-            ),
-            InputStep(
-                labelRes = R.string.rocketdry_pressure_label,
-                unit = getString(R.string.kpa),
-                getter = { pressure },
-                setter = { pressure = it }
-            ),
-            InputStep(
-                labelRes = R.string.rocketdry_wind_speed_label,
-                unit = getString(R.string.mph),
-                getter = { windSpeed },
-                setter = { windSpeed = it }
-            )
+        Log.d(
+            TAG,
+            "🧪 Launching external atmospheric log dialog at '$title' (selectedRoomId=$latestAtmosphericSelection)"
         )
-
-        var currentStep = 0
-
-        fun formatPreview(value: Double?, unit: String): String {
-            val formattedValue = value?.let { numberFormatter.format(it) } ?: "-"
-            return if (unit.isBlank()) formattedValue else "$formattedValue $unit"
-        }
-
-        fun bindStep() {
-            val step = steps[currentStep]
-            val currentValue = step.getter()
-            stepLabel.text = getString(step.labelRes)
-            stepInputLayout.hint = getString(step.labelRes)
-            stepPreview.text = formatPreview(currentValue, step.unit)
-            stepPosition.text = getString(
-                R.string.rocketdry_step_indicator,
-                currentStep + 1,
-                steps.size
+        showAtmosphericLogDialog(title) { humidity, temperature, pressure, windSpeed ->
+            Log.d(
+                TAG,
+                "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed roomId=$latestAtmosphericSelection"
             )
-            stepInputLayout.error = null
-            val textValue = currentValue?.let { numberFormatter.format(it) } ?: ""
-            stepInput.setText(textValue)
-            stepInput.setSelection(stepInput.text?.length ?: 0)
-            stepInput.imeOptions = if (currentStep == steps.lastIndex) {
-                EditorInfo.IME_ACTION_DONE
-            } else {
-                EditorInfo.IME_ACTION_NEXT
-            }
-            previousStepButton.isEnabled = currentStep > 0
-            nextStepButton.text = if (currentStep == steps.lastIndex) {
-                getString(R.string.save)
-            } else {
-                getString(R.string.rocketdry_next)
-            }
+            viewModel.addExternalAtmosphericLog(
+                humidity = humidity,
+                temperature = temperature,
+                pressure = pressure,
+                windSpeed = windSpeed,
+                roomId = latestAtmosphericSelection
+            )
         }
-
-        fun persistCurrentValue(): Boolean {
-            val value = stepInput.text?.toString()?.toDoubleOrNull()
-            return if (value == null) {
-                stepInputLayout.error = getString(R.string.rocketdry_add_external_log_error)
-                false
-            } else {
-                stepInputLayout.error = null
-                steps[currentStep].setter(value)
-                true
-            }
-        }
-
-        stepInput.doAfterTextChanged {
-            stepInputLayout.error = null
-            steps.getOrNull(currentStep)?.let { step ->
-                stepPreview.text = formatPreview(it?.toString()?.toDoubleOrNull(), step.unit)
-            }
-        }
-
-        stepInput.setOnEditorActionListener { _, actionId, _ ->
-            if (actionId == EditorInfo.IME_ACTION_NEXT || actionId == EditorInfo.IME_ACTION_DONE) {
-                nextStepButton.performClick()
-                true
-            } else {
-                false
-            }
-        }
-
-        previousStepButton.setOnClickListener {
-            if (currentStep == 0) return@setOnClickListener
-            stepInputLayout.error = null
-            stepInput.text?.toString()?.toDoubleOrNull()?.let { value ->
-                steps[currentStep].setter(value)
-            }
-            currentStep -= 1
-            bindStep()
-        }
-
-        cancelWizardButton.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        nextStepButton.setOnClickListener {
-            val isValid = persistCurrentValue()
-            if (!isValid) return@setOnClickListener
-
-            if (currentStep == steps.lastIndex) {
-                viewModel.addExternalAtmosphericLog(
-                    humidity = humidity ?: return@setOnClickListener,
-                    temperature = temperature ?: return@setOnClickListener,
-                    pressure = pressure ?: return@setOnClickListener,
-                    windSpeed = windSpeed ?: return@setOnClickListener
-                )
-                dialog.dismiss()
-            } else {
-                currentStep += 1
-                bindStep()
-            }
-        }
-
-        bindStep()
-        dialog.show()
-        stepInput.requestFocus()
     }
 
     private fun formatLogDate(date: Date): String {

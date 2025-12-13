@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
@@ -14,6 +15,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
@@ -31,7 +33,7 @@ class ManualAddressEntryFragment : Fragment() {
     private lateinit var cityLayout: TextInputLayout
     private lateinit var cityInput: TextInputEditText
     private lateinit var stateLayout: TextInputLayout
-    private lateinit var stateInput: TextInputEditText
+    private lateinit var stateInput: MaterialAutoCompleteTextView
     private lateinit var countryLayout: TextInputLayout
     private lateinit var countryInput: TextInputEditText
     private lateinit var postalLayout: TextInputLayout
@@ -59,6 +61,8 @@ class ManualAddressEntryFragment : Fragment() {
         countryInput = view.findViewById(R.id.manualCountryInput)
         postalLayout = view.findViewById(R.id.manualPostalLayout)
         postalInput = view.findViewById(R.id.manualPostalInput)
+
+        setupStateDropdown()
 
         streetInput.doAfterTextChanged {
             if (!it.isNullOrBlank()) {
@@ -148,6 +152,26 @@ class ManualAddressEntryFragment : Fragment() {
                     }
                 }
             }
+        }
+    }
+
+    private fun setupStateDropdown() {
+        val stateOptions = resources.getStringArray(R.array.state_province_options)
+        val adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_list_item_1,
+            stateOptions
+        )
+        stateInput.setAdapter(adapter)
+        stateInput.threshold = 0
+        stateInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                stateInput.showDropDown()
+            }
+        }
+        stateInput.setOnItemClickListener { _, _, _, _ ->
+            stateLayout.error = null
+            viewModel.clearError()
         }
     }
 

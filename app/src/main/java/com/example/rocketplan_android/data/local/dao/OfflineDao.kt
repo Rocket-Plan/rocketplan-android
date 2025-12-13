@@ -504,6 +504,22 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_moisture_logs WHERE roomId = :roomId")
     suspend fun deleteMoistureLogsByRoomId(roomId: Long): Int
+
+    @Query(
+        """
+        SELECT * FROM offline_moisture_logs
+        WHERE projectId = :projectId
+          AND (isDirty = 1 OR syncStatus != :synced)
+        ORDER BY updatedAt DESC
+        """
+    )
+    suspend fun getPendingMoistureLogs(
+        projectId: Long,
+        synced: SyncStatus = SyncStatus.SYNCED
+    ): List<OfflineMoistureLogEntity>
+
+    @Query("UPDATE offline_moisture_logs SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
+    suspend fun markMoistureLogsDeleted(serverIds: List<Long>)
     // endregion
 
     // region Notes & Damages & Work Scopes
@@ -571,6 +587,12 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_materials ORDER BY name")
     fun observeMaterials(): Flow<List<OfflineMaterialEntity>>
+
+    @Query("SELECT * FROM offline_materials WHERE uuid = :uuid LIMIT 1")
+    suspend fun getMaterialByUuid(uuid: String): OfflineMaterialEntity?
+
+    @Query("SELECT * FROM offline_materials WHERE materialId = :materialId LIMIT 1")
+    suspend fun getMaterial(materialId: Long): OfflineMaterialEntity?
     // endregion
 
     // region Company & Users & Properties

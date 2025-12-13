@@ -125,12 +125,12 @@
                                 android:src="@drawable/img_add_room" />
 
                             <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
+                                android:layout_width="@dimen/rocketdry_add_button_size"
+                                android:layout_height="@dimen/rocketdry_add_button_size"
                                 android:layout_gravity="bottom|end"
                                 android:background="@drawable/bg_add_circle_purple"
                                 android:contentDescription="@string/rocketdry_add"
-                                android:padding="6dp"
+                                android:padding="@dimen/rocketdry_add_button_padding"
                                 android:src="@drawable/ic_add"
                                 app:tint="@color/white" />
 
@@ -175,12 +175,12 @@
                                 android:src="@drawable/img_add_exterior" />
 
                             <ImageView
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
+                                android:layout_width="@dimen/rocketdry_add_button_size"
+                                android:layout_height="@dimen/rocketdry_add_button_size"
                                 android:layout_gravity="bottom|end"
                                 android:background="@drawable/bg_add_circle_purple"
                                 android:contentDescription="@string/rocketdry_add"
-                                android:padding="6dp"
+                                android:padding="@dimen/rocketdry_add_button_padding"
                                 android:src="@drawable/ic_add"
                                 app:tint="@color/white" />
 
@@ -327,25 +327,46 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/external_atmospheric_log"
-                        android:textColor="@color/dark_text_rp"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:id="@+id/atmosphericSectionTitle"
+                    android:text="@string/external_atmospheric_log"
+                    android:textColor="@color/dark_text_rp"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
 
                     <ImageButton
                         android:id="@+id/addExternalLogButton"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
+                        android:layout_width="@dimen/rocketdry_add_button_size"
+                        android:layout_height="@dimen/rocketdry_add_button_size"
                         android:background="@drawable/bg_add_button"
                         android:contentDescription="@string/add_log"
-                        android:padding="4dp"
-                        android:src="@drawable/ic_add"
-                        app:tint="@color/main_purple" />
+                    android:padding="@dimen/rocketdry_add_button_padding"
+                    android:src="@drawable/ic_add"
+                    app:tint="@color/main_purple" />
 
                 </LinearLayout>
+
+                <HorizontalScrollView
+                    android:id="@+id/atmosphericRoomFilterContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <com.google.android.material.chip.ChipGroup
+                        android:id="@+id/atmosphericRoomFilterGroup"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingEnd="4dp"
+                        app:chipSpacingHorizontal="8dp"
+                        app:chipSpacingVertical="4dp"
+                        app:selectionRequired="false"
+                        app:singleSelection="true" />
+
+                </HorizontalScrollView>
 
                 <!-- Atmospheric Log RecyclerView -->
                 <com.google.android.material.card.MaterialCardView

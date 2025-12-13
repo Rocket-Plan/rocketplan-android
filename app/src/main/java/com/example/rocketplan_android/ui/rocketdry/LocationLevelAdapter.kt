@@ -10,14 +10,16 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 
-class LocationLevelAdapter : RecyclerView.Adapter<LocationLevelAdapter.ViewHolder>() {
+class LocationLevelAdapter(
+    private val onLocationClick: (LocationItem) -> Unit = {}
+) : RecyclerView.Adapter<LocationLevelAdapter.ViewHolder>() {
 
     private val levels: MutableList<LocationLevel> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_location_level, parent, false)
-        return ViewHolder(view)
+        return ViewHolder(view, onLocationClick)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -32,11 +34,12 @@ class LocationLevelAdapter : RecyclerView.Adapter<LocationLevelAdapter.ViewHolde
         notifyDataSetChanged()
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class ViewHolder(itemView: View, onLocationClick: (LocationItem) -> Unit) :
+        RecyclerView.ViewHolder(itemView) {
         private val levelName: TextView = itemView.findViewById(R.id.levelName)
         private val locationsInLevelRecyclerView: RecyclerView =
             itemView.findViewById(R.id.locationsInLevelRecyclerView)
-        private val locationAdapter = LocationCardAdapter()
+        private val locationAdapter = LocationCardAdapter(onLocationClick)
         private val gridLayoutManager = GridLayoutManager(itemView.context, 2)
 
         init {
@@ -51,14 +54,16 @@ class LocationLevelAdapter : RecyclerView.Adapter<LocationLevelAdapter.ViewHolde
     }
 }
 
-class LocationCardAdapter : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>() {
+class LocationCardAdapter(
+    private val onLocationClick: (LocationItem) -> Unit
+) : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>() {
 
     private val locations: MutableList<LocationItem> = mutableListOf()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_location_card, parent, false)
-        return ViewHolder(view)
+        return ViewHolder(view, onLocationClick)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -73,7 +78,10 @@ class LocationCardAdapter : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>
         notifyDataSetChanged()
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    class ViewHolder(
+        itemView: View,
+        private val onLocationClick: (LocationItem) -> Unit
+    ) : RecyclerView.ViewHolder(itemView) {
         private val locationName: TextView = itemView.findViewById(R.id.locationName)
         private val materialCount: TextView = itemView.findViewById(R.id.materialCount)
         private val locationIcon: ImageView = itemView.findViewById(R.id.locationIcon)
@@ -95,6 +103,7 @@ class LocationCardAdapter : RecyclerView.Adapter<LocationCardAdapter.ViewHolder>
                     view.layoutParams = params
                 }
             }
+            itemView.setOnClickListener { onLocationClick(location) }
         }
     }
 }

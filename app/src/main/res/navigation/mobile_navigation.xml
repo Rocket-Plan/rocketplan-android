@@ -229,6 +229,40 @@
             android:name="startTab"
             app:argType="string"
             android:defaultValue="equipment" />
+
+        <action
+            android:id="@+id/action_rocketDryFragment_to_rocketDryRoomFragment"
+            app:destination="@id/rocketDryRoomFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/rocketDryRoomFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.RocketDryRoomFragment"
+        android:label="RocketDry Room"
+        tools:layout="@layout/fragment_rocket_dry_room">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/scopePickerFragment"
+        android:name="com.example.rocketplan_android.ui.projects.ScopePickerFragment"
+        android:label="Scope Picker"
+        tools:layout="@layout/fragment_scope_picker">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
     </fragment>
 
     <fragment
@@ -269,6 +303,10 @@
         <action
             android:id="@+id/action_roomDetailFragment_to_projectNotesFragment"
             app:destination="@id/projectNotesFragment" />
+
+        <action
+            android:id="@+id/action_roomDetailFragment_to_scopePickerFragment"
+            app:destination="@id/scopePickerFragment" />
     </fragment>
 
     <fragment

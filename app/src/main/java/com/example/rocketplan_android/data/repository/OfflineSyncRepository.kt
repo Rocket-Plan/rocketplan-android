@@ -34,11 +34,13 @@ import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
+import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
+import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
@@ -63,6 +65,7 @@ import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequ
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
+import com.example.rocketplan_android.util.parseTargetMoisture
 import com.google.gson.Gson
 import com.google.gson.JsonArray
 import com.google.gson.JsonElement
@@ -93,9 +96,11 @@ private val DEFAULT_DELETION_TYPES = listOf(
     "locations",
     "equipment",
     "damage_materials",
+    "damage_material_room_logs",
     "atmospheric_logs",
     "work_scope_actions"
 )
+private const val DEFAULT_DAMAGE_TYPE_ID: Long = 1L
 private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
     private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
         if (assignedOnly) "company_projects_${companyId}_assigned" else "company_projects_$companyId"
@@ -1024,6 +1029,26 @@ class OfflineSyncRepository(
         return total
     }
 
+    private suspend fun syncMoistureLogsForProject(projectId: Long): Int {
+        val start = System.currentTimeMillis()
+        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
+        if (roomIds.isEmpty()) {
+            Log.d("API", "ℹ️ [syncMoistureLogs] No server room IDs for project $projectId; skipping moisture log sync")
+            return 0
+        }
+        var total = 0
+        roomIds.forEach { roomId ->
+            coroutineContext.ensureActive()
+            total += syncRoomMoistureLogs(projectId, roomId)
+        }
+        val duration = System.currentTimeMillis() - start
+        Log.d(
+            "API",
+            "✅ [syncMoistureLogs] Synced $total moisture logs across ${roomIds.size} rooms for project $projectId in ${duration}ms"
+        )
+        return total
+    }
+
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> = withContext(ioDispatcher) {
         val start = System.currentTimeMillis()
         runCatching { api.getWorkScopeCatalog(companyId).data }
@@ -1139,6 +1164,8 @@ class OfflineSyncRepository(
             .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending notes", it) }
         runCatching { syncPendingEquipment(projectId) }
             .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending equipment", it) }
+        runCatching { syncPendingMoistureLogs(projectId) }
+            .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending moisture logs", it) }
 
         val notesCheckpointKey = projectNotesKey(projectId)
         val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
@@ -1187,6 +1214,10 @@ class OfflineSyncRepository(
                 Log.d("API", "🔍 [syncProjectMetadata] Raw damages from API: ${damages.size}, roomIds=${damages.take(5).map { it.roomId }}")
                 val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId) }
                 localDataService.saveDamages(entities)
+                val materialEntities = damages.map { it.toMaterialEntity() }
+                if (materialEntities.isNotEmpty()) {
+                    localDataService.saveMaterials(materialEntities)
+                }
                 itemCount += entities.size
                 Log.d("API", "⚠️ [syncProjectMetadata] Saved ${entities.size} damages (from ${damages.size} API results)")
                 damages.latestTimestamp { it.updatedAt }
@@ -1211,6 +1242,10 @@ class OfflineSyncRepository(
             val damageCount = syncDamagesForProject(projectId)
             itemCount += damageCount
         }
+
+        val moistureCount = syncMoistureLogsForProject(projectId)
+        itemCount += moistureCount
+        ensureActive()
 
         val workScopeCount = syncWorkScopesForProject(projectId)
         itemCount += workScopeCount
@@ -1271,11 +1306,38 @@ class OfflineSyncRepository(
         val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId, defaultRoomId = roomId) }
         if (entities.isNotEmpty()) {
             localDataService.saveDamages(entities)
+            val materialEntities = damages.map { it.toMaterialEntity() }
+            if (materialEntities.isNotEmpty()) {
+                localDataService.saveMaterials(materialEntities)
+            }
         }
         val duration = System.currentTimeMillis() - startTime
         Log.d(
             "API",
             "🛠️ [syncRoomDamages] Saved ${entities.size} damages for roomId=$roomId (projectId=$projectId) in ${duration}ms"
+        )
+        entities.size
+    }
+
+    suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
+        val startTime = System.currentTimeMillis()
+        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial") }
+            .onFailure { error ->
+                Log.e("API", "❌ [syncRoomMoistureLogs] Failed for roomId=$roomId (projectId=$projectId)", error)
+            }
+            .getOrNull() ?: return@withContext 0
+
+        if (response.isEmpty()) {
+            Log.d("API", "ℹ️ [syncRoomMoistureLogs] No moisture logs returned for roomId=$roomId (projectId=$projectId)")
+            return@withContext 0
+        }
+
+        val entities = response.mapNotNull { it.toEntity() }
+        localDataService.saveMoistureLogs(entities)
+        val duration = System.currentTimeMillis() - startTime
+        Log.d(
+            "API",
+            "💧 [syncRoomMoistureLogs] Saved ${entities.size} moisture logs for roomId=$roomId (projectId=$projectId) in ${duration}ms"
         )
         entities.size
     }
@@ -1707,6 +1769,7 @@ class OfflineSyncRepository(
         localDataService.markEquipmentDeleted(response.equipment)
         localDataService.markDamagesDeleted(response.damageMaterials)
         localDataService.markAtmosphericLogsDeleted(response.atmosphericLogs)
+        localDataService.markMoistureLogsDeleted(response.moistureLogs)
         localDataService.markWorkScopesDeleted(response.workScopeActions)
     }
 
@@ -1760,6 +1823,39 @@ class OfflineSyncRepository(
                 pushPendingEquipmentUpsert(equipment, projectServerId)
             }
             synced?.let { localDataService.saveEquipment(listOf(it)) }
+        }
+    }
+
+    private suspend fun syncPendingMoistureLogs(projectId: Long) {
+        val pending = localDataService.getPendingMoistureLogs(projectId)
+        if (pending.isEmpty()) return
+
+        val projectServerId = resolveServerProjectId(projectId)
+            ?: throw IllegalStateException("Project $projectId has not been synced to server")
+
+        val roomServerIds = mutableSetOf<Long>()
+        pending.forEach { log ->
+            log.roomId.let { roomId ->
+                localDataService.getRoom(roomId)?.serverId?.let { roomServerIds += it }
+            }
+        }
+
+        restoreDeletedParents(
+            buildMap {
+                put("projects", listOf(projectServerId))
+                if (roomServerIds.isNotEmpty()) {
+                    put("rooms", roomServerIds.toList())
+                }
+            }
+        )
+
+        pending.forEach { log ->
+            val synced = if (log.isDeleted) {
+                pushPendingMoistureLogDeletion(log)
+            } else {
+                pushPendingMoistureLogUpsert(log)
+            }
+            synced?.let { localDataService.saveMoistureLogs(listOf(it)) }
         }
     }
 
@@ -1861,6 +1957,199 @@ class OfflineSyncRepository(
         }.getOrNull()
 
         return synced
+    }
+
+    private suspend fun pushPendingMoistureLogDeletion(
+        log: OfflineMoistureLogEntity
+    ): OfflineMoistureLogEntity? {
+        if (log.serverId == null) {
+            return log.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                isDeleted = true,
+                lastSyncedAt = now()
+            )
+        }
+
+        val deleteRequest = DeleteWithTimestampRequest(updatedAt = log.updatedAt.toApiTimestamp())
+        return runCatching {
+            api.deleteMoistureLog(log.serverId, deleteRequest)
+            log.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+        }.recoverCatching { error ->
+            when {
+                error.isMissingOnServer() -> log.copy(
+                    isDirty = false,
+                    syncStatus = SyncStatus.SYNCED,
+                    lastSyncedAt = now()
+                )
+                error.isConflict() -> {
+                    api.deleteMoistureLog(log.serverId, DeleteWithTimestampRequest())
+                    log.copy(
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastSyncedAt = now()
+                    )
+                }
+                else -> throw error
+            }
+        }.onFailure {
+            Log.w("API", "⚠️ [syncPendingMoistureLogs] Failed to delete moisture log ${log.uuid}", it)
+        }.getOrNull()
+    }
+
+    private suspend fun pushPendingMoistureLogUpsert(
+        log: OfflineMoistureLogEntity
+    ): OfflineMoistureLogEntity? {
+        val room = localDataService.getRoom(log.roomId)
+        val roomServerId = room?.serverId ?: log.roomId.takeIf { it > 0 }
+        var material = localDataService.getMaterial(log.materialId)
+        val projectServerId = resolveServerProjectId(log.projectId)
+        if (projectServerId == null || roomServerId == null) {
+            Log.w(
+                "API",
+                "⚠️ [syncPendingMoistureLogs] Missing server ids (project=$projectServerId, room=$roomServerId) for log uuid=${log.uuid}"
+            )
+            return log
+        }
+
+        if (material?.serverId == null) {
+            material = material?.let { ensureMaterialSynced(it, projectServerId, roomServerId, log) }
+        }
+        val materialServerId = material?.serverId ?: log.materialId.takeIf { it > 0 }
+        if (materialServerId == null) {
+            Log.w(
+                "API",
+                "⚠️ [syncPendingMoistureLogs] Unable to resolve material server id for log uuid=${log.uuid}"
+            )
+            return log
+        }
+
+        val request = log.toRequest()
+        val synced = runCatching {
+            val dto = if (log.serverId == null) {
+                api.createMoistureLog(roomServerId, materialServerId, request.copy(updatedAt = null))
+            } else {
+                api.updateMoistureLog(log.serverId, request)
+            }
+            dto.toEntity()?.copy(
+                logId = log.logId,
+                uuid = log.uuid,
+                projectId = log.projectId,
+                roomId = log.roomId,
+                materialId = materialServerId,
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                isDeleted = false,
+                lastSyncedAt = now()
+            )
+        }.recoverCatching { error ->
+            when {
+                log.serverId != null && error.isMissingOnServer() -> {
+                    val created = api.createMoistureLog(roomServerId, materialServerId, request.copy(updatedAt = null))
+                    created.toEntity()?.copy(
+                        logId = log.logId,
+                        uuid = log.uuid,
+                        projectId = log.projectId,
+                        roomId = log.roomId,
+                        materialId = materialServerId,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        isDeleted = false,
+                        lastSyncedAt = now()
+                    )
+                }
+                log.serverId != null && error.isConflict() -> {
+                    val updated = api.updateMoistureLog(log.serverId, request.copy(updatedAt = null))
+                    updated.toEntity()?.copy(
+                        logId = log.logId,
+                        uuid = log.uuid,
+                        projectId = log.projectId,
+                        roomId = log.roomId,
+                        materialId = materialServerId,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        isDeleted = false,
+                        lastSyncedAt = now()
+                    )
+                }
+                else -> throw error
+            }
+        }.onFailure { error ->
+            Log.w("API", "⚠️ [syncPendingMoistureLogs] Failed to push moisture log ${log.uuid}", error)
+        }.getOrNull()
+
+        return synced
+    }
+
+    private suspend fun ensureMaterialSynced(
+        material: OfflineMaterialEntity,
+        projectServerId: Long,
+        roomServerId: Long,
+        log: OfflineMoistureLogEntity
+    ): OfflineMaterialEntity? {
+        val request = DamageMaterialRequest(
+            name = material.name.ifBlank { "Material ${material.materialId}" },
+            damageTypeId = DEFAULT_DAMAGE_TYPE_ID,
+            description = material.description,
+            dryingGoal = material.description?.let { parseTargetMoisture(it) },
+            idempotencyKey = material.uuid
+        )
+
+        val created = runCatching {
+            api.createProjectDamageMaterial(projectServerId, request.copy(updatedAt = null))
+        }.recoverCatching { error ->
+            if (error.isConflict()) {
+                val existing = runCatching { api.getProjectDamageMaterials(projectServerId).data }
+                    .getOrElse { emptyList() }
+                    .firstOrNull { dto ->
+                        dto.title.equals(material.name, ignoreCase = true) &&
+                            (dto.damageTypeId ?: DEFAULT_DAMAGE_TYPE_ID) == request.damageTypeId
+                    }
+                existing ?: throw error
+            } else {
+                throw error
+            }
+        }.onFailure {
+            Log.w(
+                "API",
+                "⚠️ [materials] Failed to create damage material for log uuid=${log.uuid} name=${material.name}",
+                it
+            )
+        }.getOrNull() ?: return material
+
+        runCatching {
+            api.attachDamageMaterialToRoom(
+                roomId = roomServerId,
+                damageMaterialId = created.id,
+                body = DamageMaterialRequest(
+                    name = created.title ?: material.name,
+                    damageTypeId = created.damageTypeId ?: DEFAULT_DAMAGE_TYPE_ID,
+                    dryingGoal = material.description?.let { parseTargetMoisture(it) },
+                    idempotencyKey = material.uuid
+                )
+            )
+        }.onFailure {
+            Log.w(
+                "API",
+                "⚠️ [materials] Failed to attach damage material ${created.id} to room $roomServerId for log uuid=${log.uuid}",
+                it
+            )
+        }
+
+        val timestamp = now()
+        val updated = material.copy(
+            serverId = created.id,
+            syncStatus = SyncStatus.SYNCED,
+            syncVersion = (material.syncVersion + 1),
+            lastSyncedAt = timestamp,
+            updatedAt = timestamp
+        )
+        localDataService.saveMaterials(listOf(updated))
+        return updated
     }
 
     private suspend fun syncPendingNotes(projectId: Long) {
@@ -2851,7 +3140,8 @@ private fun AtmosphericLogDto.toEntity(defaultRoomId: Long? = roomId): OfflineAt
 }
 
 private fun MoistureLogDto.toEntity(): OfflineMoistureLogEntity? {
-    val material = materialId ?: return null
+    val material = materialId ?: damageMaterial?.id ?: return null
+    val resolvedReading = reading ?: moistureContent
     val timestamp = now()
     return OfflineMoistureLogEntity(
         logId = id,
@@ -2861,7 +3151,7 @@ private fun MoistureLogDto.toEntity(): OfflineMoistureLogEntity? {
         roomId = roomId,
         materialId = material,
         date = DateUtils.parseApiDate(date) ?: timestamp,
-        moistureContent = moistureContent ?: 0.0,
+        moistureContent = resolvedReading ?: 0.0,
         location = location,
         depth = depth,
         photoUrl = photoUrl,
@@ -2874,6 +3164,30 @@ private fun MoistureLogDto.toEntity(): OfflineMoistureLogEntity? {
         syncVersion = 1,
         isDirty = false,
         isDeleted = false
+    )
+}
+
+private fun OfflineMoistureLogEntity.toRequest(): MoistureLogRequest =
+    MoistureLogRequest(
+        reading = moistureContent,
+        location = location,
+        idempotencyKey = uuid,
+        updatedAt = updatedAt.toApiTimestamp()
+    )
+
+private fun DamageMaterialDto.toMaterialEntity(): OfflineMaterialEntity {
+    val timestamp = now()
+    return OfflineMaterialEntity(
+        materialId = id,
+        serverId = id,
+        uuid = uuid ?: UUID.nameUUIDFromBytes("damage-material-$id".toByteArray()).toString(),
+        name = title ?: "Material $id",
+        description = description,
+        syncStatus = SyncStatus.SYNCED,
+        syncVersion = 1,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        lastSyncedAt = timestamp
     )
 }
 
