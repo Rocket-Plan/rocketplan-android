@@ -1321,18 +1321,18 @@ class OfflineSyncRepository(
 
     suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
-        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial") }
+        val logs = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial").data }
             .onFailure { error ->
                 Log.e("API", "❌ [syncRoomMoistureLogs] Failed for roomId=$roomId (projectId=$projectId)", error)
             }
             .getOrNull() ?: return@withContext 0
 
-        if (response.isEmpty()) {
+        if (logs.isEmpty()) {
             Log.d("API", "ℹ️ [syncRoomMoistureLogs] No moisture logs returned for roomId=$roomId (projectId=$projectId)")
             return@withContext 0
         }
 
-        val entities = response.mapNotNull { it.toEntity() }
+        val entities = logs.mapNotNull { it.toEntity() }
         localDataService.saveMoistureLogs(entities)
         val duration = System.currentTimeMillis() - startTime
         Log.d(
@@ -1905,7 +1905,10 @@ class OfflineSyncRepository(
         equipment: OfflineEquipmentEntity,
         projectServerId: Long
     ): OfflineEquipmentEntity? {
-        val request = equipment.toRequest(projectServerId)
+        val roomServerId = equipment.roomId?.let { roomId ->
+            localDataService.getRoom(roomId)?.serverId ?: roomId
+        }
+        val request = equipment.toRequest(projectServerId, roomServerId)
         val synced = runCatching {
             val dto = if (equipment.serverId == null) {
                 api.createProjectEquipment(projectServerId, request.copy(updatedAt = null))
@@ -3217,10 +3220,13 @@ private fun EquipmentDto.toEntity(): OfflineEquipmentEntity {
     )
 }
 
-private fun OfflineEquipmentEntity.toRequest(projectServerId: Long): EquipmentRequest =
+private fun OfflineEquipmentEntity.toRequest(
+    projectServerId: Long,
+    roomServerId: Long?
+): EquipmentRequest =
     EquipmentRequest(
         projectId = projectServerId,
-        roomId = roomId,
+        roomId = roomServerId,
         type = type,
         brand = brand,
         model = model,

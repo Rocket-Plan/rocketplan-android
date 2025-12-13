@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -68,7 +69,6 @@ class RocketDryViewModel(
                     val areaOptions = buildAtmosphericAreas(logsByRoom, roomsById)
                     val resolvedSelection = resolveAtmosphericSelection(
                         requestedRoomId = data.selectedAtmosphericRoomId,
-                        availableRoomIds = logsByRoom.keys.toList(),
                         areaOptions = areaOptions
                     )
                     if (resolvedSelection != data.selectedAtmosphericRoomId) {
@@ -92,6 +92,37 @@ class RocketDryViewModel(
             }
         }
     }
+
+    suspend fun renameAtmosphericArea(roomId: Long, newName: String): Boolean =
+        withContext(Dispatchers.IO) {
+            val normalized = newName.trim()
+            if (normalized.isEmpty()) {
+                android.util.Log.w("RocketDryVM", "⚠️ Cannot rename area; blank name provided")
+                return@withContext false
+            }
+            val room = localDataService.getRoom(roomId)
+                ?: localDataService.getRoomByServerId(roomId)
+            if (room == null) {
+                android.util.Log.w(
+                    "RocketDryVM",
+                    "⚠️ Cannot rename area; roomId=$roomId not found"
+                )
+                return@withContext false
+            }
+
+            val updated = room.copy(
+                title = normalized,
+                updatedAt = Date(),
+                syncStatus = SyncStatus.PENDING,
+                isDirty = true
+            )
+            localDataService.saveRooms(listOf(updated))
+            android.util.Log.d(
+                "RocketDryVM",
+                "✏️ Renamed atmospheric area roomId=$roomId to '$normalized'"
+            )
+            true
+        }
 
     private data class Data(
         val projects: List<OfflineProjectEntity>,
@@ -203,33 +234,50 @@ class RocketDryViewModel(
         logsByRoom: Map<Long?, List<AtmosphericLogItem>>,
         rooms: Map<Long, OfflineRoomEntity>
     ): List<AtmosphericLogArea> {
-        if (logsByRoom.isEmpty()) return emptyList()
-        return logsByRoom.entries.map { (roomId, logs) ->
-            val roomLabel = roomId?.let { id ->
-                rooms[id]?.title?.takeIf { it.isNotBlank() }
-            }
-            val label = when {
-                roomId == null -> rocketPlanApp.getString(R.string.rocketdry_atmos_room_external)
-                roomLabel != null -> roomLabel
-                else -> rocketPlanApp.getString(R.string.rocketdry_atmos_room_unknown)
-            }
+        val roomIds = buildSet {
+            addAll(rooms.keys)
+            addAll(logsByRoom.keys.filterNotNull())
+        }
+
+        val areas = roomIds.map { roomId ->
+            val roomLabel = rooms[roomId]?.title?.takeIf { it.isNotBlank() }
+            val label = roomLabel ?: rocketPlanApp.getString(R.string.rocketdry_atmos_room_unknown)
             AtmosphericLogArea(
                 roomId = roomId,
                 label = label,
-                logCount = logs.size
+                logCount = logsByRoom[roomId]?.size ?: 0
             )
-        }.sortedBy { it.label.lowercase(Locale.getDefault()) }
+        }.toMutableList()
+
+        val externalCount = logsByRoom[null]?.size ?: 0
+        areas.add(
+            AtmosphericLogArea(
+                roomId = null,
+                label = rocketPlanApp.getString(R.string.rocketdry_atmos_room_external),
+                logCount = externalCount
+            )
+        )
+
+        return areas.sortedBy { it.label.lowercase(Locale.getDefault()) }
     }
 
     private fun resolveAtmosphericSelection(
         requestedRoomId: Long?,
-        availableRoomIds: List<Long?>,
         areaOptions: List<AtmosphericLogArea>
     ): Long? {
-        if (availableRoomIds.isEmpty()) return requestedRoomId
-        if (requestedRoomId in availableRoomIds) return requestedRoomId
-        if (availableRoomIds.contains(null)) return null
-        return areaOptions.firstOrNull()?.roomId ?: availableRoomIds.first()
+        if (areaOptions.isEmpty()) return requestedRoomId
+        if (requestedRoomId != null && areaOptions.any { it.roomId == requestedRoomId }) {
+            return requestedRoomId
+        }
+
+        val hasAnyLogs = areaOptions.any { it.logCount > 0 }
+        if (!hasAnyLogs) {
+            return areaOptions.firstOrNull { it.roomId == null }?.roomId
+                ?: requestedRoomId
+        }
+
+        val areaWithLogs = areaOptions.firstOrNull { it.logCount > 0 }
+        return areaWithLogs?.roomId ?: areaOptions.first().roomId
     }
 
     private fun buildEquipmentTotals(equipment: List<OfflineEquipmentEntity>): EquipmentTotals {
@@ -251,11 +299,11 @@ class RocketDryViewModel(
     private fun buildEquipmentTypeSummaries(
         equipment: List<OfflineEquipmentEntity>
     ): List<EquipmentTypeSummary> {
-        val grouped = equipment.groupBy { normalizeType(it.type) }
+        val grouped = equipment.groupBy { EquipmentTypeMapper.normalize(it.type) }
         return grouped.map { (typeKey, items) ->
-            val meta = equipmentMeta(typeKey)
+            val meta = EquipmentTypeMapper.metaFor(typeKey)
             EquipmentTypeSummary(
-                type = typeKey,
+                type = meta.key,
                 label = meta.label,
                 count = items.sumOf { it.quantity },
                 iconRes = meta.iconRes
@@ -277,6 +325,7 @@ class RocketDryViewModel(
 
             val levelName = resolveLevelName(room, locations)
             levelName to EquipmentRoomSummary(
+                roomId = room.roomId,
                 roomName = room.title,
                 summary = buildEquipmentSummaryText(roomEquipment)
             )
@@ -290,6 +339,7 @@ class RocketDryViewModel(
         if (unassignedEquipment.isNotEmpty()) {
             roomSummaries.add(
                 UNASSIGNED_LABEL to EquipmentRoomSummary(
+                    roomId = null,
                     roomName = UNASSIGNED_LABEL,
                     summary = buildEquipmentSummaryText(unassignedEquipment)
                 )
@@ -311,10 +361,10 @@ class RocketDryViewModel(
 
     private fun buildEquipmentSummaryText(items: List<OfflineEquipmentEntity>): String {
         val summary = items
-            .groupBy { normalizeType(it.type) }
+            .groupBy { EquipmentTypeMapper.normalize(it.type) }
             .map { (typeKey, groupedItems) ->
                 val count = groupedItems.sumOf { it.quantity }
-                val label = equipmentMeta(typeKey).label
+                val label = EquipmentTypeMapper.metaFor(typeKey).label
                 formatEquipmentCount(count, label)
             }
             .sortedBy { it.lowercase(Locale.getDefault()) }
@@ -331,50 +381,12 @@ class RocketDryViewModel(
             ?: DEFAULT_LEVEL_LABEL
     }
 
-    private fun normalizeType(type: String?): String =
-        type?.trim()
-            ?.lowercase(Locale.getDefault())
-            ?.replace(" ", "_")
-            ?.replace("-", "_")
-            ?: "equipment"
-
-    private fun equipmentMeta(typeKey: String): EquipmentTypeMeta =
-        when (typeKey) {
-            "dehumidifier", "dehumidifiers" ->
-                EquipmentTypeMeta("Dehumidifier", R.drawable.ic_water_drop)
-
-            "air_mover", "air_movers" ->
-                EquipmentTypeMeta("Air Mover", R.drawable.ic_material)
-
-            "air_scrubber", "air_scrubbers" ->
-                EquipmentTypeMeta("Air Scrubber", R.drawable.ic_material)
-
-            "inject_drier", "injectidrier", "inject_dryers" ->
-                EquipmentTypeMeta("Injectidrier", R.drawable.ic_material)
-
-            "drying_mat", "drying_mats" ->
-                EquipmentTypeMeta("Drying Mat", R.drawable.ic_material)
-
-            else -> {
-                val label = typeKey.replace("_", " ")
-                    .replaceFirstChar { char ->
-                        if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
-                    }
-                EquipmentTypeMeta(label.ifBlank { "Equipment" }, R.drawable.ic_material)
-            }
-        }
-
     private fun formatEquipmentCount(count: Int, label: String): String {
         val base = label.trim().ifBlank { "Equipment" }
         val needsPlural = count != 1 && !base.endsWith("s", ignoreCase = true)
         val finalLabel = if (needsPlural) "$base" + "s" else base
         return "$count $finalLabel"
     }
-
-    private data class EquipmentTypeMeta(
-        val label: String,
-        val iconRes: Int
-    )
 
     private fun formatDateTime(date: Date): String {
         val formatter = SimpleDateFormat("MMM d, h:mma", Locale.getDefault())

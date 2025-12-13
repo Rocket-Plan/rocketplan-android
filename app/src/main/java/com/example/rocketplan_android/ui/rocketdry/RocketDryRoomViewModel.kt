@@ -55,15 +55,18 @@ class RocketDryRoomViewModel(
                 if (project == null || room == null) {
                     _uiState.value = RocketDryRoomUiState.Loading
                 } else {
+                    val atmosphericLogItems = data.atmosphericLogs.map { it.toUiItem(room.title) }
                     _uiState.value = RocketDryRoomUiState.Ready(
                         projectAddress = buildProjectAddress(project),
                         roomName = room.title,
                         roomIconRes = resolveRoomIcon(room),
-                        atmosphericLogCount = data.atmosphericLogs.size,
+                        atmosphericLogCount = atmosphericLogItems.size,
+                        atmosphericLogs = atmosphericLogItems,
                         materialGoals = buildMaterialGoals(
                             materials = resolveMaterialsForLogs(data.materials, data.moistureLogs),
                             moistureLogs = data.moistureLogs
-                        )
+                        ),
+                        materialOptions = buildMaterialOptions(data.materials)
                     )
                 }
             }
@@ -240,6 +243,26 @@ class RocketDryRoomViewModel(
         return RoomTypeCatalog.resolveIconRes(rocketPlanApp, room.roomTypeId, iconName)
     }
 
+    private fun buildMaterialOptions(materials: List<OfflineMaterialEntity>): List<String> {
+        if (materials.isEmpty()) return emptyList()
+        return materials.mapNotNull { material ->
+            material.name.trim().takeIf { it.isNotEmpty() }
+        }
+            .distinctBy { it.lowercase(Locale.getDefault()) }
+            .sortedBy { it.lowercase(Locale.getDefault()) }
+    }
+
+    private fun OfflineAtmosphericLogEntity.toUiItem(roomName: String): AtmosphericLogItem =
+        AtmosphericLogItem(
+            roomId = roomId,
+            roomName = roomName,
+            dateTime = formatDateTime(date),
+            humidity = relativeHumidity,
+            temperature = temperature,
+            pressure = pressure ?: 0.0,
+            windSpeed = windSpeed ?: 0.0
+        )
+
     private fun buildMaterialGoals(
         materials: Map<Long, OfflineMaterialEntity>,
         moistureLogs: List<OfflineMoistureLogEntity>
@@ -275,6 +298,14 @@ class RocketDryRoomViewModel(
                 logsCount = readingLogs.size
             )
         }.sortedBy { it.name.lowercase(Locale.getDefault()) }
+    }
+
+    private fun formatDateTime(date: Date): String {
+        val formatter = SimpleDateFormat("MMM d, h:mma", Locale.getDefault())
+        val formatted = formatter.format(date)
+        return formatted
+            .replace("AM", "am")
+            .replace("PM", "pm")
     }
 
     companion object {

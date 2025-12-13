@@ -63,6 +63,16 @@ class ScopePickerFragment : Fragment(R.layout.fragment_scope_picker) {
         var displayedCategory = "All"
         val expandedGroups = mutableSetOf<String>()
         var rebuildListFn: ((String, String) -> Unit)? = null
+        val categoryPriority = listOf("All", "AH CAT 1", "AH CAT 2", "AH CAT 3", "CAT1", "CAT2", "CAT3")
+            .mapIndexed { index, value -> value.lowercase(Locale.US) to index }
+            .toMap()
+        val categoryComparator = Comparator<String> { a, b ->
+            val aKey = a.lowercase(Locale.US)
+            val bKey = b.lowercase(Locale.US)
+            val aPriority = categoryPriority[aKey] ?: Int.MAX_VALUE
+            val bPriority = categoryPriority[bKey] ?: Int.MAX_VALUE
+            if (aPriority != bPriority) aPriority - bPriority else aKey.compareTo(bKey)
+        }
 
         data class Row(val header: String? = null, val item: ScopeCatalogItem? = null)
 
@@ -179,7 +189,7 @@ class ScopePickerFragment : Fragment(R.layout.fragment_scope_picker) {
             }
 
         fun buildCategories(items: List<ScopeCatalogItem>): List<String> =
-            listOf("All") + items.map(::sheetKey).distinct().sorted()
+            listOf("All") + items.map(::sheetKey).distinct().sortedWith(categoryComparator)
 
         fun rebuildList(category: String, query: String) {
             val categoryChanged = displayedCategory != category
@@ -203,10 +213,11 @@ class ScopePickerFragment : Fragment(R.layout.fragment_scope_picker) {
             }
 
             val rows = mutableListOf<Row>()
-            val grouped = filtered.groupBy(::groupingKey).toSortedMap()
+            val grouped = filtered.groupBy(::groupingKey)
             val autoExpand = q.isNotBlank()
 
-            grouped.forEach { (group, items) ->
+            grouped.keys.sortedWith(categoryComparator).forEach { group ->
+                val items = grouped[group].orEmpty()
                 rows.add(Row(header = group))
                 val expanded = autoExpand || expandedGroups.contains(group)
                 if (expanded) {

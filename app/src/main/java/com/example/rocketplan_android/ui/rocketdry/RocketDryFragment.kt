@@ -8,6 +8,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import android.util.Log
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -18,7 +19,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
@@ -26,6 +26,9 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -55,7 +58,6 @@ class RocketDryFragment : Fragment() {
     private lateinit var atmosphericSectionTitle: TextView
     private lateinit var equipmentTotalCount: TextView
     private lateinit var equipmentStatusBreakdown: TextView
-    private lateinit var equipmentSummaryRecyclerView: RecyclerView
     private lateinit var equipmentLocationsRecyclerView: RecyclerView
     private lateinit var roomCard: View
     private lateinit var exteriorSpaceCard: View
@@ -69,7 +71,6 @@ class RocketDryFragment : Fragment() {
 
     private lateinit var atmosphericLogAdapter: AtmosphericLogAdapter
     private lateinit var locationLevelAdapter: LocationLevelAdapter
-    private lateinit var equipmentSummaryAdapter: EquipmentSummaryAdapter
     private lateinit var equipmentLevelAdapter: EquipmentLevelAdapter
     private var suppressToggleChanges = false
     private lateinit var currentTab: RocketDryTab
@@ -105,7 +106,6 @@ class RocketDryFragment : Fragment() {
         atmosphericSectionTitle = view.findViewById(R.id.atmosphericSectionTitle)
         equipmentTotalCount = view.findViewById(R.id.equipmentTotalCount)
         equipmentStatusBreakdown = view.findViewById(R.id.equipmentStatusBreakdown)
-        equipmentSummaryRecyclerView = view.findViewById(R.id.equipmentSummaryRecyclerView)
         equipmentLocationsRecyclerView = view.findViewById(R.id.equipmentLocationsRecyclerView)
         roomCard = view.findViewById(R.id.roomCard)
         exteriorSpaceCard = view.findViewById(R.id.exteriorSpaceCard)
@@ -201,13 +201,10 @@ class RocketDryFragment : Fragment() {
         atmosphericLogsRecyclerView.layoutManager = LinearLayoutManager(context)
         atmosphericLogsRecyclerView.adapter = atmosphericLogAdapter
 
-        // Equipment summary RecyclerView
-        equipmentSummaryAdapter = EquipmentSummaryAdapter()
-        equipmentSummaryRecyclerView.layoutManager = GridLayoutManager(context, 2)
-        equipmentSummaryRecyclerView.adapter = equipmentSummaryAdapter
-
         // Equipment by level RecyclerView
-        equipmentLevelAdapter = EquipmentLevelAdapter()
+        equipmentLevelAdapter = EquipmentLevelAdapter { room ->
+            onEquipmentRoomSelected(room)
+        }
         equipmentLocationsRecyclerView.layoutManager = LinearLayoutManager(context)
         equipmentLocationsRecyclerView.adapter = equipmentLevelAdapter
 
@@ -218,6 +215,20 @@ class RocketDryFragment : Fragment() {
         }
         locationsRecyclerView.layoutManager = LinearLayoutManager(context)
         locationsRecyclerView.adapter = locationLevelAdapter
+    }
+
+    private fun onEquipmentRoomSelected(room: EquipmentRoomSummary) {
+        if (room.roomId == null) {
+            Toast.makeText(requireContext(), R.string.rocketdry_no_equipment, Toast.LENGTH_SHORT).show()
+            return
+        }
+        Log.d(TAG, "➡️ Navigating to room equipment for roomId=${room.roomId}, name='${room.roomName}'")
+        val action = RocketDryFragmentDirections
+            .actionRocketDryFragmentToEquipmentRoomFragment(
+                projectId = args.projectId,
+                roomId = room.roomId
+            )
+        findNavController().navigate(action)
     }
 
     private fun openRoomDry(roomId: Long) {
@@ -248,7 +259,6 @@ class RocketDryFragment : Fragment() {
         renderAtmosphericAreaFilters(emptyList(), null)
         updateAtmosphericLogs(emptyList())
         locationLevelAdapter.submitLevels(emptyList())
-        equipmentSummaryAdapter.submitItems(emptyList())
         equipmentLevelAdapter.submitLevels(emptyList())
         equipmentTotalCount.text = getString(R.string.loading_project)
         equipmentStatusBreakdown.text = ""
@@ -260,7 +270,6 @@ class RocketDryFragment : Fragment() {
         renderAtmosphericAreaFilters(state.atmosphericAreas, state.selectedAtmosphericRoomId)
         updateAtmosphericLogs(state.atmosphericLogs)
         locationLevelAdapter.submitLevels(state.locationLevels)
-        equipmentSummaryAdapter.submitItems(state.equipmentByType)
         equipmentLevelAdapter.submitLevels(state.equipmentLevels)
         equipmentTotalCount.text = resources.getQuantityString(
             R.plurals.rocketdry_equipment_units,
@@ -351,11 +360,38 @@ class RocketDryFragment : Fragment() {
             R.string.rocketdry_external_log_title,
             formatLogDate(now)
         )
+        val currentAreaLabel = lastRenderedAtmosphericAreas
+            .firstOrNull { it.roomId == latestAtmosphericSelection }
+            ?.label
+            ?: getString(R.string.rocketdry_atmos_room_external)
         Log.d(
             TAG,
             "🧪 Launching external atmospheric log dialog at '$title' (selectedRoomId=$latestAtmosphericSelection)"
         )
-        showAtmosphericLogDialog(title) { humidity, temperature, pressure, windSpeed ->
+        showAtmosphericLogDialog(
+            title = title,
+            areaLabel = currentAreaLabel,
+            onAreaClicked = { updateLabel ->
+                showAtmosphericAreaPicker { area ->
+                    updateLabel(area.label)
+                }
+            },
+            onRenameAreaClicked = onRename@{ updateLabel ->
+                val selectedRoomId = latestAtmosphericSelection
+                if (selectedRoomId == null) {
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.rocketdry_select_area_first,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@onRename
+                }
+                showRenameAreaDialog(selectedRoomId) { updatedLabel ->
+                    Log.d(TAG, "✏️ Atmospheric area renamed to '$updatedLabel'")
+                    updateLabel(updatedLabel)
+                }
+            }
+        ) { humidity, temperature, pressure, windSpeed ->
             Log.d(
                 TAG,
                 "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed roomId=$latestAtmosphericSelection"
@@ -368,6 +404,77 @@ class RocketDryFragment : Fragment() {
                 roomId = latestAtmosphericSelection
             )
         }
+    }
+
+    private fun showAtmosphericAreaPicker(onSelected: (AtmosphericLogArea) -> Unit) {
+        val areas = lastRenderedAtmosphericAreas.takeIf { it.isNotEmpty() } ?: listOf(
+            AtmosphericLogArea(
+                roomId = null,
+                label = getString(R.string.rocketdry_atmos_room_external),
+                logCount = 0
+            )
+        )
+        val labels = areas.map { it.label }.toTypedArray()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.rocketdry_select_area_title)
+            .setItems(labels) { dialog, index ->
+                val selected = areas.getOrNull(index) ?: return@setItems
+                latestAtmosphericSelection = selected.roomId
+                viewModel.selectAtmosphericRoom(selected.roomId)
+                onSelected(selected)
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showRenameAreaDialog(
+        roomId: Long,
+        onRenamed: (String) -> Unit
+    ) {
+        val currentArea = lastRenderedAtmosphericAreas.firstOrNull { it.roomId == roomId }
+            ?: return
+        val dialogView = layoutInflater.inflate(R.layout.dialog_rename_area, null)
+        val inputLayout = dialogView.findViewById<TextInputLayout>(R.id.areaNameInputLayout)
+        val input = dialogView.findViewById<TextInputEditText>(R.id.areaNameInput)
+        input.setText(currentArea.label)
+        input.setSelection(input.text?.length ?: 0)
+        input.doAfterTextChanged {
+            inputLayout.error = null
+        }
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.rocketdry_rename_area_title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.save, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        dialog.setOnShowListener {
+            val saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            saveButton.setOnClickListener {
+                val newName = input.text?.toString()?.trim().orEmpty()
+                if (newName.isBlank()) {
+                    inputLayout.error = getString(R.string.rocketdry_rename_area_error)
+                    return@setOnClickListener
+                }
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val success = viewModel.renameAtmosphericArea(roomId, newName)
+                    if (success) {
+                        onRenamed(newName)
+                        Toast.makeText(
+                            requireContext(),
+                            R.string.rocketdry_area_renamed,
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        dialog.dismiss()
+                    } else {
+                        inputLayout.error = getString(R.string.rocketdry_rename_area_error)
+                    }
+                }
+            }
+        }
+        dialog.show()
     }
 
     private fun formatLogDate(date: Date): String {

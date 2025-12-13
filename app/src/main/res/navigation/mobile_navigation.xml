@@ -233,6 +233,9 @@
         <action
             android:id="@+id/action_rocketDryFragment_to_rocketDryRoomFragment"
             app:destination="@id/rocketDryRoomFragment" />
+        <action
+            android:id="@+id/action_rocketDryFragment_to_equipmentRoomFragment"
+            app:destination="@id/equipmentRoomFragment" />
     </fragment>
 
     <fragment
@@ -240,6 +243,21 @@
         android:name="com.example.rocketplan_android.ui.rocketdry.RocketDryRoomFragment"
         android:label="RocketDry Room"
         tools:layout="@layout/fragment_rocket_dry_room">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/equipmentRoomFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.EquipmentRoomFragment"
+        android:label="Equipment Room"
+        tools:layout="@layout/fragment_equipment_room">
 
         <argument
             android:name="projectId"

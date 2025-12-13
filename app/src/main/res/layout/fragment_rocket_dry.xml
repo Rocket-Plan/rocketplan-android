@@ -276,37 +276,17 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <TextView
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/rocketdry_equipment_by_type"
-                    android:textColor="@color/dark_text_rp"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/equipmentSummaryRecyclerView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="24dp"
-                    android:nestedScrollingEnabled="false"
-                    tools:itemCount="4"
-                    tools:listitem="@layout/item_equipment_summary" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:text="@string/rocketdry_equipment_by_room"
-                    android:textColor="@color/dark_text_rp"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
+                    android:layout_height="1dp"
+                    android:layout_marginVertical="12dp"
+                    android:background="@color/light_border" />
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/equipmentLocationsRecyclerView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
                     android:nestedScrollingEnabled="false"
                     tools:itemCount="2"
                     tools:listitem="@layout/item_equipment_level" />

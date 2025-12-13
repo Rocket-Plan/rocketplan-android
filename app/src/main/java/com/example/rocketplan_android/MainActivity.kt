@@ -127,8 +127,14 @@ class MainActivity : AppCompatActivity() {
                     destination.id == R.id.loginFragment ||
                     destination.id == R.id.signUpFragment ||
                     destination.id == R.id.forgotPasswordFragment ||
-                    destination.id == R.id.oauthWebViewFragment -> {
+                destination.id == R.id.oauthWebViewFragment -> {
                     // Hide toolbar and drawer on auth screens
+                    bottomNavigation.isVisible = false
+                    supportActionBar?.hide()
+                    drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                    window.setSoftInputMode(hiddenSoftInputMode)
+                }
+                destination.id == R.id.scopePickerFragment -> {
                     bottomNavigation.isVisible = false
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)

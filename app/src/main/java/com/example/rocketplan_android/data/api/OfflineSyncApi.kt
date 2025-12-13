@@ -283,7 +283,7 @@ interface OfflineSyncApi {
     suspend fun getRoomMoistureLogs(
         @Path("roomId") roomId: Long,
         @Query("include") include: String? = null
-    ): List<MoistureLogDto>
+    ): PaginatedResponse<MoistureLogDto>
 
     @POST("/api/projects/{projectId}/damage-materials")
     suspend fun createProjectDamageMaterial(

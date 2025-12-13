@@ -43,6 +43,7 @@ data class EquipmentTypeSummary(
 )
 
 data class EquipmentRoomSummary(
+    val roomId: Long?,
     val roomName: String,
     val summary: String
 )
@@ -83,6 +84,8 @@ sealed class RocketDryRoomUiState {
         val roomName: String,
         val roomIconRes: Int,
         val atmosphericLogCount: Int,
-        val materialGoals: List<MaterialDryingGoalItem>
+        val atmosphericLogs: List<AtmosphericLogItem>,
+        val materialGoals: List<MaterialDryingGoalItem>,
+        val materialOptions: List<String>
     ) : RocketDryRoomUiState()
 }

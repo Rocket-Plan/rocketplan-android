@@ -20,14 +20,16 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="14dp"
+        app:endIconMode="dropdown_menu"
         app:hintTextColor="@color/light_text_rp">
 
-        <com.google.android.material.textfield.TextInputEditText
+        <com.google.android.material.textfield.MaterialAutoCompleteTextView
             android:id="@+id/materialNameInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/rocketdry_goal_material_hint"
-            android:inputType="textCapWords" />
+            android:inputType="textCapWords"
+            android:imeOptions="actionNext" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

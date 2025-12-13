@@ -23,22 +23,10 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <ImageButton
-                    android:id="@+id/backButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/back"
-                    android:padding="8dp"
-                    android:src="@drawable/ic_arrow_back"
-                    app:tint="@color/icon_colour" />
-
                 <TextView
                     android:id="@+id/roomProjectAddress"
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
                     android:ellipsize="end"
                     android:maxLines="2"
                     android:textColor="@color/dark_text_rp"
@@ -93,14 +81,6 @@
                     android:textColor="@color/dark_text_rp"
                     android:textSize="22sp"
                     android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/atmosphericLogCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/light_text_rp"
-                    android:textSize="14sp"
-                    tools:text="0 logs" />
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -143,6 +123,15 @@
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/atmosphericLogsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:nestedScrollingEnabled="false"
+                tools:itemCount="1"
+                tools:listitem="@layout/item_atmospheric_log" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -193,17 +182,6 @@
                     android:textSize="18sp"
                     android:textStyle="bold" />
             </LinearLayout>
-
-            <TextView
-                android:id="@+id/materialGoalsEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="@string/rocketdry_goal_list_empty"
-                android:textColor="@color/light_text_rp"
-                android:textSize="14sp"
-                android:visibility="gone"
-                tools:visibility="visible" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/materialGoalsRecyclerView"

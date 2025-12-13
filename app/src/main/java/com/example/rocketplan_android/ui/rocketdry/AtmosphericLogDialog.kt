@@ -1,8 +1,10 @@
 package com.example.rocketplan_android.ui.rocketdry
 
+import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.TextView
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import com.example.rocketplan_android.R
@@ -18,6 +20,9 @@ import java.text.DecimalFormat
 @Suppress("DEPRECATION") // SOFT_INPUT_ADJUST_RESIZE still needed for dialog keyboard behavior
 fun Fragment.showAtmosphericLogDialog(
     title: String,
+    areaLabel: String? = null,
+    onAreaClicked: ((updateLabel: (String) -> Unit) -> Unit)? = null,
+    onRenameAreaClicked: ((updateLabel: (String) -> Unit) -> Unit)? = null,
     onSave: (humidity: Double, temperature: Double, pressure: Double, windSpeed: Double) -> Unit
 ) {
     data class InputStep(
@@ -32,6 +37,10 @@ fun Fragment.showAtmosphericLogDialog(
     val stepLabel = dialogView.findViewById<TextView>(R.id.stepLabel)
     val stepPreview = dialogView.findViewById<TextView>(R.id.stepPreview)
     val stepPosition = dialogView.findViewById<TextView>(R.id.stepPosition)
+    val areaContainer = dialogView.findViewById<View>(R.id.areaContainer)
+    val areaName = dialogView.findViewById<TextView>(R.id.areaName)
+    val changeAreaButton = dialogView.findViewById<MaterialButton>(R.id.changeAreaButton)
+    val renameAreaButton = dialogView.findViewById<MaterialButton>(R.id.renameAreaButton)
     val stepInputLayout = dialogView.findViewById<TextInputLayout>(R.id.stepInputLayout)
     val stepInput = dialogView.findViewById<TextInputEditText>(R.id.stepInput)
     val previousStepButton = dialogView.findViewById<MaterialButton>(R.id.previousStepButton)
@@ -49,6 +58,26 @@ fun Fragment.showAtmosphericLogDialog(
     )
 
     wizardTitle.text = title
+
+    val hasAreaUi = areaLabel != null || onAreaClicked != null || onRenameAreaClicked != null
+    if (hasAreaUi) {
+        areaContainer.isVisible = true
+        areaName.text = areaLabel ?: getString(R.string.rocketdry_atmos_room_unknown)
+        changeAreaButton.isVisible = onAreaClicked != null
+        changeAreaButton.setOnClickListener {
+            onAreaClicked?.invoke { updatedLabel ->
+                areaName.text = updatedLabel
+            }
+        }
+        renameAreaButton.isVisible = onRenameAreaClicked != null
+        renameAreaButton.setOnClickListener {
+            onRenameAreaClicked?.invoke { updatedLabel ->
+                areaName.text = updatedLabel
+            }
+        }
+    } else {
+        areaContainer.isVisible = false
+    }
 
     var humidity: Double? = null
     var temperature: Double? = null

@@ -31,7 +31,7 @@ class EquipmentSummaryAdapter : RecyclerView.Adapter<EquipmentSummaryAdapter.Vie
         notifyDataSetChanged()
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val icon: ImageView = itemView.findViewById(R.id.equipmentTypeIcon)
         private val count: TextView = itemView.findViewById(R.id.equipmentTypeCount)
         private val label: TextView = itemView.findViewById(R.id.equipmentTypeLabel)
@@ -50,7 +50,9 @@ class EquipmentSummaryAdapter : RecyclerView.Adapter<EquipmentSummaryAdapter.Vie
     }
 }
 
-class EquipmentLevelAdapter : RecyclerView.Adapter<EquipmentLevelAdapter.ViewHolder>() {
+class EquipmentLevelAdapter(
+    private val onRoomClick: (EquipmentRoomSummary) -> Unit
+) : RecyclerView.Adapter<EquipmentLevelAdapter.ViewHolder>() {
 
     private val levels: MutableList<EquipmentLevel> = mutableListOf()
 
@@ -72,21 +74,26 @@ class EquipmentLevelAdapter : RecyclerView.Adapter<EquipmentLevelAdapter.ViewHol
         notifyDataSetChanged()
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val levelName: TextView = itemView.findViewById(R.id.equipmentLevelName)
         private val roomsRecyclerView: RecyclerView = itemView.findViewById(R.id.equipmentRoomsRecyclerView)
-        private val roomAdapter = EquipmentRoomAdapter()
+        private var roomAdapter: EquipmentRoomAdapter? = null
 
         fun bind(level: EquipmentLevel) {
             levelName.text = level.levelName
             roomsRecyclerView.layoutManager = GridLayoutManager(itemView.context, 2)
-            roomsRecyclerView.adapter = roomAdapter
-            roomAdapter.submitRooms(level.rooms)
+            val adapter = roomAdapter ?: EquipmentRoomAdapter { room -> onRoomClick(room) }.also {
+                roomAdapter = it
+                roomsRecyclerView.adapter = it
+            }
+            adapter.submitRooms(level.rooms)
         }
     }
 }
 
-private class EquipmentRoomAdapter : RecyclerView.Adapter<EquipmentRoomAdapter.ViewHolder>() {
+private class EquipmentRoomAdapter(
+    private val onRoomClick: (EquipmentRoomSummary) -> Unit
+) : RecyclerView.Adapter<EquipmentRoomAdapter.ViewHolder>() {
 
     private val rooms: MutableList<EquipmentRoomSummary> = mutableListOf()
 
@@ -108,13 +115,14 @@ private class EquipmentRoomAdapter : RecyclerView.Adapter<EquipmentRoomAdapter.V
         notifyDataSetChanged()
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val roomName: TextView = itemView.findViewById(R.id.equipmentRoomName)
         private val summary: TextView = itemView.findViewById(R.id.equipmentRoomSummary)
 
         fun bind(item: EquipmentRoomSummary) {
             roomName.text = item.roomName
             summary.text = item.summary
+            itemView.setOnClickListener { onRoomClick(item) }
         }
     }
 }
