@@ -215,12 +215,8 @@ class AuthRepository(
         val token = getAuthTokenSync()
         if (token != null) {
             RetrofitClient.setAuthToken(token)
-            return try {
-                ensureUserContext()
-                true
-            } catch (t: Throwable) {
-                false
-            }
+            val result = refreshUserContext()
+            return result.isSuccess
         }
         return false
     }
@@ -272,15 +268,27 @@ class AuthRepository(
 
             if (response.isSuccessful && currentUser != null) {
                 val primaryCompanyId = currentUser.getPrimaryCompanyId()
-                Log.d("AuthRepository", "refreshUserContext - userId=${currentUser.id}, companyId=${currentUser.companyId}, primaryCompanyId=$primaryCompanyId, companies=${currentUser.companies?.map { it.id }}, email=${currentUser.email}")
+                val storedCompanyId = secureStorage.getCompanyIdSync()
+                val availableCompanyIds = buildSet {
+                    currentUser.companyId?.let { add(it) }
+                    currentUser.companies?.forEach { add(it.id) }
+                }
+                val selectedCompanyId = when {
+                    storedCompanyId != null && availableCompanyIds.contains(storedCompanyId) -> storedCompanyId
+                    else -> primaryCompanyId
+                }
+                Log.d(
+                    "AuthRepository",
+                    "refreshUserContext - userId=${currentUser.id}, companyId=${currentUser.companyId}, primaryCompanyId=$primaryCompanyId, storedCompanyId=$storedCompanyId, selectedCompanyId=$selectedCompanyId, companies=${currentUser.companies?.map { it.id }}, email=${currentUser.email}"
+                )
                 if (currentUser.id > 0L) {
                     secureStorage.saveUserId(currentUser.id)
                 } else {
                     secureStorage.clearUserId()
                 }
-                if (primaryCompanyId != null) {
-                    Log.d("AuthRepository", "Saving primaryCompanyId=$primaryCompanyId")
-                    secureStorage.saveCompanyId(primaryCompanyId)
+                if (selectedCompanyId != null) {
+                    Log.d("AuthRepository", "Saving companyId=$selectedCompanyId")
+                    secureStorage.saveCompanyId(selectedCompanyId)
                 } else {
                     Log.w("AuthRepository", "No company found in API response - clearing stored companyId")
                     secureStorage.clearCompanyId()
@@ -349,22 +357,6 @@ class AuthRepository(
         val email = secureStorage.getUserEmailSync()
         val password = secureStorage.getEncryptedPassword()
         return Pair(email, password)
-    }
-
-    // ==================== Biometric ====================
-
-    /**
-     * Check if biometric authentication is enabled
-     */
-    suspend fun isBiometricEnabled(): Boolean {
-        return secureStorage.getBiometricEnabledSync()
-    }
-
-    /**
-     * Enable/disable biometric authentication
-     */
-    suspend fun setBiometricEnabled(enabled: Boolean) {
-        secureStorage.setBiometricEnabled(enabled)
     }
 
     // ==================== Logout ====================

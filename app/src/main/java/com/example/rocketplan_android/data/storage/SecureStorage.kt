@@ -25,7 +25,6 @@ class SecureStorage(private val context: Context) {
         private val AUTH_TOKEN_KEY = stringPreferencesKey("auth_token")
         private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
         private val REMEMBER_ME_KEY = booleanPreferencesKey("remember_me")
-        private val BIOMETRIC_ENABLED_KEY = booleanPreferencesKey("biometric_enabled")
         private val USER_ID_KEY = longPreferencesKey("user_id")
         private val COMPANY_ID_KEY = longPreferencesKey("company_id")
         private const val OAUTH_STATE_KEY = "oauth_state"
@@ -236,33 +235,6 @@ class SecureStorage(private val context: Context) {
         }
     }
 
-    // ==================== Biometric Authentication ====================
-
-    /**
-     * Enable/disable biometric authentication
-     */
-    suspend fun setBiometricEnabled(enabled: Boolean) {
-        context.dataStore.edit { preferences ->
-            preferences[BIOMETRIC_ENABLED_KEY] = enabled
-        }
-    }
-
-    /**
-     * Get biometric enabled status
-     */
-    fun getBiometricEnabled(): Flow<Boolean> {
-        return context.dataStore.data.map { preferences ->
-            preferences[BIOMETRIC_ENABLED_KEY] ?: false
-        }
-    }
-
-    /**
-     * Get biometric enabled status synchronously
-     */
-    suspend fun getBiometricEnabledSync(): Boolean {
-        return getBiometricEnabled().first()
-    }
-
     // ==================== Clear All Data ====================
 
     /**
@@ -274,7 +246,6 @@ class SecureStorage(private val context: Context) {
             preferences.remove(AUTH_TOKEN_KEY)
             preferences.remove(USER_EMAIL_KEY)
             preferences.remove(REMEMBER_ME_KEY)
-            preferences.remove(BIOMETRIC_ENABLED_KEY)
             preferences.remove(USER_ID_KEY)
             preferences.remove(COMPANY_ID_KEY)
         }

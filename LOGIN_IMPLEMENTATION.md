@@ -209,10 +209,9 @@ Implement `AuthResetPasswordFragment` matching iOS design:
 - Success/error messaging
 - Navigation back to login
 
-### 4. Add Remember Me / Biometric Login
+### 4. Add Remember Me
 
 - Store encrypted credentials if user opts in
-- Implement fingerprint/face authentication
 - Auto-login on app launch if token is valid
 
 ### 5. Social Login (Optional)

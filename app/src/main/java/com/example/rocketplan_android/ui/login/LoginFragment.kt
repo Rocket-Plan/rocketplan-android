@@ -203,7 +203,6 @@ class LoginFragment : Fragment() {
             }
         }
 
-        // Biometric prompt visibility is managed by activity for now
     }
 
     /**

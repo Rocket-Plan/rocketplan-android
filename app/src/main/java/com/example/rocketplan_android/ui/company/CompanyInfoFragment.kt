@@ -6,6 +6,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.ImageViewCompat
@@ -17,6 +19,8 @@ import androidx.lifecycle.repeatOnLifecycle
 import coil.load
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.databinding.FragmentCompanyInfoBinding
 import kotlinx.coroutines.launch
 
@@ -26,6 +30,8 @@ class CompanyInfoFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: CompanyInfoViewModel by viewModels()
+    private lateinit var rocketPlanApp: RocketPlanApplication
+    private lateinit var authRepository: AuthRepository
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,12 +45,19 @@ class CompanyInfoFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        rocketPlanApp = requireActivity().application as RocketPlanApplication
+        authRepository = rocketPlanApp.authRepository
+
         binding.retryButton.setOnClickListener {
             viewModel.refreshCompanyInfo()
         }
 
         binding.swipeRefresh.setOnRefreshListener {
             viewModel.refreshCompanyInfo()
+        }
+
+        binding.switchCompanyButton.setOnClickListener {
+            showCompanyPicker()
         }
 
         binding.environmentValue.text = getString(
@@ -122,6 +135,52 @@ class CompanyInfoFragment : Fragment() {
         val white = ContextCompat.getColor(requireContext(), android.R.color.white)
         ImageViewCompat.setImageTintList(binding.companyLogo, ColorStateList.valueOf(white))
         binding.companyLogo.setImageResource(R.drawable.ic_building)
+    }
+
+    private fun showCompanyPicker() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val result = authRepository.getUserCompanies()
+            result.onFailure { error ->
+                Toast.makeText(
+                    requireContext(),
+                    error.message ?: getString(R.string.error_loading_companies),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            val companies = result.getOrDefault(emptyList())
+            if (companies.isEmpty()) {
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.error_no_companies_found),
+                    Toast.LENGTH_LONG
+                ).show()
+                return@launch
+            }
+            val names = companies.map { it.name?.takeIf { name -> name.isNotBlank() } ?: getString(R.string.unknown_company, it.id) }
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.switch_company_title)
+                .setItems(names.toTypedArray()) { dialog, which ->
+                    val company = companies[which]
+                    dialog.dismiss()
+                    switchCompany(company.id, names[which])
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
+    }
+
+    private fun switchCompany(companyId: Long, name: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            authRepository.setActiveCompany(companyId)
+            rocketPlanApp.syncQueueManager.refreshProjects()
+            viewModel.refreshCompanyInfo()
+            Toast.makeText(
+                requireContext(),
+                getString(R.string.switched_company_to, name),
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 
     override fun onDestroyView() {

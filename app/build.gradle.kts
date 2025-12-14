@@ -34,7 +34,7 @@ val sentryDsnProd = readSentryDsn("sentry.dsn.prod", "SENTRY_DSN_PROD")
 
 android {
     namespace = "com.example.rocketplan_android"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.rocketplan_android"
@@ -224,9 +224,6 @@ dependencies {
 
     // DataStore for secure storage
     implementation(libs.androidx.datastore.preferences)
-
-    // Biometric authentication
-    implementation(libs.androidx.biometric)
 
     // Security/Encryption
     implementation(libs.androidx.security.crypto)

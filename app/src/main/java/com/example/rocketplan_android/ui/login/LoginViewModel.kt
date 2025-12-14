@@ -48,9 +48,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private val _errorMessage = MutableLiveData<String?>()
     val errorMessage: LiveData<String?> = _errorMessage
 
-    private val _biometricPromptVisible = MutableLiveData<Boolean>(false)
-    val biometricPromptVisible: LiveData<Boolean> = _biometricPromptVisible
-
     private val _authSession = MutableLiveData<AuthSession?>()
     val authSession: LiveData<AuthSession?> = _authSession
 
@@ -73,11 +70,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _email.value = savedEmail ?: ""
                 _password.value = savedPassword ?: ""
 
-                // Check if biometric is enabled
-                val isBiometricEnabled = authRepository.isBiometricEnabled()
-                if (isBiometricEnabled && savedEmail != null && savedPassword != null) {
-                    _biometricPromptVisible.value = true
-                }
             }
         }
     }
@@ -191,37 +183,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * Sign in via biometric authentication
-     */
-    fun signInWithBiometric() {
-        viewModelScope.launch {
-            _isLoading.value = true
-            _errorMessage.value = null
-            _authSession.value = null
-
-            val (savedEmail, savedPassword) = authRepository.getSavedCredentials()
-
-            if (savedEmail != null && savedPassword != null) {
-                val result = authRepository.signIn(savedEmail, savedPassword, true)
-
-                if (result.isSuccess) {
-                    _authSession.value = result.getOrNull()
-                    _signInSuccess.value = true
-                } else {
-                    // Error message is already user-friendly from ApiError
-                    val error = result.exceptionOrNull()
-                    _errorMessage.value = error?.message ?: "Biometric authentication failed. Please try again."
-                }
-            } else {
-                _errorMessage.value = "No saved credentials found. Please sign in with your password."
-            }
-
-            _isLoading.value = false
-            _biometricPromptVisible.value = false
-        }
-    }
-
-    /**
      * Navigate to forgot password screen
      */
     fun forgotPassword() {
@@ -236,11 +197,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
         _signInSuccess.value = false
     }
 
-    fun onBiometricPromptDismissed() {
-        _biometricPromptVisible.value = false
-    }
-
-    // Note: Google OAuth Sign-In is now handled via Chrome Custom Tabs + deep link callback
-    // The OAuth flow is managed by MainActivity's handleOAuthCallback() method
-    // No ViewModel method needed for OAuth as it's a browser-based flow
+    // Note: Google OAuth Sign-In is now handled via Chrome Custom Tabs + deep link callback.
+    // The OAuth flow is managed by MainActivity's handleOAuthCallback() method.
 }

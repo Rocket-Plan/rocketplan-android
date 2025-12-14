@@ -99,8 +99,7 @@ class ProjectsFragment : Fragment() {
     }
 
     private fun setupUserInterface() {
-        // TODO: Get user initials from auth/user data
-        userInitials.text = "JB"
+        loadUserInitials()
 
         refreshButton.setOnClickListener {
             viewModel.refreshProjects()
@@ -113,6 +112,26 @@ class ProjectsFragment : Fragment() {
 
         userInitials.setOnClickListener {
             showProfileMenu(it)
+        }
+    }
+
+    private fun loadUserInitials() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val savedEmail = authRepository.getSavedEmail()
+            val initials = savedEmail
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { email ->
+                    email.split("@").firstOrNull()
+                        ?.split(".", "_", "-")
+                        ?.filter { it.isNotBlank() }
+                        ?.map { it.trim().firstOrNull()?.uppercaseChar() }
+                        ?.filterNotNull()
+                        ?.joinToString("")
+                }
+                ?.takeIf { it.isNotBlank() }
+                ?: getString(R.string.projects_tab_my_projects).take(2).uppercase()
+            userInitials.text = initials
         }
     }
 

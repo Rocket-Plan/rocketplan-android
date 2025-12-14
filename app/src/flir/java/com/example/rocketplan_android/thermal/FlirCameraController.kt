@@ -3,6 +3,7 @@ package com.example.rocketplan_android.thermal
 import android.app.ActivityManager
 import android.content.Context
 import android.opengl.GLSurfaceView
+import android.util.Log
 import com.flir.thermalsdk.ErrorCode
 import com.flir.thermalsdk.image.Palette
 import com.flir.thermalsdk.image.PaletteManager
@@ -70,6 +71,8 @@ class FlirCameraController(
     @Volatile private var delayedSetSurface = false
     @Volatile private var delayedSurfaceWidth = 0
     @Volatile private var delayedSurfaceHeight = 0
+    @Volatile private var lastSurfaceWidth = 0
+    @Volatile private var lastSurfaceHeight = 0
 
     private var currentPalette: Palette = PaletteManager.getDefaultPalettes().first()
     private var currentFusionMode: FusionMode = FusionMode.THERMAL_ONLY
@@ -214,30 +217,33 @@ class FlirCameraController(
             _errors.tryEmit(message)
             return
         }
-        ThermalLog.d(TAG, "🎬 Selected stream: isThermal=${stream.isThermal}")
+        logDebug("🎬 Selected stream: isThermal=${stream.isThermal}")
         if (!stream.isThermal) {
-            ThermalLog.w(TAG, "🎬 Selected stream is not thermal; falling back to first available")
+            logWarn("🎬 Selected stream is not thermal; falling back to first available")
         }
+        logDebug("🎬 Selected stream details: type=${stream.javaClass.simpleName}, isStreaming=${stream.isStreaming}")
 
-        // Note: FLIR's camera app uses false, but we need true for visible preview
-        // false = snapshot works but no visible preview
-        // true = visible preview works
-        ThermalLog.d(TAG, "🎬 Setting up GL pipeline...")
+        // Reference app uses false, but we must pass true for visible preview on device
+        // (false = headless / no preview; true = GL output to surface)
+        logDebug("🎬 Setting up GL pipeline...")
         val setupLatch = CountDownLatch(1)
         var setupError: Throwable? = null
         runOnGlThread {
             try {
-                ThermalLog.d(TAG, "🎬 [GL Thread] glSetupPipeline(stream, true)")
+                logDebug("🎬 [GL Thread] glSetupPipeline(stream, true)")
                 cam.glSetupPipeline(stream, true)
-                ThermalLog.d(TAG, "🎬 [GL Thread] glSetupPipeline complete, glIsGlContextReady=${cam.glIsGlContextReady()}")
+                logDebug("🎬 [GL Thread] glSetupPipeline complete, glIsGlContextReady=${cam.glIsGlContextReady()}")
                 if (delayedSetSurface) {
-                    ThermalLog.d(TAG, "🎬 [GL Thread] Applying delayed surface change: ${delayedSurfaceWidth}x${delayedSurfaceHeight}")
-                    cam.glOnSurfaceChanged(delayedSurfaceWidth, delayedSurfaceHeight)
+                    logDebug("🎬 [GL Thread] Applying delayed surface change: ${delayedSurfaceWidth}x${delayedSurfaceHeight}")
+                    applySurfaceAndViewport(cam, delayedSurfaceWidth, delayedSurfaceHeight, "setupPipeline(delayed)")
                     delayedSetSurface = false
+                } else if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0) {
+                    logDebug("🎬 [GL Thread] Applying stored surface after setup: ${lastSurfaceWidth}x${lastSurfaceHeight}")
+                    applySurfaceAndViewport(cam, lastSurfaceWidth, lastSurfaceHeight, "setupPipeline(stored)")
                 }
             } catch (t: Throwable) {
                 setupError = t
-                ThermalLog.e(TAG, "🎬 [GL Thread] glSetupPipeline failed: ${t.message}")
+                logError("🎬 [GL Thread] glSetupPipeline failed: ${t.message}")
             } finally {
                 setupLatch.countDown()
             }
@@ -261,7 +267,7 @@ class FlirCameraController(
 
         _state.value = FlirState.Streaming(identity, info)
 
-        ThermalLog.d(TAG, "🎬 Starting stream...")
+        logDebug("🎬 Starting stream...")
         surface.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
         stream.start(
             {
@@ -269,11 +275,11 @@ class FlirCameraController(
             },
             { error ->
                 val message = "🎬 Stream error: $error"
-                ThermalLog.w(TAG, message)
+                logWarn(message)
                 _errors.tryEmit(message)
             }
         )
-        ThermalLog.d(TAG, "🎬 Stream started, isStreaming=${stream.isStreaming}")
+        logDebug("🎬 Stream started, isStreaming=${stream.isStreaming}")
         surface.requestRender()
     }
 
@@ -318,16 +324,34 @@ class FlirCameraController(
 
     private val renderer = object : GLSurfaceView.Renderer {
         override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-            ThermalLog.d(TAG, "onSurfaceCreated()")
+            logDebug("onSurfaceCreated()")
+            // When GL context is recreated (e.g., after permission dialog),
+            // we need to re-setup the pipeline if we have an active stream
+            val cam = camera
+            val stream = activeStream
+            if (cam != null && stream != null) {
+                logDebug("onSurfaceCreated(): Re-setting up GL pipeline for existing stream")
+                cam.glSetupPipeline(stream, true)
+                logDebug("onSurfaceCreated(): GL pipeline re-setup complete, glIsGlContextReady=${cam.glIsGlContextReady()}")
+                if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0 && cam.glIsGlContextReady()) {
+                    logDebug("onSurfaceCreated(): Re-applying last surface: ${lastSurfaceWidth}x${lastSurfaceHeight}")
+                    applySurfaceAndViewport(cam, lastSurfaceWidth, lastSurfaceHeight, "surfaceCreated(reapply)")
+                    delayedSetSurface = false
+                }
+            }
         }
 
         override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-            ThermalLog.d(TAG, "onSurfaceChanged(), width=$width, height=$height")
+            logDebug("onSurfaceChanged(), width=$width, height=$height")
+            lastSurfaceWidth = width
+            lastSurfaceHeight = height
             val cam = camera
-            if (cam != null) {
-                cam.glOnSurfaceChanged(width, height)
+            if (cam != null && cam.glIsGlContextReady()) {
+                logDebug("onSurfaceChanged(): GL context ready, applying immediately")
+                applySurfaceAndViewport(cam, width, height, "surfaceChanged")
                 delayedSetSurface = false
             } else {
+                logDebug("onSurfaceChanged(): GL context not ready, deferring surface change (will apply ${width}x${height})")
                 delayedSetSurface = true
                 delayedSurfaceWidth = width
                 delayedSurfaceHeight = height
@@ -342,13 +366,13 @@ class FlirCameraController(
             if (cam == null) {
                 // Only log occasionally to avoid spam
                 if (snapshotRequested.get()) {
-                    ThermalLog.w(TAG, "🖼️ onDrawFrame: camera is null, snapshot pending!")
+                    logWarn("🖼️ onDrawFrame: camera is null, snapshot pending!")
                 }
                 return
             }
 
             if (!cam.glIsGlContextReady()) {
-                ThermalLog.w(TAG, "🖼️ onDrawFrame: GL context not ready, skipping frame")
+                logWarn("🖼️ onDrawFrame: GL context not ready, skipping frame${if (snapshotRequested.get()) " (snapshot pending!)" else ""}")
                 return
             }
 
@@ -365,8 +389,8 @@ class FlirCameraController(
             }
 
             if (delayedSetSurface) {
-                ThermalLog.d(TAG, "🖼️ Applying delayed surface: ${delayedSurfaceWidth}x${delayedSurfaceHeight}")
-                cam.glOnSurfaceChanged(delayedSurfaceWidth, delayedSurfaceHeight)
+                logDebug("🖼️ Applying delayed surface: ${delayedSurfaceWidth}x${delayedSurfaceHeight}")
+                applySurfaceAndViewport(cam, delayedSurfaceWidth, delayedSurfaceHeight, "drawFrame(delayed)")
                 delayedSetSurface = false
             }
 
@@ -402,23 +426,27 @@ class FlirCameraController(
                     thermalImage.scale.setRange(range.first, range.second)
 
                     val snapshotPath = FileUtils.prepareUniqueFileName(imagesRoot, "ACE_", "jpg")
-                    ThermalLog.d(TAG, "📸 [onDrawFrame] Saving to: $snapshotPath")
+                    logDebug("📸 [onDrawFrame] Saving to: $snapshotPath")
                     try {
                         thermalImage.saveAs(snapshotPath)
-                        ThermalLog.d(TAG, "📸 [onDrawFrame] ✅ Snapshot saved: $snapshotPath")
+                        logDebug("📸 [onDrawFrame] ✅ Snapshot saved: $snapshotPath")
                         val emitted = _snapshots.tryEmit(File(snapshotPath))
-                        ThermalLog.d(TAG, "📸 [onDrawFrame] Emitted to flow: $emitted")
+                        logDebug("📸 [onDrawFrame] Emitted to flow: $emitted")
                     } catch (e: IOException) {
                         val message = "📸 [onDrawFrame] ❌ Unable to take snapshot: ${e.message}"
-                        ThermalLog.e(TAG, message)
+                        logError(message)
                         _errors.tryEmit(message)
                     }
                 }
             }
 
             val rendered = cam.glOnDrawFrame()
-            if (!rendered && frameCount % 30 == 0L) {
-                ThermalLog.w(TAG, "🖼️ glOnDrawFrame returned false - frame not rendered")
+            if (!rendered) {
+                if (snapshotRequested.get()) {
+                    logWarn("🖼️ glOnDrawFrame returned false while snapshot pending")
+                } else if (frameCount % 30 == 0L) {
+                    logWarn("🖼️ glOnDrawFrame returned false - frame not rendered")
+                }
             }
         }
     }
@@ -426,9 +454,42 @@ class FlirCameraController(
     private fun runOnGlThread(block: () -> Unit) {
         val surface = glSurfaceView
         if (surface == null) {
-            ThermalLog.w(TAG, "GLSurfaceView not attached; dropping GL action")
+            logWarn("GLSurfaceView not attached; dropping GL action")
             return
         }
         surface.queueEvent(block)
+    }
+
+    // Applies surface size and viewport together; mirrors the reference app's use of glSetViewport after pipeline setup.
+    private fun applySurfaceAndViewport(cam: Camera, width: Int, height: Int, reason: String) {
+        if (width <= 0 || height <= 0) {
+            logWarn("$reason: invalid surface size ${width}x$height")
+            return
+        }
+        if (!cam.glIsGlContextReady()) {
+            logWarn("$reason: GL context not ready; skipping surface apply")
+            return
+        }
+        cam.glOnSurfaceChanged(width, height)
+        try {
+            cam.glSetViewport(0, 0, width, height)
+        } catch (t: Throwable) {
+            logWarn("$reason: glSetViewport failed: ${t.message}")
+        }
+    }
+
+    private fun logDebug(message: String) {
+        ThermalLog.d(TAG, message)
+        Log.d(TAG, message)
+    }
+
+    private fun logWarn(message: String) {
+        ThermalLog.w(TAG, message)
+        Log.w(TAG, message)
+    }
+
+    private fun logError(message: String) {
+        ThermalLog.e(TAG, message)
+        Log.e(TAG, message)
     }
 }

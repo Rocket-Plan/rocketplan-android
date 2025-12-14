@@ -30,7 +30,6 @@ This document summarizes the comprehensive authentication system that has been i
   - Authentication token
   - User email
   - Remember Me preference
-  - Biometric enabled flag
 - **EncryptedSharedPreferences** for sensitive data:
   - Encrypted password (when Remember Me is enabled)
   - Uses AES256_GCM encryption with Android Keystore
@@ -47,9 +46,6 @@ storage.clearAuthToken()
 // Remember Me
 storage.setRememberMe(true)
 storage.saveEncryptedPassword(password)
-
-// Biometric
-storage.setBiometricEnabled(true)
 
 // Logout
 storage.clearAll()
@@ -100,7 +96,7 @@ storage.clearAll()
 - "Back to Login" link
 - "Send Reset Link" button
 
-### 5. ✅ Remember Me & Biometric Authentication
+### 5. ✅ Remember Me
 
 **Remember Me Implementation:**
 - Checkbox on login screen
@@ -108,23 +104,13 @@ storage.clearAll()
 - Auto-fills email/password on next app launch
 - Credentials cleared on explicit logout
 
-**Biometric Authentication:**
-- Automatic biometric prompt on app launch (if previously enabled)
-- Uses Android BiometricPrompt API
-- Supports fingerprint, face unlock, and iris scanning
-- Falls back to password entry if biometric fails
-- Signs in using saved encrypted credentials
-
 **Security Features:**
 - Password encrypted with AES256_GCM
 - Encryption keys stored in Android Keystore (hardware-backed)
-- Biometric authentication required to access saved credentials
-- Credentials automatically cleared after failed biometric attempts
+- Credentials automatically cleared after logout
 
 **UI Updates:**
 - "Remember Me" checkbox added to login screen (purple theme)
-- Biometric prompt with RocketPlan branding
-- "Use password" fallback button
 
 ## 📦 Dependencies Added
 
@@ -137,9 +123,6 @@ implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
 // DataStore for secure storage
 implementation("androidx.datastore:datastore-preferences:1.0.0")
-
-// Biometric authentication
-implementation("androidx.biometric:biometric:1.1.0")
 
 // Security/Encryption
 implementation("androidx.security:security-crypto:1.1.0-alpha06")
@@ -167,21 +150,16 @@ forgotPasswordFragment
 ### Login Screen Updates
 **New Elements:**
 - "Remember Me" checkbox (purple theme)
-- Biometric prompt integration
 - Auto-filled credentials when Remember Me is enabled
 
 **Updated ViewModel:**
 - Now extends `AndroidViewModel` (needs Application context)
 - Added `rememberMe` LiveData
-- Added `biometricPromptVisible` LiveData
-- Added `signInWithBiometric()` function
 - Added `loadSavedCredentials()` on init
 
 **Updated Fragment:**
-- Added biometric authentication setup
 - Added Remember Me checkbox handling
 - Added credential auto-fill from storage
-- Added biometric availability check
 
 ### Forgot Password Screen
 **Complete new screen with:**
@@ -211,21 +189,6 @@ forgotPasswordFragment
    - Display error message
 ```
 
-### Biometric Login Flow
-```
-1. App launches
-2. SecureStorage checks if Remember Me is enabled
-3. If enabled AND biometric enabled:
-   - Load saved email/password
-   - Display biometric prompt
-4. On successful biometric auth:
-   - Auto sign-in with saved credentials
-   - Navigate to home screen
-5. On biometric failure:
-   - User can manually enter credentials
-   - Or click "Use password" to dismiss prompt
-```
-
 ### Forgot Password Flow
 ```
 1. User clicks "Forgot Password?"
@@ -243,7 +206,6 @@ forgotPasswordFragment
 **Implemented:**
 - ✅ Encrypted password storage (AES256_GCM)
 - ✅ Hardware-backed encryption keys (Android Keystore)
-- ✅ Biometric authentication required for auto-login
 - ✅ Token stored in DataStore (app-private storage)
 - ✅ HTTPS-only API communication
 - ✅ Automatic token injection in API requests
@@ -253,7 +215,6 @@ forgotPasswordFragment
 **Best Practices:**
 - ✅ Password never stored in plain text
 - ✅ Tokens stored separately from credentials
-- ✅ Biometric prompt prevents unauthorized access
 - ✅ Remember Me is opt-in, not default
 - ✅ User can disable Remember Me anytime (via logout)
 
@@ -300,13 +261,6 @@ export JAVA_HOME=/usr/local/opt/openjdk@17
 - [ ] Credentials auto-filled on next launch
 - [ ] Credentials cleared after logout
 - [ ] Works correctly when unchecked
-
-**Biometric:**
-- [ ] Biometric prompt appears on launch (if enabled)
-- [ ] Successful biometric auth signs in
-- [ ] Failed biometric shows error
-- [ ] "Use password" fallback works
-- [ ] Disabled on devices without biometric
 
 ## 📋 Email Check Flow (Step 5)
 
@@ -445,7 +399,6 @@ authRepository.logout()
 // - Clears token
 // - Clears saved credentials
 // - Clears Remember Me preference
-// - Clears biometric preference
 // - Removes auth header from Retrofit
 ```
 
@@ -457,7 +410,7 @@ All features from steps 1-5 have been successfully implemented:
 2. ✅ **Secure Token Storage** - DataStore + EncryptedSharedPreferences with hardware-backed encryption
 3. ✅ **AuthRepository** - Clean data layer with Repository pattern
 4. ✅ **Forgot Password** - Complete screen with API integration
-5. ✅ **Remember Me + Biometric** - Auto-login with encrypted credentials and biometric authentication
+5. ✅ **Remember Me** - Auto-login with encrypted credentials when enabled by the user
 
 **Build Status:** ✅ SUCCESS
 **Files Created/Modified:** 28 files

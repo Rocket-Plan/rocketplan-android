@@ -75,9 +75,13 @@ class CompanyInfoViewModel(application: Application) : AndroidViewModel(applicat
         result.fold(
             onSuccess = { user ->
                 val resources = getApplication<Application>().resources
-                // Get primary company from companies array or fallback to single company object
-                val primaryCompany = user.companies?.firstOrNull() ?: user.company
-                val companyName = primaryCompany?.name
+                val storedCompanyId = authRepository.getStoredCompanyId()
+                val companies = user.companies.orEmpty()
+                // Prefer the stored active company, otherwise fall back to the first available company
+                val selectedCompany = companies.firstOrNull { it.id == storedCompanyId }
+                    ?: companies.firstOrNull()
+                    ?: user.company
+                val companyName = selectedCompany?.name
                     ?.takeIf { it.isNotBlank() }
                     ?: resources.getString(R.string.company_info_unknown_company)
                 val userName = listOfNotNull(user.firstName, user.lastName)
@@ -88,8 +92,8 @@ class CompanyInfoViewModel(application: Application) : AndroidViewModel(applicat
 
                 _uiState.value = CompanyInfoUiState.Content(
                     companyName = companyName,
-                    companyId = user.getPrimaryCompanyId(),
-                    logoUrl = primaryCompany?.logoUrl,
+                    companyId = selectedCompany?.id ?: storedCompanyId ?: user.getPrimaryCompanyId(),
+                    logoUrl = selectedCompany?.logoUrl,
                     userName = userName,
                     userEmail = user.email,
                     isRefreshing = false
