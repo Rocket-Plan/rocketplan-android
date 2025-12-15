@@ -1052,7 +1052,7 @@ class RoomDetailFragment : Fragment() {
 
         val waitingForRealtime = awaitingRealtimePhotos
 
-        if (snapshotRefreshInProgress || waitingForRealtime) {
+        if (snapshotRefreshInProgress) {
             loadingOverlay.isVisible = true
             photosRecyclerView.isVisible = false
             placeholderContainer.isVisible = false

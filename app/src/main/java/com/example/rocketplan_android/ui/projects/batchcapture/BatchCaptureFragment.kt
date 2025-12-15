@@ -514,18 +514,14 @@ class BatchCaptureFragment : Fragment() {
         }
 
         val shutterEnabled = state.canTakeMore &&
-            !state.isProcessing &&
             (captureMode == CaptureMode.REGULAR || flirReady)
         Log.d(TAG, "Shutter enabled: $shutterEnabled (canTakeMore=${state.canTakeMore}, isProcessing=${state.isProcessing}, captureMode=$captureMode, flirReady=$flirReady)")
         shutterButton.isEnabled = shutterEnabled
         shutterInner.alpha = if (shutterEnabled) 1f else 0.5f
 
-        doneButton.isEnabled = state.hasPhotos && !state.isProcessing
+        doneButton.isEnabled = state.hasPhotos
 
-        loadingOverlay.isVisible = state.isProcessing
-        if (state.isProcessing) {
-            loadingText.text = getString(R.string.batch_capture_processing, state.photoCount)
-        }
+        loadingOverlay.isVisible = false
 
         if (state.roomTitle.isNotEmpty()) {
             titleText.text = state.roomTitle

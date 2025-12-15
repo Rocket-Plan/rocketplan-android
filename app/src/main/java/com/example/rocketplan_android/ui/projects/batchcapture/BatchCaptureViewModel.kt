@@ -203,8 +203,6 @@ class BatchCaptureViewModel(
             return
         }
 
-        _uiState.update { it.copy(isProcessing = true) }
-
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 Log.d(TAG, "Committing ${currentState.photos.size} photos for room ${room.roomId}")
@@ -295,7 +293,7 @@ class BatchCaptureViewModel(
                     // Trigger queue processing
                     imageProcessorQueueManager.processNextQueuedAssembly()
 
-                    _uiState.update { it.copy(isProcessing = false, photos = emptyList()) }
+                    _uiState.update { it.copy(photos = emptyList()) }
                     _events.emit(BatchCaptureEvent.PhotosCommitted(currentState.photos.size, assemblyId))
 
                 }.onFailure { error ->
@@ -313,13 +311,11 @@ class BatchCaptureViewModel(
                         )
                     )
 
-                    _uiState.update { it.copy(isProcessing = false) }
                     _events.emit(BatchCaptureEvent.Error(error.message ?: "Failed to process photos"))
                 }
 
             } catch (e: Exception) {
                 Log.e(TAG, "Commit failed", e)
-                _uiState.update { it.copy(isProcessing = false) }
                 _events.emit(BatchCaptureEvent.Error(e.message ?: "Unknown error"))
             }
         }
