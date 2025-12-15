@@ -16,6 +16,8 @@ class FlirCameraController(context: Context) {
 
     data class StreamSelection(val index: Int, val count: Int, val isThermal: Boolean)
 
+    enum class SurfaceOrder { DEFAULT, MEDIA_OVERLAY, ON_TOP }
+
     private val _state = MutableStateFlow<FlirState>(FlirState.Error("FLIR not supported on this device"))
     val state: StateFlow<FlirState> = _state
 
@@ -23,6 +25,10 @@ class FlirCameraController(context: Context) {
     val errors: Flow<String> = emptyFlow()
 
     fun attachSurface(glSurfaceView: GLSurfaceView) {
+        // No-op: FLIR not supported
+    }
+
+    fun attachSurface(glSurfaceView: GLSurfaceView, surfaceOrder: SurfaceOrder) {
         // No-op: FLIR not supported
     }
 

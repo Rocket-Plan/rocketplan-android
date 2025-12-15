@@ -28,6 +28,7 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.ui.projects.ScopeCatalogItem
@@ -790,6 +791,7 @@ class RoomDetailFragment : Fragment() {
         }
         val popup = PopupMenu(requireContext(), anchor)
         popup.menuInflater.inflate(R.menu.menu_add_photo_options, popup.menu)
+        popup.menu.findItem(R.id.menu_add_photo_flir)?.isVisible = BuildConfig.HAS_FLIR_SUPPORT
         popup.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.menu_add_photo_standard -> {

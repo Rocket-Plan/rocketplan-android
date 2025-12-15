@@ -33,7 +33,6 @@ class FlirTestFragment : Fragment(), CoroutineScope {
     private lateinit var toolbar: MaterialToolbar
     private lateinit var glSurface: android.opengl.GLSurfaceView
     private lateinit var controlsContainer: View
-    private lateinit var statusText: TextView
     private lateinit var streamLabel: TextView
     private lateinit var startButton: MaterialButton
     private lateinit var prevButton: MaterialButton
@@ -79,13 +78,10 @@ class FlirTestFragment : Fragment(), CoroutineScope {
         toolbar = view.findViewById(R.id.testToolbar)
         glSurface = view.findViewById(R.id.testGlSurface)
         controlsContainer = view.findViewById(R.id.testControls)
-        statusText = view.findViewById(R.id.testStatus)
         streamLabel = view.findViewById(R.id.testStreamLabel)
         startButton = view.findViewById(R.id.testStartButton)
         prevButton = view.findViewById(R.id.testPrevStream)
         nextButton = view.findViewById(R.id.testNextStream)
-
-        statusText.text = getString(R.string.flir_test_status_idle)
 
         // Keep the reliable GL path for this test view and hide controls when streaming
         controller.attachSurface(glSurface, FlirCameraController.SurfaceOrder.ON_TOP)
@@ -112,25 +108,20 @@ class FlirTestFragment : Fragment(), CoroutineScope {
             controller.state.collectLatest { state ->
                 when (state) {
                     FlirState.Idle -> {
-                        statusText.text = getString(R.string.flir_test_status_idle)
                         controlsContainer.visibility = View.VISIBLE
                     }
                     FlirState.Discovering -> {
-                        statusText.text = getString(R.string.flir_status_discovering)
                         controlsContainer.visibility = View.VISIBLE
                     }
                     is FlirState.Connecting -> {
-                        statusText.text = getString(R.string.flir_status_connecting, state.identity.deviceId)
                         controlsContainer.visibility = View.VISIBLE
                     }
                     is FlirState.Streaming -> {
-                        statusText.text = getString(R.string.flir_status_streaming, state.identity.deviceId)
                         updateStreamLabel(controller.currentStreamSelection())
                         controlsContainer.visibility = View.GONE
                         logSurfaceState("streaming")
                     }
                     is FlirState.Error -> {
-                        statusText.text = state.message
                         controlsContainer.visibility = View.VISIBLE
                         logSurfaceState("error")
                     }

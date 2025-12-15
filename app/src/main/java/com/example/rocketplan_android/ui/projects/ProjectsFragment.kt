@@ -156,6 +156,8 @@ class ProjectsFragment : Fragment() {
     private fun showProfileMenu(anchor: View) {
         PopupMenu(requireContext(), anchor, Gravity.END).apply {
             menuInflater.inflate(R.menu.profile_menu, menu)
+            menu.findItem(R.id.action_test_flir)?.isVisible = BuildConfig.HAS_FLIR_SUPPORT
+            menu.findItem(R.id.action_test_flir_ir_only)?.isVisible = BuildConfig.HAS_FLIR_SUPPORT
             setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
                     R.id.action_company_info -> {
