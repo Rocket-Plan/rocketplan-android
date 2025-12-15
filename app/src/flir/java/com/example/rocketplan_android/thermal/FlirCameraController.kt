@@ -2,8 +2,17 @@ package com.example.rocketplan_android.thermal
 
 import android.content.Context
 import android.graphics.PixelFormat
+import android.graphics.SurfaceTexture
+import android.opengl.EGL14
+import android.opengl.EGLConfig
+import android.opengl.EGLContext
+import android.opengl.EGLDisplay
+import android.opengl.EGLSurface
 import android.opengl.GLSurfaceView
+import android.os.Handler
+import android.os.HandlerThread
 import android.util.Log
+import android.view.Surface
 import com.flir.thermalsdk.ErrorCode
 import com.flir.thermalsdk.image.Palette
 import com.flir.thermalsdk.image.PaletteManager
@@ -28,7 +37,7 @@ import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.microedition.khronos.egl.EGLConfig
+import javax.microedition.khronos.egl.EGLConfig as GLConfigLegacy
 import javax.microedition.khronos.opengles.GL10
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -68,11 +77,15 @@ class FlirCameraController(
     private var camera: Camera? = null
     private var activeStream: Stream? = null
     private var glSurfaceView: GLSurfaceView? = null
+    private var renderTarget: GlRenderTarget? = null
+    private var overlayFriendlyMode: Boolean = false
     @Volatile private var delayedSetSurface = false
     @Volatile private var delayedSurfaceWidth = 0
     @Volatile private var delayedSurfaceHeight = 0
     @Volatile private var lastSurfaceWidth = 0
     @Volatile private var lastSurfaceHeight = 0
+    private var frameCount = 0L
+    private var lastFrameLogTime = 0L
 
     private var currentPalette: Palette = PaletteManager.getDefaultPalettes().first()
     private var currentFusionMode: FusionMode = FusionMode.THERMAL_ONLY
@@ -92,11 +105,13 @@ class FlirCameraController(
     private fun resolveGlVersion(): Int = 2 // Force ES2 for FLIR sample parity; ES3 caused blank preview on some devices.
 
     enum class SurfaceOrder { DEFAULT, MEDIA_OVERLAY, ON_TOP }
+    private enum class RenderMode { WHEN_DIRTY, CONTINUOUS }
 
     fun attachSurface(
         glSurfaceView: GLSurfaceView,
         surfaceOrder: SurfaceOrder = SurfaceOrder.ON_TOP
     ) {
+        renderTarget?.release()
         this.glSurfaceView = glSurfaceView
         val glVersion = resolveGlVersion()
         ThermalLog.d(TAG, "Using GLES $glVersion for FLIR surface")
@@ -114,11 +129,46 @@ class FlirCameraController(
         }
         glSurfaceView.setRenderer(renderer)
         glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+        renderTarget = GlSurfaceViewRenderTarget(glSurfaceView)
+        if (overlayFriendlyMode) {
+            setOverlayFriendlyMode(true)
+        }
         glSurfaceView.post {
             val holderValid = runCatching { glSurfaceView.holder.surface.isValid }.getOrDefault(false)
             logDebug(
                 "🖼️ GLSurface attached: size=${glSurfaceView.width}x${glSurfaceView.height}, shown=${glSurfaceView.isShown}, attached=${glSurfaceView.isAttachedToWindow}, holderValid=$holderValid, order=$surfaceOrder"
             )
+        }
+    }
+
+    fun attachTextureSurface(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+        logDebug("🖼️ Texture surface attached: size=${width}x$height")
+        renderTarget?.release()
+        glSurfaceView = null
+        renderTarget = TextureViewRenderTarget(surfaceTexture, width, height)
+    }
+
+    fun updateTextureSurfaceSize(width: Int, height: Int) {
+        (renderTarget as? TextureViewRenderTarget)?.onSurfaceSizeChanged(width, height)
+    }
+
+    fun detachTextureSurface() {
+        if (renderTarget is TextureViewRenderTarget) {
+            renderTarget?.release()
+            renderTarget = null
+        }
+    }
+
+    fun setOverlayFriendlyMode(enabled: Boolean) {
+        overlayFriendlyMode = enabled
+        glSurfaceView?.let { surface ->
+            if (enabled) {
+                surface.setZOrderOnTop(false)
+                surface.setZOrderMediaOverlay(true)
+            } else {
+                surface.setZOrderMediaOverlay(false)
+                surface.setZOrderOnTop(true)
+            }
         }
     }
 
@@ -141,10 +191,10 @@ class FlirCameraController(
         ThermalLog.d(TAG, "📸 Camera: ${if (camera != null) "connected" else "null"}")
         ThermalLog.d(TAG, "📸 Stream: ${if (activeStream != null) "active, isStreaming=${activeStream?.isStreaming}" else "null"}")
         ThermalLog.d(TAG, "📸 GL context ready: ${camera?.glIsGlContextReady()}")
-        ThermalLog.d(TAG, "📸 GLSurfaceView: ${if (glSurfaceView != null) "attached" else "null"}")
+        ThermalLog.d(TAG, "📸 Render target: ${renderTarget?.description() ?: "null"}")
         snapshotRequested.set(true)
         // Request a render to trigger onDrawFrame where snapshot is processed
-        glSurfaceView?.requestRender()
+        renderTarget?.requestRender()
         ThermalLog.d(TAG, "📸 snapshotRequested=true, requestRender() called")
     }
 
@@ -208,9 +258,16 @@ class FlirCameraController(
 
     private fun startStream(identity: FlirIdentity, info: FlirCameraInformation?) {
         val cam = camera ?: return
-        val surface = glSurfaceView
-        if (surface == null) {
+        val target = renderTarget
+        if (target == null) {
             val message = "No GL surface attached for FLIR stream"
+            ThermalLog.e(TAG, message)
+            _state.value = FlirState.Error(message)
+            _errors.tryEmit(message)
+            return
+        }
+        if (!target.isValid()) {
+            val message = "Render target not ready for FLIR stream"
             ThermalLog.e(TAG, message)
             _state.value = FlirState.Error(message)
             _errors.tryEmit(message)
@@ -284,14 +341,11 @@ class FlirCameraController(
         _state.value = FlirState.Streaming(identity, info)
 
         logDebug("🎬 Starting stream...")
-        surface.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
-        surface.post {
-            val holderValid = runCatching { surface.holder.surface.isValid }.getOrDefault(false)
-            logDebug("🎬 Surface ready for streaming: size=${surface.width}x${surface.height}, shown=${surface.isShown}, attached=${surface.isAttachedToWindow}, holderValid=$holderValid")
-        }
+        target.setRenderMode(RenderMode.CONTINUOUS)
+        logDebug("🎬 Surface ready for streaming: target=${target.description()}")
         stream.start(
             {
-                surface.requestRender()
+                target.requestRender()
             },
             { error ->
                 val message = "🎬 Stream error: $error"
@@ -300,7 +354,7 @@ class FlirCameraController(
             }
         )
         logDebug("🎬 Stream started, isStreaming=${stream.isStreaming}")
-        surface.requestRender()
+        target.requestRender()
     }
 
     fun currentStreamSelection(): StreamSelection? {
@@ -314,7 +368,7 @@ class FlirCameraController(
 
     fun cycleStream(offset: Int): StreamSelection? {
         val cam = camera ?: return null
-        val surface = glSurfaceView ?: return null
+        val target = renderTarget ?: return null
         val streams = cam.streams
         if (streams.isEmpty()) return null
 
@@ -324,14 +378,14 @@ class FlirCameraController(
 
         // Run the actual switch work off the caller thread to avoid UI stalls.
         scope.launch {
-            performStreamSwitch(cam, surface, newStream, newIndex)
+            performStreamSwitch(cam, target, newStream, newIndex)
         }
 
         // Return the intended selection immediately for UI label updates.
         return StreamSelection(newIndex, streams.size, newStream.isThermal)
     }
 
-    private fun performStreamSwitch(cam: Camera, surface: GLSurfaceView, newStream: Stream, newIndex: Int) {
+    private fun performStreamSwitch(cam: Camera, target: GlRenderTarget, newStream: Stream, newIndex: Int) {
         val previousStream = activeStream
         if (newStream != previousStream) {
             logDebug("🔀 Switching stream to index=$newIndex isThermal=${newStream.isThermal}")
@@ -356,24 +410,24 @@ class FlirCameraController(
                 logWarn("🔀 cycleStream(): restoring previous stream after failure")
                 setupPipeline(cam, previousStream, "cycleStream(recover)")
                 activeStream = previousStream
-                previousStream.start({ surface.requestRender() }, { error ->
+                previousStream.start({ target.requestRender() }, { error ->
                     val recoverMessage = "🔀 Stream error after recovery: $error"
                     logWarn(recoverMessage)
                     _errors.tryEmit(recoverMessage)
                 })
-                surface.requestRender()
+                target.requestRender()
             }
             return
         }
 
         activeStream = newStream
-        surface.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
-        newStream.start({ surface.requestRender() }, { error ->
+        target.setRenderMode(RenderMode.CONTINUOUS)
+        newStream.start({ target.requestRender() }, { error ->
             val message = "🔀 Stream error after switch: $error"
             logWarn(message)
             _errors.tryEmit(message)
         })
-        surface.requestRender()
+        target.requestRender()
     }
 
     private data class PipelineResult(val success: Boolean, val timedOut: Boolean = false, val error: Throwable? = null)
@@ -408,7 +462,7 @@ class FlirCameraController(
             ThermalLog.d(TAG, "disconnect()")
             val currentCamera = camera
             activeStream?.stop()
-            glSurfaceView?.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+            renderTarget?.setRenderMode(RenderMode.WHEN_DIRTY)
             // FLIR's Camera.glTeardownPipeline() has a 500ms sleep before teardown
             // We replicate that here to ensure GL resources are properly released
             val latch = CountDownLatch(1)
@@ -435,149 +489,156 @@ class FlirCameraController(
     }
 
     fun onResume() {
-        glSurfaceView?.onResume()
+        renderTarget?.onResume()
     }
 
     fun onPause() {
-        glSurfaceView?.onPause()
+        renderTarget?.onPause()
     }
 
     private val renderer = object : GLSurfaceView.Renderer {
-        override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
-            logDebug("onSurfaceCreated()")
-            // When GL context is recreated (e.g., after permission dialog),
-            // we need to re-setup the pipeline if we have an active stream
-            val cam = camera
-            val stream = activeStream
-            if (cam != null && stream != null) {
-                logDebug("onSurfaceCreated(): Re-setting up GL pipeline for existing stream")
-                cam.glSetupPipeline(stream, true)
-                logDebug("onSurfaceCreated(): GL pipeline re-setup complete, glIsGlContextReady=${cam.glIsGlContextReady()}")
-                if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0 && cam.glIsGlContextReady()) {
-                    logDebug("onSurfaceCreated(): Re-applying last surface: ${lastSurfaceWidth}x${lastSurfaceHeight}")
-                    applySurfaceAndViewport(cam, lastSurfaceWidth, lastSurfaceHeight, "surfaceCreated(reapply)")
-                    delayedSetSurface = false
-                }
-            }
+        override fun onSurfaceCreated(gl: GL10?, config: GLConfigLegacy?) {
+            onRendererSurfaceCreated()
         }
 
         override fun onSurfaceChanged(gl: GL10?, width: Int, height: Int) {
-            logDebug("onSurfaceChanged(), width=$width, height=$height")
-            lastSurfaceWidth = width
-            lastSurfaceHeight = height
-            val cam = camera
-            if (cam != null && cam.glIsGlContextReady()) {
-                logDebug("onSurfaceChanged(): GL context ready, applying immediately")
-                applySurfaceAndViewport(cam, width, height, "surfaceChanged")
+            onRendererSurfaceChanged(width, height)
+        }
+
+        override fun onDrawFrame(gl: GL10?) {
+            onRendererDrawFrame()
+        }
+    }
+
+    private fun onRendererSurfaceCreated() {
+        logDebug("onSurfaceCreated()")
+        val cam = camera
+        val stream = activeStream
+        if (cam != null && stream != null) {
+            logDebug("onSurfaceCreated(): Re-setting up GL pipeline for existing stream")
+            cam.glSetupPipeline(stream, true)
+            logDebug("onSurfaceCreated(): GL pipeline re-setup complete, glIsGlContextReady=${cam.glIsGlContextReady()}")
+            if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0 && cam.glIsGlContextReady()) {
+                logDebug("onSurfaceCreated(): Re-applying last surface: ${lastSurfaceWidth}x${lastSurfaceHeight}")
+                applySurfaceAndViewport(cam, lastSurfaceWidth, lastSurfaceHeight, "surfaceCreated(reapply)")
                 delayedSetSurface = false
-            } else {
-                logDebug("onSurfaceChanged(): GL context not ready, deferring surface change (will apply ${width}x${height})")
-                delayedSetSurface = true
-                delayedSurfaceWidth = width
-                delayedSurfaceHeight = height
+            }
+        }
+    }
+
+    private fun onRendererSurfaceChanged(width: Int, height: Int) {
+        logDebug("onSurfaceChanged(), width=$width, height=$height")
+        lastSurfaceWidth = width
+        lastSurfaceHeight = height
+        val cam = camera
+        if (cam != null && cam.glIsGlContextReady()) {
+            logDebug("onSurfaceChanged(): GL context ready, applying immediately")
+            applySurfaceAndViewport(cam, width, height, "surfaceChanged")
+            delayedSetSurface = false
+        } else {
+            logDebug("onSurfaceChanged(): GL context not ready, deferring surface change (will apply ${width}x${height})")
+            delayedSetSurface = true
+            delayedSurfaceWidth = width
+            delayedSurfaceHeight = height
+        }
+    }
+
+    private fun onRendererDrawFrame() {
+        val cam = camera
+        if (cam == null) {
+            // Only log occasionally to avoid spam
+            if (snapshotRequested.get()) {
+                logWarn("🖼️ onDrawFrame: camera is null, snapshot pending!")
+            }
+            return
+        }
+
+        if (!cam.glIsGlContextReady()) {
+            logWarn("🖼️ onDrawFrame: GL context not ready, skipping frame${if (snapshotRequested.get()) " (snapshot pending!)" else ""}")
+            return
+        }
+
+        frameCount++
+        val now = System.currentTimeMillis()
+        // Log frame rate every 5 seconds
+        if (now - lastFrameLogTime > 5000) {
+            val surfaceValid = renderTarget?.isValid() ?: false
+            ThermalLog.d(
+                TAG,
+                "🖼️ onDrawFrame: frame #$frameCount, stream isStreaming=${activeStream?.isStreaming}, glReady=${cam.glIsGlContextReady()}, surfaceValid=$surfaceValid"
+            )
+            lastFrameLogTime = now
+        }
+
+        if (delayedSetSurface) {
+            logDebug("🖼️ Applying delayed surface: ${delayedSurfaceWidth}x${delayedSurfaceHeight}")
+            applySurfaceAndViewport(cam, delayedSurfaceWidth, delayedSurfaceHeight, "drawFrame(delayed)")
+            delayedSetSurface = false
+        }
+
+        var thermalImageProcessed = false
+        cam.glWithThermalImage { thermalImage ->
+            thermalImageProcessed = true
+            thermalImage.palette = currentPalette
+            val fusion: Fusion? = thermalImage.fusion
+            fusion?.setFusionMode(currentFusionMode)
+
+            if (enableMeasurements) {
+                val measurements: MeasurementShapeCollection = thermalImage.measurements
+                var spots: MutableList<MeasurementSpot> = measurements.spots
+                if (spots.size < 3) {
+                    val w = thermalImage.width
+                    val h = thermalImage.height
+                    measurements.addSpot(w / 3, h / 3)
+                    measurements.addSpot(w / 2, h / 2)
+                    measurements.addSpot(w * 2 / 3, h * 2 / 3)
+                }
+                spots = measurements.spots
+                var index = 0
+                for (spot in spots) {
+                    ThermalLog.d(TAG, "Spot $index : $spot")
+                    index++
+                }
+            }
+
+            if (snapshotRequested.compareAndSet(true, false)) {
+                ThermalLog.d(TAG, "📸 [onDrawFrame] Processing snapshot request")
+                ThermalLog.d(TAG, "📸 [onDrawFrame] ThermalImage: ${thermalImage.width}x${thermalImage.height}")
+                thermalImage.temperatureUnit = TemperatureUnit.CELSIUS
+                val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
+                ThermalLog.d(TAG, "📸 [onDrawFrame] glGetScaleRange: ${range.first} - ${range.second}")
+                thermalImage.scale.setRange(range.first, range.second)
+
+                val snapshotPath = FileUtils.prepareUniqueFileName(imagesRoot, "ACE_", "jpg")
+                logDebug("📸 [onDrawFrame] Saving to: $snapshotPath")
+                try {
+                    thermalImage.saveAs(snapshotPath)
+                    logDebug("📸 [onDrawFrame] ✅ Snapshot saved: $snapshotPath")
+                    val emitted = _snapshots.tryEmit(File(snapshotPath))
+                    logDebug("📸 [onDrawFrame] Emitted to flow: $emitted")
+                } catch (e: IOException) {
+                    val message = "📸 [onDrawFrame] ❌ Unable to take snapshot: ${e.message}"
+                    logError(message)
+                    _errors.tryEmit(message)
+                }
             }
         }
 
-        private var frameCount = 0L
-        private var lastFrameLogTime = 0L
-
-        override fun onDrawFrame(gl: GL10?) {
-            val cam = camera
-            if (cam == null) {
-                // Only log occasionally to avoid spam
-                if (snapshotRequested.get()) {
-                    logWarn("🖼️ onDrawFrame: camera is null, snapshot pending!")
-                }
-                return
-            }
-
-            if (!cam.glIsGlContextReady()) {
-                logWarn("🖼️ onDrawFrame: GL context not ready, skipping frame${if (snapshotRequested.get()) " (snapshot pending!)" else ""}")
-                return
-            }
-
-            frameCount++
-            val now = System.currentTimeMillis()
-            // Log frame rate every 5 seconds
-            if (now - lastFrameLogTime > 5000) {
-                val surfaceValid = glSurfaceView?.holder?.surface?.isValid ?: false
-                ThermalLog.d(
-                    TAG,
-                    "🖼️ onDrawFrame: frame #$frameCount, stream isStreaming=${activeStream?.isStreaming}, glReady=${cam.glIsGlContextReady()}, surfaceValid=$surfaceValid"
-                )
-                lastFrameLogTime = now
-            }
-
-            if (delayedSetSurface) {
-                logDebug("🖼️ Applying delayed surface: ${delayedSurfaceWidth}x${delayedSurfaceHeight}")
-                applySurfaceAndViewport(cam, delayedSurfaceWidth, delayedSurfaceHeight, "drawFrame(delayed)")
-                delayedSetSurface = false
-            }
-
-            var thermalImageProcessed = false
-            cam.glWithThermalImage { thermalImage ->
-                thermalImageProcessed = true
-                thermalImage.palette = currentPalette
-                val fusion: Fusion? = thermalImage.fusion
-                fusion?.setFusionMode(currentFusionMode)
-
-                if (enableMeasurements) {
-                    val measurements: MeasurementShapeCollection = thermalImage.measurements
-                    var spots: MutableList<MeasurementSpot> = measurements.spots
-                    if (spots.size < 3) {
-                        val w = thermalImage.width
-                        val h = thermalImage.height
-                        measurements.addSpot(w / 3, h / 3)
-                        measurements.addSpot(w / 2, h / 2)
-                        measurements.addSpot(w * 2 / 3, h * 2 / 3)
-                    }
-                    spots = measurements.spots
-                    var index = 0
-                    for (spot in spots) {
-                        ThermalLog.d(TAG, "Spot $index : $spot")
-                        index++
-                    }
-                }
-
-                if (snapshotRequested.compareAndSet(true, false)) {
-                    ThermalLog.d(TAG, "📸 [onDrawFrame] Processing snapshot request")
-                    ThermalLog.d(TAG, "📸 [onDrawFrame] ThermalImage: ${thermalImage.width}x${thermalImage.height}")
-                    thermalImage.temperatureUnit = TemperatureUnit.CELSIUS
-                    val range: Pair<ThermalValue, ThermalValue> = cam.glGetScaleRange()
-                    ThermalLog.d(TAG, "📸 [onDrawFrame] glGetScaleRange: ${range.first} - ${range.second}")
-                    thermalImage.scale.setRange(range.first, range.second)
-
-                    val snapshotPath = FileUtils.prepareUniqueFileName(imagesRoot, "ACE_", "jpg")
-                    logDebug("📸 [onDrawFrame] Saving to: $snapshotPath")
-                    try {
-                        thermalImage.saveAs(snapshotPath)
-                        logDebug("📸 [onDrawFrame] ✅ Snapshot saved: $snapshotPath")
-                        val emitted = _snapshots.tryEmit(File(snapshotPath))
-                        logDebug("📸 [onDrawFrame] Emitted to flow: $emitted")
-                    } catch (e: IOException) {
-                        val message = "📸 [onDrawFrame] ❌ Unable to take snapshot: ${e.message}"
-                        logError(message)
-                        _errors.tryEmit(message)
-                    }
-                }
-            }
-
-            val rendered = cam.glOnDrawFrame()
-            if (!rendered || !thermalImageProcessed) {
-                if (frameCount % 30 == 0L) {
-                    logWarn("🖼️ Frame issue: rendered=$rendered, thermalImageProcessed=$thermalImageProcessed")
-                }
+        val rendered = cam.glOnDrawFrame()
+        if (!rendered || !thermalImageProcessed) {
+            if (frameCount % 30 == 0L) {
+                logWarn("🖼️ Frame issue: rendered=$rendered, thermalImageProcessed=$thermalImageProcessed")
             }
         }
     }
 
     private fun runOnGlThread(block: () -> Unit) {
-        val surface = glSurfaceView
-        if (surface == null) {
-            logWarn("GLSurfaceView not attached; dropping GL action")
+        val target = renderTarget
+        if (target == null) {
+            logWarn("Render target not attached; dropping GL action")
             return
         }
-        surface.queueEvent(block)
+        target.queueEvent(block)
     }
 
     // Applies surface size and viewport together; mirrors the reference app's use of glSetViewport after pipeline setup.
@@ -590,13 +651,276 @@ class FlirCameraController(
             logWarn("$reason: GL context not ready; skipping surface apply")
             return
         }
-        val holderValid = runCatching { glSurfaceView?.holder?.surface?.isValid }.getOrDefault(false)
+        val holderValid = renderTarget?.isValid() ?: false
         logDebug("$reason: applying surface ${width}x$height, glReady=${cam.glIsGlContextReady()}, holderValid=$holderValid")
         cam.glOnSurfaceChanged(width, height)
         try {
             cam.glSetViewport(0, 0, width, height)
         } catch (t: Throwable) {
             logWarn("$reason: glSetViewport failed: ${t.message}")
+        }
+    }
+
+    private interface GlRenderTarget {
+        val width: Int
+        val height: Int
+        fun queueEvent(block: () -> Unit)
+        fun requestRender()
+        fun setRenderMode(mode: RenderMode)
+        fun onPause()
+        fun onResume()
+        fun release()
+        fun isValid(): Boolean
+        fun description(): String
+    }
+
+    private inner class GlSurfaceViewRenderTarget(
+        private val surfaceView: GLSurfaceView
+    ) : GlRenderTarget {
+        override val width: Int
+            get() = surfaceView.width
+        override val height: Int
+            get() = surfaceView.height
+
+        override fun queueEvent(block: () -> Unit) {
+            surfaceView.queueEvent(block)
+        }
+
+        override fun requestRender() {
+            surfaceView.requestRender()
+        }
+
+        override fun setRenderMode(mode: RenderMode) {
+            surfaceView.renderMode = if (mode == RenderMode.CONTINUOUS) {
+                GLSurfaceView.RENDERMODE_CONTINUOUSLY
+            } else {
+                GLSurfaceView.RENDERMODE_WHEN_DIRTY
+            }
+        }
+
+        override fun onPause() {
+            surfaceView.onPause()
+        }
+
+        override fun onResume() {
+            surfaceView.onResume()
+        }
+
+        override fun release() {
+            // No-op for GLSurfaceView path
+        }
+
+        override fun isValid(): Boolean = runCatching { surfaceView.holder.surface.isValid }.getOrDefault(false)
+
+        override fun description(): String =
+            "GLSurfaceView(${surfaceView.width}x${surfaceView.height}, shown=${surfaceView.isShown}, attached=${surfaceView.isAttachedToWindow})"
+    }
+
+    private inner class TextureViewRenderTarget(
+        private val surfaceTexture: SurfaceTexture,
+        @Volatile private var surfaceWidth: Int,
+        @Volatile private var surfaceHeight: Int
+    ) : GlRenderTarget {
+
+        private val handlerThread = HandlerThread("FlirTextureRenderer").apply { start() }
+        private val handler = Handler(handlerThread.looper)
+        private var eglDisplay: EGLDisplay = EGL14.EGL_NO_DISPLAY
+        private var eglContext: EGLContext = EGL14.EGL_NO_CONTEXT
+        private var eglSurface: EGLSurface = EGL14.EGL_NO_SURFACE
+        private var currentMode: RenderMode = RenderMode.WHEN_DIRTY
+        private val destroyed = AtomicBoolean(false)
+        private var windowSurface: Surface? = null
+
+        private val continuousRender = object : Runnable {
+            override fun run() {
+                if (destroyed.get()) return
+                drawFrameInternal()
+                if (currentMode == RenderMode.CONTINUOUS) {
+                    handler.postDelayed(this, 16L)
+                }
+            }
+        }
+
+        init {
+            handler.post {
+                if (setupEgl()) {
+                    onRendererSurfaceCreated()
+                    onRendererSurfaceChanged(surfaceWidth, surfaceHeight)
+                }
+            }
+        }
+
+        override val width: Int
+            get() = surfaceWidth
+        override val height: Int
+            get() = surfaceHeight
+
+        override fun queueEvent(block: () -> Unit) {
+            handler.post {
+                if (!destroyed.get() && ensureCurrent()) {
+                    block()
+                }
+            }
+        }
+
+        override fun requestRender() {
+            handler.post {
+                if (!destroyed.get() && ensureCurrent()) {
+                    drawFrameInternal()
+                }
+            }
+        }
+
+        override fun setRenderMode(mode: RenderMode) {
+            handler.post {
+                currentMode = mode
+                if (mode == RenderMode.CONTINUOUS) {
+                    handler.removeCallbacks(continuousRender)
+                    handler.post(continuousRender)
+                } else {
+                    handler.removeCallbacks(continuousRender)
+                }
+            }
+        }
+
+        override fun onPause() {
+            handler.post { handler.removeCallbacks(continuousRender) }
+        }
+
+        override fun onResume() {
+            handler.post {
+                if (currentMode == RenderMode.CONTINUOUS) {
+                    handler.removeCallbacks(continuousRender)
+                    handler.post(continuousRender)
+                }
+            }
+        }
+
+        fun onSurfaceSizeChanged(width: Int, height: Int) {
+            handler.post {
+                surfaceWidth = width
+                surfaceHeight = height
+                if (!destroyed.get() && ensureCurrent()) {
+                    onRendererSurfaceChanged(width, height)
+                }
+            }
+        }
+
+        override fun release() {
+            if (!destroyed.compareAndSet(false, true)) {
+                return
+            }
+            handler.removeCallbacksAndMessages(null)
+            val teardown: () -> Unit = {
+                tearDownEgl()
+                handlerThread.quitSafely()
+            }
+            if (Thread.currentThread() == handlerThread) {
+                teardown()
+            } else {
+                handler.post(teardown)
+                try {
+                    handlerThread.join()
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+            }
+        }
+
+        override fun isValid(): Boolean = !destroyed.get() && eglSurface != EGL14.EGL_NO_SURFACE
+
+        override fun description(): String = "TextureView(${surfaceWidth}x${surfaceHeight})"
+
+        private fun drawFrameInternal() {
+            if (!ensureCurrent()) return
+            onRendererDrawFrame()
+            if (eglDisplay != EGL14.EGL_NO_DISPLAY && eglSurface != EGL14.EGL_NO_SURFACE) {
+                EGL14.eglSwapBuffers(eglDisplay, eglSurface)
+            }
+        }
+
+        private fun ensureCurrent(): Boolean {
+            if (destroyed.get()) return false
+            if (eglDisplay == EGL14.EGL_NO_DISPLAY || eglSurface == EGL14.EGL_NO_SURFACE || eglContext == EGL14.EGL_NO_CONTEXT) {
+                return setupEgl()
+            }
+            return EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)
+        }
+
+        private fun setupEgl(): Boolean {
+            fun fail(message: String): Boolean {
+                logWarn(message)
+                tearDownEgl()
+                return false
+            }
+            eglDisplay = EGL14.eglGetDisplay(EGL14.EGL_DEFAULT_DISPLAY)
+            if (eglDisplay == EGL14.EGL_NO_DISPLAY) {
+                return fail("TextureViewRenderTarget: Unable to get EGL display")
+            }
+            val version = IntArray(2)
+            if (!EGL14.eglInitialize(eglDisplay, version, 0, version, 1)) {
+                return fail("TextureViewRenderTarget: Unable to initialize EGL")
+            }
+            val attribList = intArrayOf(
+                EGL14.EGL_RED_SIZE, 8,
+                EGL14.EGL_GREEN_SIZE, 8,
+                EGL14.EGL_BLUE_SIZE, 8,
+                EGL14.EGL_ALPHA_SIZE, 8,
+                EGL14.EGL_DEPTH_SIZE, 16,
+                EGL14.EGL_STENCIL_SIZE, 0,
+                EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+                EGL14.EGL_NONE
+            )
+            val configs = arrayOfNulls<EGLConfig>(1)
+            val numConfigs = IntArray(1)
+            if (!EGL14.eglChooseConfig(eglDisplay, attribList, 0, configs, 0, configs.size, numConfigs, 0) ||
+                numConfigs[0] <= 0
+            ) {
+                return fail("TextureViewRenderTarget: Unable to choose EGL config")
+            }
+            val config: EGLConfig = configs[0] ?: return fail("TextureViewRenderTarget: No EGL config resolved")
+            val contextAttribs = intArrayOf(
+                EGL14.EGL_CONTEXT_CLIENT_VERSION, resolveGlVersion(),
+                EGL14.EGL_NONE
+            )
+            eglContext = EGL14.eglCreateContext(eglDisplay, config, EGL14.EGL_NO_CONTEXT, contextAttribs, 0)
+            if (eglContext == EGL14.EGL_NO_CONTEXT) {
+                return fail("TextureViewRenderTarget: Unable to create EGL context")
+            }
+            windowSurface = Surface(surfaceTexture)
+            val surfaceAttribs = intArrayOf(EGL14.EGL_NONE)
+            eglSurface = EGL14.eglCreateWindowSurface(eglDisplay, config, windowSurface, surfaceAttribs, 0)
+            if (eglSurface == EGL14.EGL_NO_SURFACE) {
+                return fail("TextureViewRenderTarget: Unable to create EGL window surface")
+            }
+            if (!EGL14.eglMakeCurrent(eglDisplay, eglSurface, eglSurface, eglContext)) {
+                return fail("TextureViewRenderTarget: eglMakeCurrent failed")
+            }
+            return true
+        }
+
+        private fun tearDownEgl() {
+            if (eglDisplay != EGL14.EGL_NO_DISPLAY) {
+                EGL14.eglMakeCurrent(
+                    eglDisplay,
+                    EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_SURFACE,
+                    EGL14.EGL_NO_CONTEXT
+                )
+                if (eglSurface != EGL14.EGL_NO_SURFACE) {
+                    EGL14.eglDestroySurface(eglDisplay, eglSurface)
+                }
+                if (eglContext != EGL14.EGL_NO_CONTEXT) {
+                    EGL14.eglDestroyContext(eglDisplay, eglContext)
+                }
+                EGL14.eglReleaseThread()
+                EGL14.eglTerminate(eglDisplay)
+            }
+            windowSurface?.release()
+            windowSurface = null
+            eglDisplay = EGL14.EGL_NO_DISPLAY
+            eglSurface = EGL14.EGL_NO_SURFACE
+            eglContext = EGL14.EGL_NO_CONTEXT
         }
     }
 

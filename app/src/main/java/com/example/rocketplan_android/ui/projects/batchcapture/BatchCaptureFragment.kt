@@ -2,6 +2,7 @@ package com.example.rocketplan_android.ui.projects.batchcapture
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.opengl.GLSurfaceView
 import android.util.Log
@@ -9,6 +10,7 @@ import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.TextureView
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
@@ -41,7 +43,6 @@ import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
 import com.example.rocketplan_android.thermal.FusionMode
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
@@ -67,7 +68,9 @@ class BatchCaptureFragment : Fragment() {
 
     // Views
     private lateinit var cameraPreview: PreviewView
-    private lateinit var flirSurface: GLSurfaceView
+    private lateinit var flirPreviewContainer: FrameLayout
+    private lateinit var flirTextureView: TextureView
+    private var flirFallbackSurface: GLSurfaceView? = null
     private lateinit var modeToggle: MaterialButtonToggleGroup
     private lateinit var regularModeButton: MaterialButton
     private lateinit var irModeButton: MaterialButton
@@ -93,8 +96,8 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var loadingText: TextView
 
     private lateinit var thumbnailAdapter: ThumbnailStripAdapter
-    private var lastRenderedCategories: List<PhotoCategoryOption> = emptyList()
     private var flirReady = false
+    private val useGlSurfaceFallback = false
     private var latestUiState: BatchCaptureUiState = BatchCaptureUiState()
 
     // Camera
@@ -108,6 +111,28 @@ class BatchCaptureFragment : Fragment() {
 
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
+
+    private val flirTextureListener = object : TextureView.SurfaceTextureListener {
+        override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+            flirController.attachTextureSurface(surface, width, height)
+            if (captureMode == CaptureMode.IR && hasCameraPermission()) {
+                startActiveMode()
+            }
+        }
+
+        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+            flirController.updateTextureSurfaceSize(width, height)
+        }
+
+        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
+            flirController.detachTextureSurface()
+            return true
+        }
+
+        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+            // No-op
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -148,7 +173,7 @@ class BatchCaptureFragment : Fragment() {
         Log.d(TAG, "onViewCreated: projectId=${args.projectId}, roomId=${args.roomId}")
 
         bindViews(view)
-        flirController.attachSurface(flirSurface)
+        setupFlirPreviewSurface()
         setupThumbnailStrip()
         setupListeners()
         setupHardwareButtons(view)
@@ -167,7 +192,8 @@ class BatchCaptureFragment : Fragment() {
 
     private fun bindViews(view: View) {
         cameraPreview = view.findViewById(R.id.cameraPreview)
-        flirSurface = view.findViewById(R.id.flirSurface)
+        flirPreviewContainer = view.findViewById(R.id.flirPreviewContainer)
+        flirTextureView = view.findViewById(R.id.flirTextureView)
         modeToggle = view.findViewById(R.id.modeToggle)
         regularModeButton = view.findViewById(R.id.regularModeButton)
         irModeButton = view.findViewById(R.id.irModeButton)
@@ -192,6 +218,43 @@ class BatchCaptureFragment : Fragment() {
         loadingOverlay = view.findViewById(R.id.loadingOverlay)
         loadingText = view.findViewById(R.id.loadingText)
         flirStatusText.text = getString(R.string.flir_status_idle)
+    }
+
+    private fun setupFlirPreviewSurface() {
+        if (useGlSurfaceFallback) {
+            if (flirFallbackSurface == null) {
+                val glSurface = GLSurfaceView(requireContext()).apply {
+                    layoutParams = FrameLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.MATCH_PARENT
+                    )
+                }
+                flirPreviewContainer.addView(glSurface)
+                flirFallbackSurface = glSurface
+            }
+            flirFallbackSurface?.let { flirController.attachSurface(it) }
+        } else {
+            flirTextureView.isOpaque = false
+            flirTextureView.surfaceTextureListener = flirTextureListener
+            val surfaceTexture = flirTextureView.surfaceTexture
+            if (flirTextureView.isAvailable && surfaceTexture != null) {
+                flirTextureListener.onSurfaceTextureAvailable(
+                    surfaceTexture,
+                    flirTextureView.width,
+                    flirTextureView.height
+                )
+            }
+        }
+    }
+
+    private fun tearDownFlirPreviewSurface() {
+        if (useGlSurfaceFallback) {
+            flirFallbackSurface?.let { flirPreviewContainer.removeView(it) }
+            flirFallbackSurface = null
+        } else {
+            flirTextureView.surfaceTextureListener = null
+            flirController.detachTextureSurface()
+        }
     }
 
     private fun setupThumbnailStrip() {
@@ -514,6 +577,14 @@ class BatchCaptureFragment : Fragment() {
             ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
         }
 
+    private fun isFlirSurfaceReady(): Boolean {
+        return if (useGlSurfaceFallback) {
+            flirFallbackSurface != null
+        } else {
+            flirTextureView.isAvailable && flirTextureView.surfaceTexture != null
+        }
+    }
+
     private fun switchMode(newMode: CaptureMode) {
         if (captureMode == newMode) return
         captureMode = newMode
@@ -528,14 +599,19 @@ class BatchCaptureFragment : Fragment() {
     private fun updateModeUi() {
         val isIr = captureMode == CaptureMode.IR
         Log.d(TAG, "updateModeUi: isIr=$isIr")
-        flirControls.isVisible = false // Controls moved to menu; keep hidden
-        flirSurface.isVisible = isIr
+        flirControls.isVisible = isIr
+        flirPreviewContainer.isVisible = isIr
+        flirTextureView.isVisible = isIr && !useGlSurfaceFallback
+        flirFallbackSurface?.isVisible = isIr && useGlSurfaceFallback
         cameraPreview.isVisible = !isIr
         flashButton.isEnabled = !isIr
         switchCameraButton.isEnabled = !isIr
         flashButton.alpha = if (isIr) 0.4f else 1f
         switchCameraButton.alpha = if (isIr) 0.4f else 1f
-        Log.d(TAG, "updateModeUi: flirSurface.visibility=${flirSurface.visibility}, cameraPreview.visibility=${cameraPreview.visibility}")
+        Log.d(
+            TAG,
+            "updateModeUi: flirPreviewContainer.visibility=${flirPreviewContainer.visibility}, cameraPreview.visibility=${cameraPreview.visibility}"
+        )
     }
 
     private fun startActiveMode() {
@@ -546,6 +622,10 @@ class BatchCaptureFragment : Fragment() {
                 startCamera()
             }
             CaptureMode.IR -> {
+                if (!isFlirSurfaceReady()) {
+                    Log.d(TAG, "startActiveMode: FLIR surface not ready, waiting for availability")
+                    return
+                }
                 stopRegularCamera()
                 flirController.startDiscovery()
             }
@@ -709,9 +789,10 @@ class BatchCaptureFragment : Fragment() {
     }
 
     override fun onDestroyView() {
-        super.onDestroyView()
         cameraProvider?.unbindAll()
+        tearDownFlirPreviewSurface()
         flirController.disconnect()
+        super.onDestroyView()
     }
 
     override fun onDestroy() {

@@ -2,6 +2,7 @@ package com.example.rocketplan_android.thermal
 
 import android.content.Context
 import android.opengl.GLSurfaceView
+import android.graphics.SurfaceTexture
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +30,18 @@ class FlirCameraController(context: Context) {
     }
 
     fun attachSurface(glSurfaceView: GLSurfaceView, surfaceOrder: SurfaceOrder) {
+        // No-op: FLIR not supported
+    }
+
+    fun attachTextureSurface(surfaceTexture: SurfaceTexture, width: Int, height: Int) {
+        // No-op: FLIR not supported
+    }
+
+    fun updateTextureSurfaceSize(width: Int, height: Int) {
+        // No-op: FLIR not supported
+    }
+
+    fun detachTextureSurface() {
         // No-op: FLIR not supported
     }
 
