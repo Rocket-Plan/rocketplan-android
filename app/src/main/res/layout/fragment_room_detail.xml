@@ -235,6 +235,15 @@
                 </LinearLayout>
             </FrameLayout>
 
+            <com.google.android.material.chip.Chip
+                android:id="@+id/addPhotoChip"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/add_photo"
+                android:textAlignment="center" />
+
             <FrameLayout
                 android:id="@+id/addScopeCard"
                 android:layout_width="match_parent"
@@ -482,14 +491,6 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 app:singleSelection="true">
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/addPhotoChip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                    android:text="@string/all_photos"
-                    android:textAlignment="center" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/damageAssessmentChip"
