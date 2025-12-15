@@ -13,9 +13,6 @@
         android:id="@+id/action_test_flir"
         android:title="@string/flir_test_title" />
     <item
-        android:id="@+id/action_test_flir_ir_only"
-        android:title="@string/flir_ir_preview_title" />
-    <item
         android:id="@+id/action_company_info"
         android:title="@string/action_company_info" />
     <item

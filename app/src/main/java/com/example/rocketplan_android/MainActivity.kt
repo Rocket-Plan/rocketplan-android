@@ -47,8 +47,7 @@ class MainActivity : AppCompatActivity() {
         )
         private val FULLSCREEN_DESTINATIONS = setOf(
             R.id.batchCaptureFragment,
-            R.id.flirCaptureFragment,
-            R.id.photoViewerFragment
+            R.id.flirCaptureFragment
         )
     }
 
@@ -137,7 +136,6 @@ class MainActivity : AppCompatActivity() {
                 destination.id == R.id.forgotPasswordFragment ||
                 destination.id == R.id.oauthWebViewFragment ||
                 destination.id == R.id.scopePickerFragment ||
-                destination.id == R.id.photoViewerFragment ||
                 destination.id == R.id.batchCaptureFragment ||
                 destination.id == R.id.flirCaptureFragment
             binding.appBarMain.appBarLayout.isVisible = !shouldHideAppBar
@@ -161,8 +159,7 @@ class MainActivity : AppCompatActivity() {
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                     window.setSoftInputMode(hiddenSoftInputMode)
                 }
-                destination.id == R.id.photoViewerFragment ||
-                    destination.id == R.id.batchCaptureFragment ||
+                destination.id == R.id.batchCaptureFragment ||
                     destination.id == R.id.flirCaptureFragment -> {
                     bottomNavigation.isVisible = false
                     supportActionBar?.hide()
@@ -399,6 +396,7 @@ class MainActivity : AppCompatActivity() {
         }
         PopupMenu(this, anchor, Gravity.END).apply {
             menuInflater.inflate(R.menu.profile_menu, menu)
+            menu.findItem(R.id.action_test_flir)?.isVisible = BuildConfig.HAS_FLIR_SUPPORT
             Log.d(TAG, "🟣 Profile menu inflated with ${menu.size()} items")
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "Profile menu inflated with ${menu.size()} items")

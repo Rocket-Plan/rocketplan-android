@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.view.isVisible
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -22,11 +23,11 @@ import androidx.viewpager2.widget.ViewPager2
 import coil.load
 import com.example.rocketplan_android.R
 import com.github.chrisbanes.photoview.PhotoView
-import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -40,10 +41,10 @@ class PhotoViewerFragment : Fragment() {
         )
     }
 
-    private lateinit var toolbar: MaterialToolbar
     private lateinit var photoPager: ViewPager2
     private lateinit var photoCounter: TextView
     private lateinit var addNoteFab: FloatingActionButton
+    private lateinit var deletePhotoFab: FloatingActionButton
     private lateinit var pagerAdapter: PhotoPagerAdapter
 
     override fun onCreateView(
@@ -54,13 +55,13 @@ class PhotoViewerFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        toolbar = view.findViewById(R.id.photoToolbar)
         photoPager = view.findViewById(R.id.photoPager)
         photoCounter = view.findViewById(R.id.photoCounter)
         addNoteFab = view.findViewById(R.id.addPhotoNoteFab)
+        deletePhotoFab = view.findViewById(R.id.deletePhotoFab)
 
-        toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         addNoteFab.setOnClickListener { showAddNoteDialog() }
+        deletePhotoFab.setOnClickListener { confirmDeleteCurrentPhoto() }
 
         setupPager()
         observeViewModel()
@@ -95,27 +96,34 @@ class PhotoViewerFragment : Fragment() {
                 launch {
                     viewModel.currentPhotoInfo.collect { info ->
                         if (info != null) {
-                            toolbar.title = info.title
-                            toolbar.subtitle = info.subtitle
+                            updateActionBar(info)
                             photoCounter.text = "${info.currentIndex + 1} / ${info.totalCount}"
                             photoCounter.isVisible = info.totalCount > 1
+                        } else {
+                            updateActionBar(null)
+                            photoCounter.text = ""
+                            photoCounter.isVisible = false
                         }
                     }
                 }
 
                 launch {
-                    viewModel.currentPhoto.collect { current ->
-                        val hasPhoto = current != null
+                    combine(
+                        viewModel.currentPhoto,
+                        viewModel.isSavingNote,
+                        viewModel.isDeletingPhoto
+                    ) { current, saving, deleting ->
+                        Triple(current != null, saving, deleting)
+                    }.collect { (hasPhoto, savingNote, deletingPhoto) ->
+                        val actionsEnabled = hasPhoto && !savingNote && !deletingPhoto
                         addNoteFab.isVisible = hasPhoto
-                        addNoteFab.isEnabled = hasPhoto && !viewModel.isSavingNote.value
-                        addNoteFab.alpha = if (addNoteFab.isEnabled) 1f else 0.5f
-                    }
-                }
-
-                launch {
-                    viewModel.isSavingNote.collect { saving ->
-                        addNoteFab.isEnabled = !saving && viewModel.currentPhoto.value != null
-                        addNoteFab.alpha = if (addNoteFab.isEnabled) 1f else 0.5f
+                        deletePhotoFab.isVisible = hasPhoto
+                        addNoteFab.isEnabled = actionsEnabled
+                        deletePhotoFab.isEnabled = actionsEnabled
+                        val enabledAlpha = 1f
+                        val disabledAlpha = 0.5f
+                        addNoteFab.alpha = if (addNoteFab.isEnabled) enabledAlpha else disabledAlpha
+                        deletePhotoFab.alpha = if (deletePhotoFab.isEnabled) enabledAlpha else disabledAlpha
                     }
                 }
 
@@ -128,6 +136,27 @@ class PhotoViewerFragment : Fragment() {
                                     "Note added to photo",
                                     Snackbar.LENGTH_SHORT
                                 ).show()
+                            }
+                            is PhotoViewerEvent.PhotoDeleted -> {
+                                val messageRes = if (event.pendingSync) {
+                                    R.string.photo_delete_pending_sync
+                                } else {
+                                    R.string.photo_deleted
+                                }
+                                Snackbar.make(
+                                    requireView(),
+                                    getString(messageRes),
+                                    Snackbar.LENGTH_SHORT
+                                ).show()
+
+                                if (event.remainingCount == 0) {
+                                    findNavController().navigateUp()
+                                } else {
+                                    val targetIndex = event.newIndex?.coerceAtLeast(0) ?: 0
+                                    if (photoPager.currentItem != targetIndex) {
+                                        photoPager.setCurrentItem(targetIndex, false)
+                                    }
+                                }
                             }
                             is PhotoViewerEvent.Error -> {
                                 Snackbar.make(
@@ -159,6 +188,30 @@ class PhotoViewerFragment : Fragment() {
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
+    }
+
+    private fun confirmDeleteCurrentPhoto() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.delete_photo)
+            .setMessage(R.string.delete_photo_confirmation)
+            .setPositiveButton(R.string.delete) { dialog, _ ->
+                viewModel.deleteCurrentPhoto()
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun updateActionBar(info: CurrentPhotoInfo?) {
+        val actionBar = (activity as? AppCompatActivity)?.supportActionBar ?: return
+        actionBar.title = info?.title ?: getString(R.string.photo_viewer_title)
+        actionBar.subtitle = info?.subtitle
+        actionBar.show()
+    }
+
+    override fun onDestroyView() {
+        (activity as? AppCompatActivity)?.supportActionBar?.subtitle = null
+        super.onDestroyView()
     }
 }
 

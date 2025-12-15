@@ -266,6 +266,12 @@ interface OfflineSyncApi {
         @Query("filter[updated_date]") updatedSince: String? = null
     ): PaginatedResponse<ProjectPhotoListingDto>
 
+    @HTTP(method = "DELETE", path = "/api/photos/{photoId}", hasBody = true)
+    suspend fun deletePhoto(
+        @Path("photoId") photoId: Long,
+        @Body body: DeleteWithTimestampRequest
+    ): Response<Unit>
+
     // Atmospheric & moisture logs
     @GET("/api/projects/{projectId}/atmospheric-logs")
     suspend fun getProjectAtmosphericLogs(

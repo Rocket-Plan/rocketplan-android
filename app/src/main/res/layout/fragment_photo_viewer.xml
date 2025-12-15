@@ -7,21 +7,10 @@
     android:background="@android:color/black"
     tools:context=".ui.projects.PhotoViewerFragment">
 
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/photoToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@android:color/black"
-        android:theme="@style/ThemeOverlay.MaterialComponents.Dark.ActionBar"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="@string/photo_viewer_title"
-        app:titleTextColor="@android:color/white" />
-
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/photoPager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="?attr/actionBarSize" />
+        android:layout_height="match_parent" />
 
     <!-- Photo counter indicator -->
     <TextView
@@ -47,6 +36,18 @@
         android:visibility="gone"
         app:backgroundTint="@color/main_purple"
         app:srcCompat="@drawable/icon_add_note"
+        app:tint="@android:color/white" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/deletePhotoFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="24dp"
+        android:contentDescription="@string/delete_photo"
+        android:visibility="gone"
+        app:backgroundTint="@color/warning_red"
+        app:srcCompat="@drawable/ic_delete"
         app:tint="@android:color/white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

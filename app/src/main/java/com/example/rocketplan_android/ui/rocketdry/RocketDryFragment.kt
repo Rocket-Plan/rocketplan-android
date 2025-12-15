@@ -59,6 +59,7 @@ class RocketDryFragment : Fragment() {
     private lateinit var equipmentTotalCount: TextView
     private lateinit var equipmentStatusBreakdown: TextView
     private lateinit var equipmentLocationsRecyclerView: RecyclerView
+    private lateinit var equipmentTotalsOpenButton: MaterialButton
     private lateinit var roomCard: View
     private lateinit var exteriorSpaceCard: View
     private lateinit var addExternalLogButton: ImageButton
@@ -76,6 +77,7 @@ class RocketDryFragment : Fragment() {
     private lateinit var currentTab: RocketDryTab
     private var lastRenderedAtmosphericAreas: List<AtmosphericLogArea> = emptyList()
     private var latestAtmosphericSelection: Long? = null
+    private var latestReadyState: RocketDryUiState.Ready? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -107,6 +109,7 @@ class RocketDryFragment : Fragment() {
         equipmentTotalCount = view.findViewById(R.id.equipmentTotalCount)
         equipmentStatusBreakdown = view.findViewById(R.id.equipmentStatusBreakdown)
         equipmentLocationsRecyclerView = view.findViewById(R.id.equipmentLocationsRecyclerView)
+        equipmentTotalsOpenButton = view.findViewById(R.id.equipmentTotalsOpenButton)
         roomCard = view.findViewById(R.id.roomCard)
         exteriorSpaceCard = view.findViewById(R.id.exteriorSpaceCard)
         addExternalLogButton = view.findViewById(R.id.addExternalLogButton)
@@ -146,6 +149,11 @@ class RocketDryFragment : Fragment() {
             }
             Log.d(TAG, "🔀 Tab selected: $selectedTab")
             onTabSelected(selectedTab)
+        }
+
+        equipmentTotalsOpenButton.setOnClickListener {
+            Log.d(TAG, "📦 Equipment totals Open tapped")
+            showEquipmentTotalsDialog()
         }
 
         roomCard.setOnClickListener {
@@ -262,10 +270,12 @@ class RocketDryFragment : Fragment() {
         equipmentLevelAdapter.submitLevels(emptyList())
         equipmentTotalCount.text = getString(R.string.loading_project)
         equipmentStatusBreakdown.text = ""
+        latestReadyState = null
         showTab(currentTab)
     }
 
     private fun renderState(state: RocketDryUiState.Ready) {
+        latestReadyState = state
         projectAddress.text = state.projectAddress
         renderAtmosphericAreaFilters(state.atmosphericAreas, state.selectedAtmosphericRoomId)
         updateAtmosphericLogs(state.atmosphericLogs)
@@ -352,6 +362,34 @@ class RocketDryFragment : Fragment() {
                 chip.isChecked = chip.tag as? Long == selectedRoomId
             }
         }
+    }
+
+    private fun showEquipmentTotalsDialog() {
+        val state = latestReadyState
+        if (state == null) {
+            Toast.makeText(requireContext(), R.string.loading_project, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_equipment_totals, null)
+        val recycler = dialogView.findViewById<RecyclerView>(R.id.equipmentTotalsRecyclerView)
+        val emptyState = dialogView.findViewById<TextView>(R.id.equipmentTotalsEmptyState)
+        recycler.layoutManager = LinearLayoutManager(context)
+        val adapter = EquipmentSummaryAdapter()
+        recycler.adapter = adapter
+
+        val items = state.equipmentByType
+        val hasItems = items.isNotEmpty()
+        recycler.isVisible = hasItems
+        emptyState.isVisible = !hasItems
+        if (hasItems) {
+            adapter.submitItems(items)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.rocketdry_equipment_overview)
+            .setView(dialogView)
+            .setPositiveButton(R.string.close, null)
+            .show()
     }
 
     private fun showAddExternalLogDialog() {

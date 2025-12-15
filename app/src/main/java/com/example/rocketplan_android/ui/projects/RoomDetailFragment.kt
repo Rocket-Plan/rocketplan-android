@@ -5,7 +5,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
@@ -58,10 +57,8 @@ class RoomDetailFragment : Fragment() {
         (requireActivity().application as RocketPlanApplication).syncQueueManager
     }
 
-    private lateinit var menuButton: ImageButton
     private lateinit var roomIcon: ImageView
     private lateinit var roomTitle: TextView
-    private lateinit var noteSummary: TextView
     private lateinit var tabToggleGroup: MaterialButtonToggleGroup
     private lateinit var photosTabButton: MaterialButton
     private lateinit var damagesTabButton: MaterialButton
@@ -74,7 +71,6 @@ class RoomDetailFragment : Fragment() {
     private lateinit var albumsHeader: TextView
     private lateinit var albumsRecyclerView: RecyclerView
     private lateinit var filterChipGroup: ChipGroup
-    private lateinit var addPhotoChip: Chip
     private lateinit var damageAssessmentChip: Chip
     private lateinit var damageCategoryGroup: MaterialButtonToggleGroup
     private lateinit var totalEquipmentButton: MaterialButton
@@ -186,10 +182,8 @@ class RoomDetailFragment : Fragment() {
 
 
     private fun bindViews(root: View) {
-        menuButton = root.findViewById(R.id.menuButton)
         roomIcon = root.findViewById(R.id.roomIcon)
         roomTitle = root.findViewById(R.id.roomTitle)
-        noteSummary = root.findViewById(R.id.noteSummary)
         tabToggleGroup = root.findViewById(R.id.roomTabGroup)
         photosTabButton = root.findViewById(R.id.roomPhotosTabButton)
         damagesTabButton = root.findViewById(R.id.roomDamagesTabButton)
@@ -203,7 +197,6 @@ class RoomDetailFragment : Fragment() {
         gridSectionTitle = root.findViewById(R.id.gridSectionTitle)
         totalEquipmentButton = root.findViewById(R.id.totalEquipmentButton)
         filterChipGroup = root.findViewById(R.id.photoFilterChips)
-        addPhotoChip = root.findViewById(R.id.addPhotoChip)
         damageAssessmentChip = root.findViewById(R.id.damageAssessmentChip)
         damageCategoryGroup = root.findViewById(R.id.damageCategoryGroup)
         photosRecyclerView = root.findViewById(R.id.roomPhotosRecyclerView)
@@ -225,7 +218,6 @@ class RoomDetailFragment : Fragment() {
         scopePickerCancelButton = root.findViewById(R.id.scopePickerCancelButton)
 
         scopeTabButton.isVisible = false
-        addPhotoChip.isChecked = initialTab == RoomDetailTab.PHOTOS
         addPhotoCard.isVisible = initialTab == RoomDetailTab.PHOTOS
         addScopeCard.isVisible = false
         damageCategoryGroup.check(R.id.damageFilterAll)
@@ -236,7 +228,7 @@ class RoomDetailFragment : Fragment() {
             RoomDetailTab.DAMAGES -> getString(R.string.damages)
             RoomDetailTab.SCOPE -> getString(R.string.damages)
         }
-        gridSectionTitle.isVisible = initialTab == RoomDetailTab.PHOTOS
+        gridSectionTitle.isVisible = false
         noteCardLabel.text = getString(R.string.add_note_with_plus)
     }
 
@@ -370,11 +362,7 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun bindListeners() {
-        menuButton.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.edit_room), Toast.LENGTH_SHORT).show()
-        }
         addPhotoCard.setOnClickListener { showAddPhotoOptions(it) }
-        addPhotoChip.setOnClickListener { showAddPhotoOptions(it) }
         damageAssessmentChip.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
         }
@@ -927,7 +915,6 @@ class RoomDetailFragment : Fragment() {
         loadingOverlay.isVisible = true
         roomTitleBase = ""
         roomTitle.text = ""
-        noteSummary.text = ""
         photosRecyclerView.isVisible = false
         damagesRecyclerView.isVisible = false
         scopeRecyclerView.isVisible = false
@@ -949,7 +936,6 @@ class RoomDetailFragment : Fragment() {
         roomTitle.text = state.header.title
         roomIcon.setImageResource(state.header.iconRes)
         updateRoomTitleForTab(viewModel.selectedTab.value)
-        noteSummary.text = state.header.noteSummary
         noteCardSummary.text = state.header.noteSummary
         latestPhotoCount = state.photoCount
 
@@ -976,8 +962,7 @@ class RoomDetailFragment : Fragment() {
         when (tab) {
             RoomDetailTab.PHOTOS -> {
                 gridSectionTitle.text = getString(R.string.damage_assessment)
-                gridSectionTitle.isVisible = true
-                noteSummary.isVisible = true
+                gridSectionTitle.isVisible = false
                 noteCard.isVisible = true
                 damagesRecyclerView.isVisible = false
                 scopeRecyclerView.isVisible = false
@@ -994,7 +979,6 @@ class RoomDetailFragment : Fragment() {
             RoomDetailTab.DAMAGES, RoomDetailTab.SCOPE -> {
                 gridSectionTitle.text = getString(R.string.damages)
                 gridSectionTitle.isVisible = false
-                noteSummary.isVisible = false
                 noteCard.isVisible = false
                 albumsHeader.isVisible = false
                 albumsRecyclerView.isVisible = false

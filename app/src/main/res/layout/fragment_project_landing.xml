@@ -18,22 +18,6 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="end"
-                android:orientation="horizontal">
-
-                <ImageButton
-                    android:id="@+id/menuButton"
-                    android:layout_width="@dimen/icon_size_action"
-                    android:layout_height="@dimen/icon_size_action"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="@string/menu"
-                    android:src="@drawable/ic_more_vert"
-                    app:tint="@color/icon_colour" />
-            </LinearLayout>
-
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/projectInfoCard"
                 android:layout_width="match_parent"
@@ -52,36 +36,57 @@
                     android:padding="20dp">
 
                     <LinearLayout
-                        android:id="@+id/projectStatusContainer"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:background="@drawable/bg_wip_badge"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:foreground="?attr/selectableItemBackgroundBorderless"
                         android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingStart="12dp"
-                        android:paddingTop="4dp"
-                        android:paddingEnd="12dp"
-                        android:paddingBottom="4dp">
+                        android:orientation="horizontal">
 
-                        <TextView
-                            android:id="@+id/projectStatusBadge"
+                        <LinearLayout
+                            android:id="@+id/projectStatusContainer"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:textColor="@color/team_member_tag_dark"
-                            android:textSize="12sp"
-                            android:textStyle="bold"
-                            tools:text="WIP" />
+                            android:background="@drawable/bg_wip_badge"
+                            android:clickable="true"
+                            android:focusable="true"
+                            android:foreground="?attr/selectableItemBackgroundBorderless"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="12dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="4dp">
 
-                        <ImageView
-                            android:layout_width="@dimen/icon_size_chevron"
-                            android:layout_height="@dimen/icon_size_chevron"
-                            android:layout_marginStart="4dp"
-                            android:contentDescription="@string/change_project_status"
-                            android:src="@drawable/ic_chevron_down"
-                            android:tint="@color/team_member_tag_dark" />
+                            <TextView
+                                android:id="@+id/projectStatusBadge"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/team_member_tag_dark"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                tools:text="WIP" />
+
+                            <ImageView
+                                android:layout_width="@dimen/icon_size_chevron"
+                                android:layout_height="@dimen/icon_size_chevron"
+                                android:layout_marginStart="4dp"
+                                android:contentDescription="@string/change_project_status"
+                                android:src="@drawable/ic_chevron_down"
+                                android:tint="@color/team_member_tag_dark" />
+                        </LinearLayout>
+
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="0dp"
+                            android:layout_weight="1" />
+
+                        <ImageButton
+                            android:id="@+id/menuButton"
+                            android:layout_width="@dimen/icon_size_action"
+                            android:layout_height="@dimen/icon_size_action"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="@string/menu"
+                            android:src="@drawable/ic_more_vert"
+                            app:tint="@color/icon_colour" />
                     </LinearLayout>
 
                     <TextView
@@ -153,15 +158,15 @@
                         android:padding="16dp">
 
                         <FrameLayout
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_list_container"
+                            android:layout_height="@dimen/icon_size_list_container"
                             android:background="@drawable/bg_icon_circle_purple"
                             android:foreground="?attr/selectableItemBackgroundBorderless">
 
                             <ImageView
                                 android:id="@+id/addProjectInfoIcon"
-                                android:layout_width="@dimen/icon_size_list"
-                                android:layout_height="@dimen/icon_size_list"
+                                android:layout_width="@dimen/icon_size_list_large"
+                                android:layout_height="@dimen/icon_size_list_large"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
@@ -213,15 +218,15 @@
                         android:padding="16dp">
 
                         <FrameLayout
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_list_container"
+                            android:layout_height="@dimen/icon_size_list_container"
                             android:background="@drawable/bg_icon_circle_purple"
                             android:foreground="?attr/selectableItemBackgroundBorderless">
 
                             <ImageView
                                 android:id="@+id/rocketScanIcon"
-                                android:layout_width="@dimen/icon_size_list"
-                                android:layout_height="@dimen/icon_size_list"
+                                android:layout_width="@dimen/icon_size_list_large"
+                                android:layout_height="@dimen/icon_size_list_large"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
@@ -272,15 +277,15 @@
                         android:padding="16dp">
 
                         <FrameLayout
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_list_container"
+                            android:layout_height="@dimen/icon_size_list_container"
                             android:background="@drawable/bg_icon_circle_purple"
                             android:foreground="?attr/selectableItemBackgroundBorderless">
 
                             <ImageView
                                 android:id="@+id/allNotesIcon"
-                                android:layout_width="@dimen/icon_size_list"
-                                android:layout_height="@dimen/icon_size_list"
+                                android:layout_width="@dimen/icon_size_list_large"
+                                android:layout_height="@dimen/icon_size_list_large"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
@@ -334,15 +339,15 @@
                         android:padding="16dp">
 
                         <FrameLayout
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_list_container"
+                            android:layout_height="@dimen/icon_size_list_container"
                             android:background="@drawable/bg_icon_circle_purple"
                             android:foreground="?attr/selectableItemBackgroundBorderless">
 
                             <ImageView
                                 android:id="@+id/rocketDryIcon"
-                                android:layout_width="@dimen/icon_size_list"
-                                android:layout_height="@dimen/icon_size_list"
+                                android:layout_width="@dimen/icon_size_list_large"
+                                android:layout_height="@dimen/icon_size_list_large"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:src="@drawable/ic_water_drop"
@@ -395,15 +400,15 @@
                         android:padding="16dp">
 
                         <FrameLayout
-                            android:layout_width="48dp"
-                            android:layout_height="48dp"
+                            android:layout_width="@dimen/icon_size_list_container"
+                            android:layout_height="@dimen/icon_size_list_container"
                             android:background="@drawable/bg_icon_circle_purple"
                             android:foreground="?attr/selectableItemBackgroundBorderless">
 
                             <ImageView
                                 android:id="@+id/crewIcon"
-                                android:layout_width="@dimen/icon_size_list"
-                                android:layout_height="@dimen/icon_size_list"
+                                android:layout_width="@dimen/icon_size_list_large"
+                                android:layout_height="@dimen/icon_size_list_large"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:src="@drawable/crew" />

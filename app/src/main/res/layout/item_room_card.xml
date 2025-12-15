@@ -29,8 +29,8 @@
 
         <FrameLayout
             android:id="@+id/roomIconContainer"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
+            android:layout_width="106dp"
+            android:layout_height="106dp"
             android:layout_gravity="center">
 
             <ImageView

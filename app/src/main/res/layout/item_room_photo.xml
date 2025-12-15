@@ -13,15 +13,13 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:minHeight="120dp"
         android:padding="2dp"
         android:foreground="?attr/selectableItemBackground">
 
-        <ImageView
+        <com.example.rocketplan_android.ui.projects.SquareImageView
             android:id="@+id/roomPhotoPreview"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:adjustViewBounds="true"
             android:contentDescription="@string/photos"
             android:scaleType="centerCrop"
             android:src="@drawable/bg_room_placeholder" />

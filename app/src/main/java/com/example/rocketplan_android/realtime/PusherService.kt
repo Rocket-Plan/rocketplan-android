@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.realtime
 
+import android.util.Log
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.google.gson.Gson
@@ -39,6 +40,7 @@ class PusherService(
             val newState = change?.currentState ?: return
             when (newState) {
                 ConnectionState.CONNECTED -> {
+                    Log.d(TAG, "🔌 Pusher connected")
                     scope.launch {
                         stateMutex.withLock {
                             reconnectAttempts = 0
@@ -56,6 +58,7 @@ class PusherService(
         }
 
         override fun onError(message: String?, code: String?, e: Exception?) {
+            Log.e(TAG, "🚨 Pusher connection error: ${message ?: "unknown"} (code=${code ?: "none"})", e)
             remoteLogger?.log(
                 level = LogLevel.ERROR,
                 tag = TAG,
@@ -95,6 +98,8 @@ class PusherService(
         }
         attachSubscriptionLifecycle(channelName, binding)
 
+        Log.d(TAG, "📡 Binding image processor event: channel=$channelName event=$eventName")
+
         // Replace any previous listener for this event to avoid duplicate callbacks
         binding.listeners.remove(eventName)?.let { existing ->
             binding.channel.unbind(eventName, existing)
@@ -125,6 +130,7 @@ class PusherService(
     }
 
     fun unsubscribe(channelName: String) {
+        Log.d(TAG, "🧹 Unsubscribing from channel: $channelName")
         val binding = channelBindings.remove(channelName) ?: return
         binding.listeners.forEach { (event, listener) ->
             binding.channel.unbind(event, listener)
@@ -150,12 +156,15 @@ class PusherService(
         }
         attachSubscriptionLifecycle(channelName, binding)
 
+        Log.d(TAG, "📡 Binding generic event: channel=$channelName event=$eventName")
+
         // Replace any previous listener for this event to avoid duplicate callbacks
         binding.listeners.remove(eventName)?.let { existing ->
             binding.channel.unbind(eventName, existing)
         }
 
         val listener = SubscriptionEventListener { event ->
+            Log.d(TAG, "🔔 Pusher event received: channel=$channelName event=$eventName")
             callback()
         }
 
@@ -181,11 +190,14 @@ class PusherService(
         }
         attachSubscriptionLifecycle(channelName, binding)
 
+        Log.d(TAG, "📡 Binding raw event: channel=$channelName event=$eventName")
+
         binding.listeners.remove(eventName)?.let { existing ->
             binding.channel.unbind(eventName, existing)
         }
 
         val listener = SubscriptionEventListener { event ->
+            Log.d(TAG, "🔔 Pusher raw event received: channel=$channelName event=$eventName data=${event.data}")
             callback(event.data)
         }
 
@@ -211,12 +223,15 @@ class PusherService(
         }
         attachSubscriptionLifecycle(channelName, binding)
 
+        Log.d(TAG, "📡 Binding typed event: channel=$channelName event=$eventName")
+
         binding.listeners.remove(eventName)?.let { existing ->
             binding.channel.unbind(eventName, existing)
         }
 
         val listener = SubscriptionEventListener { event ->
             val raw = event.data
+            Log.d(TAG, "🔔 Pusher typed event received: channel=$channelName event=$eventName raw=$raw")
             if (raw.isNullOrBlank() || raw == "[]") {
                 callback(null)
                 return@SubscriptionEventListener
@@ -265,6 +280,7 @@ class PusherService(
         if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING) {
             return
         }
+        Log.d(TAG, "🔌 Connecting Pusher (state=$state)")
         pusher.connect(connectionListener, ConnectionState.ALL)
     }
 
@@ -273,6 +289,7 @@ class PusherService(
         binding.lifecycleBound = true
 
         val successListener = SubscriptionEventListener {
+            Log.d(TAG, "✅ Pusher subscription succeeded for channel=$channelName")
             remoteLogger?.log(
                 level = LogLevel.INFO,
                 tag = TAG,
@@ -281,6 +298,7 @@ class PusherService(
             )
         }
         val errorListener = SubscriptionEventListener { event ->
+            Log.e(TAG, "❌ Pusher subscription error for channel=$channelName payload=${event.data}")
             remoteLogger?.log(
                 level = LogLevel.ERROR,
                 tag = TAG,
@@ -312,8 +330,10 @@ class PusherService(
                 val attempt = reconnectAttempts
                 reconnectAttempts += 1
                 val delayMs = backoffDelayMs(attempt)
+                Log.w(TAG, "♻️ Scheduling Pusher reconnect attempt=${attempt + 1} delayMs=$delayMs state=$state")
                 reconnectJob = scope.launch {
                     delay(delayMs)
+                    Log.d(TAG, "♻️ Reconnect timer fired (attempt=${attempt + 1})")
                     ensureConnected()
                     stateMutex.withLock { reconnectJob = null }
                 }

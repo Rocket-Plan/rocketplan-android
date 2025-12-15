@@ -81,6 +81,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.Date
 import java.util.UUID
 import java.util.concurrent.TimeUnit
@@ -117,6 +118,8 @@ private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
 private fun Throwable.isConflict(): Boolean = (this as? HttpException)?.code() == 409
 private fun Throwable.isMissingOnServer(): Boolean = (this as? HttpException)?.code() in listOf(404, 410)
 private fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
+
+data class PhotoDeletionResult(val synced: Boolean)
 
 class OfflineSyncRepository(
     private val api: OfflineSyncApi,
@@ -821,6 +824,80 @@ class OfflineSyncRepository(
         }
     }
 
+    suspend fun deletePhoto(photoId: Long): PhotoDeletionResult = withContext(ioDispatcher) {
+        val photo = localDataService.getPhoto(photoId)
+            ?: throw IllegalArgumentException("Photo not found: $photoId")
+        val timestamp = now()
+        val marked = photo.copy(
+            isDeleted = true,
+            isDirty = true,
+            syncStatus = SyncStatus.PENDING,
+            updatedAt = timestamp
+        )
+        localDataService.savePhotos(listOf(marked))
+        removePhotoFiles(photo)
+
+        photo.roomId?.let { roomId ->
+            runCatching { localDataService.refreshRoomPhotoSnapshot(roomId) }
+                .onFailure {
+                    Log.w("API", "⚠️ [deletePhoto] Failed to refresh photo snapshot for room $roomId", it)
+                }
+        }
+
+        val serverId = photo.serverId
+        if (serverId == null) {
+            val cleaned = marked.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+            localDataService.savePhotos(listOf(cleaned))
+            return@withContext PhotoDeletionResult(synced = true)
+        }
+
+        val deleteRequest = DeleteWithTimestampRequest(updatedAt = marked.updatedAt.toApiTimestamp())
+        val synced = runCatching {
+            api.deletePhoto(serverId, deleteRequest)
+        }.recoverCatching { error ->
+            when {
+                error.isMissingOnServer() -> null
+                error.isConflict() -> api.deletePhoto(serverId, DeleteWithTimestampRequest())
+                else -> throw error
+            }
+        }.onFailure {
+            Log.w("API", "⚠️ [deletePhoto] Failed to delete photo $serverId", it)
+        }.isSuccess
+
+        if (synced) {
+            val cleaned = marked.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+            localDataService.savePhotos(listOf(cleaned))
+        }
+
+        PhotoDeletionResult(synced = synced)
+    }
+
+    private fun removePhotoFiles(photo: OfflinePhotoEntity) {
+        fun deleteIfExists(path: String?) {
+            if (path.isNullOrBlank()) return
+            runCatching {
+                val file = File(path)
+                if (file.exists()) {
+                    file.delete()
+                }
+            }.onFailure {
+                Log.w("API", "⚠️ [deletePhoto] Failed to delete file at $path", it)
+            }
+        }
+
+        deleteIfExists(photo.localPath)
+        deleteIfExists(photo.cachedOriginalPath)
+        deleteIfExists(photo.cachedThumbnailPath)
+    }
+
     /**
      * Runs a set of sync segments sequentially for a project.
      * Used by SyncQueueManager to compose fast vs. background sync passes without relying on the monolithic graph.
@@ -1199,6 +1276,8 @@ class OfflineSyncRepository(
             .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending equipment", it) }
         runCatching { syncPendingMoistureLogs(projectId) }
             .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending moisture logs", it) }
+        runCatching { syncPendingPhotoDeletions(projectId) }
+            .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending photo deletions", it) }
 
         val notesCheckpointKey = projectNotesKey(projectId)
         val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
@@ -1822,6 +1901,18 @@ class OfflineSyncRepository(
                 }
                 .onFailure { error ->
                     Log.w("API", "⚠️ [syncRestore] Failed to restore $type ids=${filteredIds.joinToString()}", error)
+                }
+        }
+    }
+
+    private suspend fun syncPendingPhotoDeletions(projectId: Long) {
+        val pending = localDataService.getPendingPhotoDeletions(projectId)
+        if (pending.isEmpty()) return
+
+        pending.forEach { photo ->
+            runCatching { deletePhoto(photo.photoId) }
+                .onFailure {
+                    Log.w("API", "⚠️ [syncPendingPhotoDeletions] Failed to delete photo ${photo.photoId}", it)
                 }
         }
     }

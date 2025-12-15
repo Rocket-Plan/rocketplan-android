@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -42,6 +43,9 @@ class PhotoViewerViewModel(
     private val _isSavingNote = MutableStateFlow(false)
     val isSavingNote: StateFlow<Boolean> = _isSavingNote.asStateFlow()
 
+    private val _isDeletingPhoto = MutableStateFlow(false)
+    val isDeletingPhoto: StateFlow<Boolean> = _isDeletingPhoto.asStateFlow()
+
     private val _events = MutableSharedFlow<PhotoViewerEvent>()
     val events = _events.asSharedFlow()
 
@@ -60,8 +64,10 @@ class PhotoViewerViewModel(
             for (photoId in photoIds) {
                 try {
                     val entity = localDataService.getPhoto(photoId)
-                    if (entity != null) {
+                    if (entity != null && !entity.isDeleted) {
                         photoEntities.add(entity)
+                    } else if (entity?.isDeleted == true) {
+                        Log.w(TAG, "Skipping deleted photo $photoId")
                     } else {
                         Log.w(TAG, "Photo not found: $photoId")
                     }
@@ -123,6 +129,55 @@ class PhotoViewerViewModel(
                 _events.emit(PhotoViewerEvent.Error("Failed to save note"))
             }
             _isSavingNote.value = false
+        }
+    }
+
+    fun deleteCurrentPhoto() {
+        val photo = _currentPhoto.value ?: return
+        if (_isDeletingPhoto.value) return
+
+        viewModelScope.launch {
+            _isDeletingPhoto.value = true
+            val result = runCatching {
+                offlineSyncRepository.deletePhoto(photo.photoId)
+            }.onFailure { error ->
+                reportError("Failed to delete photo ${photo.photoId}", error)
+                _events.emit(
+                    PhotoViewerEvent.Error(
+                        getApplication<Application>().getString(R.string.photo_delete_failed)
+                    )
+                )
+            }.getOrNull()
+
+            if (result != null) {
+                val remaining = _photos.value.filterNot { it.photoId == photo.photoId }
+                _photos.value = remaining
+
+                if (remaining.isEmpty()) {
+                    _currentPhoto.value = null
+                    _currentPhotoInfo.value = null
+                    _events.emit(
+                        PhotoViewerEvent.PhotoDeleted(
+                            remainingCount = 0,
+                            newIndex = null,
+                            pendingSync = !result.synced
+                        )
+                    )
+                } else {
+                    val targetIndex = currentIndex.coerceAtMost(remaining.lastIndex)
+                    currentIndex = targetIndex
+                    updateCurrentPhotoInfo(targetIndex)
+                    _events.emit(
+                        PhotoViewerEvent.PhotoDeleted(
+                            remainingCount = remaining.size,
+                            newIndex = targetIndex,
+                            pendingSync = !result.synced
+                        )
+                    )
+                }
+            }
+
+            _isDeletingPhoto.value = false
         }
     }
 
@@ -193,5 +248,10 @@ data class CurrentPhotoInfo(
 
 sealed class PhotoViewerEvent {
     data class NoteSaved(val note: OfflineNoteEntity) : PhotoViewerEvent()
+    data class PhotoDeleted(
+        val remainingCount: Int,
+        val newIndex: Int?,
+        val pendingSync: Boolean
+    ) : PhotoViewerEvent()
     data class Error(val message: String) : PhotoViewerEvent()
 }

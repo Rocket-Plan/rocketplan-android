@@ -34,6 +34,11 @@
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>
+    <string name="delete_photo">Delete photo</string>
+    <string name="delete_photo_confirmation">Delete this photo from the project?</string>
+    <string name="photo_deleted">Photo deleted</string>
+    <string name="photo_delete_failed">Unable to delete this photo right now.</string>
+    <string name="photo_delete_pending_sync">Photo deleted. We will finish syncing shortly.</string>
     <string name="delete_project_not_available">Open a project to delete it.</string>
     <string name="toast_image_processor_config_loaded">Image processor config ready (%1$s)</string>
     <string name="toast_image_processor_config_failed">Failed to load image processor config: %1$s</string>

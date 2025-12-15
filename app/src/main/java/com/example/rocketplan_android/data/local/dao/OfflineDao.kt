@@ -227,6 +227,17 @@ interface OfflineDao {
     @Query("DELETE FROM offline_photos WHERE roomId = :roomId")
     suspend fun deletePhotosByRoomId(roomId: Long): Int
 
+    @Query(
+        """
+        SELECT * FROM offline_photos
+        WHERE projectId = :projectId
+          AND isDeleted = 1
+          AND isDirty = 1
+        ORDER BY updatedAt DESC
+        """
+    )
+    suspend fun getPendingPhotoDeletions(projectId: Long): List<OfflinePhotoEntity>
+
     /**
      * Find photos where the roomId references a room that doesn't exist in the photo's project.
      * These are orphaned/mismatched photos that need cleanup.

@@ -262,6 +262,7 @@
                             tools:text="10 active | 1 removed | 1 damaged" />
 
                         <com.google.android.material.button.MaterialButton
+                            android:id="@+id/equipmentTotalsOpenButton"
                             style="@style/Widget.Material3.Button.OutlinedButton"
                             android:layout_width="match_parent"
                             android:layout_height="46dp"

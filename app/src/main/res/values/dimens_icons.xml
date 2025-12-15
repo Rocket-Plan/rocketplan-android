@@ -10,10 +10,13 @@
     <dimen name="icon_size_inline">20dp</dimen>
     <dimen name="icon_size_nav">24dp</dimen>
     <dimen name="icon_size_list">28dp</dimen>
+    <dimen name="icon_size_list_large">34dp</dimen>
     <dimen name="icon_size_tab">32dp</dimen>
     <dimen name="icon_size_action">40dp</dimen>
     <dimen name="icon_touch_target">44dp</dimen>
+    <dimen name="icon_size_list_container">57dp</dimen>
     <dimen name="icon_size_card_large">48dp</dimen>
+    <dimen name="icon_size_card_room">53dp</dimen>
     <dimen name="icon_size_section">56dp</dimen>
     <dimen name="icon_size_tile">65dp</dimen>
 </resources>
