@@ -40,6 +40,7 @@ import com.example.rocketplan_android.R
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
 import com.example.rocketplan_android.thermal.FusionMode
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
@@ -75,6 +76,8 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var flirPaletteSwitch: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var flirFusionSwitch: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var flirMeasurementsSwitch: com.google.android.material.switchmaterial.SwitchMaterial
+    private lateinit var flirMenuButton: ImageButton
+    private lateinit var categoryMenuButton: ImageButton
     private lateinit var closeButton: ImageButton
     private lateinit var titleText: TextView
     private lateinit var photoCountText: TextView
@@ -92,6 +95,7 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var thumbnailAdapter: ThumbnailStripAdapter
     private var lastRenderedCategories: List<PhotoCategoryOption> = emptyList()
     private var flirReady = false
+    private var latestUiState: BatchCaptureUiState = BatchCaptureUiState()
 
     // Camera
     private var captureMode: CaptureMode = CaptureMode.REGULAR
@@ -172,6 +176,8 @@ class BatchCaptureFragment : Fragment() {
         flirPaletteSwitch = view.findViewById(R.id.flirPaletteSwitch)
         flirFusionSwitch = view.findViewById(R.id.flirFusionSwitch)
         flirMeasurementsSwitch = view.findViewById(R.id.flirMeasurementsSwitch)
+        flirMenuButton = view.findViewById(R.id.flirMenuButton)
+        categoryMenuButton = view.findViewById(R.id.categoryMenuButton)
         closeButton = view.findViewById(R.id.closeButton)
         titleText = view.findViewById(R.id.titleText)
         photoCountText = view.findViewById(R.id.photoCountText)
@@ -241,6 +247,14 @@ class BatchCaptureFragment : Fragment() {
             flirController.setMeasurementsEnabled(isChecked)
         }
 
+        flirMenuButton.setOnClickListener {
+            showFlirOptionsMenu()
+        }
+
+        categoryMenuButton.setOnClickListener {
+            showCategoryMenu()
+        }
+
         lastPhotoPreview.setOnClickListener {
             // Could open photo gallery/review screen
         }
@@ -273,6 +287,61 @@ class BatchCaptureFragment : Fragment() {
                 false
             }
         }
+    }
+
+    private fun showFlirOptionsMenu() {
+        val items = arrayOf(
+            getString(R.string.flir_palette),
+            getString(R.string.flir_fusion),
+            getString(R.string.flir_measurements)
+        )
+        val checked = booleanArrayOf(
+            flirPaletteSwitch.isChecked,
+            flirFusionSwitch.isChecked,
+            flirMeasurementsSwitch.isChecked
+        )
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.flir_options)
+            .setMultiChoiceItems(items, checked) { _, which, isChecked ->
+                when (which) {
+                    0 -> {
+                        flirPaletteSwitch.isChecked = isChecked
+                        flirController.setPalette(if (isChecked) 1 else 0)
+                    }
+                    1 -> {
+                        flirFusionSwitch.isChecked = isChecked
+                        flirController.setFusionMode(if (isChecked) FusionMode.VISUAL_ONLY else FusionMode.THERMAL_ONLY)
+                    }
+                    2 -> {
+                        flirMeasurementsSwitch.isChecked = isChecked
+                        flirController.setMeasurementsEnabled(isChecked)
+                    }
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showCategoryMenu() {
+        val categories = latestUiState.categories
+        if (categories.isEmpty()) {
+            Toast.makeText(requireContext(), getString(R.string.batch_capture_no_categories), Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val names = categories.map { it.name }.toTypedArray()
+        val selectedIndex = categories.indexOfFirst { it.albumId == latestUiState.selectedCategoryId }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.batch_capture_select_category)
+            .setSingleChoiceItems(names, selectedIndex) { dialog, which ->
+                val selected = categories.getOrNull(which) ?: return@setSingleChoiceItems
+                viewModel.selectCategory(selected.albumId)
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     /**
@@ -360,6 +429,7 @@ class BatchCaptureFragment : Fragment() {
     }
 
     private fun renderState(state: BatchCaptureUiState) {
+        latestUiState = state
         photoCountText.text = "${state.photoCount}/${state.maxPhotos}"
 
         thumbnailAdapter.submitList(state.photos)
@@ -400,44 +470,8 @@ class BatchCaptureFragment : Fragment() {
     }
 
     private fun renderCategories(state: BatchCaptureUiState) {
-        val categoriesChanged = state.categories != lastRenderedCategories
-        if (categoriesChanged) {
-            categoryChipGroup.setOnCheckedStateChangeListener(null)
-            categoryChipGroup.removeAllViews()
-
-            val context = categoryChipGroup.context
-            state.categories.forEach { option ->
-                val chip = Chip(context).apply {
-                    id = View.generateViewId()
-                    tag = option.albumId
-                    text = option.name
-                    isCheckable = true
-                    isChecked = option.albumId == state.selectedCategoryId
-                    isClickable = true
-                    isFocusable = true
-                    chipBackgroundColor = ContextCompat.getColorStateList(context, R.color.chip_background_selector)
-                    setTextColor(ContextCompat.getColorStateList(context, R.color.chip_text_selector))
-                    isCheckedIconVisible = false
-                    rippleColor = ContextCompat.getColorStateList(context, android.R.color.transparent)
-                }
-                categoryChipGroup.addView(chip)
-            }
-
-            categoryChipGroup.setOnCheckedStateChangeListener { group, checkedIds ->
-                val checkedChipId = checkedIds.firstOrNull()
-                val checkedChip = checkedChipId?.let { id -> group.findViewById<Chip>(id) }
-                val albumId = checkedChip?.tag as? Long
-                albumId?.let { viewModel.selectCategory(it) }
-            }
-            lastRenderedCategories = state.categories
-        } else {
-            for (i in 0 until categoryChipGroup.childCount) {
-                val chip = categoryChipGroup.getChildAt(i) as? Chip ?: continue
-                chip.isChecked = chip.tag == state.selectedCategoryId
-            }
-        }
-
-        categoryChipGroup.isVisible = state.categories.isNotEmpty()
+        // Chip row hidden; selection handled via menu button instead.
+        categoryChipGroup.isVisible = false
     }
 
     private fun handleEvent(event: BatchCaptureEvent) {
@@ -494,7 +528,7 @@ class BatchCaptureFragment : Fragment() {
     private fun updateModeUi() {
         val isIr = captureMode == CaptureMode.IR
         Log.d(TAG, "updateModeUi: isIr=$isIr")
-        flirControls.isVisible = isIr
+        flirControls.isVisible = false // Controls moved to menu; keep hidden
         flirSurface.isVisible = isIr
         cameraPreview.isVisible = !isIr
         flashButton.isEnabled = !isIr

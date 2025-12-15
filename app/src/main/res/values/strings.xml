@@ -521,6 +521,8 @@
     <string name="flash_on">Flash on</string>
     <string name="flash_off">Flash off</string>
     <string name="flash_auto">Flash auto</string>
+    <string name="batch_capture_no_categories">No categories available</string>
+    <string name="batch_capture_select_category">Select photo type</string>
     <string name="camera_error">Camera error: %s</string>
     <string name="camera_not_available">Camera is not available on this device</string>
     <string name="switch_company_title">Switch Company</string>

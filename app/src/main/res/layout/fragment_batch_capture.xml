@@ -25,9 +25,11 @@
         android:background="@android:color/black"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@id/bottomContainer"
+        app:layout_constraintDimensionRatio="3:4"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/flirControlsContainer"
+        app:layout_constraintWidth_percent="0.8" />
 
     <!-- Top Controls Overlay -->
     <LinearLayout
@@ -62,6 +64,28 @@
             android:textColor="@android:color/white"
             android:textSize="18sp"
             android:textStyle="bold" />
+
+        <ImageButton
+            android:id="@+id/flirMenuButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_circle_semi_transparent"
+            android:contentDescription="@string/flir_options"
+            android:padding="10dp"
+            android:src="@android:drawable/ic_menu_manage"
+            app:tint="@android:color/white" />
+
+        <ImageButton
+            android:id="@+id/categoryMenuButton"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_circle_semi_transparent"
+            android:contentDescription="@string/batch_capture_select_category"
+            android:padding="10dp"
+            android:src="@android:drawable/ic_menu_sort_by_size"
+            app:tint="@android:color/white" />
 
         <TextView
             android:id="@+id/photoCountText"
@@ -223,7 +247,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:orientation="horizontal"
-            android:paddingHorizontal="32dp">
+            android:paddingHorizontal="16dp">
 
             <!-- Gallery / Last Photo Preview -->
             <FrameLayout
@@ -245,20 +269,21 @@
             <!-- Shutter Button -->
             <FrameLayout
                 android:id="@+id/shutterButton"
-                android:layout_width="80dp"
-                android:layout_height="80dp"
+                android:layout_width="88dp"
+                android:layout_height="88dp"
+                android:layout_marginHorizontal="8dp"
                 android:contentDescription="@string/batch_capture_take_photo">
 
                 <View
-                    android:layout_width="80dp"
-                    android:layout_height="80dp"
+                    android:layout_width="88dp"
+                    android:layout_height="88dp"
                     android:layout_gravity="center"
                     android:background="@drawable/bg_shutter_outer" />
 
                 <View
                     android:id="@+id/shutterInner"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:layout_width="70dp"
+                    android:layout_height="70dp"
                     android:layout_gravity="center"
                     android:background="@drawable/bg_shutter_inner" />
             </FrameLayout>
@@ -280,20 +305,21 @@
                     android:src="@drawable/ic_switch_camera"
                     app:tint="@android:color/white" />
             </FrameLayout>
-        </LinearLayout>
 
-        <!-- Done Button (shown when photos exist) -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/doneButton"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginHorizontal="24dp"
-            android:layout_marginTop="16dp"
-            android:backgroundTint="@color/main_purple"
-            android:text="@string/batch_capture_commit"
-            android:textColor="@android:color/white"
-            android:visibility="gone"
-            tools:visibility="visible" />
+            <!-- Commit Button inline -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/doneButton"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:backgroundTint="@color/main_purple"
+                android:text="@string/batch_capture_commit"
+                android:textAllCaps="false"
+                android:textColor="@android:color/white"
+                android:visibility="gone"
+                tools:visibility="visible" />
+        </LinearLayout>
     </LinearLayout>
 
     <!-- Loading Overlay -->
