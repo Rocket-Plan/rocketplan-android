@@ -25,6 +25,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
+import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
@@ -3383,6 +3384,8 @@ private fun List<MoistureLogDto>.extractMaterials(): List<OfflineMaterialEntity>
 
 private fun AlbumDto.toEntity(defaultProjectId: Long, defaultRoomId: Long? = null): OfflineAlbumEntity {
     val timestamp = now()
+    val normalizedName = name?.trim().takeUnless { it.isNullOrBlank() }
+    val isCategoryAlbum = CategoryAlbums.isCategory(normalizedName)
     val projectId: Long
     val roomId: Long?
     when (albumableType) {
@@ -3401,11 +3404,12 @@ private fun AlbumDto.toEntity(defaultProjectId: Long, defaultRoomId: Long? = nul
             roomId = defaultRoomId
         }
     }
+    val resolvedRoomId = if (isCategoryAlbum) null else roomId
     return OfflineAlbumEntity(
         albumId = id,
         projectId = projectId,
-        roomId = roomId,
-        name = name ?: "Album $id",
+        roomId = resolvedRoomId,
+        name = normalizedName ?: "Album $id",
         albumableType = albumableType,
         albumableId = albumableId,
         photoCount = 0, // Will be calculated from database via LEFT JOIN with offline_album_photos

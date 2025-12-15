@@ -20,6 +20,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
@@ -872,14 +873,22 @@ class RoomDetailViewModel(
         )
 
     private fun List<OfflineAlbumEntity>.toAlbumItems(): List<RoomAlbumItem> {
-        return this.map { album ->
-            RoomAlbumItem(
-                id = album.albumId,
-                name = album.name,
-                photoCount = album.photoCount,
-                thumbnailUrl = album.thumbnailUrl
-            )
-        }
+        return this
+            .filterNot { album ->
+                val isCategoryAlbum = CategoryAlbums.isCategory(album.name)
+                if (isCategoryAlbum) {
+                    Log.d(TAG, "🚫 Filtering category album ${album.name} (${album.albumId})")
+                }
+                isCategoryAlbum
+            }
+            .map { album ->
+                RoomAlbumItem(
+                    id = album.albumId,
+                    name = album.name,
+                    photoCount = album.photoCount,
+                    thumbnailUrl = album.thumbnailUrl
+                )
+            }
     }
 
     fun onPhotosAdded(result: PhotosAddedResult?) {

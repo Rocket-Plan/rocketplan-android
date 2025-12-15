@@ -15,6 +15,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,6 +44,9 @@ class ProjectDetailViewModel(
 
     private val _selectedTab = MutableStateFlow(ProjectDetailTab.PHOTOS)
     val selectedTab: StateFlow<ProjectDetailTab> = _selectedTab
+
+    @Volatile
+    private var lastIsBackgroundSyncing: Boolean? = null
 
     init {
         // Prioritize this project in the sync queue
@@ -80,6 +84,10 @@ class ProjectDetailViewModel(
                 } else {
                     Log.d("ProjectDetailVM", "✅ Project found: ${project.title}")
                     val isProjectSyncing = projectSyncingProjects.contains(projectId)
+                    if (lastIsBackgroundSyncing != isProjectSyncing) {
+                        Log.d("ProjectDetailVM", "🔄 isBackgroundSyncing changed: $lastIsBackgroundSyncing → $isProjectSyncing for project $projectId")
+                        lastIsBackgroundSyncing = isProjectSyncing
+                    }
                     val isProjectPhotoSyncing = photoSyncingProjects.contains(projectId)
                     val sections = rooms.toSections(
                         photos = photos,
@@ -247,19 +255,10 @@ class ProjectDetailViewModel(
     private fun List<OfflineAlbumEntity>.toAlbumSections(
         photos: List<OfflinePhotoEntity>
     ): List<AlbumSection> {
-        // Category album names that should be filtered out (not true room albums)
-        val categoryAlbumNames = setOf(
-            "Damage Assessment",
-            "Betterments",
-            "Contents",
-            "Daily Progress",
-            "Pre-existing Damages"
-        )
-
         val photosByAlbumId = photos.filter { it.albumId != null }.groupBy { it.albumId }
         val populatedAlbums = this.mapNotNull { album ->
             // Filter out project-scoped albums (roomId == null) or category albums by name
-            if (album.roomId == null || categoryAlbumNames.contains(album.name)) {
+            if (album.roomId == null || CategoryAlbums.isCategory(album.name)) {
                 Log.d("ProjectDetailVM", "🚫 Filtering project-scoped album ${album.name} (${album.albumId})")
                 return@mapNotNull null
             }

@@ -656,6 +656,11 @@ class SyncQueueManager(
             job.projectId.takeIf { job.mode != SyncJob.ProjectSyncMode.PHOTOS_ONLY }
         }
         // Note: pendingPhotoSyncs intentionally excluded - photo uploads shouldn't block room creation
-        _projectSyncingProjects.value = (activeProjects + queuedProjects).toSet()
+        val newSet = (activeProjects + queuedProjects).toSet()
+        val oldSet = _projectSyncingProjects.value
+        if (newSet != oldSet) {
+            Log.d(TAG, "🔄 projectSyncingProjects changed: $oldSet → $newSet")
+        }
+        _projectSyncingProjects.value = newSet
     }
 }

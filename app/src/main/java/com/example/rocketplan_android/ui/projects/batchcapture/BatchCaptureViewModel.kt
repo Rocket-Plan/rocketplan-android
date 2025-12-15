@@ -12,6 +12,7 @@ import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.logging.LogLevel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -104,11 +105,9 @@ class BatchCaptureViewModel(
             localDataService.observeAlbumsForProject(projectId).collect { albums ->
                 val categoryAlbums = albums
                     .filter { album ->
-                        album.roomId == null && CATEGORY_ALBUM_NAMES.contains(album.name)
+                        album.roomId == null && CategoryAlbums.isCategory(album.name)
                     }
-                    .sortedBy { album ->
-                        CATEGORY_ORDER.indexOf(album.name).takeIf { it >= 0 } ?: Int.MAX_VALUE
-                    }
+                    .sortedBy { album -> CategoryAlbums.orderIndex(album.name) }
                     .map { album ->
                         PhotoCategoryOption(
                             albumId = album.albumId,
@@ -330,20 +329,6 @@ class BatchCaptureViewModel(
 
     companion object {
         private const val TAG = "BatchCaptureVM"
-        private val CATEGORY_ALBUM_NAMES = setOf(
-            "Damage Assessment",
-            "Betterments",
-            "Contents",
-            "Daily Progress",
-            "Pre-existing Damages"
-        )
-        private val CATEGORY_ORDER = listOf(
-            "Damage Assessment",
-            "Daily Progress",
-            "Pre-existing Damages",
-            "Betterments",
-            "Contents"
-        )
 
         fun provideFactory(
             application: Application,
