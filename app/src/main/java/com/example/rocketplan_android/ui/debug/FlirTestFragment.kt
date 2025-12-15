@@ -16,6 +16,8 @@ import com.example.rocketplan_android.R
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,7 +30,9 @@ class FlirTestFragment : Fragment(), CoroutineScope {
 
     private lateinit var controller: FlirCameraController
 
+    private lateinit var toolbar: MaterialToolbar
     private lateinit var glSurface: android.opengl.GLSurfaceView
+    private lateinit var controlsContainer: View
     private lateinit var statusText: TextView
     private lateinit var streamLabel: TextView
     private lateinit var startButton: MaterialButton
@@ -72,7 +76,9 @@ class FlirTestFragment : Fragment(), CoroutineScope {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        toolbar = view.findViewById(R.id.testToolbar)
         glSurface = view.findViewById(R.id.testGlSurface)
+        controlsContainer = view.findViewById(R.id.testControls)
         statusText = view.findViewById(R.id.testStatus)
         streamLabel = view.findViewById(R.id.testStreamLabel)
         startButton = view.findViewById(R.id.testStartButton)
@@ -81,10 +87,22 @@ class FlirTestFragment : Fragment(), CoroutineScope {
 
         statusText.text = getString(R.string.flir_test_status_idle)
 
-        glSurface.setZOrderOnTop(true)
-        controller.attachSurface(glSurface)
+        // Keep the reliable GL path for this test view and hide controls when streaming
+        controller.attachSurface(glSurface, FlirCameraController.SurfaceOrder.ON_TOP)
         // Don't set fusion mode before streaming - use the default like FlirCaptureFragment
         logSurfaceState("onViewCreated")
+
+        toolbar.inflateMenu(R.menu.flir_test_menu)
+        toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.flir_test_options -> {
+                    showOptionsMenu()
+                    true
+                }
+
+                else -> false
+            }
+        }
 
         startButton.setOnClickListener { startDiscovery() }
         prevButton.setOnClickListener { updateStreamLabel(controller.cycleStream(-1)) }
@@ -93,16 +111,27 @@ class FlirTestFragment : Fragment(), CoroutineScope {
         launch {
             controller.state.collectLatest { state ->
                 when (state) {
-                    FlirState.Idle -> statusText.text = getString(R.string.flir_test_status_idle)
-                    FlirState.Discovering -> statusText.text = getString(R.string.flir_status_discovering)
-                    is FlirState.Connecting -> statusText.text = getString(R.string.flir_status_connecting, state.identity.deviceId)
+                    FlirState.Idle -> {
+                        statusText.text = getString(R.string.flir_test_status_idle)
+                        controlsContainer.visibility = View.VISIBLE
+                    }
+                    FlirState.Discovering -> {
+                        statusText.text = getString(R.string.flir_status_discovering)
+                        controlsContainer.visibility = View.VISIBLE
+                    }
+                    is FlirState.Connecting -> {
+                        statusText.text = getString(R.string.flir_status_connecting, state.identity.deviceId)
+                        controlsContainer.visibility = View.VISIBLE
+                    }
                     is FlirState.Streaming -> {
                         statusText.text = getString(R.string.flir_status_streaming, state.identity.deviceId)
                         updateStreamLabel(controller.currentStreamSelection())
+                        controlsContainer.visibility = View.GONE
                         logSurfaceState("streaming")
                     }
                     is FlirState.Error -> {
                         statusText.text = state.message
+                        controlsContainer.visibility = View.VISIBLE
                         logSurfaceState("error")
                     }
                 }
@@ -149,6 +178,27 @@ class FlirTestFragment : Fragment(), CoroutineScope {
         controller.disconnect()
         job.cancel()
         super.onDestroyView()
+    }
+
+    private fun showOptionsMenu() {
+        val items = arrayOf(
+            getString(R.string.flir_palette),
+            getString(R.string.flir_fusion),
+            getString(R.string.flir_measurements)
+        )
+        val checked = booleanArrayOf(false, false, false)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.flir_options)
+            .setMultiChoiceItems(items, checked) { _, which, isChecked ->
+                when (which) {
+                    0 -> controller.setPalette(if (isChecked) 1 else 0)
+                    1 -> controller.setFusionMode(if (isChecked) com.example.rocketplan_android.thermal.FusionMode.VISUAL_ONLY else com.example.rocketplan_android.thermal.FusionMode.THERMAL_ONLY)
+                    2 -> controller.setMeasurementsEnabled(isChecked)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     companion object {

@@ -26,6 +26,7 @@ import com.example.rocketplan_android.thermal.FlirState
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
 import com.example.rocketplan_android.ui.projects.RoomDetailFragment
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureEvent
+import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureUiState
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureViewModel
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -47,16 +48,21 @@ class FlirCaptureFragment : Fragment() {
     private lateinit var glSurface: android.opengl.GLSurfaceView
     private lateinit var statusText: TextView
     private lateinit var photoCountText: TextView
+    private lateinit var streamLabel: TextView
     private lateinit var startButton: MaterialButton
     private lateinit var snapshotButton: MaterialButton
     private lateinit var optionsButton: MaterialButton
     private lateinit var uploadButton: MaterialButton
     private lateinit var closeButton: MaterialButton
+    private lateinit var prevStreamButton: MaterialButton
+    private lateinit var nextStreamButton: MaterialButton
     private lateinit var loadingOverlay: View
     private lateinit var loadingText: TextView
 
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
+    private var isStreaming = false
+    private var lastUiState: BatchCaptureUiState = BatchCaptureUiState()
 
     private fun logSurfaceAndOverlay(reason: String) {
         glSurface.post {
@@ -100,12 +106,6 @@ class FlirCaptureFragment : Fragment() {
         logSurfaceAndOverlay("onViewCreated")
         setupListeners()
         observeState()
-
-        if (hasCameraPermission()) {
-            startDiscovery()
-        } else {
-            cameraPermissionLauncher.launch(cameraPermissions)
-        }
     }
 
     override fun onResume() {
@@ -127,15 +127,23 @@ class FlirCaptureFragment : Fragment() {
         glSurface = root.findViewById(R.id.glSurface)
         statusText = root.findViewById(R.id.statusText)
         photoCountText = root.findViewById(R.id.photoCountText)
+        streamLabel = root.findViewById(R.id.streamLabel)
         startButton = root.findViewById(R.id.startButton)
         snapshotButton = root.findViewById(R.id.snapshotButton)
         optionsButton = root.findViewById(R.id.optionsButton)
         uploadButton = root.findViewById(R.id.uploadButton)
         closeButton = root.findViewById(R.id.closeButton)
+        prevStreamButton = root.findViewById(R.id.prevStreamButton)
+        nextStreamButton = root.findViewById(R.id.nextStreamButton)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
         loadingText = root.findViewById(R.id.loadingText)
 
         statusText.text = getString(R.string.flir_status_idle)
+        streamLabel.text = getString(R.string.flir_stream_counter_unknown)
+        snapshotButton.isEnabled = false
+        prevStreamButton.isEnabled = false
+        nextStreamButton.isEnabled = false
+        lastUiState = viewModel.uiState.value
     }
 
     private fun setupListeners() {
@@ -143,6 +151,8 @@ class FlirCaptureFragment : Fragment() {
         snapshotButton.setOnClickListener { controller.requestSnapshot() }
         closeButton.setOnClickListener { findNavController().navigateUp() }
         optionsButton.setOnClickListener { showOptionsMenu(it) }
+        prevStreamButton.setOnClickListener { updateStreamLabel(controller.cycleStream(-1)) }
+        nextStreamButton.setOnClickListener { updateStreamLabel(controller.cycleStream(1)) }
 
         uploadButton.setOnClickListener {
             viewModel.commitPhotos()
@@ -175,18 +185,28 @@ class FlirCaptureFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
                     controller.state.collect { state ->
+                        isStreaming = state is FlirState.Streaming
+                        prevStreamButton.isEnabled = isStreaming
+                        nextStreamButton.isEnabled = isStreaming
+                        updateSnapshotButtonState()
                         when (state) {
                             FlirState.Idle -> {
                                 statusText.text = getString(R.string.flir_status_idle)
+                                streamLabel.text =
+                                    getString(R.string.flir_stream_counter_unknown)
                             }
 
                             FlirState.Discovering -> {
                                 statusText.text = getString(R.string.flir_status_discovering)
+                                streamLabel.text =
+                                    getString(R.string.flir_stream_counter_unknown)
                             }
 
                             is FlirState.Connecting -> {
                                 statusText.text =
                                     getString(R.string.flir_status_connecting, state.identity.deviceId)
+                                streamLabel.text =
+                                    getString(R.string.flir_stream_counter_unknown)
                             }
 
                             is FlirState.Streaming -> {
@@ -194,11 +214,14 @@ class FlirCaptureFragment : Fragment() {
                                     R.string.flir_status_streaming,
                                     state.identity.deviceId
                                 )
+                                updateStreamLabel(controller.currentStreamSelection())
                                 logSurfaceAndOverlay("streaming")
                             }
 
                             is FlirState.Error -> {
                                 statusText.text = state.message
+                                streamLabel.text =
+                                    getString(R.string.flir_stream_counter_unknown)
                                 logSurfaceAndOverlay("error")
                             }
                         }
@@ -233,13 +256,14 @@ class FlirCaptureFragment : Fragment() {
 
                 launch {
                     viewModel.uiState.collect { state ->
+                        lastUiState = state
                         val count = state.photoCount
                         photoCountText.text = getString(
                             if (state.isProcessing) R.string.flir_upload_in_progress else R.string.flir_upload_ready,
                             count
                         )
                         uploadButton.isEnabled = state.hasPhotos && !state.isProcessing
-                        snapshotButton.isEnabled = state.canTakeMore && !state.isProcessing
+                        updateSnapshotButtonState()
                         // Keep overlay hidden; preview stays on top for reliability.
                         loadingOverlay.isVisible = false
                         if (state.isProcessing) {
@@ -306,6 +330,20 @@ class FlirCaptureFragment : Fragment() {
         cameraPermissions.all {
             ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
         }
+
+    private fun updateSnapshotButtonState() {
+        val enabledByUiState = lastUiState.canTakeMore && !lastUiState.isProcessing
+        snapshotButton.isEnabled = isStreaming && enabledByUiState
+    }
+
+    private fun updateStreamLabel(selection: FlirCameraController.StreamSelection?) {
+        val text = selection?.let {
+            val type =
+                if (it.isThermal) getString(R.string.flir_stream_type_thermal) else getString(R.string.flir_stream_type_visible)
+            getString(R.string.flir_stream_counter, it.index + 1, it.count, type)
+        } ?: getString(R.string.flir_stream_counter_unknown)
+        streamLabel.text = text
+    }
 
     companion object {
         private const val TAG = "FlirCaptureFrag"

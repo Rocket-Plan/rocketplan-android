@@ -91,7 +91,12 @@ class FlirCameraController(
 
     private fun resolveGlVersion(): Int = 2 // Force ES2 for FLIR sample parity; ES3 caused blank preview on some devices.
 
-    fun attachSurface(glSurfaceView: GLSurfaceView) {
+    enum class SurfaceOrder { DEFAULT, MEDIA_OVERLAY, ON_TOP }
+
+    fun attachSurface(
+        glSurfaceView: GLSurfaceView,
+        surfaceOrder: SurfaceOrder = SurfaceOrder.ON_TOP
+    ) {
         this.glSurfaceView = glSurfaceView
         val glVersion = resolveGlVersion()
         ThermalLog.d(TAG, "Using GLES $glVersion for FLIR surface")
@@ -99,13 +104,21 @@ class FlirCameraController(
         glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
         glSurfaceView.setPreserveEGLContextOnPause(false)
         glSurfaceView.holder.setFormat(PixelFormat.TRANSLUCENT)
-        // Reliable preview: keep GL surface on top of siblings; place controls outside its bounds.
-        glSurfaceView.setZOrderOnTop(true)
+        when (surfaceOrder) {
+            SurfaceOrder.ON_TOP -> glSurfaceView.setZOrderOnTop(true)
+            SurfaceOrder.MEDIA_OVERLAY -> glSurfaceView.setZOrderMediaOverlay(true)
+            SurfaceOrder.DEFAULT -> {
+                glSurfaceView.setZOrderOnTop(false)
+                glSurfaceView.setZOrderMediaOverlay(false)
+            }
+        }
         glSurfaceView.setRenderer(renderer)
         glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         glSurfaceView.post {
             val holderValid = runCatching { glSurfaceView.holder.surface.isValid }.getOrDefault(false)
-            logDebug("🖼️ GLSurface attached: size=${glSurfaceView.width}x${glSurfaceView.height}, shown=${glSurfaceView.isShown}, attached=${glSurfaceView.isAttachedToWindow}, holderValid=$holderValid, zOnTop=${true}")
+            logDebug(
+                "🖼️ GLSurface attached: size=${glSurfaceView.width}x${glSurfaceView.height}, shown=${glSurfaceView.isShown}, attached=${glSurfaceView.isAttachedToWindow}, holderValid=$holderValid, order=$surfaceOrder"
+            )
         }
     }
 

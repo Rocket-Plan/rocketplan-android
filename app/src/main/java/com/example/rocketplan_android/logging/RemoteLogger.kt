@@ -9,6 +9,7 @@ import android.provider.Settings
 import android.util.Log
 import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.api.LoggingService
+import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.model.RemoteLogBatch
 import com.example.rocketplan_android.data.model.RemoteLogEntry
 import com.example.rocketplan_android.data.storage.SecureStorage
@@ -200,6 +201,12 @@ class RemoteLogger(
         batchId: String,
         attempt: Int
     ): BatchResult {
+        if (RetrofitClient.getAuthToken().isNullOrBlank()) {
+            secureStorage.getAuthTokenSync()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { RetrofitClient.setAuthToken(it) }
+        }
+
         val userId = secureStorage.getUserIdSync()
             ?.takeIf { it > 0L }
             ?.toString()
