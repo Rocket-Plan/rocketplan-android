@@ -35,8 +35,8 @@
             <ImageButton
                 android:id="@+id/claimEditButton"
                 style="?attr/borderlessButtonStyle"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="@dimen/icon_size_action"
+                android:layout_height="@dimen/icon_size_action"
                 android:background="@drawable/bg_icon_circle_purple"
                 android:contentDescription="@string/loss_info_edit_claim"
                 android:padding="10dp"

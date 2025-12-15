@@ -2,12 +2,13 @@ package com.example.rocketplan_android.data.api
 
 import com.example.rocketplan_android.config.AppConfig
 import com.google.gson.GsonBuilder
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
 
 /**
  * Singleton Retrofit client for API communication
@@ -15,19 +16,19 @@ import java.util.concurrent.TimeUnit
  */
 object RetrofitClient {
 
-    private var authToken: String? = null
+    private val authToken: AtomicReference<String?> = AtomicReference(null)
 
     /**
      * Set the authentication token for API requests
      */
     fun setAuthToken(token: String?) {
-        authToken = token
+        authToken.set(token)
     }
 
     /**
      * Get the authentication token
      */
-    fun getAuthToken(): String? = authToken
+    fun getAuthToken(): String? = authToken.get()
 
     /**
      * Logging interceptor for debugging (only enabled in dev/staging)
@@ -50,7 +51,7 @@ object RetrofitClient {
         val requestBuilder = chain.request().newBuilder()
 
         // Add auth token if available
-        authToken?.let { token ->
+        authToken.get()?.let { token ->
             requestBuilder.addHeader("Authorization", "Bearer $token")
         }
 

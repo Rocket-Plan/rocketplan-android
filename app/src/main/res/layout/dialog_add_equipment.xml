@@ -41,8 +41,8 @@
 
         <ImageButton
             android:id="@+id/addEquipmentMinus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="@dimen/icon_size_action"
+            android:layout_height="@dimen/icon_size_action"
             android:background="@drawable/bg_icon_circle_light"
             android:contentDescription="@string/rocketdry_remove"
             android:padding="10dp"
@@ -61,8 +61,8 @@
 
         <ImageButton
             android:id="@+id/addEquipmentPlus"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="@dimen/icon_size_action"
+            android:layout_height="@dimen/icon_size_action"
             android:background="@drawable/bg_icon_circle_purple"
             android:contentDescription="@string/rocketdry_add"
             android:padding="10dp"

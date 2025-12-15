@@ -44,8 +44,8 @@
 
                 <ImageView
                     android:id="@+id/roomIcon"
-                    android:layout_width="64dp"
-                    android:layout_height="64dp"
+                    android:layout_width="@dimen/icon_size_tile"
+                    android:layout_height="@dimen/icon_size_tile"
                     android:background="@drawable/bg_icon_circle_purple"
                     android:contentDescription="@string/room"
                     android:padding="14dp"
@@ -165,8 +165,8 @@
                 android:padding="14dp">
 
                 <ImageView
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="@dimen/icon_size_card_large"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:background="@drawable/bg_icon_circle_purple"
                     android:contentDescription="@string/add_scope_sheet"
                     android:padding="12dp"

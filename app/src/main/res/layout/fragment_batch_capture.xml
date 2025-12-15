@@ -48,8 +48,8 @@
 
         <ImageButton
             android:id="@+id/closeButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/icon_touch_target"
+            android:layout_height="@dimen/icon_touch_target"
             android:background="@drawable/bg_circle_semi_transparent"
             android:contentDescription="@string/close"
             android:padding="10dp"
@@ -71,8 +71,8 @@
 
         <ImageButton
             android:id="@+id/flirMenuButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/icon_touch_target"
+            android:layout_height="@dimen/icon_touch_target"
             android:layout_marginEnd="8dp"
             android:background="@drawable/bg_circle_semi_transparent"
             android:contentDescription="@string/flir_options"
@@ -82,8 +82,8 @@
 
         <ImageButton
             android:id="@+id/categoryMenuButton"
-            android:layout_width="44dp"
-            android:layout_height="44dp"
+            android:layout_width="@dimen/icon_touch_target"
+            android:layout_height="@dimen/icon_touch_target"
             android:layout_marginEnd="8dp"
             android:background="@drawable/bg_circle_semi_transparent"
             android:contentDescription="@string/batch_capture_select_category"
@@ -196,15 +196,15 @@
     </LinearLayout>
 
     <!-- Flash Toggle -->
-    <ImageButton
-        android:id="@+id/flashButton"
-        android:layout_width="44dp"
-        android:layout_height="44dp"
-        android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_circle_semi_transparent"
-        android:contentDescription="@string/flash_toggle"
-        android:padding="10dp"
-        android:src="@drawable/ic_flash_off"
+        <ImageButton
+            android:id="@+id/flashButton"
+            android:layout_width="@dimen/icon_touch_target"
+            android:layout_height="@dimen/icon_touch_target"
+            android:layout_marginEnd="16dp"
+            android:background="@drawable/bg_circle_semi_transparent"
+            android:contentDescription="@string/flash_toggle"
+            android:padding="10dp"
+            android:src="@drawable/ic_flash_off"
         app:layout_constraintBottom_toBottomOf="@id/topControls"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/topControls"

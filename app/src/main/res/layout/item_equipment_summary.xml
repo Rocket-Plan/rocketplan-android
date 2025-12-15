@@ -27,8 +27,8 @@
 
             <ImageView
                 android:id="@+id/equipmentTypeIcon"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="@dimen/icon_size_nav"
+                android:layout_height="@dimen/icon_size_nav"
                 android:layout_gravity="center"
                 android:contentDescription="@string/equipment"
                 android:tint="@color/white"

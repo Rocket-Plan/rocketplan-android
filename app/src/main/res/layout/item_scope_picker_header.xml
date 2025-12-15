@@ -20,8 +20,8 @@
 
     <ImageView
         android:id="@+id/scopeHeaderChevron"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="@dimen/icon_size_inline"
+        android:layout_height="@dimen/icon_size_inline"
         android:rotation="0"
         android:src="@drawable/icon_arrow_right"
         android:tint="@color/light_text_rp" />

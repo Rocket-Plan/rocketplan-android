@@ -78,8 +78,8 @@
 
                 <ImageView
                     android:id="@+id/roomIcon"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="@dimen/icon_size_card_large"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:background="@drawable/bg_icon_circle_light"
                     android:padding="8dp"
                     android:scaleType="centerInside"
@@ -113,8 +113,8 @@
 
                 <ImageButton
                     android:id="@+id/menuButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/icon_size_action"
+                    android:layout_height="@dimen/icon_size_action"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/edit_room"
                     android:src="@drawable/icon_pencil" />
@@ -140,8 +140,8 @@
 
                 <ImageView
                     android:id="@+id/roomNoteIcon"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="@dimen/icon_size_action"
+                    android:layout_height="@dimen/icon_size_action"
                     android:layout_marginEnd="12dp"
                     android:background="@drawable/bg_icon_circle_light"
                     android:contentDescription="@string/add_note"
@@ -169,8 +169,8 @@
 
                 <ImageView
                     android:id="@+id/roomNoteEditIcon"
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
+                    android:layout_width="@dimen/icon_size_inline"
+                    android:layout_height="@dimen/icon_size_inline"
                     android:layout_marginStart="8dp"
                     android:contentDescription="@string/add_note"
                     android:src="@drawable/icon_pencil"
@@ -200,8 +200,8 @@
                         android:background="@drawable/bg_icon_circle_purple">
 
                         <ImageView
-                            android:layout_width="24dp"
-                            android:layout_height="24dp"
+                            android:layout_width="@dimen/icon_size_nav"
+                            android:layout_height="@dimen/icon_size_nav"
                             android:layout_gravity="center"
                             android:contentDescription="@string/add_photo"
                             android:scaleType="centerInside"

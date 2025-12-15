@@ -34,8 +34,8 @@
 
         <ImageView
             android:id="@+id/locationIcon"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="@dimen/icon_size_tile"
+            android:layout_height="@dimen/icon_size_tile"
             android:background="@drawable/bg_icon_circle_purple"
             android:contentDescription="@string/location_icon"
             android:padding="16dp"

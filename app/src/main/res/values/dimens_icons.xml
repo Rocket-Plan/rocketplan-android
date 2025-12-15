@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Icon sizing aligned with the iOS app:
+         - 16/20/24dp: navigation chevrons & inline glyphs (iOS BackButton and inline icons)
+         - 28/32dp: list and tab icons (iOS row icons and tab bar)
+         - 40/44dp: action buttons & minimum tap targets (iOS CircleButton and 44pt nav bar height)
+         - 48/56dp: larger row heroes (iOS section tiles and large create buttons)
+         - 65dp: hero tiles (iOS property type selector) -->
+    <dimen name="icon_size_chevron">16dp</dimen>
+    <dimen name="icon_size_inline">20dp</dimen>
+    <dimen name="icon_size_nav">24dp</dimen>
+    <dimen name="icon_size_list">28dp</dimen>
+    <dimen name="icon_size_tab">32dp</dimen>
+    <dimen name="icon_size_action">40dp</dimen>
+    <dimen name="icon_touch_target">44dp</dimen>
+    <dimen name="icon_size_card_large">48dp</dimen>
+    <dimen name="icon_size_section">56dp</dimen>
+    <dimen name="icon_size_tile">65dp</dimen>
+</resources>

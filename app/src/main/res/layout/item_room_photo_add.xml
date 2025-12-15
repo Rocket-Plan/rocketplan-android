@@ -15,8 +15,8 @@
         android:padding="12dp">
 
         <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="@dimen/icon_size_tab"
+            android:layout_height="@dimen/icon_size_tab"
             android:contentDescription="@string/add_photo"
             android:src="@drawable/ic_photo"
             android:tint="@color/main_purple" />

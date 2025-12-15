@@ -41,8 +41,8 @@
 
                 <ImageButton
                     android:id="@+id/editAddressButton"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="@dimen/icon_size_tab"
+                    android:layout_height="@dimen/icon_size_tab"
                     android:layout_marginStart="8dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/edit_address"

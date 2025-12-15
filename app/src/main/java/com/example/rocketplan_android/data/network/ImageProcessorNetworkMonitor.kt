@@ -6,13 +6,16 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
+import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Monitors network connectivity and triggers retry queue processing when network is restored.
@@ -28,25 +31,20 @@ class ImageProcessorNetworkMonitor(
     }
 
     private val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    private var isNetworkAvailable = false
+    private val isNetworkAvailable = AtomicBoolean(false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val stateMutex = Mutex()
     private var restoreJob: Job? = null
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
             Log.d(TAG, "🌐 Network available")
-            if (!isNetworkAvailable) {
-                isNetworkAvailable = true
-                onNetworkRestored()
-            }
+            handleNetworkRestored()
         }
 
         override fun onLost(network: Network) {
             Log.d(TAG, "📡 Network lost")
-            if (isNetworkAvailable) {
-                isNetworkAvailable = false
-                onNetworkLost()
-            }
+            handleNetworkLost()
         }
 
         override fun onCapabilitiesChanged(
@@ -56,10 +54,9 @@ class ImageProcessorNetworkMonitor(
             val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
             val hasValidated = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 
-            if (hasInternet && hasValidated && !isNetworkAvailable) {
+            if (hasInternet && hasValidated) {
                 Log.d(TAG, "🌐 Network validated and available")
-                isNetworkAvailable = true
-                onNetworkRestored()
+                handleNetworkRestored()
             }
         }
     }
@@ -68,8 +65,10 @@ class ImageProcessorNetworkMonitor(
         // Check current network state
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        isNetworkAvailable = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
-                            capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+        val initialAvailable =
+            capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
+                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+        isNetworkAvailable.set(initialAvailable)
 
         // Register network callback
         val networkRequest = NetworkRequest.Builder()
@@ -77,21 +76,48 @@ class ImageProcessorNetworkMonitor(
             .build()
 
         connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
-        Log.d(TAG, "📡 Network monitor initialized (initial state: ${if (isNetworkAvailable) "online" else "offline"})")
+        Log.d(TAG, "📡 Network monitor initialized (initial state: ${if (initialAvailable) "online" else "offline"})")
     }
 
-    private fun onNetworkLost() {
-        Log.d(TAG, "⏸️ Network lost - pausing active assemblies")
-        // Mark uploading assemblies as WAITING_FOR_CONNECTIVITY (matching iOS behavior)
-        queueManager.pauseForConnectivity()
+    private fun handleNetworkLost() {
+        scope.launch {
+            val shouldPause = stateMutex.withLock {
+                if (!isNetworkAvailable.compareAndSet(true, false)) {
+                    return@withLock false
+                }
+                restoreJob?.cancel()
+                restoreJob = null
+                true
+            }
+            if (shouldPause) {
+                Log.d(TAG, "⏸️ Network lost - pausing active assemblies")
+                // Mark uploading assemblies as WAITING_FOR_CONNECTIVITY (matching iOS behavior)
+                queueManager.pauseForConnectivity()
+            }
+        }
     }
 
-    private fun onNetworkRestored() {
-        Log.d(TAG, "🔄 Network restored - triggering retry queue (debounced, bypass timeout)")
-        restoreJob?.cancel()
-        restoreJob = scope.launch {
-            delay(RESTORE_DEBOUNCE_MS)
-            queueManager.processRetryQueue(bypassTimeout = true)
+    private fun handleNetworkRestored() {
+        scope.launch {
+            val shouldSchedule = stateMutex.withLock {
+                isNetworkAvailable.compareAndSet(false, true)
+            }
+            if (shouldSchedule) {
+                Log.d(TAG, "🔄 Network restored - triggering retry queue (debounced, bypass timeout)")
+                scheduleRetry()
+            }
+        }
+    }
+
+    private fun scheduleRetry() {
+        scope.launch {
+            stateMutex.withLock {
+                restoreJob?.cancel()
+                restoreJob = scope.launch {
+                    delay(RESTORE_DEBOUNCE_MS)
+                    queueManager.processRetryQueue(bypassTimeout = true)
+                }
+            }
         }
     }
 

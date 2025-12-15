@@ -93,8 +93,8 @@
 
                             <ImageView
                                 android:id="@+id/companyLogo"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
+                                android:layout_width="@dimen/icon_size_action"
+                                android:layout_height="@dimen/icon_size_action"
                                 android:contentDescription="@string/company_info_company_label"
                                 android:scaleType="centerInside"
                                 android:src="@drawable/ic_building"

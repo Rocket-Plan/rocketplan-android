@@ -73,8 +73,8 @@
                 android:padding="20dp">
 
                 <ImageView
-                    android:layout_width="65dp"
-                    android:layout_height="65dp"
+                    android:layout_width="@dimen/icon_size_tile"
+                    android:layout_height="@dimen/icon_size_tile"
                     android:layout_marginEnd="16dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_single_unit" />
@@ -89,8 +89,8 @@
                     android:textStyle="bold" />
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="@dimen/icon_size_nav"
+                    android:layout_height="@dimen/icon_size_nav"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_chevron_right"
                     android:tint="@color/main_purple" />
@@ -118,8 +118,8 @@
                 android:padding="20dp">
 
                 <ImageView
-                    android:layout_width="65dp"
-                    android:layout_height="65dp"
+                    android:layout_width="@dimen/icon_size_tile"
+                    android:layout_height="@dimen/icon_size_tile"
                     android:layout_marginEnd="16dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_multi_unit" />
@@ -134,8 +134,8 @@
                     android:textStyle="bold" />
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="@dimen/icon_size_nav"
+                    android:layout_height="@dimen/icon_size_nav"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_chevron_right"
                     android:tint="@color/main_purple" />
@@ -163,8 +163,8 @@
                 android:padding="20dp">
 
                 <ImageView
-                    android:layout_width="65dp"
-                    android:layout_height="65dp"
+                    android:layout_width="@dimen/icon_size_tile"
+                    android:layout_height="@dimen/icon_size_tile"
                     android:layout_marginEnd="16dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_exterior" />
@@ -179,8 +179,8 @@
                     android:textStyle="bold" />
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="@dimen/icon_size_nav"
+                    android:layout_height="@dimen/icon_size_nav"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_chevron_right"
                     android:tint="@color/main_purple" />
@@ -207,8 +207,8 @@
                 android:padding="20dp">
 
                 <ImageView
-                    android:layout_width="65dp"
-                    android:layout_height="65dp"
+                    android:layout_width="@dimen/icon_size_tile"
+                    android:layout_height="@dimen/icon_size_tile"
                     android:layout_marginEnd="16dp"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_commercial" />
@@ -223,8 +223,8 @@
                     android:textStyle="bold" />
 
                 <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
+                    android:layout_width="@dimen/icon_size_nav"
+                    android:layout_height="@dimen/icon_size_nav"
                     android:contentDescription="@null"
                     android:src="@drawable/ic_chevron_right"
                     android:tint="@color/main_purple" />

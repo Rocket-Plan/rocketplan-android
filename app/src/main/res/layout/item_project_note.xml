@@ -34,8 +34,8 @@
 
             <ImageButton
                 android:id="@+id/noteDeleteButton"
-                android:layout_width="36dp"
-                android:layout_height="36dp"
+                android:layout_width="@dimen/icon_size_action"
+                android:layout_height="@dimen/icon_size_action"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/delete_note"
                 android:padding="8dp"

@@ -46,13 +46,13 @@
                 android:textStyle="bold"
                 tools:text="$2,695.00" />
 
-            <ImageView
-                android:id="@+id/scopeGroupChevron"
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:contentDescription="@string/expand"
-                android:rotation="0"
-                android:src="@drawable/icon_arrow_right"
+        <ImageView
+            android:id="@+id/scopeGroupChevron"
+            android:layout_width="@dimen/icon_size_inline"
+            android:layout_height="@dimen/icon_size_inline"
+            android:contentDescription="@string/expand"
+            android:rotation="0"
+            android:src="@drawable/icon_arrow_right"
                 android:tint="@color/dark_text_rp" />
         </LinearLayout>
 

@@ -22,8 +22,8 @@
 
         <ImageView
             android:id="@+id/equipmentRoomIcon"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
+            android:layout_width="@dimen/icon_size_section"
+            android:layout_height="@dimen/icon_size_section"
             android:layout_marginBottom="12dp"
             android:background="@drawable/bg_icon_circle_purple"
             android:contentDescription="@string/room"

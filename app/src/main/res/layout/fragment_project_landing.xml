@@ -26,8 +26,8 @@
 
                 <ImageButton
                     android:id="@+id/menuButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/icon_size_action"
+                    android:layout_height="@dimen/icon_size_action"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/menu"
                     android:src="@drawable/ic_more_vert"
@@ -76,8 +76,8 @@
                             tools:text="WIP" />
 
                         <ImageView
-                            android:layout_width="16dp"
-                            android:layout_height="16dp"
+                            android:layout_width="@dimen/icon_size_chevron"
+                            android:layout_height="@dimen/icon_size_chevron"
                             android:layout_marginStart="4dp"
                             android:contentDescription="@string/change_project_status"
                             android:src="@drawable/ic_chevron_down"
@@ -160,8 +160,8 @@
 
                             <ImageView
                                 android:id="@+id/addProjectInfoIcon"
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
+                                android:layout_width="@dimen/icon_size_list"
+                                android:layout_height="@dimen/icon_size_list"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
@@ -220,8 +220,8 @@
 
                             <ImageView
                                 android:id="@+id/rocketScanIcon"
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
+                                android:layout_width="@dimen/icon_size_list"
+                                android:layout_height="@dimen/icon_size_list"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
@@ -279,8 +279,8 @@
 
                             <ImageView
                                 android:id="@+id/allNotesIcon"
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
+                                android:layout_width="@dimen/icon_size_list"
+                                android:layout_height="@dimen/icon_size_list"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:scaleType="centerInside"
@@ -341,8 +341,8 @@
 
                             <ImageView
                                 android:id="@+id/rocketDryIcon"
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
+                                android:layout_width="@dimen/icon_size_list"
+                                android:layout_height="@dimen/icon_size_list"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:src="@drawable/ic_water_drop"
@@ -402,8 +402,8 @@
 
                             <ImageView
                                 android:id="@+id/crewIcon"
-                                android:layout_width="28dp"
-                                android:layout_height="28dp"
+                                android:layout_width="@dimen/icon_size_list"
+                                android:layout_height="@dimen/icon_size_list"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
                                 android:src="@drawable/crew" />

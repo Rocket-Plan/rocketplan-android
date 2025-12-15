@@ -22,8 +22,8 @@
         <!-- Delete button overlay -->
         <ImageButton
             android:id="@+id/deleteButton"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
+            android:layout_width="@dimen/icon_size_list"
+            android:layout_height="@dimen/icon_size_list"
             android:layout_gravity="top|end"
             android:layout_margin="4dp"
             android:background="@drawable/bg_circle_semi_transparent"

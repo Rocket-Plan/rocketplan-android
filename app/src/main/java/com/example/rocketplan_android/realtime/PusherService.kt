@@ -19,6 +19,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 
 class PusherService(
@@ -37,8 +39,13 @@ class PusherService(
             val newState = change?.currentState ?: return
             when (newState) {
                 ConnectionState.CONNECTED -> {
-                    reconnectAttempts = 0
-                    reconnectJob?.cancel()
+                    scope.launch {
+                        stateMutex.withLock {
+                            reconnectAttempts = 0
+                            reconnectJob?.cancel()
+                            reconnectJob = null
+                        }
+                    }
                 }
 
                 ConnectionState.DISCONNECTED,
@@ -71,6 +78,7 @@ class PusherService(
     private val channelBindings = ConcurrentHashMap<String, ChannelBinding>()
     private val envelopeType = object : TypeToken<PusherEnvelope>() {}.type
     private val updateType = object : TypeToken<ImageProcessorUpdate>() {}.type
+    private val stateMutex = Mutex()
     private var reconnectJob: Job? = null
     private var reconnectAttempts = 0
 
@@ -237,8 +245,13 @@ class PusherService(
 
     fun disconnect() {
         channelBindings.keys.toList().forEach { unsubscribe(it) }
-        reconnectJob?.cancel()
-        pusher.disconnect()
+        scope.launch {
+            stateMutex.withLock {
+                reconnectJob?.cancel()
+                reconnectJob = null
+            }
+            pusher.disconnect()
+        }
     }
 
     fun connectIfNeeded() {
@@ -287,17 +300,24 @@ class PusherService(
     }
 
     private fun scheduleReconnect() {
-        if (channelBindings.isEmpty()) return
-        if (pusher.connection.state == ConnectionState.CONNECTING || pusher.connection.state == ConnectionState.CONNECTED) {
-            return
-        }
-        if (reconnectJob?.isActive == true) return
+        scope.launch {
+            stateMutex.withLock {
+                if (channelBindings.isEmpty()) return@withLock
+                val state = pusher.connection.state
+                if (state == ConnectionState.CONNECTING || state == ConnectionState.CONNECTED) {
+                    return@withLock
+                }
+                if (reconnectJob?.isActive == true) return@withLock
 
-        val attempt = reconnectAttempts++
-        val delayMs = backoffDelayMs(attempt)
-        reconnectJob = scope.launch {
-            delay(delayMs)
-            ensureConnected()
+                val attempt = reconnectAttempts
+                reconnectAttempts += 1
+                val delayMs = backoffDelayMs(attempt)
+                reconnectJob = scope.launch {
+                    delay(delayMs)
+                    ensureConnected()
+                    stateMutex.withLock { reconnectJob = null }
+                }
+            }
         }
     }
 
@@ -309,8 +329,13 @@ class PusherService(
 
     private fun disconnectIfIdle() {
         if (channelBindings.isEmpty()) {
-            reconnectJob?.cancel()
-            pusher.disconnect()
+            scope.launch {
+                stateMutex.withLock {
+                    reconnectJob?.cancel()
+                    reconnectJob = null
+                }
+                pusher.disconnect()
+            }
         }
     }
 

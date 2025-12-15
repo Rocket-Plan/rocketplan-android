@@ -15,8 +15,8 @@
 
         <ImageView
             android:id="@+id/sectionRoomIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/icon_size_card_large"
+            android:layout_height="@dimen/icon_size_card_large"
             android:background="@drawable/bg_icon_circle_light"
             android:padding="8dp"
             android:scaleType="centerInside"
@@ -60,8 +60,8 @@
             android:padding="14dp">
 
             <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
+                android:layout_width="@dimen/icon_size_inline"
+                android:layout_height="@dimen/icon_size_inline"
                 android:layout_marginEnd="12dp"
                 android:contentDescription="@string/add_note"
                 android:src="@drawable/icon_add_note" />
@@ -84,8 +84,8 @@
                 tools:text="No Notes" />
 
             <ImageView
-                android:layout_width="18dp"
-                android:layout_height="18dp"
+                android:layout_width="@dimen/icon_size_inline"
+                android:layout_height="@dimen/icon_size_inline"
                 android:layout_marginStart="8dp"
                 android:contentDescription="@string/add_note"
                 android:src="@drawable/icon_pencil"

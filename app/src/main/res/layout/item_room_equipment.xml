@@ -25,8 +25,8 @@
 
             <ImageView
                 android:id="@+id/equipmentIcon"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="@dimen/icon_size_tile"
+                android:layout_height="@dimen/icon_size_tile"
                 android:background="@drawable/bg_icon_circle_purple"
                 android:contentDescription="@string/equipment_room_add_cta"
                 android:padding="14dp"
@@ -59,8 +59,8 @@
 
             <ImageButton
                 android:id="@+id/deleteEquipmentButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="@dimen/icon_size_action"
+                android:layout_height="@dimen/icon_size_action"
                 android:background="@drawable/bg_circle_semi_transparent"
                 android:contentDescription="@string/equipment_room_delete"
                 android:padding="10dp"
@@ -92,8 +92,8 @@
 
                 <ImageButton
                     android:id="@+id/quantityMinusButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/icon_size_action"
+                    android:layout_height="@dimen/icon_size_action"
                     android:background="@drawable/bg_icon_circle_light"
                     android:contentDescription="@string/rocketdry_remove"
                     android:padding="10dp"
@@ -112,8 +112,8 @@
 
                 <ImageButton
                     android:id="@+id/quantityPlusButton"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="@dimen/icon_size_action"
+                    android:layout_height="@dimen/icon_size_action"
                     android:background="@drawable/bg_icon_circle_purple"
                     android:contentDescription="@string/rocketdry_add"
                     android:padding="10dp"

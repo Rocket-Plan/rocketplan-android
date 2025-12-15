@@ -20,8 +20,8 @@
 
         <ImageView
             android:id="@+id/goalIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/icon_size_card_large"
+            android:layout_height="@dimen/icon_size_card_large"
             android:background="@drawable/bg_icon_circle_purple"
             android:contentDescription="@string/location_icon"
             android:padding="12dp"
