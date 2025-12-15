@@ -62,6 +62,8 @@ class SyncQueueManager(
     private val pendingPhotoSyncs = mutableSetOf<Long>()
     private val _photoSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
     val photoSyncingProjects: StateFlow<Set<Long>> = _photoSyncingProjects
+    private val _projectSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
+    val projectSyncingProjects: StateFlow<Set<Long>> = _projectSyncingProjects
     @Volatile
     private var pendingSyncProjectsForce = false
 
@@ -284,6 +286,7 @@ class SyncQueueManager(
             val queued = QueuedTask(job.key, job, job.priority, System.currentTimeMillis())
             queue.add(queued)
             taskIndex[job.key] = queued
+            updateProjectSyncingProjectsLocked()
         }
         notifier.tryEmit(Unit)
     }
@@ -291,7 +294,10 @@ class SyncQueueManager(
     private suspend fun processLoop() {
         while (true) {
             val next = mutex.withLock {
-                queue.poll()?.also { taskIndex.remove(it.key) }
+                queue.poll()?.also {
+                    taskIndex.remove(it.key)
+                    updateProjectSyncingProjectsLocked()
+                }
             }
 
             if (next == null) {
@@ -463,8 +469,12 @@ class SyncQueueManager(
                                 photoCacheScheduler.schedulePrefetch()
                             }
                             SyncJob.ProjectSyncMode.FULL -> {
-                                syncRepository.syncProjectGraph(job.projectId, skipPhotos = false)
-                                syncSucceeded = true
+                                val results = syncRepository.syncProjectGraph(job.projectId, skipPhotos = false)
+                                syncSucceeded = results.all { it.success }.also { success ->
+                                    if (!success) {
+                                        logSegmentFailures(job.projectId, results)
+                                    }
+                                }
                                 photoCacheScheduler.schedulePrefetch()
                             }
                         }
@@ -476,6 +486,7 @@ class SyncQueueManager(
                                 pendingPhotoSyncs.remove(job.projectId)
                                 updatePhotoSyncingProjectsLocked()
                             }
+                            updateProjectSyncingProjectsLocked()
                         }
                         notifier.tryEmit(Unit)
                     }
@@ -484,6 +495,7 @@ class SyncQueueManager(
                 mutex.withLock {
                     activeProjectSyncJobs[job.projectId] = syncJob
                     activeProjectModes[job.projectId] = mode
+                    updateProjectSyncingProjectsLocked()
                 }
 
                 // Wait for completion
@@ -548,11 +560,25 @@ class SyncQueueManager(
 
     private fun logSegmentFailures(projectId: Long, results: List<com.example.rocketplan_android.data.repository.SyncResult>) {
         results.filterNot { it.success }.forEach { result ->
-            Log.w(
-                TAG,
-                "⚠️ Segment ${result.segment} failed for project $projectId (items=${result.itemsSynced}, duration=${result.durationMs}ms)",
-                result.error
-            )
+            when (result) {
+                is com.example.rocketplan_android.data.repository.SyncResult.Failure -> {
+                    Log.w(
+                        TAG,
+                        "⚠️ Segment ${result.segment} failed for project $projectId (items=${result.itemsSynced}, duration=${result.durationMs}ms)",
+                        result.error
+                    )
+                }
+                is com.example.rocketplan_android.data.repository.SyncResult.Incomplete -> {
+                    Log.w(
+                        TAG,
+                        "⚠️ Segment ${result.segment} incomplete (${result.reason}) for project $projectId (items=${result.itemsSynced}, duration=${result.durationMs}ms)",
+                        result.error
+                    )
+                }
+                else -> {
+                    // no-op
+                }
+            }
         }
     }
 
@@ -605,6 +631,7 @@ class SyncQueueManager(
                     taskIndex.remove(task.key)
                 }
             }
+            updateProjectSyncingProjectsLocked()
             true
         }
         if (!shouldEnqueueFast) {
@@ -617,5 +644,18 @@ class SyncQueueManager(
 
     private fun updatePhotoSyncingProjectsLocked() {
         _photoSyncingProjects.value = pendingPhotoSyncs.toSet()
+        updateProjectSyncingProjectsLocked()
+    }
+
+    private fun updateProjectSyncingProjectsLocked() {
+        val activeProjects = activeProjectModes
+            .filterValues { it != SyncJob.ProjectSyncMode.PHOTOS_ONLY }
+            .keys
+        val queuedProjects = taskIndex.values.mapNotNull { task ->
+            val job = task.job as? SyncJob.SyncProjectGraph ?: return@mapNotNull null
+            job.projectId.takeIf { job.mode != SyncJob.ProjectSyncMode.PHOTOS_ONLY }
+        }
+        // Note: pendingPhotoSyncs intentionally excluded - photo uploads shouldn't block room creation
+        _projectSyncingProjects.value = (activeProjects + queuedProjects).toSet()
     }
 }

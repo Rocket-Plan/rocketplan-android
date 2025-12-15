@@ -12,6 +12,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
+import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.example.rocketplan_android.util.DateUtils
 import com.google.common.truth.Truth.assertThat
@@ -125,6 +126,10 @@ class ProjectDetailViewModelTest {
         )
     )
 
+    private val photoSyncingProjectsFlow = MutableStateFlow(emptySet<Long>())
+    private val projectSyncingProjectsFlow = MutableStateFlow(emptySet<Long>())
+    private val syncQueueManager = mockk<SyncQueueManager>()
+
     private val notesFlow = MutableStateFlow(
         listOf(
             OfflineNoteEntity(
@@ -168,6 +173,10 @@ class ProjectDetailViewModelTest {
         val offlineSyncRepository = mockk<OfflineSyncRepository>()
         coJustRun { offlineSyncRepository.syncProjectGraph(projectId) }
         every { application.offlineSyncRepository } returns offlineSyncRepository
+        every { application.syncQueueManager } returns syncQueueManager
+        every { syncQueueManager.photoSyncingProjects } returns photoSyncingProjectsFlow
+        every { syncQueueManager.projectSyncingProjects } returns projectSyncingProjectsFlow
+        every { syncQueueManager.prioritizeProject(projectId) } returns Unit
 
         val viewModel = ProjectDetailViewModel(application, projectId)
 
@@ -188,6 +197,52 @@ class ProjectDetailViewModelTest {
         val room = section.rooms.first()
         assertThat(room.photoCount).isEqualTo(1)
         assertThat(room.thumbnailUrl).contains("photo_thumb")
+
+        viewModel.viewModelScope.cancel()
+    }
+
+    @Test
+    fun `updates background syncing flag when queue state changes`() = runTest {
+        mockkStatic(Log::class)
+        every { Log.d(any<String>(), any<String>()) } returns 0
+        every { Log.d(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
+        every { Log.w(any<String>(), any<String>()) } returns 0
+
+        val localDataService = mockk<LocalDataService>()
+        every { localDataService.observeProjects() } returns projectsFlow
+        every { localDataService.observeRooms(projectId) } returns roomsFlow
+        every { localDataService.observePhotosForProject(projectId) } returns photosFlow
+        every { localDataService.observeNotes(projectId) } returns notesFlow
+        every { localDataService.observeAlbumsForProject(projectId) } returns albumsFlow
+
+        val application = mockk<RocketPlanApplication>()
+        every { application.localDataService } returns localDataService
+        val offlineSyncRepository = mockk<OfflineSyncRepository>()
+        coJustRun { offlineSyncRepository.syncProjectGraph(projectId) }
+        every { application.offlineSyncRepository } returns offlineSyncRepository
+        every { application.syncQueueManager } returns syncQueueManager
+        every { syncQueueManager.photoSyncingProjects } returns photoSyncingProjectsFlow
+        every { syncQueueManager.projectSyncingProjects } returns projectSyncingProjectsFlow
+        every { syncQueueManager.prioritizeProject(projectId) } returns Unit
+
+        projectSyncingProjectsFlow.value = setOf(projectId)
+
+        val viewModel = ProjectDetailViewModel(application, projectId)
+
+        repeat(5) {
+            advanceUntilIdle()
+            if (viewModel.uiState.value is ProjectDetailUiState.Ready) return@repeat
+        }
+
+        val ready = viewModel.uiState.value as ProjectDetailUiState.Ready
+        assertThat(ready.isBackgroundSyncing).isTrue()
+
+        projectSyncingProjectsFlow.value = emptySet()
+        advanceUntilIdle()
+
+        val updated = viewModel.uiState.value as ProjectDetailUiState.Ready
+        assertThat(updated.isBackgroundSyncing).isFalse()
 
         viewModel.viewModelScope.cancel()
     }

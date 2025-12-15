@@ -22,6 +22,8 @@ import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.ui.projects.PropertyType
+import com.example.rocketplan_android.data.repository.IncompleteReason
+import com.example.rocketplan_android.data.repository.SyncResult
 import com.example.rocketplan_android.util.DateUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -93,6 +95,7 @@ sealed interface ProjectLossInfoEvent {
     data class SaveFailed(val message: String) : ProjectLossInfoEvent
     data class ClaimUpdated(val claim: ClaimDto) : ProjectLossInfoEvent
     data class ClaimUpdateFailed(val message: String) : ProjectLossInfoEvent
+    data class PropertyMissing(val message: String) : ProjectLossInfoEvent
 }
 
 data class ProjectLossInfoUiState(
@@ -366,12 +369,14 @@ class ProjectLossInfoViewModel(
             val propertyReady = ensurePropertyAttached()
             if (propertyReady.isFailure) {
                 val error = propertyReady.exceptionOrNull()
+                val message = error?.message ?: "Property still syncing, please try again."
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     isSaving = false,
                     savingClaimId = null,
-                    errorMessage = error?.message ?: "Property still syncing, please try again."
+                    errorMessage = message
                 )
+                _events.tryEmit(ProjectLossInfoEvent.PropertyMissing(message))
                 return@launch
             }
             runCatching { repository.load(projectId) }
@@ -644,9 +649,19 @@ class ProjectLossInfoViewModel(
         val serverId = project.serverId
             ?: return Result.failure(IllegalStateException("Project is not synced yet; property unavailable"))
 
-        val syncResult = offlineSyncRepository.syncProjectEssentials(serverId)
-        if (!syncResult.success) {
-            return Result.failure(syncResult.error ?: IllegalStateException("Unable to sync project essentials"))
+        when (val syncResult = offlineSyncRepository.syncProjectEssentials(serverId)) {
+            is SyncResult.Success -> {
+                // Proceed to wait for property to appear locally
+            }
+            is SyncResult.Incomplete -> {
+                val message = when (syncResult.reason) {
+                    IncompleteReason.MISSING_PROPERTY -> "Property not set up yet. Please choose a property type to continue."
+                }
+                return Result.failure(IllegalStateException(message))
+            }
+            is SyncResult.Failure -> {
+                return Result.failure(syncResult.error ?: IllegalStateException("Unable to sync project essentials"))
+            }
         }
 
         val propertyId = awaitPropertyId()

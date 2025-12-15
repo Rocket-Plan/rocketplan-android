@@ -10,6 +10,7 @@ import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
+import com.example.rocketplan_android.data.repository.SyncResult
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -188,16 +189,28 @@ class ProjectTypeSelectionViewModel(
             hasAttemptedPropertyRecovery = true
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-                val result = offlineSyncRepository.syncProjectEssentials(project.serverId)
-                if (!result.success) {
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = result.error?.message ?: genericErrorMessage
-                        )
+                when (val result = offlineSyncRepository.syncProjectEssentials(project.serverId)) {
+                    is SyncResult.Success -> {
+                        _uiState.update { it.copy(isLoading = false) }
                     }
-                } else {
-                    _uiState.update { it.copy(isLoading = false) }
+                    is SyncResult.Incomplete -> {
+                        val message = when (result.reason) {
+                            IncompleteReason.MISSING_PROPERTY -> "Property not set up yet. Please choose a property type to continue."
+                        }
+                        Log.w(
+                            TAG,
+                            "[ProjectType] Essentials sync incomplete (${result.reason}) for project $projectId; property still missing"
+                        )
+                        _uiState.update { it.copy(isLoading = false, errorMessage = message) }
+                    }
+                    is SyncResult.Failure -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                errorMessage = result.error?.message ?: genericErrorMessage
+                            )
+                        }
+                    }
                 }
             }
         }

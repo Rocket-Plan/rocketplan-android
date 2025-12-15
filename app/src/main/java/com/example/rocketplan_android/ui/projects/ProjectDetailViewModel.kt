@@ -61,15 +61,16 @@ class ProjectDetailViewModel(
             }.combine(
                 combine(
                     syncQueueManager.photoSyncingProjects,
+                    syncQueueManager.projectSyncingProjects,
                     localDataService.observeDamages(projectId),
                     localDataService.observeWorkScopes(projectId)
-                ) { photoSyncingProjects, damages, workScopes ->
-                    Triple(photoSyncingProjects, damages, workScopes)
+                ) { photoSyncingProjects, projectSyncingProjects, damages, workScopes ->
+                    SyncExtras(photoSyncingProjects, projectSyncingProjects, damages, workScopes)
                 }
             ) { data, extra -> data to extra }
             .mapLatest { (data, extra) ->
                 val (projects, rooms, photos, notes, albums) = data
-                val (photoSyncingProjects, damages, workScopes) = extra
+                val (photoSyncingProjects, projectSyncingProjects, damages, workScopes) = extra
 
                 Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
                 val project = projects.firstOrNull { it.projectId == projectId }
@@ -78,6 +79,7 @@ class ProjectDetailViewModel(
                     ProjectDetailUiState.Loading
                 } else {
                     Log.d("ProjectDetailVM", "✅ Project found: ${project.title}")
+                    val isProjectSyncing = projectSyncingProjects.contains(projectId)
                     val isProjectPhotoSyncing = photoSyncingProjects.contains(projectId)
                     val sections = rooms.toSections(
                         photos = photos,
@@ -92,7 +94,8 @@ class ProjectDetailViewModel(
                         header = header,
                         levelSections = sections,
                         albums = albums.toAlbumSections(photos),
-                        roomCreationStatus = roomCreationStatus
+                        roomCreationStatus = roomCreationStatus,
+                        isBackgroundSyncing = isProjectSyncing
                     )
                 }
             }
@@ -115,7 +118,8 @@ class ProjectDetailViewModel(
                             oldPhotoTotal == newPhotoTotal &&
                             oldLoadingCount == newLoadingCount &&
                             oldDamageTotal == newDamageTotal &&
-                            old.roomCreationStatus == new.roomCreationStatus
+                            old.roomCreationStatus == new.roomCreationStatus &&
+                            old.isBackgroundSyncing == new.isBackgroundSyncing
                     }
                     old is ProjectDetailUiState.Loading && new is ProjectDetailUiState.Loading -> true
                     else -> false
@@ -307,7 +311,8 @@ sealed class ProjectDetailUiState {
         val header: ProjectDetailHeader,
         val levelSections: List<RoomLevelSection>,
         val albums: List<AlbumSection> = emptyList(),
-        val roomCreationStatus: RoomCreationStatus = RoomCreationStatus.UNKNOWN
+        val roomCreationStatus: RoomCreationStatus = RoomCreationStatus.UNKNOWN,
+        val isBackgroundSyncing: Boolean = false
     ) : ProjectDetailUiState()
 }
 
@@ -386,4 +391,11 @@ private data class DetailData(
     val photos: List<OfflinePhotoEntity>,
     val notes: List<OfflineNoteEntity>,
     val albums: List<OfflineAlbumEntity>
+)
+
+private data class SyncExtras(
+    val photoSyncingProjects: Set<Long>,
+    val projectSyncingProjects: Set<Long>,
+    val damages: List<OfflineDamageEntity>,
+    val workScopes: List<OfflineWorkScopeEntity>
 )

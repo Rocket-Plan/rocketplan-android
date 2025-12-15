@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewpager2.widget.ViewPager2
 import com.example.rocketplan_android.R
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 import kotlinx.coroutines.launch
@@ -60,6 +61,20 @@ class ProjectLossInfoFragment : Fragment() {
                 viewModel.uiState.collect { state ->
                     val title = state.projectTitle ?: getString(R.string.add_project_info_title)
                     updateToolbarTitle(title)
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    if (event is ProjectLossInfoEvent.PropertyMissing) {
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle(R.string.loss_info_property_details_heading)
+                            .setMessage(event.message)
+                            .setPositiveButton(android.R.string.ok, null)
+                            .show()
+                    }
                 }
             }
         }

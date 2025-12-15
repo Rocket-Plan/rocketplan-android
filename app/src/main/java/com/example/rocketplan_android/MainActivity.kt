@@ -19,6 +19,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import android.graphics.Color
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -493,10 +494,12 @@ class MainActivity : AppCompatActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, !enabled)
         val controller = WindowInsetsControllerCompat(window, binding.root)
         if (enabled) {
+            window.statusBarColor = Color.TRANSPARENT
             controller.hide(WindowInsetsCompat.Type.statusBars())
             controller.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
+            window.statusBarColor = getColor(R.color.black)
             controller.show(WindowInsetsCompat.Type.statusBars())
         }
     }

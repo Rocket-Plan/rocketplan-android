@@ -11,27 +11,63 @@ enum class SyncSegment {
     PROJECT_METADATA     // Notes, equipment, damages, work scopes, logs
 }
 
+enum class IncompleteReason {
+    MISSING_PROPERTY
+}
+
 /**
  * Result of a sync operation.
  *
- * @param segment Which part of the sync this represents
- * @param success Whether the sync completed successfully
- * @param itemsSynced Number of items synced (projects, rooms, photos, etc.)
- * @param error The error that occurred, if any
- * @param durationMs How long the sync took in milliseconds
+ * Success, failure, and incomplete states are explicit so callers can handle partial
+ * syncs (e.g., missing property) without assuming full success.
  */
-data class SyncResult(
-    val segment: SyncSegment,
-    val success: Boolean,
-    val itemsSynced: Int = 0,
-    val error: Throwable? = null,
-    val durationMs: Long = 0
-) {
+sealed class SyncResult {
+    abstract val segment: SyncSegment
+    abstract val itemsSynced: Int
+    abstract val durationMs: Long
+    open val error: Throwable? = null
+
+    val success: Boolean get() = this is Success
+    val incomplete: Boolean get() = this is Incomplete
+
+    data class Success(
+        override val segment: SyncSegment,
+        override val itemsSynced: Int = 0,
+        override val durationMs: Long = 0
+    ) : SyncResult()
+
+    data class Failure(
+        override val segment: SyncSegment,
+        val cause: Throwable,
+        override val durationMs: Long = 0,
+        override val itemsSynced: Int = 0
+    ) : SyncResult() {
+        override val error: Throwable = cause
+    }
+
+    data class Incomplete(
+        override val segment: SyncSegment,
+        val reason: IncompleteReason,
+        override val durationMs: Long = 0,
+        override val itemsSynced: Int = 0,
+        val cause: Throwable? = null
+    ) : SyncResult() {
+        override val error: Throwable? = cause
+    }
+
     companion object {
         fun success(segment: SyncSegment, items: Int, duration: Long) =
-            SyncResult(segment, true, items, null, duration)
+            Success(segment, items, duration)
 
         fun failure(segment: SyncSegment, error: Throwable, duration: Long) =
-            SyncResult(segment, false, 0, error, duration)
+            Failure(segment, error, duration)
+
+        fun incomplete(
+            segment: SyncSegment,
+            reason: IncompleteReason,
+            duration: Long,
+            items: Int = 0,
+            error: Throwable? = null
+        ) = Incomplete(segment, reason, duration, items, error)
     }
 }

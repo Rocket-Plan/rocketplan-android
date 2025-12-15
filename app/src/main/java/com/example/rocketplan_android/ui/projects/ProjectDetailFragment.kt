@@ -45,6 +45,7 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var noteCard: View
     private lateinit var addRoomCard: View
     private lateinit var addExteriorCard: View
+    private lateinit var roomActionsProgressBar: ProgressBar
     private lateinit var albumsHeader: TextView
     private lateinit var albumsRecyclerView: RecyclerView
     private lateinit var roomsRecyclerView: RecyclerView
@@ -82,6 +83,7 @@ class ProjectDetailFragment : Fragment() {
     }
     private var roomsSectionIsLoading = true
     private var roomCreationStatus: RoomCreationStatus = RoomCreationStatus.UNKNOWN
+    private var isBackgroundSyncing: Boolean = false
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -108,6 +110,7 @@ class ProjectDetailFragment : Fragment() {
         noteCard = root.findViewById(R.id.noteCard)
         addRoomCard = root.findViewById(R.id.addRoomCard)
         addExteriorCard = root.findViewById(R.id.addExteriorCard)
+        roomActionsProgressBar = root.findViewById(R.id.roomActionsProgressBar)
         albumsHeader = root.findViewById(R.id.albumsHeader)
         albumsRecyclerView = root.findViewById(R.id.albumsRecyclerView)
         roomsRecyclerView = root.findViewById(R.id.roomsRecyclerView)
@@ -237,12 +240,15 @@ class ProjectDetailFragment : Fragment() {
     private fun showLoadingState() {
         roomsSectionIsLoading = true
         roomCreationStatus = RoomCreationStatus.UNKNOWN
+        isBackgroundSyncing = false
         tabPlaceholder.isVisible = false
+        updateRoomCreationUi()
         updateRoomsSectionVisibility()
     }
 
     private fun renderState(state: ProjectDetailUiState.Ready) {
         roomCreationStatus = state.roomCreationStatus
+        isBackgroundSyncing = state.isBackgroundSyncing
         projectTitle.text = state.header.projectTitle
         projectCode.isVisible = state.header.projectCode.isNotBlank()
         projectCode.text = state.header.projectCode
@@ -269,6 +275,7 @@ class ProjectDetailFragment : Fragment() {
         Log.d("ProjectDetailFrag", "🏠 Submitting ${flattenedItems.size} room items to roomsAdapter (${state.levelSections.size} sections)")
         roomsAdapter.submitList(flattenedItems)
         roomsSectionIsLoading = false
+        updateRoomCreationUi()
         updateRoomsSectionVisibility()
     }
 
@@ -329,7 +336,21 @@ class ProjectDetailFragment : Fragment() {
         }
     }
 
+    private fun updateRoomCreationUi() {
+        roomActionsProgressBar.isVisible = isBackgroundSyncing
+        addRoomCard.isEnabled = !isBackgroundSyncing
+        addRoomCard.isClickable = !isBackgroundSyncing
+        addExteriorCard.isEnabled = !isBackgroundSyncing
+        addExteriorCard.isClickable = !isBackgroundSyncing
+        val alpha = if (isBackgroundSyncing) 0.6f else 1f
+        addRoomCard.alpha = alpha
+        addExteriorCard.alpha = alpha
+    }
+
     private fun handleAddRoomClick(mode: RoomTypePickerMode) {
+        if (isBackgroundSyncing) {
+            return
+        }
         when (roomCreationStatus) {
             RoomCreationStatus.AVAILABLE -> navigateToRoomTypePicker(mode)
             RoomCreationStatus.MISSING_PROPERTY ->

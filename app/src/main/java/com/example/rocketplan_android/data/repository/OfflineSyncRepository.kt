@@ -314,9 +314,16 @@ class OfflineSyncRepository(
         // 1. Property
         val property = fetchProjectProperty(serverProjectId, detail) ?: run {
             val duration = System.currentTimeMillis() - startTime
-            val error = IllegalStateException("No property found for project $projectId")
-            Log.e("API", "❌ [syncProjectEssentials] Property missing after fallback, aborting navigation chain", error)
-            return@withContext SyncResult.failure(SyncSegment.PROJECT_ESSENTIALS, error, duration)
+            Log.w(
+                "API",
+                "⚠️ [syncProjectEssentials] No property found for project $projectId; returning incomplete result"
+            )
+            return@withContext SyncResult.incomplete(
+                SyncSegment.PROJECT_ESSENTIALS,
+                IncompleteReason.MISSING_PROPERTY,
+                duration,
+                itemCount
+            )
         }
         Log.d("API", "🏠 [syncProjectEssentials] Property DTO received: id=${property.id}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}, lat=${property.latitude}, lng=${property.longitude}")
         Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail.address?.address}, city=${detail.address?.city}, state=${detail.address?.state}, zip=${detail.address?.zip}")
@@ -842,12 +849,24 @@ class OfflineSyncRepository(
                     )
                 }
             }
-            if (!result.success) {
-                Log.w(
-                    "API",
-                    "⚠️ [syncProjectSegments] Segment ${segment.name} failed for project $projectId",
-                    result.error
-                )
+            when (result) {
+                is SyncResult.Failure -> {
+                    Log.w(
+                        "API",
+                        "⚠️ [syncProjectSegments] Segment ${segment.name} failed for project $projectId",
+                        result.error
+                    )
+                }
+                is SyncResult.Incomplete -> {
+                    Log.w(
+                        "API",
+                        "⚠️ [syncProjectSegments] Segment ${segment.name} incomplete (${result.reason}) for project $projectId"
+                    )
+                    result.error?.let { Log.w("API", "⚠️ [syncProjectSegments] Incomplete reason detail", it) }
+                }
+                else -> {
+                    // no-op
+                }
             }
             results += result
             coroutineContext.ensureActive()
@@ -1085,7 +1104,7 @@ class OfflineSyncRepository(
      * Full project sync: syncs essentials + metadata + all photos.
      * Uses modular functions to avoid duplication.
      */
-    suspend fun syncProjectGraph(projectId: Long, skipPhotos: Boolean = false) = withContext(ioDispatcher) {
+    suspend fun syncProjectGraph(projectId: Long, skipPhotos: Boolean = false): List<SyncResult> = withContext(ioDispatcher) {
         val syncType = if (skipPhotos) "FAST (rooms only)" else "FULL"
         Log.d("API", "🔄 [syncProjectGraph] Starting $syncType sync for project $projectId")
         val startTime = System.currentTimeMillis()
@@ -1103,9 +1122,21 @@ class OfflineSyncRepository(
         val duration = System.currentTimeMillis() - startTime
 
         val essentialsResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_ESSENTIALS }
-        if (essentialsResult != null && !essentialsResult.success) {
-            Log.e("API", "❌ [syncProjectGraph] Failed to sync essentials", essentialsResult.error)
-            return@withContext
+        when (essentialsResult) {
+            is SyncResult.Failure -> {
+                Log.e("API", "❌ [syncProjectGraph] Failed to sync essentials", essentialsResult.error)
+                return@withContext results
+            }
+            is SyncResult.Incomplete -> {
+                Log.w(
+                    "API",
+                    "⚠️ [syncProjectGraph] Essentials sync incomplete (${essentialsResult.reason}); skipping follow-up segments"
+                )
+                return@withContext results
+            }
+            else -> {
+                // Success, continue
+            }
         }
 
         // Skip metadata and photos for FAST foreground sync - rooms are available now
@@ -1114,7 +1145,7 @@ class OfflineSyncRepository(
             essentialsResult?.let {
                 Log.d("API", "   Essentials: ${it.itemsSynced} items in ${it.durationMs}ms")
             }
-            return@withContext
+            return@withContext results
         }
 
         val metadataResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_METADATA }
@@ -1143,6 +1174,7 @@ class OfflineSyncRepository(
         projectPhotosResult?.let {
             Log.d("API", "   Project photos: ${it.itemsSynced} photos in ${it.durationMs}ms")
         }
+        results
     }
 
     /**
