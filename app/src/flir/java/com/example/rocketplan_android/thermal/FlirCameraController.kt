@@ -1,8 +1,8 @@
 package com.example.rocketplan_android.thermal
 
 import android.content.Context
-import android.opengl.GLSurfaceView
 import android.graphics.PixelFormat
+import android.opengl.GLSurfaceView
 import android.util.Log
 import com.flir.thermalsdk.ErrorCode
 import com.flir.thermalsdk.image.Palette
@@ -99,12 +99,13 @@ class FlirCameraController(
         glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
         glSurfaceView.setPreserveEGLContextOnPause(false)
         glSurfaceView.holder.setFormat(PixelFormat.TRANSLUCENT)
+        // Reliable preview: keep GL surface on top of siblings; place controls outside its bounds.
         glSurfaceView.setZOrderOnTop(true)
         glSurfaceView.setRenderer(renderer)
         glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
         glSurfaceView.post {
             val holderValid = runCatching { glSurfaceView.holder.surface.isValid }.getOrDefault(false)
-            logDebug("🖼️ GLSurface attached: size=${glSurfaceView.width}x${glSurfaceView.height}, shown=${glSurfaceView.isShown}, attached=${glSurfaceView.isAttachedToWindow}, holderValid=$holderValid")
+            logDebug("🖼️ GLSurface attached: size=${glSurfaceView.width}x${glSurfaceView.height}, shown=${glSurfaceView.isShown}, attached=${glSurfaceView.isAttachedToWindow}, holderValid=$holderValid, zOnTop=${true}")
         }
     }
 
