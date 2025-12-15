@@ -235,7 +235,8 @@ class FlirCaptureFragment : Fragment() {
                         )
                         uploadButton.isEnabled = state.hasPhotos && !state.isProcessing
                         snapshotButton.isEnabled = state.canTakeMore && !state.isProcessing
-                        loadingOverlay.isVisible = state.isProcessing
+                        // Keep overlay hidden; preview stays on top for reliability.
+                        loadingOverlay.isVisible = false
                         if (state.isProcessing) {
                             loadingText.text = getString(R.string.flir_upload_in_progress, count)
                         }

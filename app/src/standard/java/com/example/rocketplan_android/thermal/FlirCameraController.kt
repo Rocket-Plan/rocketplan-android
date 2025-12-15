@@ -67,4 +67,8 @@ class FlirCameraController(context: Context) {
         // No-op: FLIR not supported
         return null
     }
+
+    fun setOverlayFriendlyMode(enabled: Boolean) {
+        // No-op: FLIR not supported
+    }
 }
