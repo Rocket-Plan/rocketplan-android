@@ -14,6 +14,8 @@ import java.io.File
  */
 class FlirCameraController(context: Context) {
 
+    data class StreamSelection(val index: Int, val count: Int, val isThermal: Boolean)
+
     private val _state = MutableStateFlow<FlirState>(FlirState.Error("FLIR not supported on this device"))
     val state: StateFlow<FlirState> = _state
 
@@ -54,5 +56,15 @@ class FlirCameraController(context: Context) {
 
     fun onPause() {
         // No-op: FLIR not supported
+    }
+
+    fun currentStreamSelection(): StreamSelection? {
+        // No-op: FLIR not supported
+        return null
+    }
+
+    fun cycleStream(offset: Int): StreamSelection? {
+        // No-op: FLIR not supported
+        return null
     }
 }

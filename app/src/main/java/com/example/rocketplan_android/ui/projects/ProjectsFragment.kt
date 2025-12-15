@@ -174,6 +174,14 @@ class ProjectsFragment : Fragment() {
                         findNavController().navigate(R.id.imageProcessorConfigFragment)
                         true
                     }
+                    R.id.action_test_flir -> {
+                        findNavController().navigate(R.id.flirTestFragment)
+                        true
+                    }
+                    R.id.action_test_flir_ir_only -> {
+                        findNavController().navigate(R.id.flirIrPreviewFragment)
+                        true
+                    }
                     R.id.action_switch_company -> {
                         showCompanyPicker()
                         true

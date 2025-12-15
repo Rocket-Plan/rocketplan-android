@@ -363,6 +363,18 @@
     </fragment>
 
     <fragment
+        android:id="@+id/flirTestFragment"
+        android:name="com.example.rocketplan_android.ui.debug.FlirTestFragment"
+        android:label="@string/flir_test_title"
+        tools:layout="@layout/fragment_flir_test" />
+
+    <fragment
+        android:id="@+id/flirIrPreviewFragment"
+        android:name="com.example.rocketplan_android.ui.debug.FlirIrPreviewFragment"
+        android:label="@string/flir_ir_preview_title"
+        tools:layout="@layout/fragment_flir_ir_preview" />
+
+    <fragment
         android:id="@+id/roomTypePickerFragment"
         android:name="com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerFragment"
         android:label="Room Types"

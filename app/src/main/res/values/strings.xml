@@ -436,6 +436,18 @@
     <string name="flir_upload_success">Thermal photos queued for upload</string>
     <string name="flir_upload_error">Unable to upload thermal photos</string>
     <string name="flash_ir_unavailable">Flash not available in IR mode</string>
+    <string name="flir_stream_prev">Prev stream</string>
+    <string name="flir_stream_next">Next stream</string>
+    <string name="flir_stream_counter">Stream %1$d/%2$d (%3$s)</string>
+    <string name="flir_stream_counter_unknown">Stream ?/?</string>
+    <string name="flir_stream_type_thermal">thermal</string>
+    <string name="flir_stream_type_visible">visible</string>
+    <string name="flir_test_start">Start FLIR Test</string>
+    <string name="flir_test_title">Test FLIR</string>
+    <string name="flir_test_status_idle">Idle \u2013 tap Start to scan streams</string>
+    <string name="flir_ir_preview_title">IR Preview</string>
+    <string name="flir_ir_preview_start">Start IR Preview</string>
+    <string name="flir_ir_preview_status_idle">Idle \u2013 tap Start to view IR feed</string>
     <string name="refreshing">Refreshing…</string>
 
     <!-- Project Status -->

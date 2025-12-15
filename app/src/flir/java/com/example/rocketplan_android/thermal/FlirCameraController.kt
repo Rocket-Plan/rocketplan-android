@@ -1,8 +1,8 @@
 package com.example.rocketplan_android.thermal
 
-import android.app.ActivityManager
 import android.content.Context
 import android.opengl.GLSurfaceView
+import android.graphics.PixelFormat
 import android.util.Log
 import com.flir.thermalsdk.ErrorCode
 import com.flir.thermalsdk.image.Palette
@@ -79,6 +79,8 @@ class FlirCameraController(
     private var enableMeasurements: Boolean = false
     private val snapshotRequested = AtomicBoolean(false)
 
+    data class StreamSelection(val index: Int, val count: Int, val isThermal: Boolean)
+
     private val imagesRoot: String by lazy {
         val dir = File(appContext.filesDir, "flir_snapshots")
         if (!dir.exists()) {
@@ -87,13 +89,7 @@ class FlirCameraController(
         dir.absolutePath
     }
 
-    private fun resolveGlVersion(): Int {
-        val activityManager = appContext.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-        val versionString = activityManager?.deviceConfigurationInfo?.glEsVersion ?: "2.0"
-        val major = versionString.substringBefore('.').toIntOrNull() ?: 2
-        val minor = versionString.substringAfter('.', "0").take(1).toIntOrNull() ?: 0
-        return if (major > 3 || (major == 3 && minor >= 0)) 3 else 2
-    }
+    private fun resolveGlVersion(): Int = 2 // Force ES2 for FLIR sample parity; ES3 caused blank preview on some devices.
 
     fun attachSurface(glSurfaceView: GLSurfaceView) {
         this.glSurfaceView = glSurfaceView
@@ -102,8 +98,14 @@ class FlirCameraController(
         glSurfaceView.setEGLContextClientVersion(glVersion)
         glSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0)
         glSurfaceView.setPreserveEGLContextOnPause(false)
+        glSurfaceView.holder.setFormat(PixelFormat.TRANSLUCENT)
+        glSurfaceView.setZOrderOnTop(true)
         glSurfaceView.setRenderer(renderer)
         glSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+        glSurfaceView.post {
+            val holderValid = runCatching { glSurfaceView.holder.surface.isValid }.getOrDefault(false)
+            logDebug("🖼️ GLSurface attached: size=${glSurfaceView.width}x${glSurfaceView.height}, shown=${glSurfaceView.isShown}, attached=${glSurfaceView.isAttachedToWindow}, holderValid=$holderValid")
+        }
     }
 
     fun setPalette(index: Int) {
@@ -269,6 +271,10 @@ class FlirCameraController(
 
         logDebug("🎬 Starting stream...")
         surface.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+        surface.post {
+            val holderValid = runCatching { surface.holder.surface.isValid }.getOrDefault(false)
+            logDebug("🎬 Surface ready for streaming: size=${surface.width}x${surface.height}, shown=${surface.isShown}, attached=${surface.isAttachedToWindow}, holderValid=$holderValid")
+        }
         stream.start(
             {
                 surface.requestRender()
@@ -281,6 +287,106 @@ class FlirCameraController(
         )
         logDebug("🎬 Stream started, isStreaming=${stream.isStreaming}")
         surface.requestRender()
+    }
+
+    fun currentStreamSelection(): StreamSelection? {
+        val cam = camera ?: return null
+        val streams = cam.streams
+        if (streams.isEmpty()) return null
+        val currentIndex = activeStream?.let { streams.indexOf(it) }?.takeIf { it >= 0 } ?: 0
+        val stream = streams[currentIndex]
+        return StreamSelection(currentIndex, streams.size, stream.isThermal)
+    }
+
+    fun cycleStream(offset: Int): StreamSelection? {
+        val cam = camera ?: return null
+        val surface = glSurfaceView ?: return null
+        val streams = cam.streams
+        if (streams.isEmpty()) return null
+
+        val currentIndex = activeStream?.let { streams.indexOf(it) }?.takeIf { it >= 0 } ?: 0
+        val newIndex = (currentIndex + offset + streams.size) % streams.size
+        val newStream = streams[newIndex]
+
+        // Run the actual switch work off the caller thread to avoid UI stalls.
+        scope.launch {
+            performStreamSwitch(cam, surface, newStream, newIndex)
+        }
+
+        // Return the intended selection immediately for UI label updates.
+        return StreamSelection(newIndex, streams.size, newStream.isThermal)
+    }
+
+    private fun performStreamSwitch(cam: Camera, surface: GLSurfaceView, newStream: Stream, newIndex: Int) {
+        val previousStream = activeStream
+        if (newStream != previousStream) {
+            logDebug("🔀 Switching stream to index=$newIndex isThermal=${newStream.isThermal}")
+            previousStream?.stop()
+        } else {
+            logDebug("🔀 Reapplying current stream index=$newIndex isThermal=${newStream.isThermal}")
+        }
+
+        val setupResult = setupPipeline(cam, newStream, "cycleStream")
+        if (!setupResult.success) {
+            val message = if (setupResult.timedOut) {
+                "🔀 cycleStream(): GL pipeline setup timed out"
+            } else {
+                "🔀 cycleStream(): setup error ${setupResult.error?.message}"
+            }
+            logWarn(message)
+            _errors.tryEmit(message)
+            _state.value = FlirState.Error(message)
+
+            // Attempt to recover the previous stream if we switched away and setup failed.
+            if (previousStream != null && previousStream != newStream) {
+                logWarn("🔀 cycleStream(): restoring previous stream after failure")
+                setupPipeline(cam, previousStream, "cycleStream(recover)")
+                activeStream = previousStream
+                previousStream.start({ surface.requestRender() }, { error ->
+                    val recoverMessage = "🔀 Stream error after recovery: $error"
+                    logWarn(recoverMessage)
+                    _errors.tryEmit(recoverMessage)
+                })
+                surface.requestRender()
+            }
+            return
+        }
+
+        activeStream = newStream
+        surface.renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
+        newStream.start({ surface.requestRender() }, { error ->
+            val message = "🔀 Stream error after switch: $error"
+            logWarn(message)
+            _errors.tryEmit(message)
+        })
+        surface.requestRender()
+    }
+
+    private data class PipelineResult(val success: Boolean, val timedOut: Boolean = false, val error: Throwable? = null)
+
+    private fun setupPipeline(cam: Camera, stream: Stream, reason: String): PipelineResult {
+        val latch = CountDownLatch(1)
+        var setupError: Throwable? = null
+        runOnGlThread {
+            try {
+                logDebug("🔀 [$reason][GL Thread] glSetupPipeline(stream, true)")
+                cam.glSetupPipeline(stream, true)
+                if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0 && cam.glIsGlContextReady()) {
+                    applySurfaceAndViewport(cam, lastSurfaceWidth, lastSurfaceHeight, reason)
+                }
+            } catch (t: Throwable) {
+                setupError = t
+                logError("🔀 [$reason][GL Thread] glSetupPipeline failed: ${t.message}")
+            } finally {
+                latch.countDown()
+            }
+        }
+
+        val timedOut = !latch.await(1, TimeUnit.SECONDS)
+        if (timedOut) {
+            logWarn("🔀 [$reason] GL pipeline setup timed out")
+        }
+        return PipelineResult(success = !timedOut && setupError == null, timedOut = timedOut, error = setupError)
     }
 
     fun disconnect() {
@@ -394,7 +500,9 @@ class FlirCameraController(
                 delayedSetSurface = false
             }
 
+            var thermalImageProcessed = false
             cam.glWithThermalImage { thermalImage ->
+                thermalImageProcessed = true
                 thermalImage.palette = currentPalette
                 val fusion: Fusion? = thermalImage.fusion
                 fusion?.setFusionMode(currentFusionMode)
@@ -441,11 +549,9 @@ class FlirCameraController(
             }
 
             val rendered = cam.glOnDrawFrame()
-            if (!rendered) {
-                if (snapshotRequested.get()) {
-                    logWarn("🖼️ glOnDrawFrame returned false while snapshot pending")
-                } else if (frameCount % 30 == 0L) {
-                    logWarn("🖼️ glOnDrawFrame returned false - frame not rendered")
+            if (!rendered || !thermalImageProcessed) {
+                if (frameCount % 30 == 0L) {
+                    logWarn("🖼️ Frame issue: rendered=$rendered, thermalImageProcessed=$thermalImageProcessed")
                 }
             }
         }
@@ -470,6 +576,8 @@ class FlirCameraController(
             logWarn("$reason: GL context not ready; skipping surface apply")
             return
         }
+        val holderValid = runCatching { glSurfaceView?.holder?.surface?.isValid }.getOrDefault(false)
+        logDebug("$reason: applying surface ${width}x$height, glReady=${cam.glIsGlContextReady()}, holderValid=$holderValid")
         cam.glOnSurfaceChanged(width, height)
         try {
             cam.glSetViewport(0, 0, width, height)

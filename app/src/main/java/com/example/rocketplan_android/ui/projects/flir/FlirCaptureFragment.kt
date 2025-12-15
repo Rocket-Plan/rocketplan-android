@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
+import android.util.Log
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
@@ -60,6 +61,16 @@ class FlirCaptureFragment : Fragment() {
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
 
+    private fun logSurfaceAndOverlay(reason: String) {
+        glSurface.post {
+            val holderValid = runCatching { glSurface.holder.surface.isValid }.getOrDefault(false)
+            Log.d(
+                TAG,
+                "[$reason] GLSurface size=${glSurface.width}x${glSurface.height}, shown=${glSurface.isShown}, attached=${glSurface.isAttachedToWindow}, holderValid=$holderValid, overlayVisible=${loadingOverlay.isVisible}, overlayVis=${loadingOverlay.visibility}, overlayAlpha=${loadingOverlay.alpha}"
+            )
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         controller = FlirCameraController(requireContext())
@@ -89,6 +100,7 @@ class FlirCaptureFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
         controller.attachSurface(glSurface)
+        logSurfaceAndOverlay("onViewCreated")
         setupListeners()
         observeState()
 
@@ -177,10 +189,12 @@ class FlirCaptureFragment : Fragment() {
                                     R.string.flir_status_streaming,
                                     state.identity.deviceId
                                 )
+                                logSurfaceAndOverlay("streaming")
                             }
 
                             is FlirState.Error -> {
                                 statusText.text = state.message
+                                logSurfaceAndOverlay("error")
                             }
                         }
                     }
@@ -225,6 +239,7 @@ class FlirCaptureFragment : Fragment() {
                         if (state.isProcessing) {
                             loadingText.text = getString(R.string.flir_upload_in_progress, count)
                         }
+                        logSurfaceAndOverlay("uiState isProcessing=${state.isProcessing}")
                     }
                 }
 
@@ -285,4 +300,8 @@ class FlirCaptureFragment : Fragment() {
         cameraPermissions.all {
             ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
         }
+
+    companion object {
+        private const val TAG = "FlirCaptureFrag"
+    }
 }
