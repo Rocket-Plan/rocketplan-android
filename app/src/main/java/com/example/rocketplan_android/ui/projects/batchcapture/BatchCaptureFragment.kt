@@ -218,6 +218,7 @@ class BatchCaptureFragment : Fragment() {
         loadingOverlay = view.findViewById(R.id.loadingOverlay)
         loadingText = view.findViewById(R.id.loadingText)
         flirStatusText.text = getString(R.string.flir_status_idle)
+        flirStatusText.visibility = View.GONE
     }
 
     private fun setupFlirPreviewSurface() {

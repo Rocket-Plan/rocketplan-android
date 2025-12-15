@@ -29,7 +29,6 @@ import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureEvent
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureUiState
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureViewModel
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class FlirCaptureFragment : Fragment() {
@@ -51,7 +50,6 @@ class FlirCaptureFragment : Fragment() {
     private lateinit var streamLabel: TextView
     private lateinit var startButton: MaterialButton
     private lateinit var snapshotButton: MaterialButton
-    private lateinit var optionsButton: MaterialButton
     private lateinit var uploadButton: MaterialButton
     private lateinit var closeButton: MaterialButton
     private lateinit var prevStreamButton: MaterialButton
@@ -130,7 +128,6 @@ class FlirCaptureFragment : Fragment() {
         streamLabel = root.findViewById(R.id.streamLabel)
         startButton = root.findViewById(R.id.startButton)
         snapshotButton = root.findViewById(R.id.snapshotButton)
-        optionsButton = root.findViewById(R.id.optionsButton)
         uploadButton = root.findViewById(R.id.uploadButton)
         closeButton = root.findViewById(R.id.closeButton)
         prevStreamButton = root.findViewById(R.id.prevStreamButton)
@@ -139,10 +136,11 @@ class FlirCaptureFragment : Fragment() {
         loadingText = root.findViewById(R.id.loadingText)
 
         statusText.text = getString(R.string.flir_status_idle)
+        statusText.visibility = View.GONE
         streamLabel.text = getString(R.string.flir_stream_counter_unknown)
         snapshotButton.isEnabled = false
-        prevStreamButton.isEnabled = false
-        nextStreamButton.isEnabled = false
+        prevStreamButton.isVisible = false
+        nextStreamButton.isVisible = false
         lastUiState = viewModel.uiState.value
     }
 
@@ -150,34 +148,12 @@ class FlirCaptureFragment : Fragment() {
         startButton.setOnClickListener { startDiscovery() }
         snapshotButton.setOnClickListener { controller.requestSnapshot() }
         closeButton.setOnClickListener { findNavController().navigateUp() }
-        optionsButton.setOnClickListener { showOptionsMenu(it) }
         prevStreamButton.setOnClickListener { updateStreamLabel(controller.cycleStream(-1)) }
         nextStreamButton.setOnClickListener { updateStreamLabel(controller.cycleStream(1)) }
 
         uploadButton.setOnClickListener {
             viewModel.commitPhotos()
         }
-    }
-
-    private fun showOptionsMenu(anchor: View) {
-        val items = arrayOf(
-            getString(R.string.flir_palette),
-            getString(R.string.flir_fusion),
-            getString(R.string.flir_measurements)
-        )
-        val checked = booleanArrayOf(false, false, false)
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.flir_options)
-            .setMultiChoiceItems(items, checked) { _, which, isChecked ->
-                when (which) {
-                    0 -> controller.setPalette(if (isChecked) 1 else 0)
-                    1 -> controller.setFusionMode(if (isChecked) com.example.rocketplan_android.thermal.FusionMode.VISUAL_ONLY else com.example.rocketplan_android.thermal.FusionMode.THERMAL_ONLY)
-                    2 -> controller.setMeasurementsEnabled(isChecked)
-                }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
     }
 
     private fun observeState() {
