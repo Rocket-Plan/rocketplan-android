@@ -11,7 +11,7 @@
         android:id="@+id/cameraPreview"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@id/bottomContainer"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -215,7 +215,8 @@
         android:id="@+id/bottomContainer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/black"
+        android:background="@android:color/transparent"
+        android:elevation="12dp"
         android:orientation="vertical"
         android:paddingBottom="24dp"
         app:layout_constraintBottom_toBottomOf="parent">
@@ -224,8 +225,8 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/thumbnailStrip"
             android:layout_width="match_parent"
-            android:layout_height="72dp"
-            android:layout_marginBottom="16dp"
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp"
             android:clipToPadding="false"
             android:orientation="horizontal"
             android:paddingHorizontal="16dp"
@@ -300,16 +301,11 @@
                 android:layout_height="56dp"
                 android:layout_weight="1">
 
-                <ImageButton
-                    android:id="@+id/switchCameraButton"
+                <View
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:layout_gravity="center"
-                    android:background="@drawable/bg_circle_semi_transparent"
-                    android:contentDescription="@string/switch_camera"
-                    android:padding="12dp"
-                    android:src="@drawable/ic_switch_camera"
-                    app:tint="@android:color/white" />
+                    android:visibility="gone" />
             </FrameLayout>
 
             <!-- Commit Button inline -->

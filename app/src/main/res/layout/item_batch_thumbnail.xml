@@ -2,14 +2,14 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="64dp"
-    android:layout_height="64dp"
-    android:layout_marginEnd="8dp">
+    android:layout_width="52dp"
+    android:layout_height="52dp"
+    android:layout_marginEnd="6dp">
 
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:cardCornerRadius="6dp"
+        app:cardCornerRadius="5dp"
         app:cardElevation="0dp"
         app:strokeWidth="2dp"
         app:strokeColor="@android:color/white">
@@ -25,8 +25,8 @@
     <!-- Delete button overlay -->
     <ImageButton
         android:id="@+id/deleteButton"
-        android:layout_width="20dp"
-        android:layout_height="20dp"
+        android:layout_width="18dp"
+        android:layout_height="18dp"
         android:layout_gravity="top|end"
         android:background="@drawable/bg_circle_delete"
         android:contentDescription="@string/delete"
@@ -37,13 +37,13 @@
     <!-- Photo number badge -->
     <TextView
         android:id="@+id/photoNumberBadge"
-        android:layout_width="18dp"
-        android:layout_height="18dp"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
         android:layout_gravity="bottom|start"
         android:background="@drawable/bg_circle_purple"
         android:gravity="center"
         android:textColor="@android:color/white"
-        android:textSize="10sp"
+        android:textSize="9sp"
         android:textStyle="bold"
         tools:text="1" />
 

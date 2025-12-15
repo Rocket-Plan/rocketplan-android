@@ -16,6 +16,9 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
 import androidx.core.view.isVisible
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -40,6 +43,11 @@ class MainActivity : AppCompatActivity() {
             R.id.nav_projects,
             R.id.nav_notifications,
             R.id.nav_people
+        )
+        private val FULLSCREEN_DESTINATIONS = setOf(
+            R.id.batchCaptureFragment,
+            R.id.flirCaptureFragment,
+            R.id.photoViewerFragment
         )
     }
 
@@ -121,6 +129,18 @@ class MainActivity : AppCompatActivity() {
 
             val isBottomNavDestination = BOTTOM_NAV_DESTINATIONS.contains(destination.id)
             bottomNavigation.isVisible = isBottomNavDestination
+            val shouldHideAppBar = isBottomNavDestination ||
+                destination.id == R.id.emailCheckFragment ||
+                destination.id == R.id.loginFragment ||
+                destination.id == R.id.signUpFragment ||
+                destination.id == R.id.forgotPasswordFragment ||
+                destination.id == R.id.oauthWebViewFragment ||
+                destination.id == R.id.scopePickerFragment ||
+                destination.id == R.id.photoViewerFragment ||
+                destination.id == R.id.batchCaptureFragment ||
+                destination.id == R.id.flirCaptureFragment
+            binding.appBarMain.appBarLayout.isVisible = !shouldHideAppBar
+            setFullscreen(FULLSCREEN_DESTINATIONS.contains(destination.id))
 
             when {
                 destination.id == R.id.emailCheckFragment ||
@@ -140,7 +160,9 @@ class MainActivity : AppCompatActivity() {
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
                     window.setSoftInputMode(hiddenSoftInputMode)
                 }
-                destination.id == R.id.photoViewerFragment -> {
+                destination.id == R.id.photoViewerFragment ||
+                    destination.id == R.id.batchCaptureFragment ||
+                    destination.id == R.id.flirCaptureFragment -> {
                     bottomNavigation.isVisible = false
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
@@ -464,6 +486,18 @@ class MainActivity : AppCompatActivity() {
                     Log.w(TAG, "Image processor config preload failed: ${error.message}")
                 }
             }
+        }
+    }
+
+    private fun setFullscreen(enabled: Boolean) {
+        WindowCompat.setDecorFitsSystemWindows(window, !enabled)
+        val controller = WindowInsetsControllerCompat(window, binding.root)
+        if (enabled) {
+            controller.hide(WindowInsetsCompat.Type.statusBars())
+            controller.systemBarsBehavior =
+                WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        } else {
+            controller.show(WindowInsetsCompat.Type.statusBars())
         }
     }
 

@@ -89,7 +89,6 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var lastPhotoPreview: ImageView
     private lateinit var shutterButton: FrameLayout
     private lateinit var shutterInner: View
-    private lateinit var switchCameraButton: ImageButton
     private lateinit var doneButton: MaterialButton
     private lateinit var categoryChipGroup: ChipGroup
     private lateinit var loadingOverlay: View
@@ -212,7 +211,6 @@ class BatchCaptureFragment : Fragment() {
         lastPhotoPreview = view.findViewById(R.id.lastPhotoPreview)
         shutterButton = view.findViewById(R.id.shutterButton)
         shutterInner = view.findViewById(R.id.shutterInner)
-        switchCameraButton = view.findViewById(R.id.switchCameraButton)
         doneButton = view.findViewById(R.id.doneButton)
         categoryChipGroup = view.findViewById(R.id.categoryChipGroup)
         loadingOverlay = view.findViewById(R.id.loadingOverlay)
@@ -280,10 +278,6 @@ class BatchCaptureFragment : Fragment() {
 
         flashButton.setOnClickListener {
             toggleFlash()
-        }
-
-        switchCameraButton.setOnClickListener {
-            switchCamera()
         }
 
         doneButton.setOnClickListener {
@@ -602,9 +596,7 @@ class BatchCaptureFragment : Fragment() {
         flirFallbackSurface?.isVisible = isIr && useGlSurfaceFallback
         cameraPreview.isVisible = !isIr
         flashButton.isEnabled = !isIr
-        switchCameraButton.isEnabled = !isIr
         flashButton.alpha = if (isIr) 0.4f else 1f
-        switchCameraButton.alpha = if (isIr) 0.4f else 1f
         Log.d(
             TAG,
             "updateModeUi: flirPreviewContainer.visibility=${flirPreviewContainer.visibility}, cameraPreview.visibility=${cameraPreview.visibility}"
@@ -761,16 +753,6 @@ class BatchCaptureFragment : Fragment() {
             else -> R.drawable.ic_flash_off
         }
         flashButton.setImageResource(iconRes)
-    }
-
-    private fun switchCamera() {
-        if (captureMode != CaptureMode.REGULAR) return
-        lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-            CameraSelector.LENS_FACING_FRONT
-        } else {
-            CameraSelector.LENS_FACING_BACK
-        }
-        bindCameraUseCases()
     }
 
     private fun createTempPhotoFile(): File? {
