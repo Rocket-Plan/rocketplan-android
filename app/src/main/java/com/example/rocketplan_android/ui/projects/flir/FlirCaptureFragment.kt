@@ -23,13 +23,12 @@ import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
-import com.example.rocketplan_android.thermal.FusionMode
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
 import com.example.rocketplan_android.ui.projects.RoomDetailFragment
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureEvent
 import com.example.rocketplan_android.ui.projects.batchcapture.BatchCaptureViewModel
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.switchmaterial.SwitchMaterial
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import kotlinx.coroutines.launch
 
 class FlirCaptureFragment : Fragment() {
@@ -50,9 +49,7 @@ class FlirCaptureFragment : Fragment() {
     private lateinit var photoCountText: TextView
     private lateinit var startButton: MaterialButton
     private lateinit var snapshotButton: MaterialButton
-    private lateinit var paletteSwitch: SwitchMaterial
-    private lateinit var fusionSwitch: SwitchMaterial
-    private lateinit var measurementsSwitch: SwitchMaterial
+    private lateinit var optionsButton: MaterialButton
     private lateinit var uploadButton: MaterialButton
     private lateinit var closeButton: MaterialButton
     private lateinit var loadingOverlay: View
@@ -132,9 +129,7 @@ class FlirCaptureFragment : Fragment() {
         photoCountText = root.findViewById(R.id.photoCountText)
         startButton = root.findViewById(R.id.startButton)
         snapshotButton = root.findViewById(R.id.snapshotButton)
-        paletteSwitch = root.findViewById(R.id.paletteSwitch)
-        fusionSwitch = root.findViewById(R.id.fusionSwitch)
-        measurementsSwitch = root.findViewById(R.id.measurementsSwitch)
+        optionsButton = root.findViewById(R.id.optionsButton)
         uploadButton = root.findViewById(R.id.uploadButton)
         closeButton = root.findViewById(R.id.closeButton)
         loadingOverlay = root.findViewById(R.id.loadingOverlay)
@@ -147,22 +142,32 @@ class FlirCaptureFragment : Fragment() {
         startButton.setOnClickListener { startDiscovery() }
         snapshotButton.setOnClickListener { controller.requestSnapshot() }
         closeButton.setOnClickListener { findNavController().navigateUp() }
-
-        paletteSwitch.setOnCheckedChangeListener { _, isChecked ->
-            controller.setPalette(if (isChecked) 1 else 0)
-        }
-
-        fusionSwitch.setOnCheckedChangeListener { _, isChecked ->
-            controller.setFusionMode(if (isChecked) FusionMode.VISUAL_ONLY else FusionMode.THERMAL_ONLY)
-        }
-
-        measurementsSwitch.setOnCheckedChangeListener { _, isChecked ->
-            controller.setMeasurementsEnabled(isChecked)
-        }
+        optionsButton.setOnClickListener { showOptionsMenu(it) }
 
         uploadButton.setOnClickListener {
             viewModel.commitPhotos()
         }
+    }
+
+    private fun showOptionsMenu(anchor: View) {
+        val items = arrayOf(
+            getString(R.string.flir_palette),
+            getString(R.string.flir_fusion),
+            getString(R.string.flir_measurements)
+        )
+        val checked = booleanArrayOf(false, false, false)
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.flir_options)
+            .setMultiChoiceItems(items, checked) { _, which, isChecked ->
+                when (which) {
+                    0 -> controller.setPalette(if (isChecked) 1 else 0)
+                    1 -> controller.setFusionMode(if (isChecked) com.example.rocketplan_android.thermal.FusionMode.VISUAL_ONLY else com.example.rocketplan_android.thermal.FusionMode.THERMAL_ONLY)
+                    2 -> controller.setMeasurementsEnabled(isChecked)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun observeState() {

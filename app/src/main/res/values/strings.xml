@@ -445,6 +445,7 @@
     <string name="flir_test_start">Start FLIR Test</string>
     <string name="flir_test_title">Test FLIR</string>
     <string name="flir_test_status_idle">Idle \u2013 tap Start to scan streams</string>
+    <string name="flir_options">Options</string>
     <string name="flir_ir_preview_title">IR Preview</string>
     <string name="flir_ir_preview_start">Start IR Preview</string>
     <string name="flir_ir_preview_status_idle">Idle \u2013 tap Start to view IR feed</string>
