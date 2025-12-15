@@ -162,8 +162,8 @@ class FlirCaptureFragment : Fragment() {
                 launch {
                     controller.state.collect { state ->
                         isStreaming = state is FlirState.Streaming
-                        prevStreamButton.isEnabled = isStreaming
-                        nextStreamButton.isEnabled = isStreaming
+                        prevStreamButton.isEnabled = false
+                        nextStreamButton.isEnabled = false
                         updateSnapshotButtonState()
                         when (state) {
                             FlirState.Idle -> {
