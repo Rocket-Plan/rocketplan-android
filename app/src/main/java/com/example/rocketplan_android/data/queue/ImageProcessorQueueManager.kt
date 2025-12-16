@@ -278,6 +278,59 @@ class ImageProcessorQueueManager(
         }
     }
 
+    suspend fun retryAssembly(assemblyId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val assembly = dao.getAssembly(assemblyId)
+            ?: return@withContext Result.failure(IllegalArgumentException("Assembly not found"))
+
+        val status = AssemblyStatus.fromValue(assembly.status)
+        val retryableStatuses = setOf(
+            AssemblyStatus.FAILED,
+            AssemblyStatus.WAITING_FOR_CONNECTIVITY,
+            AssemblyStatus.CANCELLED
+        )
+
+        if (status !in retryableStatuses) {
+            val message = "Assembly is already in progress or complete"
+            Log.d(TAG, "ℹ️ Manual retry skipped for $assemblyId (status=${assembly.status})")
+            return@withContext Result.failure(IllegalStateException(message))
+        }
+
+        val uploadData = uploadStore.read(assemblyId)
+        if (uploadData == null) {
+            val message = "Upload data missing - cannot retry this assembly"
+            updateAssemblyStatus(assemblyId, AssemblyStatus.FAILED, message)
+            return@withContext Result.failure(IllegalStateException(message))
+        }
+
+        resetFailedPhotosToPending(assemblyId)
+
+        val resetAssembly = assembly.copy(
+            failsCount = 0,
+            retryCount = 0,
+            nextRetryAt = null,
+            lastTimeout = 0,
+            errorMessage = null,
+            isWaitingForConnectivity = false
+        )
+        dao.updateAssembly(resetAssembly)
+
+        updateAssemblyStatus(assemblyId, AssemblyStatus.RETRYING, null)
+        updateAssemblyStatus(assemblyId, AssemblyStatus.CREATED, null)
+
+        remoteLogger?.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Manual retry requested",
+            metadata = mapOf(
+                "assembly_id" to assemblyId,
+                "status" to assembly.status
+            )
+        )
+
+        processNextQueuedAssembly()
+        Result.success(Unit)
+    }
+
     private suspend fun uploadAssembly(assembly: ImageProcessorAssemblyEntity) {
         try {
             Log.d(TAG, "📸 Uploading assembly ${assembly.assemblyId}")
@@ -297,6 +350,19 @@ class ImageProcessorQueueManager(
 
             // Get photos for this assembly
             val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
+
+            if (uploadData.apiKey.isNullOrBlank()) {
+                Log.e(TAG, "❌ Missing image processor API key; uploads will omit x-api-key header")
+                remoteLogger?.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "Missing API key for image processor upload",
+                    metadata = mapOf(
+                        "assembly_id" to assembly.assemblyId,
+                        "processing_url" to uploadData.processingUrl
+                    )
+                )
+            }
 
             // If the backend already marks this assembly complete, skip re-uploads
             if (reconcileWithBackendStatus(assembly, photos)) {

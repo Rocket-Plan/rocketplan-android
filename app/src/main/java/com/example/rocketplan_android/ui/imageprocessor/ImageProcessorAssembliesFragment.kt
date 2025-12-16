@@ -8,6 +8,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
@@ -22,6 +23,8 @@ import com.example.rocketplan_android.R
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.databinding.FragmentImageProcessorAssembliesBinding
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.Locale
@@ -46,10 +49,20 @@ class ImageProcessorAssembliesFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = ImageProcessorAssembliesAdapter()
+        adapter = ImageProcessorAssembliesAdapter(
+            onRetryAssembly = { assemblyId -> viewModel.retryAssembly(assemblyId) },
+            onDeleteAssembly = { entity -> confirmDeleteAssembly(entity) }
+        )
         binding.assembliesRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.assembliesRecyclerView.adapter = adapter
 
+        binding.deleteAllButton.setOnClickListener { confirmDeleteAll() }
+
+        observeUiState()
+        observeEvents()
+    }
+
+    private fun observeUiState() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
@@ -58,18 +71,21 @@ class ImageProcessorAssembliesFragment : Fragment() {
                             binding.loadingIndicator.visibility = View.VISIBLE
                             binding.assembliesRecyclerView.visibility = View.GONE
                             binding.emptyPlaceholder.visibility = View.GONE
+                            binding.deleteAllButton.isEnabled = false
                         }
 
                         ImageProcessorAssembliesUiState.Empty -> {
                             binding.loadingIndicator.visibility = View.GONE
                             binding.assembliesRecyclerView.visibility = View.GONE
                             binding.emptyPlaceholder.visibility = View.VISIBLE
+                            binding.deleteAllButton.isEnabled = false
                         }
 
                         is ImageProcessorAssembliesUiState.Content -> {
                             binding.loadingIndicator.visibility = View.GONE
                             binding.assembliesRecyclerView.visibility = View.VISIBLE
                             binding.emptyPlaceholder.visibility = View.GONE
+                            binding.deleteAllButton.isEnabled = true
                             adapter.submitList(state.assemblies)
                         }
                     }
@@ -78,14 +94,97 @@ class ImageProcessorAssembliesFragment : Fragment() {
         }
     }
 
+    private fun observeEvents() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.events.collect { event ->
+                    when (event) {
+                        ImageProcessorAssembliesEvent.RetryQueued -> {
+                            showMessage(getString(R.string.toast_image_processor_retry_queued))
+                        }
+
+                        is ImageProcessorAssembliesEvent.RetryFailed -> {
+                            showMessage(
+                                getString(
+                                    R.string.toast_image_processor_retry_failed,
+                                    event.reason
+                                )
+                            )
+                        }
+
+                        is ImageProcessorAssembliesEvent.AssemblyDeleted -> {
+                            showMessage(
+                                getString(
+                                    R.string.toast_image_processor_delete_single,
+                                    event.assemblyId.take(8)
+                                )
+                            )
+                        }
+
+                        is ImageProcessorAssembliesEvent.AssembliesCleared -> {
+                            val message = if (event.count == 0) {
+                                getString(R.string.toast_image_processor_delete_none)
+                            } else {
+                                getString(R.string.toast_image_processor_delete_all, event.count)
+                            }
+                            showMessage(message)
+                        }
+
+                        is ImageProcessorAssembliesEvent.DeleteFailed -> {
+                            showMessage(
+                                getString(
+                                    R.string.toast_image_processor_delete_failed,
+                                    event.reason
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun confirmDeleteAssembly(entity: ImageProcessorAssemblyEntity) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.image_processor_delete_single_title)
+            .setMessage(
+                getString(
+                    R.string.image_processor_delete_single_message,
+                    entity.assemblyId.take(8)
+                )
+            )
+            .setPositiveButton(R.string.delete) { _, _ ->
+                viewModel.deleteAssembly(entity.assemblyId)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun confirmDeleteAll() {
+        AlertDialog.Builder(requireContext())
+            .setTitle(R.string.image_processor_delete_all_title)
+            .setMessage(R.string.image_processor_delete_all_message)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                viewModel.deleteAllAssemblies()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showMessage(message: String) {
+        Snackbar.make(binding.root, message, Snackbar.LENGTH_SHORT).show()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
 }
 
-private class ImageProcessorAssembliesAdapter :
-    RecyclerView.Adapter<ImageProcessorAssembliesViewHolder>() {
+private class ImageProcessorAssembliesAdapter(
+    private val onRetryAssembly: (String) -> Unit,
+    private val onDeleteAssembly: (ImageProcessorAssemblyEntity) -> Unit
+) : RecyclerView.Adapter<ImageProcessorAssembliesViewHolder>() {
 
     private var items: List<ImageProcessorAssemblyEntity> = emptyList()
 
@@ -97,7 +196,7 @@ private class ImageProcessorAssembliesAdapter :
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageProcessorAssembliesViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_image_processor_assembly, parent, false)
-        return ImageProcessorAssembliesViewHolder(view)
+        return ImageProcessorAssembliesViewHolder(view, onRetryAssembly, onDeleteAssembly)
     }
 
     override fun onBindViewHolder(holder: ImageProcessorAssembliesViewHolder, position: Int) {
@@ -107,8 +206,11 @@ private class ImageProcessorAssembliesAdapter :
     override fun getItemCount(): Int = items.size
 }
 
-private class ImageProcessorAssembliesViewHolder(itemView: View) :
-    RecyclerView.ViewHolder(itemView) {
+private class ImageProcessorAssembliesViewHolder(
+    itemView: View,
+    private val onRetryAssembly: (String) -> Unit,
+    private val onDeleteAssembly: (ImageProcessorAssemblyEntity) -> Unit
+) : RecyclerView.ViewHolder(itemView) {
 
     private val assemblyIdText: TextView = itemView.findViewById(R.id.assemblyIdText)
     private val statusChip: TextView = itemView.findViewById(R.id.statusChip)
@@ -117,6 +219,8 @@ private class ImageProcessorAssembliesViewHolder(itemView: View) :
     private val createdText: TextView = itemView.findViewById(R.id.createdText)
     private val updatedText: TextView = itemView.findViewById(R.id.updatedText)
     private val errorText: TextView = itemView.findViewById(R.id.errorText)
+    private val retryButton: MaterialButton = itemView.findViewById(R.id.retryButton)
+    private val deleteButton: MaterialButton = itemView.findViewById(R.id.deleteButton)
 
     fun bind(entity: ImageProcessorAssemblyEntity) {
         assemblyIdText.text = itemView.context.getString(
@@ -158,6 +262,24 @@ private class ImageProcessorAssembliesViewHolder(itemView: View) :
                 R.string.image_processor_assembly_error_format,
                 entity.errorMessage
             )
+        }
+
+        bindRetryButton(status, entity)
+        deleteButton.setOnClickListener { onDeleteAssembly(entity) }
+    }
+
+    private fun bindRetryButton(status: AssemblyStatus?, entity: ImageProcessorAssemblyEntity) {
+        val retryableStatuses = setOf(
+            AssemblyStatus.FAILED,
+            AssemblyStatus.WAITING_FOR_CONNECTIVITY,
+            AssemblyStatus.CANCELLED
+        )
+        val shouldShowRetry = status != null && retryableStatuses.contains(status)
+        retryButton.visibility = if (shouldShowRetry) View.VISIBLE else View.GONE
+        if (shouldShowRetry) {
+            retryButton.setOnClickListener { onRetryAssembly(entity.assemblyId) }
+        } else {
+            retryButton.setOnClickListener(null)
         }
     }
 

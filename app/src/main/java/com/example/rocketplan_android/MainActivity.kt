@@ -43,7 +43,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private val BOTTOM_NAV_DESTINATIONS = setOf(
+        private val bottomNavDestinations: Set<Int> = setOf(
             R.id.nav_map,
             R.id.nav_projects,
             R.id.nav_notifications,
@@ -111,7 +111,7 @@ class MainActivity : AppCompatActivity() {
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.
         appBarConfiguration = AppBarConfiguration(
-            BOTTOM_NAV_DESTINATIONS,
+            bottomNavDestinations,
             drawerLayout
         )
         setupActionBarWithNavController(navController, appBarConfiguration)
@@ -140,7 +140,7 @@ class MainActivity : AppCompatActivity() {
                 imm.hideSoftInputFromWindow(focused.windowToken, 0)
             }
 
-            val isBottomNavDestination = BOTTOM_NAV_DESTINATIONS.contains(destination.id)
+            val isBottomNavDestination = bottomNavDestinations.contains(destination.id)
             bottomNavigation.isVisible = isBottomNavDestination
             val shouldHideAppBar = isBottomNavDestination ||
                 destination.id == R.id.emailCheckFragment ||
@@ -463,6 +463,20 @@ class MainActivity : AppCompatActivity() {
                             Log.d(TAG, "Navigating to Company Info screen")
                         }
                         findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.companyInfoFragment)
+                        true
+                    }
+                    R.id.action_terms_and_conditions -> {
+                        if (BuildConfig.ENABLE_LOGGING) {
+                            Log.d(TAG, "Navigating to Terms and Conditions")
+                        }
+                        findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.termsAndConditionsFragment)
+                        true
+                    }
+                    R.id.action_about -> {
+                        if (BuildConfig.ENABLE_LOGGING) {
+                            Log.d(TAG, "Navigating to About screen")
+                        }
+                        findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.aboutFragment)
                         true
                     }
                     R.id.action_sign_out -> {

@@ -49,6 +49,14 @@ interface ImageProcessorDao {
     @Query(
         """
         SELECT * FROM image_processor_assemblies
+        ORDER BY createdAt DESC
+        """
+    )
+    suspend fun getAllAssemblies(): List<ImageProcessorAssemblyEntity>
+
+    @Query(
+        """
+        SELECT * FROM image_processor_assemblies
         WHERE status IN (:statuses)
         ORDER BY createdAt ASC
         """
@@ -84,6 +92,12 @@ interface ImageProcessorDao {
         """
     )
     suspend fun deleteAssembliesByStatusOlderThan(status: String, cutoffMillis: Long)
+
+    @Query("DELETE FROM image_processor_assemblies WHERE assemblyId = :assemblyId")
+    suspend fun deleteAssembly(assemblyId: String)
+
+    @Query("DELETE FROM image_processor_assemblies")
+    suspend fun deleteAllAssemblies()
     // endregion
 
     // region Photo operations

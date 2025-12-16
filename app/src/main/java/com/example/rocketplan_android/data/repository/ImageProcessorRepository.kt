@@ -27,6 +27,7 @@ import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 import java.util.UUID
 
 class ImageProcessorRepository(
@@ -268,6 +269,54 @@ class ImageProcessorRepository(
     fun observeAllAssemblies(): Flow<List<ImageProcessorAssemblyEntity>> =
         dao.observeAllAssemblies()
 
+    suspend fun deleteAssembly(assemblyId: String): Result<Unit> = withContext(ioDispatcher) {
+        runCatching {
+            dao.getAssembly(assemblyId)
+                ?: throw IllegalStateException("Assembly not found")
+
+            val photos = dao.getPhotosByAssemblyUuid(assemblyId)
+
+            dao.deleteAssembly(assemblyId)
+            uploadStore.remove(assemblyId)
+            deleteLocalFiles(photos)
+
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Deleted local image processor assembly",
+                metadata = mapOf("assembly_id" to assemblyId)
+            )
+            Unit
+        }
+    }
+
+    suspend fun deleteAllAssemblies(): Result<Int> = withContext(ioDispatcher) {
+        runCatching {
+            val assemblies = dao.getAllAssemblies()
+            if (assemblies.isEmpty()) {
+                uploadStore.clear()
+                return@runCatching 0
+            }
+
+            val allPhotos = assemblies.flatMap { assembly ->
+                dao.getPhotosByAssemblyUuid(assembly.assemblyId)
+            }
+
+            dao.deleteAllAssemblies()
+            uploadStore.clear()
+            deleteLocalFiles(allPhotos)
+
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Deleted all local image processor assemblies",
+                metadata = mapOf("count" to assemblies.size.toString())
+            )
+
+            assemblies.size
+        }
+    }
+
     suspend fun cleanupOldAssemblies(daysOld: Int = 7) = withContext(ioDispatcher) {
         val cutoff = System.currentTimeMillis() - daysOld * 24 * 60 * 60 * 1000L
         dao.deleteAssembliesByStatusOlderThan(
@@ -368,6 +417,24 @@ class ImageProcessorRepository(
             if (file.uri.scheme != "file") return@forEach
             val path = file.uri.path ?: return@forEach
             runCatching { File(path).delete() }
+        }
+    }
+
+    private fun deleteLocalFiles(photos: List<ImageProcessorPhotoEntity>) {
+        photos.forEach { photo ->
+            val rawPath = photo.localFilePath ?: return@forEach
+            runCatching {
+                val uri = Uri.parse(rawPath)
+                when (uri.scheme?.lowercase(Locale.getDefault())) {
+                    null, "", "file" -> {
+                        val file = uri.path?.let { File(it) } ?: return@runCatching
+                        if (file.exists()) {
+                            file.delete()
+                        }
+                    }
+                    else -> context.contentResolver.delete(uri, null, null)
+                }
+            }
         }
     }
 

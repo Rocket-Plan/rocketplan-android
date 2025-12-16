@@ -163,6 +163,14 @@ class ProjectsFragment : Fragment() {
                         findNavController().navigate(R.id.companyInfoFragment)
                         true
                     }
+                    R.id.action_terms_and_conditions -> {
+                        findNavController().navigate(R.id.termsAndConditionsFragment)
+                        true
+                    }
+                    R.id.action_about -> {
+                        findNavController().navigate(R.id.aboutFragment)
+                        true
+                    }
                     R.id.action_sync_status -> {
                         findNavController().navigate(R.id.syncStatusFragment)
                         true

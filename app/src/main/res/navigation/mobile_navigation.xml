@@ -482,6 +482,23 @@
         tools:layout="@layout/fragment_company_info" />
 
     <fragment
+        android:id="@+id/termsAndConditionsFragment"
+        android:name="com.example.rocketplan_android.ui.info.TermsAndConditionsFragment"
+        android:label="@string/terms_and_conditions_title"
+        tools:layout="@layout/fragment_terms_and_conditions" />
+
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="com.example.rocketplan_android.ui.info.AboutFragment"
+        android:label="@string/about_title"
+        tools:layout="@layout/fragment_about">
+
+        <action
+            android:id="@+id/action_aboutFragment_to_termsAndConditionsFragment"
+            app:destination="@id/termsAndConditionsFragment" />
+    </fragment>
+
+    <fragment
         android:id="@+id/projectLossInfoFragment"
         android:name="com.example.rocketplan_android.ui.projects.lossinfo.ProjectLossInfoFragment"
         android:label="@string/add_project_info_title"

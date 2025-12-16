@@ -16,6 +16,12 @@
         android:id="@+id/action_company_info"
         android:title="@string/action_company_info" />
     <item
+        android:id="@+id/action_terms_and_conditions"
+        android:title="@string/action_terms_and_conditions" />
+    <item
+        android:id="@+id/action_about"
+        android:title="@string/action_about" />
+    <item
         android:id="@+id/action_switch_company"
         android:title="@string/action_switch_company" />
     <item
