@@ -336,10 +336,10 @@ class ImageProcessorQueueManager(
             Log.d(TAG, "📸 Uploading assembly ${assembly.assemblyId}")
 
             // Get upload data
-            val uploadData = uploadStore.read(assembly.assemblyId)
-            if (uploadData == null) {
-                val errorMessage = "Upload data missing - cannot retry without stored credentials"
-                Log.e(TAG, "❌ No upload data for assembly ${assembly.assemblyId}")
+        val uploadData = uploadStore.read(assembly.assemblyId)
+        if (uploadData == null) {
+            val errorMessage = "Upload data missing - cannot retry without stored credentials"
+            Log.e(TAG, "❌ No upload data for assembly ${assembly.assemblyId}")
 
                 // Mark assembly as FAILED (terminal state - no retry possible without upload data)
                 updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.FAILED, errorMessage)
@@ -349,7 +349,12 @@ class ImageProcessorQueueManager(
             }
 
             // Get photos for this assembly
-            val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
+        val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
+
+        Log.d(
+            TAG,
+            "🌐 Upload target: ${uploadData.processingUrl} (apiKey=${uploadData.apiKey ?: "missing"})"
+        )
 
             if (uploadData.apiKey.isNullOrBlank()) {
                 Log.e(TAG, "❌ Missing image processor API key; uploads will omit x-api-key header")
@@ -445,7 +450,7 @@ class ImageProcessorQueueManager(
         val requestBody = buildRequestBody(localPath, mimeType)
 
         // Build URL with filename query parameter (matching iOS behavior)
-        val uploadUrl = "$processingUrl/upload".toHttpUrl()
+        val uploadUrl = processingUrl.toHttpUrl()
             .newBuilder()
             .addQueryParameter("filename", photo.fileName)
             .build()
@@ -758,6 +763,13 @@ class ImageProcessorQueueManager(
         val timeout = INITIAL_RETRY_TIMEOUT_SECONDS * (1 shl retryCount)
         return timeout.coerceAtMost(MAX_RETRY_TIMEOUT_SECONDS)
     }
+
+    private fun maskApiKey(apiKey: String?): String =
+        when {
+            apiKey.isNullOrBlank() -> "missing"
+            apiKey.length <= 4 -> apiKey
+            else -> "****${apiKey.takeLast(4)}"
+        }
 
     /**
      * Schedule a one-off retry work with the computed backoff delay so we don't
