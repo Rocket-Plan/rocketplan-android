@@ -90,6 +90,28 @@ class ImageProcessorAssembliesViewModel(application: Application) : AndroidViewM
             )
         }
     }
+
+    fun reconcileAssembly(assemblyId: String) {
+        viewModelScope.launch {
+            val result = queueManager.reconcileAssemblyStatus(assemblyId)
+            result.fold(
+                onSuccess = { status ->
+                    _events.emit(
+                        ImageProcessorAssembliesEvent.ReconcileSucceeded(
+                            status?.name ?: "unknown"
+                        )
+                    )
+                },
+                onFailure = { error ->
+                    _events.emit(
+                        ImageProcessorAssembliesEvent.ReconcileFailed(
+                            error.message ?: "Unable to check status"
+                        )
+                    )
+                }
+            )
+        }
+    }
 }
 
 sealed class ImageProcessorAssembliesUiState {
@@ -105,4 +127,6 @@ sealed class ImageProcessorAssembliesEvent {
     data class AssemblyDeleted(val assemblyId: String) : ImageProcessorAssembliesEvent()
     data class AssembliesCleared(val count: Int) : ImageProcessorAssembliesEvent()
     data class DeleteFailed(val reason: String) : ImageProcessorAssembliesEvent()
+    data class ReconcileSucceeded(val status: String) : ImageProcessorAssembliesEvent()
+    data class ReconcileFailed(val reason: String) : ImageProcessorAssembliesEvent()
 }

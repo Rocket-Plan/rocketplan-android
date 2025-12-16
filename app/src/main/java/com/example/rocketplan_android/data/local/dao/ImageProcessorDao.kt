@@ -52,10 +52,15 @@ interface ImageProcessorDao {
         SELECT 
             a.*,
             p.title AS projectName,
-            r.title AS roomName
+            r.title AS roomName,
+            COALESCE(SUM(CASE WHEN ph.status = 'completed' THEN 1 ELSE 0 END), 0) AS uploadedCount,
+            COALESCE(SUM(CASE WHEN ph.status = 'failed' THEN 1 ELSE 0 END), 0) AS failedCount,
+            COALESCE(SUM(ph.bytesUploaded), 0) AS bytesUploaded
         FROM image_processor_assemblies AS a
         LEFT JOIN offline_projects AS p ON a.projectId = p.projectId
         LEFT JOIN offline_rooms AS r ON a.roomId = r.roomId
+        LEFT JOIN image_processor_photos AS ph ON ph.assemblyLocalId = a.id
+        GROUP BY a.id
         ORDER BY a.createdAt DESC
         """
     )

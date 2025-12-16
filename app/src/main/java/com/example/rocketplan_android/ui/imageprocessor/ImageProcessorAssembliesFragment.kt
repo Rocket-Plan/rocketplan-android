@@ -25,10 +25,12 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEn
 import com.example.rocketplan_android.data.local.model.ImageProcessorAssemblyWithDetails
 import com.example.rocketplan_android.databinding.FragmentImageProcessorAssembliesBinding
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 class ImageProcessorAssembliesFragment : Fragment() {
 
@@ -52,6 +54,7 @@ class ImageProcessorAssembliesFragment : Fragment() {
 
         adapter = ImageProcessorAssembliesAdapter(
             onRetryAssembly = { assemblyId -> viewModel.retryAssembly(assemblyId) },
+            onReconcileAssembly = { assemblyId -> viewModel.reconcileAssembly(assemblyId) },
             onDeleteAssembly = { entity -> confirmDeleteAssembly(entity) }
         )
         binding.assembliesRecyclerView.layoutManager = LinearLayoutManager(requireContext())
@@ -139,6 +142,24 @@ class ImageProcessorAssembliesFragment : Fragment() {
                                 )
                             )
                         }
+
+                        is ImageProcessorAssembliesEvent.ReconcileSucceeded -> {
+                            showMessage(
+                                getString(
+                                    R.string.toast_image_processor_reconcile_success,
+                                    event.status.toReadableStatus()
+                                )
+                            )
+                        }
+
+                        is ImageProcessorAssembliesEvent.ReconcileFailed -> {
+                            showMessage(
+                                getString(
+                                    R.string.toast_image_processor_reconcile_failed,
+                                    event.reason
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -184,6 +205,7 @@ class ImageProcessorAssembliesFragment : Fragment() {
 
 private class ImageProcessorAssembliesAdapter(
     private val onRetryAssembly: (String) -> Unit,
+    private val onReconcileAssembly: (String) -> Unit,
     private val onDeleteAssembly: (ImageProcessorAssemblyEntity) -> Unit
 ) : RecyclerView.Adapter<ImageProcessorAssembliesViewHolder>() {
 
@@ -197,7 +219,12 @@ private class ImageProcessorAssembliesAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ImageProcessorAssembliesViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_image_processor_assembly, parent, false)
-        return ImageProcessorAssembliesViewHolder(view, onRetryAssembly, onDeleteAssembly)
+        return ImageProcessorAssembliesViewHolder(
+            view,
+            onRetryAssembly,
+            onReconcileAssembly,
+            onDeleteAssembly
+        )
     }
 
     override fun onBindViewHolder(holder: ImageProcessorAssembliesViewHolder, position: Int) {
@@ -210,6 +237,7 @@ private class ImageProcessorAssembliesAdapter(
 private class ImageProcessorAssembliesViewHolder(
     itemView: View,
     private val onRetryAssembly: (String) -> Unit,
+    private val onReconcileAssembly: (String) -> Unit,
     private val onDeleteAssembly: (ImageProcessorAssemblyEntity) -> Unit
 ) : RecyclerView.ViewHolder(itemView) {
 
@@ -217,6 +245,9 @@ private class ImageProcessorAssembliesViewHolder(
     private val statusChip: TextView = itemView.findViewById(R.id.statusChip)
     private val destinationText: TextView = itemView.findViewById(R.id.destinationText)
     private val filesText: TextView = itemView.findViewById(R.id.filesText)
+    private val uploadProgressText: TextView = itemView.findViewById(R.id.uploadProgressText)
+    private val uploadBytesText: TextView = itemView.findViewById(R.id.uploadBytesText)
+    private val uploadProgressBar: LinearProgressIndicator = itemView.findViewById(R.id.uploadProgressBar)
     private val createdText: TextView = itemView.findViewById(R.id.createdText)
     private val updatedText: TextView = itemView.findViewById(R.id.updatedText)
     private val errorText: TextView = itemView.findViewById(R.id.errorText)
@@ -243,6 +274,7 @@ private class ImageProcessorAssembliesViewHolder(
             entity.totalFiles,
             formatBytes(entity.bytesReceived)
         )
+        bindProgress(status, item)
         createdText.text = itemView.context.getString(
             R.string.image_processor_assembly_created_format,
             formatDate(entity.createdAt)
@@ -270,18 +302,55 @@ private class ImageProcessorAssembliesViewHolder(
         deleteButton.setOnClickListener { onDeleteAssembly(entity) }
     }
 
+    private fun bindProgress(status: AssemblyStatus?, item: ImageProcessorAssemblyWithDetails) {
+        val entity = item.assembly
+        val totalFiles = entity.totalFiles
+        val uploadedCount = item.uploadedCount
+        val totalBytes = entity.bytesReceived
+        val uploadedBytes = item.bytesUploaded
+
+        uploadProgressText.text = itemView.context.getString(
+            R.string.image_processor_assembly_upload_progress_format,
+            uploadedCount,
+            totalFiles
+        )
+
+        val progressPercent = when {
+            status == AssemblyStatus.COMPLETED -> 100
+            totalBytes > 0 -> ((uploadedBytes.toDouble() / totalBytes.toDouble()) * 100).roundToInt()
+            totalFiles > 0 -> ((uploadedCount.toDouble() / totalFiles.toDouble()) * 100).roundToInt()
+            else -> 0
+        }.coerceIn(0, 100)
+
+        uploadProgressBar.isIndeterminate = totalFiles == 0 && totalBytes == 0L
+        uploadProgressBar.setProgressCompat(progressPercent, true)
+        uploadBytesText.text = String.format(Locale.getDefault(), "%d%%", progressPercent)
+    }
+
     private fun bindRetryButton(status: AssemblyStatus?, entity: ImageProcessorAssemblyEntity) {
+        val context = itemView.context
         val retryableStatuses = setOf(
             AssemblyStatus.FAILED,
             AssemblyStatus.WAITING_FOR_CONNECTIVITY,
             AssemblyStatus.CANCELLED
         )
-        val shouldShowRetry = status != null && retryableStatuses.contains(status)
-        retryButton.visibility = if (shouldShowRetry) View.VISIBLE else View.GONE
-        if (shouldShowRetry) {
-            retryButton.setOnClickListener { onRetryAssembly(entity.assemblyId) }
-        } else {
-            retryButton.setOnClickListener(null)
+        when {
+            status == AssemblyStatus.PROCESSING -> {
+                retryButton.visibility = View.VISIBLE
+                retryButton.text = context.getString(R.string.image_processor_reconcile_button)
+                retryButton.setOnClickListener { onReconcileAssembly(entity.assemblyId) }
+            }
+
+            status != null && retryableStatuses.contains(status) -> {
+                retryButton.visibility = View.VISIBLE
+                retryButton.text = context.getString(R.string.image_processor_retry_button)
+                retryButton.setOnClickListener { onRetryAssembly(entity.assemblyId) }
+            }
+
+            else -> {
+                retryButton.visibility = View.GONE
+                retryButton.setOnClickListener(null)
+            }
         }
     }
 
@@ -390,8 +459,17 @@ private class ImageProcessorAssembliesViewHolder(
         )
     }
 
-    private fun AssemblyStatus.toDisplayName(): String =
-        name.lowercase(Locale.getDefault())
-            .replace('_', ' ')
+}
+
+private fun AssemblyStatus.toDisplayName(): String =
+    name.lowercase(Locale.getDefault())
+        .replace('_', ' ')
+        .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+
+private fun String.toReadableStatus(): String {
+    val normalized = lowercase(Locale.getDefault())
+    val status = AssemblyStatus.fromValue(normalized)
+    return status?.toDisplayName()
+        ?: replace('_', ' ')
             .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
 }

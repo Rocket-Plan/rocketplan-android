@@ -67,9 +67,13 @@
     <string name="image_processor_assembly_target_project">Project</string>
     <string name="image_processor_assembly_destination_format">%1$s • %2$s</string>
     <string name="image_processor_assembly_date_format">%1$s • %2$s</string>
+    <string name="image_processor_assembly_upload_progress_format">Uploaded %1$d / %2$d files</string>
     <string name="image_processor_retry_button">Retry assembly</string>
+    <string name="image_processor_reconcile_button">Check status</string>
     <string name="toast_image_processor_retry_queued">Retry started. We\'ll try this assembly again now.</string>
     <string name="toast_image_processor_retry_failed">Unable to retry: %1$s</string>
+    <string name="toast_image_processor_reconcile_success">Checked server status: %1$s.</string>
+    <string name="toast_image_processor_reconcile_failed">Unable to check server status: %1$s</string>
     <string name="image_processor_delete_all_button">Delete all local assemblies</string>
     <string name="image_processor_delete_button">Delete local</string>
     <string name="image_processor_delete_single_title">Delete assembly?</string>

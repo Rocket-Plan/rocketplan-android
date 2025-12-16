@@ -216,9 +216,12 @@ class ProjectDetailViewModel(
                             ?: roomPhotos.firstNotNullOfOrNull { photo ->
                                 photo.preferredThumbnailSourceForRoomCard()
                             }
-                        val isLoadingPhotos = room.serverId == null ||
-                            (isProjectPhotoSyncing && resolvedPhotoCount > roomPhotos.size) ||
-                            (isProjectPhotoSyncing && roomPhotos.isEmpty())
+                        val hasAnyPhotos = resolvedPhotoCount > 0 || roomPhotos.isNotEmpty()
+                        val isLoadingPhotos = hasAnyPhotos && (
+                            room.serverId == null ||
+                                (isProjectPhotoSyncing && resolvedPhotoCount > roomPhotos.size) ||
+                                (isProjectPhotoSyncing && roomPhotos.isEmpty())
+                            )
                         val relatedRoomIds = buildSet {
                             add(room.roomId)
                             room.serverId?.let { add(it) }

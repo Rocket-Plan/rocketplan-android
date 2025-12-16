@@ -331,6 +331,72 @@ class ImageProcessorQueueManager(
         Result.success(Unit)
     }
 
+    suspend fun reconcileAssemblyStatus(assemblyId: String): Result<AssemblyStatus?> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val assembly = dao.getAssembly(assemblyId)
+                    ?: throw IllegalArgumentException("Assembly not found")
+                val photos = dao.getPhotosByAssemblyUuid(assemblyId)
+                val snapshot = fetchBackendStatus(assembly)
+                    ?: throw IllegalStateException("No status from backend")
+
+                val completedCount = snapshot.completedFiles ?: 0
+                val isComplete = snapshot.isComplete == true ||
+                    (assembly.totalFiles > 0 && completedCount >= assembly.totalFiles)
+
+                val mappedStatus = snapshot.status?.let { AssemblyStatus.fromValue(it) }
+
+                if (isComplete) {
+                    val now = System.currentTimeMillis()
+                    photos.forEach { photo ->
+                        if (photo.status != PhotoStatus.COMPLETED.value) {
+                            val updated = photo.copy(
+                                status = PhotoStatus.COMPLETED.value,
+                                lastUpdatedAt = now,
+                                errorMessage = null
+                            )
+                            dao.updatePhoto(updated)
+                        }
+                    }
+
+                    updateAssemblyStatus(assemblyId, AssemblyStatus.COMPLETED, null)
+
+                    remoteLogger?.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "Manual reconciliation marked assembly complete",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "server_status" to (snapshot.status ?: "unknown"),
+                            "completed_files" to completedCount.toString(),
+                            "total_files" to assembly.totalFiles.toString()
+                        )
+                    )
+
+                    onAssemblyCompleted(assemblyId, success = true, errorMessage = null)
+                    return@runCatching AssemblyStatus.COMPLETED
+                }
+
+                val targetStatus = mappedStatus ?: AssemblyStatus.PROCESSING
+                updateAssemblyStatus(assemblyId, targetStatus, assembly.errorMessage)
+
+                remoteLogger?.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "Manual reconciliation checked assembly status",
+                    metadata = mapOf(
+                        "assembly_id" to assemblyId,
+                        "server_status" to (snapshot.status ?: "unknown"),
+                        "completed_files" to completedCount.toString(),
+                        "remaining_files" to (snapshot.remainingFiles ?: -1).toString(),
+                        "is_complete" to (snapshot.isComplete ?: false).toString()
+                    )
+                )
+
+                targetStatus
+            }
+        }
+
     private suspend fun uploadAssembly(assembly: ImageProcessorAssemblyEntity) {
         try {
             Log.d(TAG, "📸 Uploading assembly ${assembly.assemblyId}")
