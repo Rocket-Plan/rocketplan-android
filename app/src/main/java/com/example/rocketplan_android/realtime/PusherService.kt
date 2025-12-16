@@ -113,6 +113,10 @@ class PusherService(
             }
 
             val update = parseUpdate(data)
+            Log.d(
+                TAG,
+                "🔔 Pusher update: channel=$channelName event=$eventName assembly=${update?.assemblyId ?: "unknown"} status=${update?.status ?: "none"}"
+            )
             if (update == null) {
                 remoteLogger?.log(
                     level = LogLevel.WARN,

@@ -58,7 +58,10 @@ interface ImageProcessorDao {
             COALESCE(SUM(ph.bytesUploaded), 0) AS bytesUploaded
         FROM image_processor_assemblies AS a
         LEFT JOIN offline_projects AS p ON a.projectId = p.projectId
-        LEFT JOIN offline_rooms AS r ON a.roomId = r.roomId
+        LEFT JOIN offline_rooms AS r ON (
+            a.roomId = r.roomId
+            OR a.roomId = r.serverId
+        )
         LEFT JOIN image_processor_photos AS ph ON ph.assemblyLocalId = a.id
         GROUP BY a.id
         ORDER BY a.createdAt DESC
