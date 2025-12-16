@@ -121,6 +121,8 @@ UI_TAGS=(
   "ProjectDetailFrag:*"
   "ProjectsViewModel:*"
   "ProjectsFragment:*"
+  "MapViewModel:*"
+  "MapFragment:*"
   "RoomDetailVM:*"
   "RoomDetailFrag:*"
   "MainActivity:*"
