@@ -15,11 +15,14 @@ import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.navigation.NavigationView
 import androidx.navigation.findNavController
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination
 import androidx.core.view.isVisible
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import android.graphics.Color
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -33,6 +36,7 @@ import com.example.rocketplan_android.databinding.ActivityMainBinding
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.sync.SyncQueueManager
+import com.google.android.material.appbar.AppBarLayout
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -56,6 +60,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var authRepository: AuthRepository
     private lateinit var syncQueueManager: SyncQueueManager
     private lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
+    private lateinit var contentLayoutParams: CoordinatorLayout.LayoutParams
+    private lateinit var scrollingContentBehavior: AppBarLayout.ScrollingViewBehavior
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
@@ -81,6 +87,13 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        contentLayoutParams =
+            binding.appBarMain.contentMain.root.layoutParams as CoordinatorLayout.LayoutParams
+        scrollingContentBehavior =
+            (contentLayoutParams.behavior as? AppBarLayout.ScrollingViewBehavior) ?:
+            AppBarLayout.ScrollingViewBehavior()
+        contentLayoutParams.behavior = scrollingContentBehavior
+        binding.appBarMain.contentMain.root.layoutParams = contentLayoutParams
 
         setSupportActionBar(binding.appBarMain.toolbar)
 
@@ -139,6 +152,7 @@ class MainActivity : AppCompatActivity() {
                 destination.id == R.id.batchCaptureFragment ||
                 destination.id == R.id.flirCaptureFragment
             binding.appBarMain.appBarLayout.isVisible = !shouldHideAppBar
+            updateContentLayoutForAppBar(shouldHideAppBar)
             setFullscreen(FULLSCREEN_DESTINATIONS.contains(destination.id))
 
             when {
@@ -196,7 +210,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Check if user is logged in and navigate to appropriate screen
      */
-    private fun checkAuthenticationStatus(navController: androidx.navigation.NavController) {
+    private fun checkAuthenticationStatus(navController: NavController) {
         lifecycleScope.launch {
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "Checking authentication status...")
@@ -205,26 +219,35 @@ class MainActivity : AppCompatActivity() {
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "User logged in: $isLoggedIn")
             }
-            if (isLoggedIn) {
-                preloadImageProcessorConfiguration()
-            }
+            if (!isLoggedIn) return@launch
 
-            // Wait for navigation graph to be ready
-            navController.addOnDestinationChangedListener { controller, destination, _ ->
-                if (BuildConfig.ENABLE_LOGGING) {
-                    Log.d(TAG, "Navigation destination changed: ${destination.label}")
-                }
-                // Only navigate once, on first destination
-                if (isLoggedIn && when (destination.id) {
-                        R.id.emailCheckFragment,
-                        R.id.loginFragment,
-                        R.id.signUpFragment -> true
-                        else -> false
-                    }
+            preloadImageProcessorConfiguration()
+
+            val authDestinations = setOf(
+                R.id.emailCheckFragment,
+                R.id.loginFragment,
+                R.id.signUpFragment
+            )
+
+            // Wait for navigation graph to be ready, then redirect once
+            val authRedirectListener = object : NavController.OnDestinationChangedListener {
+                override fun onDestinationChanged(
+                    controller: NavController,
+                    destination: NavDestination,
+                    arguments: Bundle?
                 ) {
+                    if (!authDestinations.contains(destination.id)) return
+
+                    if (BuildConfig.ENABLE_LOGGING) {
+                        Log.d(TAG, "Navigation destination changed: ${destination.label}")
+                    }
+
+                    controller.removeOnDestinationChangedListener(this)
+
                     if (BuildConfig.ENABLE_LOGGING) {
                         Log.d(TAG, "User authenticated, navigating to projects")
                     }
+
                     val navOptions = androidx.navigation.NavOptions.Builder()
                         .setPopUpTo(R.id.emailCheckFragment, true)
                         .build()
@@ -234,6 +257,8 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
+
+            navController.addOnDestinationChangedListener(authRedirectListener)
         }
     }
 
@@ -499,6 +524,19 @@ class MainActivity : AppCompatActivity() {
         } else {
             window.statusBarColor = getColor(R.color.black)
             controller.show(WindowInsetsCompat.Type.statusBars())
+        }
+    }
+
+    private fun updateContentLayoutForAppBar(shouldHideAppBar: Boolean) {
+        if (shouldHideAppBar) {
+            binding.appBarMain.appBarLayout.setExpanded(true, false)
+        }
+
+        val desiredBehavior = if (shouldHideAppBar) null else scrollingContentBehavior
+        if (contentLayoutParams.behavior !== desiredBehavior) {
+            contentLayoutParams.behavior = desiredBehavior
+            binding.appBarMain.contentMain.root.layoutParams = contentLayoutParams
+            binding.appBarMain.contentMain.root.requestLayout()
         }
     }
 

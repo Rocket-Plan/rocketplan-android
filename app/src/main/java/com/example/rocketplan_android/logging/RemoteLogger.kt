@@ -99,6 +99,20 @@ class RemoteLogger(
         }.getOrDefault(false)
     }
 
+    private suspend fun ensureAuthToken(): Boolean {
+        val existing = RetrofitClient.getAuthToken()
+        if (!existing.isNullOrBlank()) {
+            return true
+        }
+
+        val stored = secureStorage.getAuthTokenSync()
+            ?.takeIf { it.isNotBlank() }
+            ?: return false
+
+        RetrofitClient.setAuthToken(stored)
+        return true
+    }
+
     private fun scheduleProcessing(delayMillis: Long) {
         val now = System.currentTimeMillis()
         val target = now + delayMillis
@@ -120,6 +134,11 @@ class RemoteLogger(
 
     private suspend fun processQueue() {
         mutex.withLock {
+            if (!ensureAuthToken()) {
+                scheduleProcessing(AUTH_RETRY_DELAY_MS)
+                return
+            }
+
             if (!isNetworkAvailable()) {
                 scheduleProcessing(NETWORK_RETRY_DELAY_MS)
                 return
@@ -222,6 +241,7 @@ class RemoteLogger(
             sessionId = sessionId,
             appVersion = AppConfig.versionName,
             buildNumber = AppConfig.versionCode.toString(),
+            platform = RemoteLogBatch.PLATFORM_ANDROID,
             logs = entries
         )
 
@@ -316,7 +336,7 @@ class RemoteLogger(
 
     private fun isRetryableStatusCode(code: Int): Boolean {
         return when (code) {
-            429, 408, 423 -> true
+            401, 429, 408, 423 -> true
             in 500..599 -> true
             else -> false
         }
@@ -345,5 +365,6 @@ class RemoteLogger(
         private const val INITIAL_BACKOFF_SECONDS = 5L
         private const val MAX_BACKOFF_SECONDS = 1800L
         private const val NETWORK_RETRY_DELAY_MS = 5_000L
+        private const val AUTH_RETRY_DELAY_MS = 5_000L
     }
 }

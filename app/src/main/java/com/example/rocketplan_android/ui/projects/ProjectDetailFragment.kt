@@ -317,8 +317,11 @@ class ProjectDetailFragment : Fragment() {
             return
         }
 
+        val shouldShowRoomsSpinner =
+            roomsSectionIsLoading || (isBackgroundSyncing && roomsAdapter.currentList.isEmpty())
+
         when {
-            roomsSectionIsLoading -> {
+            shouldShowRoomsSpinner -> {
                 roomsProgressBar.isVisible = true
                 roomsRecyclerView.isVisible = false
                 roomsPlaceholder.isVisible = false
@@ -337,7 +340,8 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private fun updateRoomCreationUi() {
-        roomActionsProgressBar.isVisible = isBackgroundSyncing
+        // Keep the add-room row static; room cards already show sync spinners.
+        roomActionsProgressBar.isVisible = false
         addRoomCard.isEnabled = !isBackgroundSyncing
         addRoomCard.isClickable = !isBackgroundSyncing
         addExteriorCard.isEnabled = !isBackgroundSyncing

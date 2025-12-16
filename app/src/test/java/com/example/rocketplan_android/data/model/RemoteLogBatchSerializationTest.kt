@@ -33,5 +33,6 @@ class RemoteLogBatchSerializationTest {
 
         assertThat(jsonObject.get("build_number").asString).isEqualTo("12345")
         assertThat(jsonObject.has("buildNumber")).isFalse()
+        assertThat(jsonObject.get("platform").asString).isEqualTo(RemoteLogBatch.PLATFORM_ANDROID)
     }
 }

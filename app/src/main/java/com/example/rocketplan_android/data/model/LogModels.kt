@@ -28,9 +28,14 @@ data class RemoteLogBatch(
     val appVersion: String,
     @SerializedName("build_number")
     val buildNumber: String?,
-    val platform: String = "Android",
+    @SerializedName("platform")
+    val platform: String = PLATFORM_ANDROID,
     val logs: List<RemoteLogEntry>
-)
+) {
+    companion object {
+        const val PLATFORM_ANDROID = "android"
+    }
+}
 
 data class RemoteLogResponse(
     val success: Boolean = true,
