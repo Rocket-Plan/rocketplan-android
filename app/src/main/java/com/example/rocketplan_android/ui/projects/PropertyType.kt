@@ -22,8 +22,13 @@ enum class PropertyType(
 
     companion object {
         fun fromApiValue(value: String?): PropertyType? =
-            value?.let { api ->
-                entries.firstOrNull { it.apiValue.equals(api, ignoreCase = true) }
-            }
+            value
+                ?.trim()
+                ?.lowercase()
+                ?.replace("[^a-z0-9]+".toRegex(), "_")
+                ?.trim('_')
+                ?.let { normalized ->
+                    entries.firstOrNull { it.apiValue == normalized }
+                }
     }
 }

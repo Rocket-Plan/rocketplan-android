@@ -48,7 +48,7 @@ class RemoteLogger(
     private var scheduledAtMillis: Long? = null
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            scheduleProcessing(0)
+            scheduleDelayedFlush()
         }
     }
 
@@ -64,7 +64,7 @@ class RemoteLogger(
                     Log.w(TAG, "Unable to register network callback: ${it.localizedMessage}")
                 }
         }
-        scheduleProcessing(0)
+        scheduleDelayedFlush()
     }
 
     fun log(
@@ -83,7 +83,7 @@ class RemoteLogger(
         )
         scope.launch {
             store.enqueue(entry)
-            scheduleProcessing(0)
+            scheduleDelayedFlush()
         }
     }
 
@@ -130,6 +130,13 @@ class RemoteLogger(
             scheduledJob = null
             processQueue()
         }
+    }
+
+    private fun scheduleDelayedFlush() {
+        if (scheduledJob?.isActive == true) {
+            return
+        }
+        scheduleProcessing(PERIODIC_FLUSH_INTERVAL_MS)
     }
 
     private suspend fun processQueue() {
@@ -359,6 +366,7 @@ class RemoteLogger(
 
     companion object {
         private const val TAG = "RemoteLogger"
+        private const val PERIODIC_FLUSH_INTERVAL_MS = 10 * 60 * 1000L
         private const val MAX_BATCH_SIZE = 50
         private const val MAX_RETRY_QUEUE_SIZE = 10
         private const val MAX_RETRY_ATTEMPTS = 11

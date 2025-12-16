@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.map
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
@@ -48,6 +49,11 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 val myProjects = mappedProjects.filter { assignedIds.contains(it.projectId) }
                 val wipProjects = mappedProjects.filter { it.matchesStatus(ProjectStatus.WIP) }
                 val markers = wipProjects.mapNotNull { it.toMarker() }
+                val missingCoords = mappedProjects.count { it.latitude == null || it.longitude == null }
+                val missingSample = mappedProjects
+                    .filter { it.latitude == null || it.longitude == null }
+                    .take(3)
+                    .joinToString { "[${it.projectId}] ${it.title}" }
 
                 _uiState.value = MapUiState.Ready(
                     myProjects = myProjects,
@@ -56,6 +62,12 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
                 )
                 _isRefreshing.value = false
 
+                Log.d(
+                    TAG,
+                    "Map data: db=${projectsWithProperty.size}, filtered=${filteredProjects.size}, " +
+                        "assigned=${assignedIds.size}, my=${myProjects.size}, wip=${wipProjects.size}, " +
+                        "markers=${markers.size}, missingCoords=$missingCoords sample=$missingSample"
+                )
                 remoteLogger.log(
                     level = LogLevel.DEBUG,
                     tag = TAG,

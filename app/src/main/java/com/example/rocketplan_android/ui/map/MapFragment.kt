@@ -33,6 +33,7 @@ import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.tasks.CancellationTokenSource
 import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.launch
+import android.util.Log
 
 class MapFragment : Fragment() {
 
@@ -114,6 +115,7 @@ class MapFragment : Fragment() {
             applyMapStyle(map)
             enableMyLocation()
             updateMarkers(latestMarkers)
+            Log.d(TAG, "Map ready, markers=${latestMarkers.size}")
         }
     }
 
@@ -124,6 +126,7 @@ class MapFragment : Fragment() {
             addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
                     selectedTab = if (tab?.position == 1) MapTab.WIP else MapTab.MY_PROJECTS
+                    Log.d(TAG, "Tab selected: $selectedTab")
                     renderLatestState()
                 }
 
@@ -219,6 +222,9 @@ class MapFragment : Fragment() {
         val map = googleMap ?: return
         map.clear()
 
+        val sample = markers.take(3).joinToString { "[${it.projectId}] ${it.title}" }
+        Log.d(TAG, "Updating markers: count=${markers.size}, sample=$sample")
+
         markers.forEach { marker ->
             val position = LatLng(marker.latitude, marker.longitude)
             map.addMarker(
@@ -288,6 +294,7 @@ class MapFragment : Fragment() {
             location?.let {
                 lastKnownLocation = it
                 userHasMovedMap = false
+                Log.d(TAG, "Moving to user location: ${it.latitude}, ${it.longitude}")
                 googleMap?.animateCamera(
                     CameraUpdateFactory.newLatLngZoom(
                         LatLng(it.latitude, it.longitude),
@@ -296,6 +303,7 @@ class MapFragment : Fragment() {
                 )
             }
         }.addOnFailureListener {
+            Log.w(TAG, "getCurrentLocation failed: ${it.localizedMessage}")
             Toast.makeText(
                 requireContext(),
                 R.string.map_location_unavailable,
@@ -309,6 +317,7 @@ class MapFragment : Fragment() {
             googleMap?.isMyLocationEnabled = true
             fetchLastKnownLocation()
         } else {
+            Log.d(TAG, "Requesting location permission for My Location")
             locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
@@ -318,6 +327,7 @@ class MapFragment : Fragment() {
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
                 lastKnownLocation = location
+                Log.d(TAG, "Last known location: ${location.latitude}, ${location.longitude}")
             }
         }
     }
@@ -335,6 +345,7 @@ class MapFragment : Fragment() {
     }
 
     private companion object {
+        private const val TAG = "MapFragment"
         private val DEFAULT_LOCATION = LatLng(49.283884, -123.077592)
         private const val DEFAULT_ZOOM = 10f
     }
