@@ -12,6 +12,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.content.getSystemService
 import androidx.core.view.doOnNextLayout
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -35,6 +36,9 @@ class LoginFragment : Fragment() {
     companion object {
         private const val TAG = "LoginFragment"
     }
+
+    private val allowThirdPartyAuth: Boolean
+        get() = !BuildConfig.HAS_FLIR_SUPPORT
 
     private var _binding: FragmentLoginBinding? = null
     private val binding get() = _binding!!
@@ -130,9 +134,14 @@ class LoginFragment : Fragment() {
             viewModel.forgotPassword()
         }
 
-        binding.googleSignInButton.setOnClickListener {
-            hideKeyboard()
-            signInWithGoogle()
+        if (allowThirdPartyAuth) {
+            binding.googleSignInButton.setOnClickListener {
+                hideKeyboard()
+                signInWithGoogle()
+            }
+        } else {
+            binding.googleSignInButton.isVisible = false
+            binding.orDivider.isVisible = false
         }
     }
 
@@ -179,7 +188,7 @@ class LoginFragment : Fragment() {
             binding.signInButton.isEnabled = !isLoading && (viewModel.emailError.value == null && viewModel.passwordError.value == null)
             binding.emailInputLayout.isEnabled = !isLoading
             binding.passwordInputLayout.isEnabled = !isLoading
-            binding.googleSignInButton.isEnabled = !isLoading
+            binding.googleSignInButton.isEnabled = allowThirdPartyAuth && !isLoading
         }
 
         viewModel.navigateToForgotPassword.observe(viewLifecycleOwner) { email ->
@@ -210,6 +219,13 @@ class LoginFragment : Fragment() {
      * Matches iOS implementation using backend-driven OAuth
      */
     private fun signInWithGoogle() {
+        if (!allowThirdPartyAuth) {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Google Sign-In disabled for FLIR build")
+            }
+            return
+        }
+
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "Starting Google OAuth flow...")
         }

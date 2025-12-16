@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.ui.projects
 
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.util.Log
 import android.view.Gravity
@@ -11,9 +12,14 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.content.ContextCompat
+import androidx.core.view.ViewCompat
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
@@ -23,9 +29,13 @@ import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.progressindicator.LinearProgressIndicator
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 class ProjectsFragment : Fragment() {
 
@@ -44,6 +54,13 @@ class ProjectsFragment : Fragment() {
     private lateinit var userInitials: TextView
     private lateinit var refreshButton: ImageView
     private lateinit var fabNewProject: FloatingActionButton
+    private lateinit var assemblyUploadBubble: View
+    private lateinit var assemblyUploadIconProgress: CircularProgressIndicator
+    private lateinit var assemblyUploadIconCounter: TextView
+    private lateinit var assemblyUploadSubtitle: TextView
+    private lateinit var assemblyUploadPhotos: TextView
+    private lateinit var assemblyUploadStatus: TextView
+    private lateinit var assemblyUploadProgress: LinearProgressIndicator
     private lateinit var tabs: List<ProjectTab>
     private var initialTabKey: String? = null
 
@@ -71,9 +88,17 @@ class ProjectsFragment : Fragment() {
         userInitials = view.findViewById(R.id.userInitials)
         refreshButton = view.findViewById(R.id.refreshButton)
         fabNewProject = view.findViewById(R.id.fabNewProject)
+        assemblyUploadBubble = view.findViewById(R.id.assemblyUploadBubble)
+        assemblyUploadIconProgress = view.findViewById(R.id.assemblyUploadIconProgress)
+        assemblyUploadIconCounter = view.findViewById(R.id.assemblyUploadIconCounter)
+        assemblyUploadSubtitle = view.findViewById(R.id.assemblyUploadSubtitle)
+        assemblyUploadPhotos = view.findViewById(R.id.assemblyUploadPhotos)
+        assemblyUploadStatus = view.findViewById(R.id.assemblyUploadStatus)
+        assemblyUploadProgress = view.findViewById(R.id.assemblyUploadProgress)
 
         setupViewPager()
         setupUserInterface()
+        observeAssemblyUploads()
     }
 
     private fun setupViewPager() {
@@ -112,6 +137,79 @@ class ProjectsFragment : Fragment() {
 
         userInitials.setOnClickListener {
             showProfileMenu(it)
+        }
+    }
+
+    private fun observeAssemblyUploads() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.activeAssemblyUpload.collectLatest { state ->
+                    if (state == null) {
+                        assemblyUploadBubble.isVisible = false
+                        return@collectLatest
+                    }
+
+                    assemblyUploadBubble.isVisible = true
+                    val roomLabel = state.roomName ?: getString(R.string.projects_uploading_project_level)
+                    val totalPhotos = state.totalPhotos.coerceAtLeast(0)
+                    val completedPhotos = state.completedPhotos.coerceAtLeast(0)
+                    val cappedCompletedPhotos = if (totalPhotos > 0) {
+                        completedPhotos.coerceAtMost(totalPhotos)
+                    } else {
+                        completedPhotos
+                    }
+                    assemblyUploadSubtitle.text = getString(
+                        R.string.projects_uploading_destination,
+                        state.projectName,
+                        roomLabel
+                    )
+                    assemblyUploadPhotos.text = getString(
+                        R.string.projects_uploading_photo_count,
+                        cappedCompletedPhotos,
+                        totalPhotos
+                    )
+                    assemblyUploadProgress.setProgressCompat(state.progressPercent, true)
+                    assemblyUploadIconCounter.text = getString(
+                        R.string.projects_uploading_photo_counter,
+                        cappedCompletedPhotos,
+                        totalPhotos
+                    )
+
+                    if (totalPhotos == 0) {
+                        assemblyUploadIconProgress.isIndeterminate = true
+                        assemblyUploadIconProgress.progress = 0
+                    } else {
+                        assemblyUploadIconProgress.isIndeterminate = false
+                        val spinnerProgress = ((cappedCompletedPhotos.toDouble() / totalPhotos.toDouble()) * 100)
+                            .roundToInt()
+                            .coerceIn(0, 100)
+                        assemblyUploadIconProgress.setProgressCompat(spinnerProgress, true)
+                    }
+
+                    val statusText = if (state.isPaused) {
+                        getString(R.string.projects_uploading_paused)
+                    } else {
+                        getString(R.string.projects_uploading_progress, state.progressPercent)
+                    }
+                    assemblyUploadStatus.text = statusText
+
+                    val chipColor = if (state.isPaused) {
+                        ContextCompat.getColor(requireContext(), R.color.error_fill)
+                    } else {
+                        ContextCompat.getColor(requireContext(), R.color.light_purple)
+                    }
+                    val textColor = if (state.isPaused) {
+                        ContextCompat.getColor(requireContext(), R.color.dark_red)
+                    } else {
+                        ContextCompat.getColor(requireContext(), R.color.main_purple)
+                    }
+                    ViewCompat.setBackgroundTintList(
+                        assemblyUploadStatus,
+                        ColorStateList.valueOf(chipColor)
+                    )
+                    assemblyUploadStatus.setTextColor(textColor)
+                }
+            }
         }
     }
 

@@ -120,6 +120,7 @@ private fun Throwable.isMissingOnServer(): Boolean = (this as? HttpException)?.c
 private fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
 
 data class PhotoDeletionResult(val synced: Boolean)
+data class RoomDeletionResult(val synced: Boolean)
 
 class OfflineSyncRepository(
     private val api: OfflineSyncApi,
@@ -824,6 +825,69 @@ class OfflineSyncRepository(
         }
     }
 
+    suspend fun deleteRoom(projectId: Long, roomId: Long): RoomDeletionResult = withContext(ioDispatcher) {
+        val room = localDataService.getRoom(roomId)
+            ?: throw IllegalArgumentException("Room not found: $roomId")
+
+        Log.d(
+            "API",
+            "🗑️ [deleteRoom] Marking room for deletion (projectId=$projectId, localId=${room.roomId}, serverId=${room.serverId})"
+        )
+
+        val timestamp = now()
+        val marked = room.copy(
+            isDeleted = true,
+            isDirty = true,
+            syncStatus = SyncStatus.PENDING,
+            updatedAt = timestamp
+        )
+        localDataService.saveRooms(listOf(marked))
+
+        val snapshotRoomId = room.serverId ?: room.roomId
+        runCatching { localDataService.clearRoomPhotoSnapshot(snapshotRoomId) }
+            .onFailure {
+                Log.w("API", "⚠️ [deleteRoom] Failed to clear photo snapshot for roomId=$snapshotRoomId", it)
+            }
+
+        val photosToDelete = localDataService.cascadeDeleteRoom(room)
+        photosToDelete.forEach { photo -> removePhotoFiles(photo) }
+
+        if (room.serverId == null) {
+            localDataService.removeSyncOperationsForEntity(entityType = "room", entityId = room.roomId)
+            val cleaned = marked.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+            localDataService.saveRooms(listOf(cleaned))
+            return@withContext RoomDeletionResult(synced = true)
+        }
+
+        val deleteRequest = DeleteWithTimestampRequest(updatedAt = marked.updatedAt.toApiTimestamp())
+        val synced = runCatching {
+            api.deleteRoom(room.serverId, deleteRequest)
+        }.recoverCatching { error ->
+            when {
+                error.isMissingOnServer() -> null
+                error.isConflict() -> api.deleteRoom(room.serverId, DeleteWithTimestampRequest())
+                else -> throw error
+            }
+        }.onFailure {
+            Log.w("API", "⚠️ [deleteRoom] Failed to delete room ${room.serverId}", it)
+        }.isSuccess
+
+        if (synced) {
+            val cleaned = marked.copy(
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = now()
+            )
+            localDataService.saveRooms(listOf(cleaned))
+        }
+
+        RoomDeletionResult(synced = synced)
+    }
+
     suspend fun deletePhoto(photoId: Long): PhotoDeletionResult = withContext(ioDispatcher) {
         val photo = localDataService.getPhoto(photoId)
             ?: throw IllegalArgumentException("Photo not found: $photoId")
@@ -1278,6 +1342,8 @@ class OfflineSyncRepository(
             .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending moisture logs", it) }
         runCatching { syncPendingPhotoDeletions(projectId) }
             .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending photo deletions", it) }
+        runCatching { syncPendingRoomDeletions(projectId) }
+            .onFailure { Log.w("API", "⚠️ [syncProjectMetadata] Failed to push pending room deletions", it) }
 
         val notesCheckpointKey = projectNotesKey(projectId)
         val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
@@ -1913,6 +1979,18 @@ class OfflineSyncRepository(
             runCatching { deletePhoto(photo.photoId) }
                 .onFailure {
                     Log.w("API", "⚠️ [syncPendingPhotoDeletions] Failed to delete photo ${photo.photoId}", it)
+                }
+        }
+    }
+
+    private suspend fun syncPendingRoomDeletions(projectId: Long) {
+        val pending = localDataService.getPendingRoomDeletions(projectId)
+        if (pending.isEmpty()) return
+
+        pending.forEach { room ->
+            runCatching { deleteRoom(projectId, room.roomId) }
+                .onFailure {
+                    Log.w("API", "⚠️ [syncPendingRoomDeletions] Failed to delete room ${room.roomId}", it)
                 }
         }
     }

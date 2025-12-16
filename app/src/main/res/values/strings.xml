@@ -41,6 +41,11 @@
     <string name="photo_deleted">Photo deleted</string>
     <string name="photo_delete_failed">Unable to delete this photo right now.</string>
     <string name="photo_delete_pending_sync">Photo deleted. We will finish syncing shortly.</string>
+    <string name="room_delete_title">Delete room</string>
+    <string name="room_delete_message">Delete \"%1$s\"? This removes the room and its items from this project.</string>
+    <string name="room_deleted">Room deleted</string>
+    <string name="room_delete_pending_sync">Room deleted. We will finish syncing shortly.</string>
+    <string name="room_delete_failed">Unable to delete this room right now.</string>
     <string name="delete_project_not_available">Open a project to delete it.</string>
     <string name="toast_image_processor_config_loaded">Image processor config ready (%1$s)</string>
     <string name="toast_image_processor_config_failed">Failed to load image processor config: %1$s</string>
@@ -54,10 +59,13 @@
     <string name="image_processor_assembly_created_format">Created %1$s</string>
     <string name="image_processor_assembly_updated_format">Updated %1$s</string>
     <string name="image_processor_assembly_error_format">Failed: %1$s</string>
-    <string name="image_processor_assembly_target_entity">%1$s #%2$d</string>
-    <string name="image_processor_assembly_target_room">Room #%1$d</string>
+    <string name="image_processor_assembly_target_entity">%1$s #%2$s</string>
+    <string name="image_processor_assembly_target_room">Room %1$s</string>
+    <string name="image_processor_assembly_room_fallback">#%1$d</string>
+    <string name="image_processor_assembly_project_name">Project %1$s</string>
+    <string name="image_processor_assembly_project_fallback">Project #%1$d</string>
     <string name="image_processor_assembly_target_project">Project</string>
-    <string name="image_processor_assembly_destination_format">Project #%1$d • %2$s</string>
+    <string name="image_processor_assembly_destination_format">%1$s • %2$s</string>
     <string name="image_processor_assembly_date_format">%1$s • %2$s</string>
     <string name="image_processor_retry_button">Retry assembly</string>
     <string name="toast_image_processor_retry_queued">Retry started. We\'ll try this assembly again now.</string>
@@ -503,6 +511,18 @@
     <string name="project_status_paid">Paid</string>
     <string name="project_status_recon">Recon</string>
     <string name="projects_tab_my_projects">My Projects</string>
+    <string name="projects_uploading_title">Uploading photos</string>
+    <string name="projects_uploading_progress">Uploading (%1$d%%)</string>
+    <string name="projects_uploading_paused">Paused</string>
+    <string name="projects_uploading_photo_count">%1$d of %2$d photos</string>
+    <string name="projects_uploading_photo_counter">%1$d/%2$d</string>
+    <string name="projects_uploading_photo_counter_placeholder">0/0</string>
+    <string name="projects_uploading_destination">%1$s • %2$s</string>
+    <string name="projects_uploading_project_level">Project</string>
+    <string name="projects_uploading_content_description">Assembly upload status</string>
+    <string name="projects_uploading_placeholder_destination">Project • Room</string>
+    <string name="projects_uploading_photo_placeholder">0 of 0 photos</string>
+    <string name="projects_uploading_status_default">Uploading</string>
 
     <!-- Project Type Selection -->
     <string name="project_type_title">This Project Is…</string>

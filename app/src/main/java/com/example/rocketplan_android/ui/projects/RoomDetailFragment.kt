@@ -59,6 +59,7 @@ class RoomDetailFragment : Fragment() {
 
     private lateinit var roomIcon: ImageView
     private lateinit var roomTitle: TextView
+    private lateinit var deleteRoomButton: MaterialButton
     private lateinit var tabToggleGroup: MaterialButtonToggleGroup
     private lateinit var photosTabButton: MaterialButton
     private lateinit var damagesTabButton: MaterialButton
@@ -151,6 +152,7 @@ class RoomDetailFragment : Fragment() {
 
     private var scopePickerAdapter: ScopePickerAdapter? = null
     private var roomTitleBase: String = ""
+    private var isRoomLoaded: Boolean = false
 
 
     override fun onCreateView(
@@ -184,6 +186,7 @@ class RoomDetailFragment : Fragment() {
     private fun bindViews(root: View) {
         roomIcon = root.findViewById(R.id.roomIcon)
         roomTitle = root.findViewById(R.id.roomTitle)
+        deleteRoomButton = root.findViewById(R.id.deleteRoomButton)
         tabToggleGroup = root.findViewById(R.id.roomTabGroup)
         photosTabButton = root.findViewById(R.id.roomPhotosTabButton)
         damagesTabButton = root.findViewById(R.id.roomDamagesTabButton)
@@ -390,6 +393,7 @@ class RoomDetailFragment : Fragment() {
                 )
             findNavController().navigate(action)
         }
+        deleteRoomButton.setOnClickListener { confirmDeleteRoom() }
     }
 
     private fun resolveNoteCategoryId(): Long {
@@ -398,6 +402,20 @@ class RoomDetailFragment : Fragment() {
             RoomDetailTab.SCOPE -> 1L // Scope notes share the roomDamage category for now
             RoomDetailTab.PHOTOS -> 2L // Matches iOS Category.roomPhoto raw value
         }
+    }
+
+    private fun confirmDeleteRoom() {
+        val roomName = roomTitleBase.ifBlank { roomTitle.text.toString() }.ifBlank {
+            getString(R.string.room_delete_title)
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.room_delete_title))
+            .setMessage(getString(R.string.room_delete_message, roomName))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                viewModel.deleteRoom()
+            }
+            .show()
     }
 
     private fun openScopePickerScreen() {
@@ -906,15 +924,34 @@ class RoomDetailFragment : Fragment() {
                         updatePhotoVisibility()
                     }
                 }
+                launch {
+                    viewModel.isDeleting.collect { isDeleting ->
+                        updateDeleteButton(isDeleting)
+                    }
+                }
+                launch {
+                    viewModel.events.collect { event ->
+                        when (event) {
+                            is RoomDetailEvent.RoomDeleted -> handleRoomDeleted(event.synced)
+                            is RoomDetailEvent.Error -> {
+                                val message = event.message.ifBlank { getString(R.string.room_delete_failed) }
+                                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
     private fun showLoading() {
         latestPhotoCount = 0
+        isRoomLoaded = false
         loadingOverlay.isVisible = true
         roomTitleBase = ""
         roomTitle.text = ""
+        deleteRoomButton.isEnabled = false
+        deleteRoomButton.alpha = 0.6f
         photosRecyclerView.isVisible = false
         damagesRecyclerView.isVisible = false
         scopeRecyclerView.isVisible = false
@@ -932,9 +969,11 @@ class RoomDetailFragment : Fragment() {
     private fun renderState(state: RoomDetailUiState.Ready) {
         Log.d(TAG, "🎛 renderState: photoCount=${state.photoCount}, albums=${state.albums.size}")
         loadingOverlay.isVisible = false
+        isRoomLoaded = true
         roomTitleBase = state.header.title
         roomTitle.text = state.header.title
         roomIcon.setImageResource(state.header.iconRes)
+        updateDeleteButton(viewModel.isDeleting.value)
         updateRoomTitleForTab(viewModel.selectedTab.value)
         noteCardSummary.text = state.header.noteSummary
         latestPhotoCount = state.photoCount
@@ -1007,6 +1046,22 @@ class RoomDetailFragment : Fragment() {
             RoomDetailTab.SCOPE -> getString(R.string.scope_sheet)
         }
         roomTitle.text = "$baseTitle $suffix"
+    }
+
+    private fun updateDeleteButton(isDeleting: Boolean) {
+        val enabled = isRoomLoaded && !isDeleting
+        deleteRoomButton.isEnabled = enabled
+        deleteRoomButton.alpha = if (enabled) 1f else 0.6f
+    }
+
+    private fun handleRoomDeleted(synced: Boolean) {
+        val message = if (synced) {
+            getString(R.string.room_deleted)
+        } else {
+            getString(R.string.room_delete_pending_sync)
+        }
+        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+        findNavController().popBackStack()
     }
 
     private fun openPhotoViewer(photo: RoomPhotoItem) {

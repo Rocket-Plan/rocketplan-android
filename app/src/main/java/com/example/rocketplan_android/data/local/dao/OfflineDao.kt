@@ -114,6 +114,9 @@ interface OfflineDao {
     @Query("SELECT MAX(updatedAt) FROM offline_rooms WHERE locationId = :locationId AND isDeleted = 0")
     suspend fun getLatestRoomUpdatedAt(locationId: Long): Date?
 
+    @Query("SELECT * FROM offline_rooms WHERE projectId = :projectId AND isDeleted = 1 AND isDirty = 1 AND serverId IS NOT NULL")
+    suspend fun getPendingRoomDeletions(projectId: Long): List<OfflineRoomEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRoom(room: OfflineRoomEntity): Long
 
@@ -681,6 +684,9 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_sync_queue WHERE operationId = :operationId")
     suspend fun deleteSyncOperation(operationId: String)
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = :entityType AND entityId = :entityId")
+    suspend fun deleteSyncOperationsForEntity(entityType: String, entityId: Long)
     // endregion
 
     // region Conflicts

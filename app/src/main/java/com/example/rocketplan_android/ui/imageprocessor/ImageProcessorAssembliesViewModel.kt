@@ -4,7 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
-import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
+import com.example.rocketplan_android.data.local.model.ImageProcessorAssemblyWithDetails
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,7 +28,7 @@ class ImageProcessorAssembliesViewModel(application: Application) : AndroidViewM
 
     init {
         viewModelScope.launch {
-            repository.observeAllAssemblies().collect { assemblies ->
+            repository.observeAllAssembliesWithDetails().collect { assemblies ->
                 _uiState.value = when {
                     assemblies.isEmpty() -> ImageProcessorAssembliesUiState.Empty
                     else -> ImageProcessorAssembliesUiState.Content(assemblies)
@@ -95,7 +95,7 @@ class ImageProcessorAssembliesViewModel(application: Application) : AndroidViewM
 sealed class ImageProcessorAssembliesUiState {
     object Loading : ImageProcessorAssembliesUiState()
     object Empty : ImageProcessorAssembliesUiState()
-    data class Content(val assemblies: List<ImageProcessorAssemblyEntity>) :
+    data class Content(val assemblies: List<ImageProcessorAssemblyWithDetails>) :
         ImageProcessorAssembliesUiState()
 }
 

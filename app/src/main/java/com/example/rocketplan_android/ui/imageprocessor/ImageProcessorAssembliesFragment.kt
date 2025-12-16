@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
+import com.example.rocketplan_android.data.local.model.ImageProcessorAssemblyWithDetails
 import com.example.rocketplan_android.databinding.FragmentImageProcessorAssembliesBinding
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.snackbar.Snackbar
@@ -186,9 +187,9 @@ private class ImageProcessorAssembliesAdapter(
     private val onDeleteAssembly: (ImageProcessorAssemblyEntity) -> Unit
 ) : RecyclerView.Adapter<ImageProcessorAssembliesViewHolder>() {
 
-    private var items: List<ImageProcessorAssemblyEntity> = emptyList()
+    private var items: List<ImageProcessorAssemblyWithDetails> = emptyList()
 
-    fun submitList(newItems: List<ImageProcessorAssemblyEntity>) {
+    fun submitList(newItems: List<ImageProcessorAssemblyWithDetails>) {
         items = newItems
         notifyDataSetChanged()
     }
@@ -222,7 +223,8 @@ private class ImageProcessorAssembliesViewHolder(
     private val retryButton: MaterialButton = itemView.findViewById(R.id.retryButton)
     private val deleteButton: MaterialButton = itemView.findViewById(R.id.deleteButton)
 
-    fun bind(entity: ImageProcessorAssemblyEntity) {
+    fun bind(item: ImageProcessorAssemblyWithDetails) {
+        val entity = item.assembly
         assemblyIdText.text = itemView.context.getString(
             R.string.image_processor_assembly_id_format,
             entity.assemblyId.take(8)
@@ -235,7 +237,7 @@ private class ImageProcessorAssembliesViewHolder(
         )
         applyStatusChipStyle(status)
 
-        destinationText.text = buildDestinationText(entity)
+        destinationText.text = buildDestinationText(item)
         filesText.text = itemView.context.getString(
             R.string.image_processor_assembly_files_format,
             entity.totalFiles,
@@ -322,21 +324,33 @@ private class ImageProcessorAssembliesViewHolder(
         statusChip.setTextColor(textColor)
     }
 
-    private fun buildDestinationText(entity: ImageProcessorAssemblyEntity): String {
+    private fun buildDestinationText(item: ImageProcessorAssemblyWithDetails): String {
         val context = itemView.context
+        val entity = item.assembly
+        val projectLabel = item.projectName
+            ?.takeIf { it.isNotBlank() }
+            ?.let { name -> context.getString(R.string.image_processor_assembly_project_name, name) }
+            ?: context.getString(R.string.image_processor_assembly_project_fallback, entity.projectId)
+
         val target = when {
             !entity.entityType.isNullOrBlank() && entity.entityId != null -> {
                 context.getString(
                     R.string.image_processor_assembly_target_entity,
                     formatLabel(entity.entityType),
-                    entity.entityId
+                    entity.entityId.toString()
                 )
             }
 
             entity.roomId != null -> {
+                val roomLabel = item.roomName
+                    ?.takeIf { it.isNotBlank() }
+                    ?: context.getString(
+                        R.string.image_processor_assembly_room_fallback,
+                        entity.roomId
+                    )
                 context.getString(
                     R.string.image_processor_assembly_target_room,
-                    entity.roomId
+                    roomLabel
                 )
             }
 
@@ -345,7 +359,7 @@ private class ImageProcessorAssembliesViewHolder(
 
         return context.getString(
             R.string.image_processor_assembly_destination_format,
-            entity.projectId,
+            projectLabel,
             target
         )
     }

@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Update
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
+import com.example.rocketplan_android.data.local.model.ImageProcessorAssemblyWithDetails
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -45,6 +46,20 @@ interface ImageProcessorDao {
         """
     )
     fun observeAllAssemblies(): Flow<List<ImageProcessorAssemblyEntity>>
+
+    @Query(
+        """
+        SELECT 
+            a.*,
+            p.title AS projectName,
+            r.title AS roomName
+        FROM image_processor_assemblies AS a
+        LEFT JOIN offline_projects AS p ON a.projectId = p.projectId
+        LEFT JOIN offline_rooms AS r ON a.roomId = r.roomId
+        ORDER BY a.createdAt DESC
+        """
+    )
+    fun observeAllAssembliesWithDetails(): Flow<List<ImageProcessorAssemblyWithDetails>>
 
     @Query(
         """

@@ -460,7 +460,7 @@ class ImageProcessorQueueManager(
             .url(uploadUrl)
             .addHeader("X-Assembly-Id", assembly.assemblyId)
             .addHeader("Content-Type", mimeType)
-            .put(requestBody)
+            .post(requestBody)
 
         // Add API key header if available (matching iOS behavior)
         if (apiKey != null) {

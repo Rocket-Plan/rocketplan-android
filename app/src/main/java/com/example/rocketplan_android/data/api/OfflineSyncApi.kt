@@ -222,6 +222,12 @@ interface OfflineSyncApi {
         @Body request: CreateRoomRequest
     ): RoomDto
 
+    @HTTP(method = "DELETE", path = "/api/rooms/{roomId}", hasBody = true)
+    suspend fun deleteRoom(
+        @Path("roomId") roomId: Long,
+        @Body request: DeleteWithTimestampRequest
+    )
+
     @GET("/api/properties/{propertyId}/room-types")
     suspend fun getPropertyRoomTypes(
         @Path("propertyId") propertyId: Long,

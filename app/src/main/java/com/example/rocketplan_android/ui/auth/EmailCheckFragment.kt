@@ -9,6 +9,7 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.core.content.getSystemService
+import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -79,6 +80,14 @@ class EmailCheckFragment : Fragment() {
     }
 
     private fun setupSocialButtons() {
+        val socialEnabled = !BuildConfig.HAS_FLIR_SUPPORT
+        binding.orDivider.isVisible = socialEnabled
+        binding.socialButtonsRow.isVisible = socialEnabled
+
+        if (!socialEnabled) {
+            return
+        }
+
         binding.facebookButton.setOnClickListener {
             hideKeyboard()
             launchOAuth(PROVIDER_FACEBOOK)
@@ -139,6 +148,13 @@ class EmailCheckFragment : Fragment() {
     }
 
     private fun launchOAuth(provider: String) {
+        if (BuildConfig.HAS_FLIR_SUPPORT) {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Skipping $provider OAuth on FLIR build")
+            }
+            return
+        }
+
         val schema = when (BuildConfig.ENVIRONMENT) {
             "DEV" -> "rocketplan-local"
             "STAGING" -> "rocketplan-staging"

@@ -11,6 +11,7 @@ import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
 import com.example.rocketplan_android.data.local.entity.PhotoStatus
+import com.example.rocketplan_android.data.local.model.ImageProcessorAssemblyWithDetails
 import com.example.rocketplan_android.data.model.FileToUpload
 import com.example.rocketplan_android.data.model.IRPhotoData
 import com.example.rocketplan_android.data.model.ImageProcessorAssemblyRequest
@@ -268,6 +269,12 @@ class ImageProcessorRepository(
 
     fun observeAllAssemblies(): Flow<List<ImageProcessorAssemblyEntity>> =
         dao.observeAllAssemblies()
+
+    fun observeAllAssembliesWithDetails(): Flow<List<ImageProcessorAssemblyWithDetails>> =
+        dao.observeAllAssembliesWithDetails()
+
+    fun observePhotosByAssemblyLocalId(assemblyLocalId: Long): Flow<List<ImageProcessorPhotoEntity>> =
+        dao.observePhotosByAssemblyLocalId(assemblyLocalId)
 
     suspend fun deleteAssembly(assemblyId: String): Result<Unit> = withContext(ioDispatcher) {
         runCatching {

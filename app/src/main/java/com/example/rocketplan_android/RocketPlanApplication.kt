@@ -1,6 +1,7 @@
 package com.example.rocketplan_android
 
 import android.app.Application
+import android.util.Log
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -232,6 +233,10 @@ class RocketPlanApplication : Application() {
         CoroutineScope(Dispatchers.IO).launch {
             imageProcessorQueueManager.recoverStrandedAssemblies()
             imageProcessorQueueManager.processNextQueuedAssembly()
+            runCatching { imageProcessorRepository.cleanupOldAssemblies() }
+                .onFailure { error ->
+                    Log.w(TAG, "Failed to cleanup old image processor assemblies", error)
+                }
         }
 
         // One-time data repair: Fix photos with mismatched roomIds from previous sync bugs
@@ -259,5 +264,6 @@ class RocketPlanApplication : Application() {
     }
 
     private companion object {
+        private const val TAG = "RocketPlanApp"
     }
 }

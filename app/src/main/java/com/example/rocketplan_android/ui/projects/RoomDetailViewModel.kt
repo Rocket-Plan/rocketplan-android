@@ -43,6 +43,9 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -84,6 +87,10 @@ class RoomDetailViewModel(
 
     private val _isAwaitingRealtimePhotos = MutableStateFlow(false)
     val isAwaitingRealtimePhotos: StateFlow<Boolean> = _isAwaitingRealtimePhotos.asStateFlow()
+    private val _isDeleting = MutableStateFlow(false)
+    val isDeleting: StateFlow<Boolean> = _isDeleting.asStateFlow()
+    private val _events = MutableSharedFlow<RoomDetailEvent>(extraBufferCapacity = 1)
+    val events: SharedFlow<RoomDetailEvent> = _events.asSharedFlow()
 
     private var lastRefreshAt = 0L
     private var isRefreshing = false
@@ -735,6 +742,40 @@ class RoomDetailViewModel(
         }
     }
 
+    fun deleteRoom() {
+        if (_isDeleting.value) return
+        val room = _resolvedRoom.value
+        if (room == null) {
+            viewModelScope.launch {
+                _events.emit(RoomDetailEvent.Error("Room not found"))
+            }
+            return
+        }
+
+        _isDeleting.value = true
+        viewModelScope.launch {
+            try {
+                val result = offlineSyncRepository.deleteRoom(projectId, room.roomId)
+                _events.emit(RoomDetailEvent.RoomDeleted(result.synced))
+            } catch (t: Throwable) {
+                Log.e(TAG, "❌ Failed to delete room ${room.roomId}", t)
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "Failed to delete room",
+                    metadata = mapOf(
+                        "projectId" to projectId.toString(),
+                        "roomId" to room.roomId.toString(),
+                        "serverRoomId" to (room.serverId?.toString() ?: "null")
+                    )
+                )
+                _events.emit(RoomDetailEvent.Error(t.message ?: "Unable to delete room"))
+            } finally {
+                _isDeleting.value = false
+            }
+        }
+    }
+
     private fun currentRoomIds(room: OfflineRoomEntity): Set<Long> = buildSet {
         add(room.roomId)
         room.serverId?.let { add(it) }
@@ -1018,6 +1059,11 @@ sealed class RoomDetailUiState {
         val albums: List<RoomAlbumItem> = emptyList(),
         val photoCount: Int = 0
     ) : RoomDetailUiState()
+}
+
+sealed class RoomDetailEvent {
+    data class RoomDeleted(val synced: Boolean) : RoomDetailEvent()
+    data class Error(val message: String) : RoomDetailEvent()
 }
 
 data class RoomDetailHeader(

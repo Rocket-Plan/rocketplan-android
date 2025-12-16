@@ -101,6 +101,22 @@
                         android:textStyle="bold"
                         tools:text="Basement Damages" />
                 </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/deleteRoomButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="12dp"
+                    android:text="@string/delete"
+                    android:textAllCaps="false"
+                    android:textColor="@color/warning_red"
+                    app:icon="@drawable/ic_delete"
+                    app:iconGravity="textStart"
+                    app:iconPadding="8dp"
+                    app:iconTint="@color/warning_red" />
             </LinearLayout>
 
     <com.google.android.material.card.MaterialCardView

@@ -100,6 +100,9 @@ class LocalDataService private constructor(
     suspend fun getRoom(roomId: Long): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoom(roomId) }
 
+    suspend fun getPendingRoomDeletions(projectId: Long): List<OfflineRoomEntity> =
+        withContext(ioDispatcher) { dao.getPendingRoomDeletions(projectId) }
+
     suspend fun getServerRoomIdsForProject(projectId: Long): List<Long> =
         withContext(ioDispatcher) { dao.getServerRoomIdsForProject(projectId) }
 
@@ -465,9 +468,41 @@ class LocalDataService private constructor(
                 "🧹 Deleted phantom roomId=$phantomRoomId and cleaned refs " +
                     "(rooms=$rooms, photos=$photos, notes=$notes, damages=$damages, equipment=$equipment, " +
                     "moistureLogs=$moistureLogs, atmosphericLogs=$atmosphericLogs, workScopes=$workScopes, " +
-                    "albums=$albums, albumPhotos=$albumPhotos, snapshots=$snapshots)"
+                "albums=$albums, albumPhotos=$albumPhotos, snapshots=$snapshots)"
             )
         }
+    }
+
+    /**
+     * Deletes a room's related data locally to avoid orphaned records.
+     * Returns the photos that were removed so callers can clean up files on disk.
+     */
+    suspend fun cascadeDeleteRoom(room: OfflineRoomEntity): List<OfflinePhotoEntity> = withContext(ioDispatcher) {
+        val roomIds = buildSet {
+            add(room.roomId)
+            room.serverId?.let { add(it) }
+        }
+
+        val photosToDelete = roomIds.flatMap { id ->
+            dao.getPhotosForRoomSnapshot(id)
+        }
+
+        database.withTransaction {
+            roomIds.forEach { id ->
+                dao.deleteAlbumPhotosByRoomId(id)
+                dao.deleteAlbumsByRoomId(id)
+                dao.clearRoomPhotoSnapshots(id)
+                dao.deletePhotosByRoomId(id)
+                dao.deleteNotesByRoomId(id)
+                dao.deleteDamagesByRoomId(id)
+                dao.deleteEquipmentByRoomId(id)
+                dao.deleteMoistureLogsByRoomId(id)
+                dao.deleteAtmosphericLogsByRoomId(id)
+                dao.deleteWorkScopesByRoomId(id)
+            }
+        }
+
+        photosToDelete
     }
 
     suspend fun saveAtmosphericLogs(logs: List<OfflineAtmosphericLogEntity>) = withContext(ioDispatcher) {
@@ -641,6 +676,10 @@ class LocalDataService private constructor(
 
     suspend fun removeSyncOperation(operationId: String) = withContext(ioDispatcher) {
         dao.deleteSyncOperation(operationId)
+    }
+
+    suspend fun removeSyncOperationsForEntity(entityType: String, entityId: Long) = withContext(ioDispatcher) {
+        dao.deleteSyncOperationsForEntity(entityType, entityId)
     }
 
     fun observeConflicts(): Flow<List<OfflineConflictResolutionEntity>> = dao.observeConflicts()
