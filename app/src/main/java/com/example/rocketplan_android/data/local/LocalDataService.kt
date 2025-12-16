@@ -163,6 +163,15 @@ class LocalDataService private constructor(
     suspend fun getPhoto(photoId: Long): OfflinePhotoEntity? =
         withContext(ioDispatcher) { dao.getPhotoById(photoId) }
 
+    suspend fun deleteLocalPendingRoomPhoto(
+        projectId: Long,
+        roomId: Long,
+        fileName: String
+    ): Int = withContext(ioDispatcher) {
+        if (fileName.isBlank()) return@withContext 0
+        dao.deleteLocalPendingRoomPhoto(projectId, roomId, fileName)
+    }
+
     fun observeAlbumsForProject(projectId: Long): Flow<List<OfflineAlbumEntity>> =
         dao.observeAlbumsForProject(projectId)
 

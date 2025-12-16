@@ -64,6 +64,8 @@ import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsReques
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.util.parseTargetMoisture
@@ -128,6 +130,7 @@ class OfflineSyncRepository(
     private val photoCacheScheduler: PhotoCacheScheduler,
     private val syncCheckpointStore: SyncCheckpointStore,
     private val roomTypeRepository: RoomTypeRepository,
+    private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
 
@@ -1868,6 +1871,7 @@ class OfflineSyncRepository(
 
         val entities = mutableListOf<OfflinePhotoEntity>()
         var mismatchCount = 0
+        val roomsNeedingSnapshotRefresh = mutableMapOf<Long, Int>()
         for (photo in photos) {
             val existing = localDataService.getPhotoByServerId(photo.id)
             val preservedRoom = existing?.roomId
@@ -1883,6 +1887,16 @@ class OfflineSyncRepository(
             }
             if (defaultRoomId != null && photo.roomId != null && photo.roomId != defaultRoomId) {
                 Log.w("API", "⚠️ [persistPhotos] Photo ${photo.id} has roomId=${photo.roomId} but syncing for room $defaultRoomId - using $defaultRoomId")
+            }
+
+            val resolvedFileName = photo.fileName ?: "photo_${photo.id}.jpg"
+            val removedCount = pruneLocalPlaceholderForIncomingPhoto(
+                projectId = resolvedProjectId,
+                roomId = resolvedRoomId,
+                fileName = resolvedFileName
+            )
+            if (removedCount > 0 && resolvedRoomId != null) {
+                roomsNeedingSnapshotRefresh.merge(resolvedRoomId, removedCount, Int::plus)
             }
 
             entities += photo.toEntity(
@@ -1935,7 +1949,55 @@ class OfflineSyncRepository(
             Log.d("API", "📸 [persistPhotos] Saved ${albumPhotoRelationships.size} album-photo relationships")
         }
 
+        roomsNeedingSnapshotRefresh.forEach { (roomId, _) ->
+            runCatching { localDataService.refreshRoomPhotoSnapshot(roomId) }
+                .onFailure {
+                    Log.w("API", "⚠️ [persistPhotos] Failed to refresh snapshot after placeholder cleanup for room $roomId", it)
+                    remoteLogger?.log(
+                        level = LogLevel.WARN,
+                        tag = "OfflineSyncRepository",
+                        message = "Failed to refresh snapshot after placeholder cleanup",
+                        metadata = mapOf(
+                            "room_id" to roomId.toString(),
+                            "error" to (it.message ?: "unknown")
+                        )
+                    )
+                }
+        }
+
+        if (roomsNeedingSnapshotRefresh.isNotEmpty()) {
+            val totalRemoved = roomsNeedingSnapshotRefresh.values.sum()
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = "OfflineSyncRepository",
+                message = "Removed local pending placeholders before applying server photos",
+                metadata = mapOf(
+                    "total_removed" to totalRemoved.toString(),
+                    "rooms" to roomsNeedingSnapshotRefresh.entries.joinToString { "${it.key}:${it.value}" }
+                )
+            )
+        }
+
         return true
+    }
+
+    private suspend fun pruneLocalPlaceholderForIncomingPhoto(
+        projectId: Long?,
+        roomId: Long?,
+        fileName: String
+    ): Int {
+        if (projectId == null || roomId == null) return 0
+
+        val removed = localDataService.deleteLocalPendingRoomPhoto(projectId, roomId, fileName)
+        if (removed <= 0) return 0
+
+        Log.d(
+            "API",
+            "🧹 [persistPhotos] Removed $removed local pending photo(s) named '$fileName' " +
+                "for roomId=$roomId projectId=$projectId before applying server update"
+        )
+
+        return removed
     }
 
     private suspend fun applyDeletedRecords(response: DeletedRecordsResponse) {

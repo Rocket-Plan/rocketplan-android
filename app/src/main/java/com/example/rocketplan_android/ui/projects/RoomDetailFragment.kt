@@ -1108,7 +1108,10 @@ class RoomDetailFragment : Fragment() {
         loadingOverlay.isVisible = false
 
         val showPlaceholder = adapterItemCount == 0 && latestPhotoCount == 0 && effectiveLoadState !is LoadState.Loading
-        val showSpinner = isLoading || (adapterItemCount == 0 && latestPhotoCount > 0 && effectiveLoadState !is LoadState.Error)
+        val showSpinner = isLoading || (
+            adapterItemCount == 0 &&
+                (waitingForRealtime || (latestPhotoCount > 0 && effectiveLoadState !is LoadState.Error))
+            )
 
         Log.d(
             TAG,

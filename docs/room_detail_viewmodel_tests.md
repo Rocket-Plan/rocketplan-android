@@ -7,7 +7,7 @@ Last updated: `2025-11-12`
 - **UI readiness flow**: Verifies `RoomDetailViewModel` emits `RoomDetailUiState.Ready` when `LocalDataService.observeRooms/Notes/Albums` resolve, ensuring header text, album list, and photo count match the mocked flows.
 - **Tab selection**: Confirms redundant calls to `selectTab` do not emit new values; switching tabs updates `_selectedTab`.
 - **Photo refresh throttling**: Uses `SystemClock` stubbing to ensure `ensureRoomPhotosFresh` calls `OfflineSyncRepository.refreshRoomPhotos` only when the room has a `serverId`, honoring the `ROOM_REFRESH_INTERVAL_MS` window.
-- **Local capture persistence**: Validates `onLocalPhotoCaptured` constructs an `OfflinePhotoEntity` with `SyncStatus.PENDING`, `isDirty=true`, the server room ID, and cached paths before handing it to `LocalDataService.savePhotos`.
+- **Local capture deferral**: Confirms `onLocalPhotoCaptured` no longer persists placeholder rows, emits a user-facing error, and logs that the image processor will supply the final photos.
 - (Optional future work) **Paging transformation**: could use `AsyncPagingDataDiffer` to assert `photoPagingData` filters out photos lacking renderable assets and formats `capturedOn` with the thread-local formatter.
 
 ## Test Harness Details

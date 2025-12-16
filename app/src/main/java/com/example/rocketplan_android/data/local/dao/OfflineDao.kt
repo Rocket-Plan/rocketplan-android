@@ -232,6 +232,23 @@ interface OfflineDao {
 
     @Query(
         """
+        DELETE FROM offline_photos
+        WHERE projectId = :projectId
+          AND roomId = :roomId
+          AND serverId IS NULL
+          AND uploadStatus = 'local_pending'
+          AND isDeleted = 0
+          AND LOWER(fileName) = LOWER(:fileName)
+        """
+    )
+    suspend fun deleteLocalPendingRoomPhoto(
+        projectId: Long,
+        roomId: Long,
+        fileName: String
+    ): Int
+
+    @Query(
+        """
         SELECT * FROM offline_photos
         WHERE projectId = :projectId
           AND isDeleted = 1

@@ -6,16 +6,15 @@ import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.LocalDataService
-import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
-import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
+import com.example.rocketplan_android.ui.projects.RoomDetailEvent
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coJustRun
 import io.mockk.coVerify
@@ -23,6 +22,7 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.verify
 import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -130,13 +130,15 @@ class RoomDetailViewModelTest {
     }
 
     @Test
-    fun `onLocalPhotoCaptured saves pending photo with resolved room id`() = runTest {
+    fun `onLocalPhotoCaptured defers persistence until image processor completes`() = runTest {
         val localDataService = mockk<LocalDataService>()
+        val remoteLogger = mockk<RemoteLogger>(relaxed = true)
         val roomsFlow = MutableStateFlow(listOf(defaultRoom()))
 
         val viewModel = createViewModel(
             rooms = roomsFlow,
-            localDataService = localDataService
+            localDataService = localDataService,
+            remoteLogger = remoteLogger
         )
 
         val tempFile = File.createTempFile("room-detail", ".jpg").apply {
@@ -144,22 +146,23 @@ class RoomDetailViewModelTest {
             deleteOnExit()
         }
 
-        viewModel.onLocalPhotoCaptured(tempFile, mimeType = "image/jpeg", albumId = 55L)
-        advanceUntilIdle()
+        viewModel.events.test {
+            viewModel.onLocalPhotoCaptured(tempFile, mimeType = "image/jpeg", albumId = 55L)
+            advanceUntilIdle()
 
-        coVerify {
-            localDataService.savePhotos(withArg { photos ->
-                assertThat(photos).hasSize(1)
-                val entity = photos.first()
-                assertThat(entity.projectId).isEqualTo(projectId)
-                assertThat(entity.roomId).isEqualTo(serverRoomId)
-                assertThat(entity.albumId).isEqualTo(55L)
-                assertThat(entity.syncStatus).isEqualTo(SyncStatus.PENDING)
-                assertThat(entity.isDirty).isTrue()
-                assertThat(entity.fileName).isEqualTo(tempFile.name)
-                assertThat(entity.cachedOriginalPath).isEqualTo(tempFile.absolutePath)
-                assertThat(entity.cacheStatus).isEqualTo(PhotoCacheStatus.READY)
-            })
+            val error = awaitItem() as RoomDetailEvent.Error
+            assertThat(error.message).contains("after processing finishes")
+            cancelAndConsumeRemainingEvents()
+        }
+
+        coVerify(exactly = 0) { localDataService.savePhotos(any()) }
+        verify {
+            remoteLogger.log(
+                level = com.example.rocketplan_android.logging.LogLevel.WARN,
+                tag = "RoomDetailVM",
+                message = match { it.contains("No local placeholder saved") },
+                metadata = match { it["fileName"] == tempFile.name }
+            )
         }
     }
 

@@ -8,9 +8,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
-import com.example.rocketplan_android.data.local.PhotoCacheStatus
-import com.example.rocketplan_android.data.local.SyncStatus
-import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.logging.LogLevel
@@ -24,7 +21,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
-import java.util.Date
 import java.util.UUID
 
 data class BatchCaptureUiState(
@@ -206,26 +202,18 @@ class BatchCaptureViewModel(
             try {
                 Log.d(TAG, "Committing ${currentState.photos.size} photos for room ${room.roomId}")
                 val lookupRoomId = room.serverId ?: room.roomId
-                // Save photos to database
-                val photoEntities = currentState.photos.map { batchPhoto ->
-                    OfflinePhotoEntity(
-                        uuid = UUID.randomUUID().toString(),
-                        uploadStatus = "local_pending",
-                        syncStatus = SyncStatus.PENDING,
-                        isDirty = true,
-                        roomId = lookupRoomId,
-                        projectId = projectId,
-                        albumId = batchPhoto.categoryAlbumId,
-                        localPath = batchPhoto.file.absolutePath,
-                        fileName = batchPhoto.file.name,
-                        mimeType = "image/jpeg",
-                        capturedAt = Date(),
-                        cacheStatus = PhotoCacheStatus.NONE
+                Log.d(TAG, "Skipping local placeholder insert; awaiting image processor results")
+                remoteLogger.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "Batch commit defers local placeholders; waiting for image processor photos",
+                    metadata = mapOf(
+                        "project_id" to projectId.toString(),
+                        "room_id" to lookupRoomId.toString(),
+                        "photo_count" to currentState.photos.size.toString(),
+                        "group_uuid" to groupUuid
                     )
-                }
-
-                localDataService.savePhotos(photoEntities)
-                Log.d(TAG, "Saved ${photoEntities.size} photos to database")
+                )
 
                 val albumAssignments = mutableMapOf<String, MutableList<String>>()
                 currentState.photos.forEach { batchPhoto ->

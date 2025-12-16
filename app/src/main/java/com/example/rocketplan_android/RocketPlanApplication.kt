@@ -134,7 +134,8 @@ class RocketPlanApplication : Application() {
             localDataService = localDataService,
             photoCacheScheduler = photoCacheScheduler,
             syncCheckpointStore = syncCheckpointStore,
-            roomTypeRepository = roomTypeRepository
+            roomTypeRepository = roomTypeRepository,
+            remoteLogger = remoteLogger
         )
 
         // Note: syncQueueManager is initialized here but photoSyncRealtimeManager

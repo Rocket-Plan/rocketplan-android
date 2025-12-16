@@ -15,7 +15,7 @@ Workflow:
 We rebuild the snapshot explicitly:
 - First time `_resolvedRoom` emits for a room (if we haven’t built a snapshot yet).
 - After `ensureRoomPhotosFresh()` completes (network sync → `offline_photos`).
-- After local captures (`onLocalPhotoCaptured`).
+- When image-processor assemblies report completion (RoomDetailViewModel refreshes the snapshot on `AssemblyStatus.COMPLETED`).
 
 Because we rebuild the snapshot only at these points, background syncs for *other* rooms no longer invalidate this room’s Pager. The only visible reload now happens when we intentionally rebuild the snapshot for the active room.
 

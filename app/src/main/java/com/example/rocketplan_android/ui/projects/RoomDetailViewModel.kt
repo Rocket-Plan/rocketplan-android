@@ -11,7 +11,6 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
 import com.example.rocketplan_android.RocketPlanApplication
-import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
@@ -989,46 +988,25 @@ class RoomDetailViewModel(
             return
         }
 
-        viewModelScope.launch(Dispatchers.IO) {
-            val timestamp = Date()
-            val lookupRoomId = room.serverId ?: room.roomId
-            Log.d(TAG, "📸 Photo captured: file=${photoFile.name}, size=${photoFile.length()} bytes, roomId=$lookupRoomId, projectId=$projectId")
-
-            val entity = OfflinePhotoEntity(
-                uuid = UUID.randomUUID().toString(),
-                projectId = projectId,
-                roomId = lookupRoomId,
-                albumId = albumId,
-                fileName = photoFile.name,
-                localPath = photoFile.absolutePath,
-                mimeType = mimeType,
-                fileSize = photoFile.length(),
-                capturedAt = timestamp,
-                createdAt = timestamp,
-                updatedAt = timestamp,
-                uploadStatus = "local_pending",
-                syncStatus = SyncStatus.PENDING,
-                isDirty = true,
-                cacheStatus = PhotoCacheStatus.READY,
-                cachedOriginalPath = photoFile.absolutePath,
-                cachedThumbnailPath = null,
-                lastAccessedAt = timestamp
+        val lookupRoomId = room.serverId ?: room.roomId
+        Log.d(
+            TAG,
+            "📸 Photo captured (deferred): file=${photoFile.name}, size=${photoFile.length()} bytes, roomId=$lookupRoomId, projectId=$projectId. " +
+                "Skipping local placeholder until image processor returns processed assets."
+        )
+        val message = "Photo will be added after processing finishes. No local placeholder saved."
+        remoteLogger.log(
+            level = LogLevel.WARN,
+            tag = TAG,
+            message = message,
+            metadata = mapOf(
+                "projectId" to projectId.toString(),
+                "roomId" to lookupRoomId.toString(),
+                "fileName" to photoFile.name
             )
-            localDataService.savePhotos(listOf(entity))
-            Log.d(TAG, "♻️ Refreshing snapshot after local capture for roomId=$lookupRoomId")
-            refreshSnapshot(lookupRoomId)
-            Log.d(TAG, "✅ Photo saved to local database: uuid=${entity.uuid}, isDirty=true, syncStatus=PENDING")
-
-            remoteLogger.log(
-                level = LogLevel.INFO,
-                tag = TAG,
-                message = "Captured photo saved locally",
-                metadata = mapOf(
-                    "projectId" to projectId.toString(),
-                    "roomId" to lookupRoomId.toString(),
-                    "fileName" to photoFile.name
-                )
-            )
+        )
+        viewModelScope.launch {
+            _events.emit(RoomDetailEvent.Error(message))
         }
     }
 
