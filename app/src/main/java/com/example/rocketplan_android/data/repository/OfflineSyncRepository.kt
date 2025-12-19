@@ -92,6 +92,7 @@ private const val ROOM_PHOTO_INCLUDE = "photo,albums,notes_count,creator"
 private const val ROOM_PHOTO_PAGE_LIMIT = 30
 private const val NOTES_PAGE_LIMIT = 30
 private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"
+private const val SERVER_TIME_CHECKPOINT_KEY = "deleted_records_server_date"
 private val DEFAULT_DELETION_TYPES = listOf(
     "projects",
     "photos",
@@ -1524,8 +1525,30 @@ class OfflineSyncRepository(
     }
 
     suspend fun syncDeletedRecords(types: List<String> = DEFAULT_DELETION_TYPES) = withContext(ioDispatcher) {
-        val sinceDate = syncCheckpointStore.getCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY)
-            ?: Date(System.currentTimeMillis() - DEFAULT_DELETION_LOOKBACK_MS)
+        val now = Date()
+        val lastServerDate = syncCheckpointStore.getCheckpoint(SERVER_TIME_CHECKPOINT_KEY)
+        val rawSinceDate = syncCheckpointStore.getCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY)
+            ?: Date(now.time - DEFAULT_DELETION_LOOKBACK_MS)
+        val sinceDate = when {
+            lastServerDate != null && rawSinceDate.after(lastServerDate) -> {
+                Log.w(
+                    "API",
+                    "⚠️ [syncDeletedRecords] Future checkpoint $rawSinceDate clamped to last server time $lastServerDate (device now=$now)"
+                )
+                syncCheckpointStore.updateCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY, lastServerDate)
+                lastServerDate
+            }
+            lastServerDate == null && rawSinceDate.after(now) -> {
+                val clamped = Date(0) // Safe epoch fallback avoids future-dated requests
+                Log.w(
+                    "API",
+                    "⚠️ [syncDeletedRecords] Future checkpoint $rawSinceDate with no server time; clamping to epoch (device now=$now)"
+                )
+                syncCheckpointStore.updateCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY, clamped)
+                clamped
+            }
+            else -> rawSinceDate
+        }
         val sinceParam = DateUtils.formatApiDate(sinceDate)
         val filteredTypes = types.filter { it.isNotBlank() }
 
@@ -1558,6 +1581,7 @@ class OfflineSyncRepository(
         val serverTimestamp = DateUtils.parseHttpDate(response.headers()["Date"])
         if (serverTimestamp != null) {
             syncCheckpointStore.updateCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY, serverTimestamp)
+            syncCheckpointStore.updateCheckpoint(SERVER_TIME_CHECKPOINT_KEY, serverTimestamp)
         } else {
             Log.w("API", "⚠️ [syncDeletedRecords] Missing Date header; checkpoint not advanced")
         }
@@ -2638,6 +2662,10 @@ class OfflineSyncRepository(
     }
 
     private suspend fun fetchRoomsForLocation(locationId: Long): List<RoomDto> {
+        if (locationId <= 0) {
+            Log.w("API", "⚠️ [syncProjectGraph] Skipping invalid locationId=$locationId")
+            return emptyList()
+        }
         val collected = mutableListOf<RoomDto>()
         var page = 1
         val updatedSince = localDataService.getLatestRoomUpdateForLocation(locationId)
@@ -2670,6 +2698,8 @@ class OfflineSyncRepository(
                 .onFailure { error ->
                     if (error is retrofit2.HttpException && error.code() == 404) {
                         Log.d("API", "INFO [syncProjectGraph] Location $locationId has no rooms (404)")
+                        runCatching { localDataService.markLocationsDeleted(listOf(locationId)) }
+                            .onFailure { Log.w("API", "⚠️ [syncProjectGraph] Failed to mark missing location $locationId as deleted", it) }
                     } else {
                         Log.e("API", "❌ [syncProjectGraph] Failed to fetch rooms for location $locationId", error)
                     }

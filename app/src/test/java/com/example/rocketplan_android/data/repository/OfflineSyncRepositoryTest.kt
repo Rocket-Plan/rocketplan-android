@@ -57,6 +57,7 @@ import org.junit.Test
 import retrofit2.HttpException
 import retrofit2.Response
 import java.util.Date
+import java.util.concurrent.TimeUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class OfflineSyncRepositoryTest {
@@ -533,6 +534,44 @@ class OfflineSyncRepositoryTest {
         val expected = DateUtils.parseHttpDate(headerDate)!!
         io.mockk.verify {
             checkpointStore.updateCheckpoint("deleted_records_global", match { it == expected })
+        }
+    }
+
+    @Test
+    fun `syncDeletedRecords clamps future checkpoint before requesting`() = runTest {
+        everyLog()
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
+        val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
+
+        val futureDate = Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(365))
+        every { checkpointStore.getCheckpoint(any()) } returns futureDate
+
+        val sinceSlot = slot<String>()
+        coEvery { api.getDeletedRecords(capture(sinceSlot), any()) } returns Response.success(
+            DeletedRecordsResponse(),
+            Headers.headersOf()
+        )
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = scheduler,
+            syncCheckpointStore = checkpointStore,
+            roomTypeRepository = mockk(relaxed = true)
+        )
+
+        repository.syncDeletedRecords()
+
+        val parsedSince = DateUtils.parseApiDate(sinceSlot.captured)!!
+        val now = Date()
+        assertThat(parsedSince.time).isAtMost(now.time)
+        coVerify {
+            checkpointStore.updateCheckpoint(
+                "deleted_records_global",
+                match { !it.after(now) }
+            )
         }
     }
 
