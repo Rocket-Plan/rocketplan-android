@@ -28,9 +28,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.ui.projects.ScopeCatalogItem
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.google.android.material.button.MaterialButton
@@ -39,8 +39,9 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.checkbox.MaterialCheckBox
-import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
@@ -94,6 +95,10 @@ class RoomDetailFragment : Fragment() {
     private lateinit var scopePickerAddButton: MaterialButton
     private lateinit var scopePickerCustomButton: MaterialButton
     private lateinit var scopePickerCancelButton: MaterialButton
+    private lateinit var inFlightBanner: View
+    private lateinit var inFlightSpinner: CircularProgressIndicator
+    private lateinit var inFlightStatus: TextView
+    private lateinit var inFlightCount: TextView
     private lateinit var photoConcatAdapter: ConcatAdapter
     private var latestPhotoCount: Int = 0
     private var latestDamages: List<RoomDamageItem> = emptyList()
@@ -222,6 +227,10 @@ class RoomDetailFragment : Fragment() {
         scopePickerAddButton = root.findViewById(R.id.scopePickerAddButton)
         scopePickerCustomButton = root.findViewById(R.id.scopePickerCustomButton)
         scopePickerCancelButton = root.findViewById(R.id.scopePickerCancelButton)
+        inFlightBanner = root.findViewById(R.id.inFlightBanner)
+        inFlightSpinner = root.findViewById(R.id.inFlightSpinner)
+        inFlightStatus = root.findViewById(R.id.inFlightStatus)
+        inFlightCount = root.findViewById(R.id.inFlightCount)
         swipeRefreshLayout.isEnabled = initialTab == RoomDetailTab.PHOTOS
 
         scopeTabButton.isVisible = false
@@ -247,8 +256,9 @@ class RoomDetailFragment : Fragment() {
         val gridLayoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), 3).apply {
             spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
                 override fun getSpanSize(position: Int): Int {
-                    val isHeader = position == 0
+                    val headerCount = addPhotoAdapter.itemCount
                     val loadStateCount = photoLoadStateAdapter.itemCount
+                    val isHeader = position < headerCount
                     val isFooter = loadStateCount > 0 &&
                         position >= photoConcatAdapter.itemCount - loadStateCount
                     return if (isHeader || isFooter) spanCount else 1
@@ -933,6 +943,18 @@ class RoomDetailFragment : Fragment() {
                         snapshotRefreshInProgress = refreshing
                         Log.d(TAG, if (refreshing) "🌀 Snapshot refresh started" else "✅ Snapshot refresh finished")
                         updatePhotoVisibility()
+                    }
+                }
+                launch {
+                    viewModel.inFlightAssembly.collect { state ->
+                        if (state != null) {
+                            inFlightSpinner.isIndeterminate = true
+                            inFlightStatus.text = getString(R.string.processing_photos)
+                            inFlightCount.text = "${state.processedCount}/${state.totalCount}"
+                            inFlightBanner.isVisible = true
+                        } else {
+                            inFlightBanner.isVisible = false
+                        }
                     }
                 }
                 launch {

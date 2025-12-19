@@ -725,11 +725,18 @@ class ImageProcessorQueueManager(
 
         Log.d(TAG, "📊 Assembly $assemblyId: $completedCount/$totalCount completed, $failedCount failed")
 
+        val currentAssembly = dao.getAssembly(assemblyId)
+        val alreadyCompleted = currentAssembly?.status == AssemblyStatus.COMPLETED.value
+
         when {
             completedCount == totalCount -> {
                 // All photos uploaded successfully
-                updateAssemblyStatus(assemblyId, AssemblyStatus.PROCESSING, null)
-                Log.d(TAG, "✅ Assembly $assemblyId upload complete, now processing")
+                if (alreadyCompleted) {
+                    Log.d(TAG, "✅ Assembly $assemblyId upload complete, already marked completed by Pusher")
+                } else {
+                    updateAssemblyStatus(assemblyId, AssemblyStatus.PROCESSING, null)
+                    Log.d(TAG, "✅ Assembly $assemblyId upload complete, now processing")
+                }
                 onAssemblyCompleted(assemblyId, success = true, errorMessage = null)
 
                 remoteLogger?.log(

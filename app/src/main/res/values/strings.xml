@@ -249,6 +249,7 @@
     <string name="damages_coming_soon">Damages coming soon</string>
     <string name="sketch_coming_soon">Sketch coming soon</string>
     <string name="room_damages_empty_state">No damages captured for this room yet.</string>
+    <string name="processing_photos">Processing photos…</string>
     <string name="add_scope_sheet">Add scope item</string>
     <string name="add_scope_item">Add scope item</string>
     <string name="add_scope_sheet_subtitle">Add a scope of work item for this room.</string>

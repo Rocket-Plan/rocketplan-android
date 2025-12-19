@@ -13,6 +13,7 @@ import androidx.paging.map
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
+import com.example.rocketplan_android.data.local.entity.PhotoStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
@@ -108,6 +109,9 @@ class RoomDetailViewModel(
     val isPhotoRefreshInProgress: StateFlow<Boolean> = _isPhotoRefreshInProgress.asStateFlow()
     private val pendingAssemblyIds = mutableSetOf<String>()
     private val processedAssemblyIds = mutableSetOf<String>()
+    private val _inFlightAssembly = MutableStateFlow<InFlightAssemblyState?>(null)
+    val inFlightAssembly: StateFlow<InFlightAssemblyState?> = _inFlightAssembly.asStateFlow()
+    private var inFlightAssemblyJob: Job? = null
     private var assemblyWatcherJob: Job? = null
     private val scopeCatalogCache = MutableStateFlow<List<ScopeCatalogItem>>(emptyList())
     private var scopeCatalogCompanyId: Long? = null
@@ -989,6 +993,26 @@ class RoomDetailViewModel(
                 TAG,
                 "⏱️ Assembly watch: active=${activeAssemblies.size}, pendingIds=${pendingAssemblyIds.size}, awaiting=$awaiting"
             )
+
+            if (activeAssemblies.isNotEmpty()) {
+                val active = activeAssemblies.first()
+                inFlightAssemblyJob?.cancel()
+                inFlightAssemblyJob = viewModelScope.launch {
+                    imageProcessorRepository.observePhotosByAssemblyLocalId(active.id)
+                        .collectLatest { photos ->
+                            val processed = photos.count { it.status == PhotoStatus.COMPLETED.value }
+                            _inFlightAssembly.value = InFlightAssemblyState(
+                                assemblyId = active.assemblyId,
+                                processedCount = processed,
+                                totalCount = active.totalFiles
+                            )
+                        }
+                }
+            } else {
+                inFlightAssemblyJob?.cancel()
+                inFlightAssemblyJob = null
+                _inFlightAssembly.value = null
+            }
         }
     }
 
@@ -1072,6 +1096,12 @@ data class RoomPhotoItem(
     val thumbnailUrl: String,
     val capturedOn: String?,
     val noteCount: Int = 0
+)
+
+data class InFlightAssemblyState(
+    val assemblyId: String,
+    val processedCount: Int,
+    val totalCount: Int
 )
 
 data class RoomAlbumItem(
