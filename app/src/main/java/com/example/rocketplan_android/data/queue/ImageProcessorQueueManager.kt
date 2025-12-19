@@ -114,6 +114,7 @@ class ImageProcessorQueueManager(
                     metadata = mapOf("count" to uploadingAssemblies.size.toString())
                 )
             }
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error recovering stranded assemblies", e)
         }
@@ -332,70 +333,141 @@ class ImageProcessorQueueManager(
     }
 
     suspend fun reconcileAssemblyStatus(assemblyId: String): Result<AssemblyStatus?> =
-        withContext(Dispatchers.IO) {
-            runCatching {
-                val assembly = dao.getAssembly(assemblyId)
-                    ?: throw IllegalArgumentException("Assembly not found")
-                val photos = dao.getPhotosByAssemblyUuid(assemblyId)
-                val snapshot = fetchBackendStatus(assembly)
-                    ?: throw IllegalStateException("No status from backend")
+        reconcileAssemblyStatusInternal(assemblyId, source = "manual")
 
-                val completedCount = snapshot.completedFiles ?: 0
-                val isComplete = snapshot.isComplete == true ||
-                    (assembly.totalFiles > 0 && completedCount >= assembly.totalFiles)
-
-                val mappedStatus = snapshot.status?.let { AssemblyStatus.fromValue(it) }
-
-                if (isComplete) {
-                    val now = System.currentTimeMillis()
-                    photos.forEach { photo ->
-                        if (photo.status != PhotoStatus.COMPLETED.value) {
-                            val updated = photo.copy(
-                                status = PhotoStatus.COMPLETED.value,
-                                lastUpdatedAt = now,
-                                errorMessage = null
-                            )
-                            dao.updatePhoto(updated)
-                        }
-                    }
-
-                    updateAssemblyStatus(assemblyId, AssemblyStatus.COMPLETED, null)
-
+    fun reconcileProcessingAssemblies(source: String = "foreground") {
+        scope.launch {
+            runCatching { reconcileProcessingAssembliesInternal(source) }
+                .onFailure { error ->
+                    Log.e(TAG, "❌ Failed to reconcile processing assemblies (source=$source)", error)
                     remoteLogger?.log(
-                        level = LogLevel.INFO,
+                        level = LogLevel.ERROR,
                         tag = TAG,
-                        message = "Manual reconciliation marked assembly complete",
+                        message = "Failed to reconcile processing assemblies",
                         metadata = mapOf(
-                            "assembly_id" to assemblyId,
-                            "server_status" to (snapshot.status ?: "unknown"),
-                            "completed_files" to completedCount.toString(),
-                            "total_files" to assembly.totalFiles.toString()
+                            "source" to source,
+                            "error" to (error.message ?: "unknown")
                         )
                     )
+                }
+        }
+    }
 
-                    onAssemblyCompleted(assemblyId, success = true, errorMessage = null)
-                    return@runCatching AssemblyStatus.COMPLETED
+    private suspend fun reconcileProcessingAssembliesInternal(source: String) {
+        val assemblies = dao.getAssembliesByStatus(listOf(AssemblyStatus.PROCESSING.value))
+        if (assemblies.isEmpty()) {
+            Log.d(TAG, "✅ No processing assemblies to reconcile (source=$source)")
+            return
+        }
+
+        Log.d(TAG, "🔎 Reconciling ${assemblies.size} processing assemblies (source=$source)")
+        remoteLogger?.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Reconciling processing assemblies",
+            metadata = mapOf(
+                "source" to source,
+                "count" to assemblies.size.toString()
+            )
+        )
+
+        assemblies.forEach { reconcileAssemblyStatusInternal(it.assemblyId, source) }
+    }
+
+    private suspend fun reconcileAssemblyStatusInternal(
+        assemblyId: String,
+        source: String
+    ): Result<AssemblyStatus?> = withContext(Dispatchers.IO) {
+        Log.d(TAG, "🔎 Reconciling assembly $assemblyId (source=$source)")
+        remoteLogger?.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Assembly reconciliation started",
+            metadata = mapOf(
+                "assembly_id" to assemblyId,
+                "source" to source
+            )
+        )
+
+        runCatching {
+            val assembly = dao.getAssembly(assemblyId)
+                ?: throw IllegalArgumentException("Assembly not found")
+            val photos = dao.getPhotosByAssemblyUuid(assemblyId)
+            val snapshot = fetchBackendStatus(assembly)
+                ?: throw IllegalStateException("No status from backend")
+
+            val completedCount = snapshot.completedFiles ?: 0
+            val isComplete = snapshot.isComplete == true ||
+                (assembly.totalFiles > 0 && completedCount >= assembly.totalFiles)
+
+            val mappedStatus = snapshot.status?.let { AssemblyStatus.fromValue(it) }
+
+            if (isComplete) {
+                val now = System.currentTimeMillis()
+                photos.forEach { photo ->
+                    if (photo.status != PhotoStatus.COMPLETED.value) {
+                        val updated = photo.copy(
+                            status = PhotoStatus.COMPLETED.value,
+                            lastUpdatedAt = now,
+                            errorMessage = null
+                        )
+                        dao.updatePhoto(updated)
+                    }
                 }
 
-                val targetStatus = mappedStatus ?: AssemblyStatus.PROCESSING
-                updateAssemblyStatus(assemblyId, targetStatus, assembly.errorMessage)
+                updateAssemblyStatus(assemblyId, AssemblyStatus.COMPLETED, null)
 
+                Log.d(TAG, "✅ Assembly $assemblyId reconciled as complete (source=$source)")
                 remoteLogger?.log(
                     level = LogLevel.INFO,
                     tag = TAG,
-                    message = "Manual reconciliation checked assembly status",
+                    message = "Assembly reconciliation marked assembly complete",
                     metadata = mapOf(
                         "assembly_id" to assemblyId,
+                        "source" to source,
                         "server_status" to (snapshot.status ?: "unknown"),
                         "completed_files" to completedCount.toString(),
-                        "remaining_files" to (snapshot.remainingFiles ?: -1).toString(),
-                        "is_complete" to (snapshot.isComplete ?: false).toString()
+                        "total_files" to assembly.totalFiles.toString()
                     )
                 )
 
-                targetStatus
+                onAssemblyCompleted(assemblyId, success = true, errorMessage = null)
+                return@runCatching AssemblyStatus.COMPLETED
             }
+
+            val targetStatus = mappedStatus ?: AssemblyStatus.PROCESSING
+            updateAssemblyStatus(assemblyId, targetStatus, assembly.errorMessage)
+
+            Log.d(TAG, "ℹ️ Assembly $assemblyId reconciliation finished (source=$source, status=${targetStatus.value})")
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Assembly reconciliation checked assembly status",
+                metadata = mapOf(
+                    "assembly_id" to assemblyId,
+                    "source" to source,
+                    "server_status" to (snapshot.status ?: "unknown"),
+                    "completed_files" to completedCount.toString(),
+                    "remaining_files" to (snapshot.remainingFiles ?: -1).toString(),
+                    "is_complete" to (snapshot.isComplete ?: false).toString()
+                )
+            )
+
+            targetStatus
+        }.onFailure { error ->
+            Log.e(TAG, "❌ Assembly reconciliation failed for $assemblyId (source=$source)", error)
+            remoteLogger?.log(
+                level = LogLevel.ERROR,
+                tag = TAG,
+                message = "Assembly reconciliation failed",
+                metadata = mapOf(
+                    "assembly_id" to assemblyId,
+                    "source" to source,
+                    "error" to (error.message ?: "unknown")
+                )
+            )
         }
+    }
 
     private suspend fun uploadAssembly(assembly: ImageProcessorAssemblyEntity) {
         try {

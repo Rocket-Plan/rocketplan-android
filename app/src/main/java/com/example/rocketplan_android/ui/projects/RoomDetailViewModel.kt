@@ -104,6 +104,8 @@ class RoomDetailViewModel(
     private val snapshotRefreshMutex = Mutex()
     private val _isSnapshotRefreshing = MutableStateFlow(false)
     val isSnapshotRefreshing: StateFlow<Boolean> = _isSnapshotRefreshing.asStateFlow()
+    private val _isPhotoRefreshInProgress = MutableStateFlow(false)
+    val isPhotoRefreshInProgress: StateFlow<Boolean> = _isPhotoRefreshInProgress.asStateFlow()
     private val pendingAssemblyIds = mutableSetOf<String>()
     private val processedAssemblyIds = mutableSetOf<String>()
     private var assemblyWatcherJob: Job? = null
@@ -780,28 +782,40 @@ class RoomDetailViewModel(
         room.serverId?.let { add(it) }
     }
 
-    fun ensureRoomPhotosFresh(force: Boolean = false) {
+    fun ensureRoomPhotosFresh(
+        force: Boolean = false,
+        notifyRefresh: Boolean = false,
+        ignoreCheckpoint: Boolean = false
+    ): Boolean {
         val now = SystemClock.elapsedRealtime()
         if (!force && now - lastRefreshAt < ROOM_REFRESH_INTERVAL_MS) {
-            return
+            return false
         }
         if (isRefreshing) {
-            return
+            return false
         }
 
         val remoteRoomId = _resolvedRoom.value?.serverId
         if (remoteRoomId == null) {
             Log.d(TAG, "⏭️ Skipping remote photo refresh; room $roomId has no serverId yet")
-            return
+            return false
         }
         isRefreshing = true
+        if (notifyRefresh) {
+            _isPhotoRefreshInProgress.value = true
+        }
         viewModelScope.launch {
             try {
                 Log.d(
                     TAG,
-                    "🔄 ensureRoomPhotosFresh(force=$force) -> syncRoomPhotos(projectId=$projectId, remoteRoomId=$remoteRoomId)"
+                    "🔄 ensureRoomPhotosFresh(force=$force, ignoreCheckpoint=$ignoreCheckpoint) -> " +
+                        "syncRoomPhotos(projectId=$projectId, remoteRoomId=$remoteRoomId)"
                 )
-                val result = offlineSyncRepository.syncRoomPhotos(projectId, remoteRoomId)
+                val result = offlineSyncRepository.syncRoomPhotos(
+                    projectId,
+                    remoteRoomId,
+                    ignoreCheckpoint = ignoreCheckpoint
+                )
                 if (!result.success) {
                     Log.w(TAG, "⚠️ Room photo sync failed for roomId=$remoteRoomId", result.error)
                 }
@@ -821,9 +835,11 @@ class RoomDetailViewModel(
             } finally {
                 lastRefreshAt = SystemClock.elapsedRealtime()
                 isRefreshing = false
+                _isPhotoRefreshInProgress.value = false
                 Log.d(TAG, "✅ ensureRoomPhotosFresh done; lastRefreshAt=$lastRefreshAt")
             }
         }
+        return true
     }
 
     val photoPagingData: Flow<PagingData<RoomPhotoItem>> =
@@ -962,9 +978,9 @@ class RoomDetailViewModel(
             if (newlyCompleted.isNotEmpty()) {
                 Log.d(
                     TAG,
-                    "✅ Assemblies completed for room $localRoomId: ${newlyCompleted.map { it.assemblyId }}, refreshing snapshot"
+                    "✅ Assemblies completed for room $localRoomId: ${newlyCompleted.map { it.assemblyId }}, syncing photos from server"
                 )
-                refreshSnapshot(snapshotRoomId)
+                ensureRoomPhotosFresh(force = true)
             }
 
             val awaiting = activeAssemblies.isNotEmpty() || pendingAssemblyIds.isNotEmpty()

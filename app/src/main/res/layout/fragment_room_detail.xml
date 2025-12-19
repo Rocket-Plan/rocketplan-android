@@ -6,8 +6,13 @@
     android:layout_height="match_parent"
     android:background="@color/background">
 
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/roomDetailScroll"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/roomDetailSwipeRefresh"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/roomDetailScroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fillViewport="true">
@@ -566,7 +571,8 @@
                     android:visibility="gone" />
             </FrameLayout>
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+        </androidx.core.widget.NestedScrollView>
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- Loading spinner overlay -->
     <FrameLayout

@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.realtime
 
+import android.util.Log
 import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
@@ -111,6 +112,20 @@ class ImageProcessorRealtimeManager(
             errorMessage = update.errorMessage ?: assembly.errorMessage
         )
         dao.updateAssembly(updatedAssembly)
+        if (mappedStatus == AssemblyStatus.COMPLETED &&
+            assembly.status != AssemblyStatus.COMPLETED.value
+        ) {
+            Log.d(TAG, "✅ Assembly $assemblyId marked complete from Pusher")
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Assembly marked complete from Pusher",
+                metadata = mapOf(
+                    "assembly_id" to assemblyId,
+                    "status" to mappedStatus.value
+                )
+            )
+        }
 
         update.photos?.forEach { photoUpdate ->
             val photoEntity = findPhotoEntity(assemblyId, photoUpdate, assembly.id) ?: return@forEach
@@ -174,6 +189,21 @@ class ImageProcessorRealtimeManager(
         val backendStatus = update.status?.lowercase(Locale.US) ?: return false
 
         if (localStatus == AssemblyStatus.COMPLETED && backendStatus == "processing") {
+            Log.d(
+                TAG,
+                "⏭️ Ignoring stale Pusher update for assembly ${assembly.assemblyId} " +
+                    "(local=${assembly.status}, backend=$backendStatus)"
+            )
+            remoteLogger?.log(
+                level = LogLevel.DEBUG,
+                tag = TAG,
+                message = "Ignored stale Pusher update (local completed, backend processing)",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "local_status" to assembly.status,
+                    "backend_status" to backendStatus
+                )
+            )
             return true
         }
 
@@ -184,6 +214,21 @@ class ImageProcessorRealtimeManager(
                 AssemblyStatus.FAILED
             ) && backendStatus == "processing"
         ) {
+            Log.d(
+                TAG,
+                "⏭️ Ignoring stale Pusher update for assembly ${assembly.assemblyId} " +
+                    "(local=${assembly.status}, backend=$backendStatus)"
+            )
+            remoteLogger?.log(
+                level = LogLevel.DEBUG,
+                tag = TAG,
+                message = "Ignored stale Pusher update (local in terminal/transition, backend processing)",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "local_status" to assembly.status,
+                    "backend_status" to backendStatus
+                )
+            )
             return true
         }
 

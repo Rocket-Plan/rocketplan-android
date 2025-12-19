@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
@@ -75,6 +76,7 @@ class RoomDetailFragment : Fragment() {
     private lateinit var damageAssessmentChip: Chip
     private lateinit var damageCategoryGroup: MaterialButtonToggleGroup
     private lateinit var totalEquipmentButton: MaterialButton
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var photosRecyclerView: RecyclerView
     private lateinit var damagesRecyclerView: RecyclerView
     private lateinit var scopeRecyclerView: RecyclerView
@@ -205,6 +207,7 @@ class RoomDetailFragment : Fragment() {
         photosRecyclerView = root.findViewById(R.id.roomPhotosRecyclerView)
         damagesRecyclerView = root.findViewById(R.id.roomDamagesRecyclerView)
         scopeRecyclerView = root.findViewById(R.id.roomScopeRecyclerView)
+        swipeRefreshLayout = root.findViewById(R.id.roomDetailSwipeRefresh)
         placeholderContainer = root.findViewById(R.id.photosPlaceholder)
         placeholderText = root.findViewById(R.id.photosPlaceholderText)
         placeholderImage = root.findViewById(R.id.photosPlaceholderImage)
@@ -219,6 +222,7 @@ class RoomDetailFragment : Fragment() {
         scopePickerAddButton = root.findViewById(R.id.scopePickerAddButton)
         scopePickerCustomButton = root.findViewById(R.id.scopePickerCustomButton)
         scopePickerCancelButton = root.findViewById(R.id.scopePickerCancelButton)
+        swipeRefreshLayout.isEnabled = initialTab == RoomDetailTab.PHOTOS
 
         scopeTabButton.isVisible = false
         addPhotoCard.isVisible = initialTab == RoomDetailTab.PHOTOS
@@ -365,6 +369,20 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun bindListeners() {
+        swipeRefreshLayout.setOnRefreshListener {
+            if (viewModel.selectedTab.value != RoomDetailTab.PHOTOS) {
+                swipeRefreshLayout.isRefreshing = false
+                return@setOnRefreshListener
+            }
+            val started = viewModel.ensureRoomPhotosFresh(
+                force = true,
+                notifyRefresh = true,
+                ignoreCheckpoint = true
+            )
+            if (!started && !viewModel.isPhotoRefreshInProgress.value) {
+                swipeRefreshLayout.isRefreshing = false
+            }
+        }
         addPhotoCard.setOnClickListener { showAddPhotoOptions(it) }
         damageAssessmentChip.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.damage_assessment), Toast.LENGTH_SHORT).show()
@@ -918,6 +936,12 @@ class RoomDetailFragment : Fragment() {
                     }
                 }
                 launch {
+                    viewModel.isPhotoRefreshInProgress.collect { refreshing ->
+                        swipeRefreshLayout.isRefreshing =
+                            refreshing && viewModel.selectedTab.value == RoomDetailTab.PHOTOS
+                    }
+                }
+                launch {
                     viewModel.isAwaitingRealtimePhotos.collect { awaiting ->
                         awaitingRealtimePhotos = awaiting
                         Log.d(TAG, if (awaiting) "⏳ Awaiting realtime photo completion" else "✅ Realtime photo processing done")
@@ -1000,6 +1024,8 @@ class RoomDetailFragment : Fragment() {
         Log.d(TAG, "🧩 applyTabState: $tab, albums=${albumsAdapter.currentList.size}, photoCount=$latestPhotoCount")
         when (tab) {
             RoomDetailTab.PHOTOS -> {
+                swipeRefreshLayout.isEnabled = true
+                swipeRefreshLayout.isRefreshing = viewModel.isPhotoRefreshInProgress.value
                 gridSectionTitle.text = getString(R.string.damage_assessment)
                 gridSectionTitle.isVisible = false
                 noteCard.isVisible = true
@@ -1016,6 +1042,8 @@ class RoomDetailFragment : Fragment() {
                 damageCategoryGroup.isVisible = false
             }
             RoomDetailTab.DAMAGES, RoomDetailTab.SCOPE -> {
+                swipeRefreshLayout.isEnabled = false
+                swipeRefreshLayout.isRefreshing = false
                 gridSectionTitle.text = getString(R.string.damages)
                 gridSectionTitle.isVisible = false
                 noteCard.isVisible = false

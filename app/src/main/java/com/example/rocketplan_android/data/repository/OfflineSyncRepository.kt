@@ -1635,14 +1635,35 @@ class OfflineSyncRepository(
     /**
      * Syncs photos for a single room. Returns SyncResult for composability.
      */
-    suspend fun syncRoomPhotos(projectId: Long, roomId: Long): SyncResult = withContext(ioDispatcher) {
+    suspend fun syncRoomPhotos(
+        projectId: Long,
+        roomId: Long,
+        ignoreCheckpoint: Boolean = false
+    ): SyncResult = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
         val checkpointKey = roomPhotosKey(roomId)
-        val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
-        if (updatedSince != null) {
-            Log.d("API", "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) since $updatedSince")
+        val checkpointValue = syncCheckpointStore.getCheckpoint(checkpointKey)
+            ?.let { DateUtils.formatApiDate(it) }
+            ?: "none"
+        val updatedSince = if (ignoreCheckpoint) null else syncCheckpointStore.updatedSinceParam(checkpointKey)
+        if (ignoreCheckpoint) {
+            Log.d(
+                "API",
+                "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) - " +
+                    "full sync (checkpoint ignored, checkpoint=$checkpointValue)"
+            )
+        } else if (updatedSince != null) {
+            Log.d(
+                "API",
+                "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) since " +
+                    "$updatedSince (checkpoint=$checkpointValue)"
+            )
         } else {
-            Log.d("API", "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) - full sync")
+            Log.d(
+                "API",
+                "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) - " +
+                    "full sync (checkpoint=$checkpointValue)"
+            )
         }
 
         val photos = runCatching {

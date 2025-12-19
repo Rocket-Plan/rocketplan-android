@@ -396,12 +396,20 @@ private class ImageProcessorAssembliesViewHolder(
     private fun buildDestinationText(item: ImageProcessorAssemblyWithDetails): String {
         val context = itemView.context
         val entity = item.assembly
+        val normalizedEntityType = entity.entityType?.trim()?.lowercase(Locale.getDefault())
         val projectLabel = item.projectName
             ?.takeIf { it.isNotBlank() }
             ?.let { name -> context.getString(R.string.image_processor_assembly_project_name, name) }
             ?: context.getString(R.string.image_processor_assembly_project_fallback, entity.projectId)
 
         val target = when {
+            normalizedEntityType == "room" && !item.roomName.isNullOrBlank() -> {
+                context.getString(
+                    R.string.image_processor_assembly_target_room,
+                    item.roomName
+                )
+            }
+
             !entity.entityType.isNullOrBlank() && entity.entityId != null -> {
                 context.getString(
                     R.string.image_processor_assembly_target_entity,

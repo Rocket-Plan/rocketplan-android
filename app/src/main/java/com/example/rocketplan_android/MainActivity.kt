@@ -35,6 +35,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.example.rocketplan_android.databinding.ActivityMainBinding
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
+import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.google.android.material.appbar.AppBarLayout
 import kotlinx.coroutines.launch
@@ -60,6 +61,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var authRepository: AuthRepository
     private lateinit var syncQueueManager: SyncQueueManager
     private lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
+    private lateinit var imageProcessorQueueManager: ImageProcessorQueueManager
     private lateinit var contentLayoutParams: CoordinatorLayout.LayoutParams
     private lateinit var scrollingContentBehavior: AppBarLayout.ScrollingViewBehavior
 
@@ -80,6 +82,7 @@ class MainActivity : AppCompatActivity() {
         authRepository = rocketPlanApp.authRepository
         syncQueueManager = rocketPlanApp.syncQueueManager
         imageProcessingConfigurationRepository = rocketPlanApp.imageProcessingConfigurationRepository
+        imageProcessorQueueManager = rocketPlanApp.imageProcessorQueueManager
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
@@ -203,6 +206,15 @@ class MainActivity : AppCompatActivity() {
                     bottomNavigation.isVisible = false
                     window.setSoftInputMode(hiddenSoftInputMode)
                 }
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        lifecycleScope.launch {
+            if (authRepository.isLoggedIn()) {
+                imageProcessorQueueManager.reconcileProcessingAssemblies(source = "foreground")
             }
         }
     }
