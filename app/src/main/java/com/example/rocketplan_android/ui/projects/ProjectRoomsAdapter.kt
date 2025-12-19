@@ -147,28 +147,51 @@ class ProjectRoomsAdapter(
             roomIconContainer.isVisible = false
             roomScopeTotal.isVisible = false
             roomTypeIcon.isVisible = false
+
+            val hasAnyPhotos = room.photoCount > 0 || !room.thumbnailUrl.isNullOrBlank()
+            if (!hasAnyPhotos && !room.isLoadingPhotos) {
+                // Empty state: mimic iOS card with icon over light background
+                gradientOverlay.isVisible = false
+                roomIconContainer.isVisible = true
+                roomTypeIcon.isVisible = true
+                roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_light)
+                title.setTextColor(ContextCompat.getColor(itemView.context, R.color.black))
+                photoCount.setTextColor(ContextCompat.getColor(itemView.context, R.color.light_text_rp))
+                spinner.isVisible = false
+                thumbnail.load(R.drawable.bg_room_placeholder_white) {
+                    crossfade(previousRoom == null || hasModeChanged)
+                }
+            } else {
+                roomIconContainer.isVisible = false
+                gradientOverlay.isVisible = true
+                photoCount.text = itemView.resources.getQuantityString(
+                    R.plurals.photo_count,
+                    room.photoCount,
+                    room.photoCount
+                )
+                spinner.isVisible = room.isLoadingPhotos
+
+                val needsReload = previousRoom?.let { hasVisualDifferences(it, room) || hasModeChanged } ?: true
+                if (needsReload) {
+                    Log.d(TAG, "🔄 Loading thumbnail for room id=${room.roomId}, prev=${previousRoom?.roomId}")
+                    // Include URL in cache key so image updates get fresh load
+                    val cacheKey = "room_card_${room.roomId}_${room.thumbnailUrl.hashCode()}"
+                    thumbnail.load(room.thumbnailUrl ?: R.drawable.bg_room_placeholder) {
+                        memoryCacheKey(cacheKey)
+                        placeholder(R.drawable.bg_room_placeholder)
+                        error(R.drawable.bg_room_placeholder)
+                        crossfade(previousRoom == null || hasModeChanged)
+                    }
+                } else {
+                    Log.v(TAG, "✅ Skipping reload for room id=${room.roomId} (same as previous)")
+                }
+            }
+            thumbnail.isVisible = true
             photoCount.text = itemView.resources.getQuantityString(
                 R.plurals.photo_count,
                 room.photoCount,
                 room.photoCount
             )
-            spinner.isVisible = room.isLoadingPhotos
-
-            val needsReload = previousRoom?.let { hasVisualDifferences(it, room) || hasModeChanged } ?: true
-            if (needsReload) {
-                Log.d(TAG, "🔄 Loading thumbnail for room id=${room.roomId}, prev=${previousRoom?.roomId}")
-                // Include URL in cache key so image updates get fresh load
-                val cacheKey = "room_card_${room.roomId}_${room.thumbnailUrl.hashCode()}"
-                thumbnail.load(room.thumbnailUrl) {
-                    memoryCacheKey(cacheKey)
-                    placeholder(R.drawable.bg_room_placeholder)
-                    error(R.drawable.bg_room_placeholder)
-                    crossfade(previousRoom == null || hasModeChanged)
-                }
-            } else {
-                Log.v(TAG, "✅ Skipping reload for room id=${room.roomId} (same as previous)")
-            }
-            thumbnail.isVisible = true
             itemView.setOnClickListener { onRoomClick(room) }
         }
 

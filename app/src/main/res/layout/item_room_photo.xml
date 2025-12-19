@@ -35,6 +35,8 @@
             android:paddingEnd="8dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:textColor="@android:color/white"
             android:textSize="12sp"
             tools:text="10/25/2025" />

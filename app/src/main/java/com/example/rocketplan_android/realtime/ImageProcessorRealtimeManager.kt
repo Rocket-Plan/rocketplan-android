@@ -210,6 +210,7 @@ class ImageProcessorRealtimeManager(
         if (localStatus in setOf(
                 AssemblyStatus.RETRYING,
                 AssemblyStatus.CREATING,
+                AssemblyStatus.CREATED,
                 AssemblyStatus.UPLOADING,
                 AssemblyStatus.FAILED
             ) && backendStatus == "processing"
