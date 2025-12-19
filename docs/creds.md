@@ -4,5 +4,5 @@
 
 | Email | Password | Company |
 |-------|----------|---------|
-| what | flirtest123 | FLIR |
+| flirstaging@rocketplantech.com | flirtest123 | FLIR |
 user 2916 - flir@rocketplantech.com | flirtest123
