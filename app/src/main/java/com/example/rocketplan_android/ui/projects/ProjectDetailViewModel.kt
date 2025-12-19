@@ -26,7 +26,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import com.example.rocketplan_android.data.repository.SyncSegment
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class ProjectDetailViewModel(
@@ -44,6 +46,8 @@ class ProjectDetailViewModel(
 
     private val _selectedTab = MutableStateFlow(ProjectDetailTab.PHOTOS)
     val selectedTab: StateFlow<ProjectDetailTab> = _selectedTab
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     @Volatile
     private var lastIsBackgroundSyncing: Boolean? = null
@@ -142,6 +146,27 @@ class ProjectDetailViewModel(
     fun selectTab(tab: ProjectDetailTab) {
         if (_selectedTab.value != tab) {
             _selectedTab.value = tab
+        }
+    }
+
+    fun refreshRoomsAndThumbnails() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                Log.d("ProjectDetailVM", "🔄 Pull-to-refresh project $projectId (rooms + thumbnails only)")
+                val results = offlineSyncRepository.syncProjectGraph(projectId, skipPhotos = true)
+                val essentials = results.firstOrNull { it.segment == SyncSegment.PROJECT_ESSENTIALS }
+                if (essentials == null || !essentials.success) {
+                    Log.w("ProjectDetailVM", "⚠️ Project refresh incomplete for project $projectId; essentials=$essentials")
+                } else {
+                    Log.d("ProjectDetailVM", "✅ Project refresh complete for project $projectId; rooms updated")
+                }
+            } catch (t: Throwable) {
+                Log.e("ProjectDetailVM", "❌ Failed to refresh project $projectId via pull-to-refresh", t)
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 

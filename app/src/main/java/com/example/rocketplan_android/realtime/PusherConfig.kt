@@ -8,7 +8,8 @@ import com.example.rocketplan_android.config.AppConfig
  */
 object PusherConfig {
     private const val PROD_KEY = "85e07c3ecff502d261e3"
-    private const val NON_PROD_KEY = "f17c0735529857c8b4e9"
+    private const val STAGING_KEY = "44e029cefa4005144219"
+    private const val DEV_KEY = "f17c0735529857c8b4e9"
     const val CLUSTER = "us2"
     const val PHOTO_EVENT = "App\\Events\\ImageProcessorPhotoUpdated"
     const val ASSEMBLY_EVENT = "App\\Events\\ImageProcessorUpdated"
@@ -66,5 +67,9 @@ object PusherConfig {
     fun noteBookmarkedChannel(noteId: Long): String =
         "BroadcastNoteBookmarkedEvent.Note.$noteId"
 
-    fun appKey(): String = if (AppConfig.isProduction) PROD_KEY else NON_PROD_KEY
+    fun appKey(): String = when {
+        AppConfig.isProduction -> PROD_KEY
+        AppConfig.isStaging -> STAGING_KEY
+        else -> DEV_KEY
+    }
 }

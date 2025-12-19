@@ -20,6 +20,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
 import com.example.rocketplan_android.ui.projects.ProjectRoomsAdapter.RoomStatMode
@@ -56,6 +57,7 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var photosButton: MaterialButton
     private lateinit var damagesButton: MaterialButton
     private lateinit var sketchButton: MaterialButton
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -121,6 +123,7 @@ class ProjectDetailFragment : Fragment() {
         photosButton = root.findViewById(R.id.photosTabButton)
         damagesButton = root.findViewById(R.id.damagesTabButton)
         sketchButton = root.findViewById(R.id.sketchTabButton)
+        swipeRefreshLayout = root.findViewById(R.id.projectDetailSwipeRefresh)
 
         headerTitle.text = getString(R.string.project_home)
     }
@@ -169,6 +172,9 @@ class ProjectDetailFragment : Fragment() {
     private fun bindListeners() {
         editButton.setOnClickListener {
             Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
+        }
+        swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshRoomsAndThumbnails()
         }
         noteCard.setOnClickListener {
             val action = ProjectDetailFragmentDirections
@@ -231,6 +237,11 @@ class ProjectDetailFragment : Fragment() {
                     viewModel.selectedTab.collect { tab ->
                         applyTabVisibility(tab)
                         updateToggleStyles(tab)
+                    }
+                }
+                launch {
+                    viewModel.isRefreshing.collect { refreshing ->
+                        swipeRefreshLayout.isRefreshing = refreshing
                     }
                 }
             }

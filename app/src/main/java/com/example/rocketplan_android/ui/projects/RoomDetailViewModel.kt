@@ -823,6 +823,7 @@ class RoomDetailViewModel(
                 if (!result.success) {
                     Log.w(TAG, "⚠️ Room photo sync failed for roomId=$remoteRoomId", result.error)
                 }
+                imageProcessorQueueManager.reconcileProcessingAssemblies(source = "room_pull_to_refresh")
                 Log.d(TAG, "🗂 Sync complete; refreshing snapshot for roomId=$remoteRoomId")
                 refreshSnapshot(remoteRoomId)
             } catch (t: Throwable) {

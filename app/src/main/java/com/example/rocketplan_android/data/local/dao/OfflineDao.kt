@@ -392,7 +392,7 @@ interface OfflineDao {
         """
         SELECT * FROM offline_room_photo_snapshots
         WHERE roomId = :roomId
-        ORDER BY orderIndex ASC
+        ORDER BY capturedOn DESC, photoId DESC
         """
     )
     fun pagingRoomPhotoSnapshots(roomId: Long): PagingSource<Int, OfflineRoomPhotoSnapshotEntity>
