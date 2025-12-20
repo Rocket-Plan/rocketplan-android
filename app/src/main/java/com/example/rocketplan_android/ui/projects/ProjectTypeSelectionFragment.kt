@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
@@ -89,15 +90,22 @@ class ProjectTypeSelectionFragment : Fragment() {
                     viewModel.navigationEvents.collect { event ->
                         when (event) {
                             is ProjectTypeSelectionNavigation.NavigateToProjectDetail -> {
-                                val action = ProjectTypeSelectionFragmentDirections
-                                    .actionProjectTypeSelectionFragmentToProjectDetailFragment(event.projectId)
-                                findNavController().navigate(action)
+                                navigateToProjectDetail(event.projectId)
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    private fun navigateToProjectDetail(projectId: Long) {
+        val action = ProjectTypeSelectionFragmentDirections
+            .actionProjectTypeSelectionFragmentToProjectDetailFragment(projectId)
+        val options = NavOptions.Builder()
+            .setPopUpTo(R.id.projectTypeSelectionFragment, true)
+            .build()
+        findNavController().navigate(action, options)
     }
 
     private fun renderState(state: ProjectTypeSelectionViewState) {

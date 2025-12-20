@@ -71,4 +71,9 @@
         <item>Saskatchewan (SK)</item>
         <item>Yukon (YT)</item>
     </string-array>
+
+    <string-array name="country_options">
+        <item>United States</item>
+        <item>Canada</item>
+    </string-array>
 </resources>

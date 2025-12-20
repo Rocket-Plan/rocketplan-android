@@ -58,6 +58,8 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var damagesButton: MaterialButton
     private lateinit var sketchButton: MaterialButton
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var syncInProgressBanner: View
+    private lateinit var syncInProgressText: TextView
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -86,6 +88,7 @@ class ProjectDetailFragment : Fragment() {
     private var roomsSectionIsLoading = true
     private var roomCreationStatus: RoomCreationStatus = RoomCreationStatus.UNKNOWN
     private var isBackgroundSyncing: Boolean = false
+    private var lastSubmittedRoomCount: Int = 0
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -119,6 +122,8 @@ class ProjectDetailFragment : Fragment() {
         roomsProgressBar = root.findViewById(R.id.roomsProgressBar)
         roomsPlaceholder = root.findViewById(R.id.roomsPlaceholder)
         tabPlaceholder = root.findViewById(R.id.tabPlaceholder)
+        syncInProgressBanner = root.findViewById(R.id.syncInProgressBanner)
+        syncInProgressText = root.findViewById(R.id.syncInProgressText)
         toggleGroup = root.findViewById(R.id.tabToggleGroup)
         photosButton = root.findViewById(R.id.photosTabButton)
         damagesButton = root.findViewById(R.id.damagesTabButton)
@@ -252,7 +257,9 @@ class ProjectDetailFragment : Fragment() {
         roomsSectionIsLoading = true
         roomCreationStatus = RoomCreationStatus.UNKNOWN
         isBackgroundSyncing = false
+        lastSubmittedRoomCount = 0
         tabPlaceholder.isVisible = false
+        syncInProgressBanner.isVisible = false
         updateRoomCreationUi()
         updateRoomsSectionVisibility()
     }
@@ -284,10 +291,17 @@ class ProjectDetailFragment : Fragment() {
             }
         }
         Log.d("ProjectDetailFrag", "🏠 Submitting ${flattenedItems.size} room items to roomsAdapter (${state.levelSections.size} sections)")
+        lastSubmittedRoomCount = flattenedItems.size
         roomsAdapter.submitList(flattenedItems)
         roomsSectionIsLoading = false
         updateRoomCreationUi()
         updateRoomsSectionVisibility()
+        syncInProgressBanner.isVisible = state.isBackgroundSyncing
+        if (state.isBackgroundSyncing) {
+            syncInProgressText.text = getString(R.string.project_sync_in_progress)
+        } else {
+            syncInProgressBanner.isVisible = false
+        }
     }
 
     private fun applyTabVisibility(tab: ProjectDetailTab) {
@@ -328,8 +342,9 @@ class ProjectDetailFragment : Fragment() {
             return
         }
 
+        val hasRooms = lastSubmittedRoomCount > 0
         val shouldShowRoomsSpinner =
-            roomsSectionIsLoading || (isBackgroundSyncing && roomsAdapter.currentList.isEmpty())
+            roomsSectionIsLoading || (isBackgroundSyncing && !hasRooms)
 
         when {
             shouldShowRoomsSpinner -> {
@@ -337,7 +352,7 @@ class ProjectDetailFragment : Fragment() {
                 roomsRecyclerView.isVisible = false
                 roomsPlaceholder.isVisible = false
             }
-            roomsAdapter.currentList.isEmpty() -> {
+            !hasRooms -> {
                 roomsProgressBar.isVisible = false
                 roomsRecyclerView.isVisible = false
                 roomsPlaceholder.isVisible = true
@@ -353,19 +368,18 @@ class ProjectDetailFragment : Fragment() {
     private fun updateRoomCreationUi() {
         // Keep the add-room row static; room cards already show sync spinners.
         roomActionsProgressBar.isVisible = false
-        addRoomCard.isEnabled = !isBackgroundSyncing
-        addRoomCard.isClickable = !isBackgroundSyncing
-        addExteriorCard.isEnabled = !isBackgroundSyncing
-        addExteriorCard.isClickable = !isBackgroundSyncing
-        val alpha = if (isBackgroundSyncing) 0.6f else 1f
+        val isBlocked = roomCreationStatus == RoomCreationStatus.MISSING_PROPERTY ||
+            roomCreationStatus == RoomCreationStatus.UNSYNCED_PROPERTY
+        addRoomCard.isEnabled = !isBlocked
+        addRoomCard.isClickable = !isBlocked
+        addExteriorCard.isEnabled = !isBlocked
+        addExteriorCard.isClickable = !isBlocked
+        val alpha = if (isBlocked) 0.6f else 1f
         addRoomCard.alpha = alpha
         addExteriorCard.alpha = alpha
     }
 
     private fun handleAddRoomClick(mode: RoomTypePickerMode) {
-        if (isBackgroundSyncing) {
-            return
-        }
         when (roomCreationStatus) {
             RoomCreationStatus.AVAILABLE -> navigateToRoomTypePicker(mode)
             RoomCreationStatus.MISSING_PROPERTY ->

@@ -13,6 +13,7 @@ import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
+import com.example.rocketplan_android.data.model.CreateLocationRequest
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
@@ -26,6 +27,7 @@ import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.AddressResourceResponse
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
+import com.example.rocketplan_android.data.model.RoomResourceResponse
 import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.DeleteProjectRequest
 import com.example.rocketplan_android.data.model.PropertyResourceResponse
@@ -175,6 +177,12 @@ interface OfflineSyncApi {
         @Path("propertyId") propertyId: Long,
         @Query("filter[updated_date]") updatedSince: String? = null
     ): PaginatedResponse<LocationDto>
+
+    @POST("/api/properties/{propertyId}/locations")
+    suspend fun createLocation(
+        @Path("propertyId") propertyId: Long,
+        @Body body: CreateLocationRequest
+    ): LocationDto
 
     // Damage types / causes (Project Loss Info)
     @GET("/api/projects/{projectId}/property-damage-types")

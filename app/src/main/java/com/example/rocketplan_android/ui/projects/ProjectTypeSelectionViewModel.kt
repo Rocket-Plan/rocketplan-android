@@ -139,6 +139,24 @@ class ProjectTypeSelectionViewModel(
 
             result.fold(
                 onSuccess = {
+                    val locationName = project.displayName()
+                    val seedResult = offlineSyncRepository.createDefaultLocationAndRoom(
+                        projectId = projectId,
+                        propertyTypeValue = propertyType.apiValue,
+                        locationName = locationName,
+                        seedDefaultRoom = propertyType == PropertyType.SINGLE_LOCATION
+                    )
+                    if (seedResult.isFailure) {
+                        val message = seedResult.exceptionOrNull()?.message ?: genericErrorMessage
+                        _uiState.update {
+                            it.copy(
+                                isSelectionInProgress = false,
+                                errorMessage = message
+                            )
+                        }
+                        return@launch
+                    }
+
                     propertyCreationIdempotencyKey = null
                     _uiState.update { it.copy(isSelectionInProgress = false) }
                     syncQueueManager.prioritizeProject(projectId)

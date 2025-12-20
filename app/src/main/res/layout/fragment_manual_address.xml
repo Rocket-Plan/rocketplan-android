@@ -82,13 +82,15 @@
                 android:hint="@string/manual_address_state_label"
                 app:endIconMode="dropdown_menu">
 
-            <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                android:id="@+id/manualStateInput"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="start|center_vertical"
-                android:textAlignment="viewStart"
-                android:inputType="text" />
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                    android:id="@+id/manualStateInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="start|center_vertical"
+                    android:textAlignment="viewStart"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:inputType="text" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -97,12 +99,17 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:hint="@string/manual_address_country_label">
+                android:hint="@string/manual_address_country_label"
+                app:endIconMode="dropdown_menu">
 
-                <com.google.android.material.textfield.TextInputEditText
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/manualCountryInput"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:gravity="start|center_vertical"
+                    android:textAlignment="viewStart"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
                     android:inputType="textCapWords" />
             </com.google.android.material.textfield.TextInputLayout>
 

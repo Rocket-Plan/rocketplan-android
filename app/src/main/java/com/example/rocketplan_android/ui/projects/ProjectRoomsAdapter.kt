@@ -103,7 +103,6 @@ class ProjectRoomsAdapter(
             val previousRoom = thumbnail.getTag(R.id.tag_room_photo_id) as? RoomCard
             val previousMode = thumbnail.getTag(R.id.tag_room_card_mode) as? RoomStatMode
             val hasModeChanged = previousMode != mode
-
             thumbnail.setTag(R.id.tag_room_photo_id, room)
             thumbnail.setTag(R.id.tag_room_card_mode, mode)
 

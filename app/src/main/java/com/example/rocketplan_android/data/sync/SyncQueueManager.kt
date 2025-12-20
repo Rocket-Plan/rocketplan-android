@@ -404,7 +404,15 @@ class SyncQueueManager(
 
                 projectRealtimeManager?.updateProjects(projects.map { it.projectId }.toSet())
 
-                projects.forEachIndexed { index, project ->
+                val now = System.currentTimeMillis()
+                val recentCutoff = now - RECENT_SYNC_THRESHOLD_MS
+                val eligible = projects.filter { project ->
+                    val lastSynced = project.lastSyncedAt?.time
+                    // Skip recently synced projects to avoid immediate re-queue
+                    lastSynced == null || lastSynced < recentCutoff
+                }
+
+                eligible.forEachIndexed { index, project ->
                     enqueue(
                         SyncJob.SyncProjectGraph(
                             projectId = project.projectId,
@@ -593,6 +601,8 @@ class SyncQueueManager(
         private const val TAG = "SyncQueueManager"
         private const val FOREGROUND_PRIORITY = -1
         private const val FOREGROUND_PHOTO_PRIORITY = 0
+        // Avoid re-queuing projects that have synced very recently when building background queues
+        private const val RECENT_SYNC_THRESHOLD_MS = 5 * 60 * 1000L
     }
 
     private suspend fun focusProjectSync(projectId: Long) {
@@ -649,11 +659,17 @@ class SyncQueueManager(
 
     private fun updateProjectSyncingProjectsLocked() {
         val activeProjects = activeProjectModes
-            .filterValues { it != SyncJob.ProjectSyncMode.PHOTOS_ONLY }
+            .filterValues {
+                it != SyncJob.ProjectSyncMode.PHOTOS_ONLY &&
+                    it != SyncJob.ProjectSyncMode.CONTENT_ONLY
+            }
             .keys
         val queuedProjects = taskIndex.values.mapNotNull { task ->
             val job = task.job as? SyncJob.SyncProjectGraph ?: return@mapNotNull null
-            job.projectId.takeIf { job.mode != SyncJob.ProjectSyncMode.PHOTOS_ONLY }
+            job.projectId.takeIf {
+                job.mode != SyncJob.ProjectSyncMode.PHOTOS_ONLY &&
+                    job.mode != SyncJob.ProjectSyncMode.CONTENT_ONLY
+            }
         }
         // Note: pendingPhotoSyncs intentionally excluded - photo uploads shouldn't block room creation
         val newSet = (activeProjects + queuedProjects).toSet()

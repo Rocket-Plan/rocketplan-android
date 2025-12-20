@@ -236,6 +236,9 @@
         <action
             android:id="@+id/action_rocketDryFragment_to_equipmentRoomFragment"
             app:destination="@id/equipmentRoomFragment" />
+        <action
+            android:id="@+id/action_rocketDryFragment_to_roomTypePickerFragment"
+            app:destination="@id/roomTypePickerFragment" />
     </fragment>
 
     <fragment
@@ -432,8 +435,8 @@
             app:destination="@id/manualAddressEntryFragment" />
 
         <action
-            android:id="@+id/action_createProjectFragment_to_projectLandingFragment"
-            app:destination="@id/projectLandingFragment"
+            android:id="@+id/action_createProjectFragment_to_projectTypeSelectionFragment"
+            app:destination="@id/projectTypeSelectionFragment"
             app:popUpTo="@id/createProjectFragment"
             app:popUpToInclusive="true" />
     </fragment>
@@ -447,6 +450,12 @@
         <action
             android:id="@+id/action_manualAddressEntryFragment_to_projectLandingFragment"
             app:destination="@id/projectLandingFragment"
+            app:popUpTo="@id/createProjectFragment"
+            app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_manualAddressEntryFragment_to_projectTypeSelectionFragment"
+            app:destination="@id/projectTypeSelectionFragment"
             app:popUpTo="@id/createProjectFragment"
             app:popUpToInclusive="true" />
     </fragment>

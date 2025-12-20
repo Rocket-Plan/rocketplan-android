@@ -47,9 +47,23 @@
 -keep class * extends com.google.gson.reflect.TypeToken { *; }
 -keep,allowobfuscation,allowshrinking class com.google.gson.reflect.TypeToken
 
-# Keep API models
+# Keep API models and DTOs
 -keep class com.example.rocketplan_android.data.remote.dto.** { *; }
 -keep class com.example.rocketplan_android.data.local.entity.** { *; }
+-keep class com.example.rocketplan_android.data.model.** { *; }
+-keep class com.example.rocketplan_android.data.model.offline.** { *; }
+
+# Keep Gson-serialized persisted payloads (stored in files/shared prefs)
+-keep class com.example.rocketplan_android.logging.PendingRemoteLog { *; }
+-keep class com.example.rocketplan_android.logging.RetryableLogBatch { *; }
+-keep class com.example.rocketplan_android.data.storage.StoredUploadData { *; }
+
+# Keep Retrofit API interfaces
+-keep interface com.example.rocketplan_android.data.api.** { *; }
+-keep class com.example.rocketplan_android.data.api.** { *; }
+
+# Keep Pusher payloads
+-keep class com.example.rocketplan_android.realtime.** { *; }
 
 # FLIR ThermalSDK - keep all classes (loaded via reflection)
 -keep class com.flir.** { *; }

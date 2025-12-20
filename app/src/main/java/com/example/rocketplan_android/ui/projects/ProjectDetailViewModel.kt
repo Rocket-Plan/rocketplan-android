@@ -398,12 +398,9 @@ private suspend fun OfflineProjectEntity.resolveRoomCreationStatus(
     localDataService: LocalDataService
 ): RoomCreationStatus {
     val propertyLocalId = propertyId ?: return RoomCreationStatus.MISSING_PROPERTY
-    val property = localDataService.getProperty(propertyLocalId) ?: return RoomCreationStatus.MISSING_PROPERTY
-    return if (property.serverId == null) {
-        RoomCreationStatus.UNSYNCED_PROPERTY
-    } else {
-        RoomCreationStatus.AVAILABLE
-    }
+    localDataService.getProperty(propertyLocalId) ?: return RoomCreationStatus.MISSING_PROPERTY
+    // Allow room creation as long as property exists locally - rooms will sync when online
+    return RoomCreationStatus.AVAILABLE
 }
 
 private fun String?.existingFilePath(): String? {

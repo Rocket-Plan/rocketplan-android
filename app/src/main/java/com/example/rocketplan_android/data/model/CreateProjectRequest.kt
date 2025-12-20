@@ -47,3 +47,4 @@ typealias ProjectResourceResponse = SingleResourceResponse<ProjectDto>
 typealias ProjectDetailResourceResponse = SingleResourceResponse<ProjectDetailDto>
 typealias NoteResourceResponse = SingleResourceResponse<NoteDto>
 typealias PropertyResourceResponse = SingleResourceResponse<PropertyDto>
+typealias RoomResourceResponse = SingleResourceResponse<com.example.rocketplan_android.data.model.offline.RoomDto>

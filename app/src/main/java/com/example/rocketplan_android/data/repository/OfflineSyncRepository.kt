@@ -25,6 +25,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
+import com.example.rocketplan_android.data.model.CreateLocationRequest
 import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
@@ -140,7 +141,8 @@ class OfflineSyncRepository(
 
     data class PendingCreationResult(
         val createdProjects: List<PendingProjectSyncResult> = emptyList(),
-        val syncedRoomIds: List<Long> = emptyList()
+        val syncedRoomIds: List<Long> = emptyList(),
+        val syncedLocationIds: List<Long> = emptyList()
     )
 
     data class PendingProjectSyncResult(
@@ -645,7 +647,10 @@ class OfflineSyncRepository(
         isSource: Boolean = false,
         idempotencyKey: String? = null
     ): Result<OfflineRoomEntity> = withContext(ioDispatcher) {
-        val resolvedIdempotencyKey = idempotencyKey ?: UUID.randomUUID().toString()
+        // Tie the request idempotency to the room UUID so we can reconcile pending locals
+        val pendingRoom = localDataService.getPendingRoomForProject(projectId, roomName)
+        val roomUuid = pendingRoom?.uuid ?: UUID.randomUUID().toString()
+        val resolvedIdempotencyKey = idempotencyKey ?: roomUuid
         runCatching {
             val project = localDataService.getProject(projectId)
                 ?: throw IllegalStateException("Project not found locally")
@@ -684,12 +689,20 @@ class OfflineSyncRepository(
             )
 
             val dto = api.createRoom(locationServerId, request)
-            val existing = localDataService.getRoomByServerId(dto.id)
+            // Prefer matching by UUID to reconcile pending locals; fall back to serverId
+            val existing = localDataService.getRoomByUuid(roomUuid)
+                ?: localDataService.getRoomByServerId(dto.id)
             val entity = dto.toEntity(
                 existing = existing,
                 projectId = projectId,
                 locationId = locationServerId
+            ).copy(
+                uuid = existing?.uuid ?: roomUuid,
+                roomId = existing?.roomId ?: dto.id
             )
+            if (entity.serverId == null || entity.serverId == 0L || entity.roomId == 0L) {
+                throw IllegalStateException("Room response missing server id")
+            }
             localDataService.saveRooms(listOf(entity))
             entity
         }.recoverCatching { error ->
@@ -699,8 +712,67 @@ class OfflineSyncRepository(
                 roomName = roomName,
                 roomTypeId = roomTypeId,
                 isSource = isSource,
-                idempotencyKey = resolvedIdempotencyKey
+                idempotencyKey = resolvedIdempotencyKey,
+                forcedUuid = roomUuid
             ) ?: throw error
+        }
+    }
+
+    suspend fun createDefaultLocationAndRoom(
+        projectId: Long,
+        propertyTypeValue: String?,
+        locationName: String,
+        seedDefaultRoom: Boolean
+    ): Result<Unit> = withContext(ioDispatcher) {
+        val config = resolveLocationDefaults(propertyTypeValue)
+        val idempotencyKey = UUID.randomUUID().toString()
+
+        runCatching {
+            val location = createLocationInternal(
+                projectId = projectId,
+                locationName = locationName,
+                config = config,
+                idempotencyKey = idempotencyKey
+            )
+
+            if (seedDefaultRoom) {
+                val roomTypeId = roomTypeRepository
+                    .getRoomTypes(projectId, RequestType.INTERIOR, forceRefresh = false)
+                    .getOrNull()
+                    ?.firstOrNull()
+                    ?.id
+
+                if (roomTypeId != null) {
+                    createRoom(
+                        projectId = projectId,
+                        roomName = locationName.ifBlank { "Room" },
+                        roomTypeId = roomTypeId,
+                        isSource = true
+                    )
+                } else {
+                    Log.w(
+                        "API",
+                        "ℹ️ [createDefaultLocationAndRoom] No room types available; skipping default room creation"
+                    )
+                }
+            }
+            Unit
+        }.recoverCatching { error ->
+            Log.w("API", "📴 [createDefaultLocationAndRoom] Falling back to pending location", error)
+            createPendingLocation(
+                projectId = projectId,
+                locationName = locationName,
+                config = config,
+                idempotencyKey = idempotencyKey
+            )
+            if (seedDefaultRoom) {
+                // Room will be created after location sync completes
+                Log.d(
+                    "API",
+                    "🕒 [createDefaultLocationAndRoom] Default room will be created after location sync"
+                )
+            }
+            Unit
         }
     }
 
@@ -1044,6 +1116,7 @@ class OfflineSyncRepository(
         if (operations.isEmpty()) return@withContext PendingCreationResult()
 
         val createdProjects = mutableListOf<PendingProjectSyncResult>()
+        val syncedLocationIds = mutableListOf<Long>()
         val syncedRoomIds = mutableListOf<Long>()
 
         operations.forEach { operation ->
@@ -1056,6 +1129,19 @@ class OfflineSyncRepository(
                         }
                         .onFailure { error ->
                             Log.w("API", "⚠️ [processPendingCreations] Project creation retry failed", error)
+                            markSyncOperationFailure(operation, error)
+                        }
+                }
+                "location" -> {
+                    runCatching { handlePendingLocationCreation(operation) }
+                        .onSuccess { locationId ->
+                            if (locationId != null) {
+                                syncedLocationIds += locationId
+                                localDataService.removeSyncOperation(operation.operationId)
+                            }
+                        }
+                        .onFailure { error ->
+                            Log.w("API", "⚠️ [processPendingCreations] Location creation retry failed", error)
                             markSyncOperationFailure(operation, error)
                         }
                 }
@@ -1079,7 +1165,11 @@ class OfflineSyncRepository(
             }
         }
 
-        PendingCreationResult(createdProjects = createdProjects, syncedRoomIds = syncedRoomIds)
+        PendingCreationResult(
+            createdProjects = createdProjects,
+            syncedRoomIds = syncedRoomIds,
+            syncedLocationIds = syncedLocationIds
+        )
     }
 
     suspend fun upsertEquipmentOffline(
@@ -2990,7 +3080,8 @@ class OfflineSyncRepository(
         roomName: String,
         roomTypeId: Long,
         isSource: Boolean,
-        idempotencyKey: String
+        idempotencyKey: String,
+        forcedUuid: String? = null
     ): OfflineRoomEntity? {
         val project = localDataService.getProject(projectId)
             ?: throw IllegalStateException("Project not found locally")
@@ -3006,7 +3097,7 @@ class OfflineSyncRepository(
         val pending = OfflineRoomEntity(
             roomId = localId,
             serverId = null,
-            uuid = UUID.randomUUID().toString(),
+            uuid = forcedUuid ?: UUID.randomUUID().toString(),
             projectId = project.projectId,
             locationId = location.locationId,
             title = roomName,
@@ -3031,6 +3122,194 @@ class OfflineSyncRepository(
             idempotencyKey = idempotencyKey
         )
         return pending
+    }
+
+    private data class LocationDefaults(
+        val locationTypeId: Long,
+        val type: String,
+        val floorNumber: Int,
+        val isCommon: Boolean,
+        val isAccessible: Boolean,
+        val isCommercial: Boolean
+    )
+
+    private fun resolveLocationDefaults(propertyTypeValue: String?): LocationDefaults {
+        val normalized = propertyTypeValue
+            ?.lowercase()
+            ?.replace("-", "_")
+            ?.replace("\\s+".toRegex(), "_")
+            ?.trim('_')
+
+        return when (normalized) {
+            "exterior" -> LocationDefaults(
+                locationTypeId = 3,
+                type = "exterior",
+                floorNumber = 0,
+                isCommon = true,
+                isAccessible = true,
+                isCommercial = false
+            )
+            "commercial", "multi_unit", "multi-unit" -> LocationDefaults(
+                locationTypeId = 2,
+                type = "floor",
+                floorNumber = 1,
+                isCommon = true,
+                isAccessible = true,
+                isCommercial = normalized == "commercial"
+            )
+            else -> LocationDefaults(
+                locationTypeId = 1,
+                type = "unit",
+                floorNumber = 1,
+                isCommon = true,
+                isAccessible = true,
+                isCommercial = false
+            )
+        }
+    }
+
+    private suspend fun createLocationInternal(
+        projectId: Long,
+        locationName: String,
+        config: LocationDefaults,
+        idempotencyKey: String
+    ): OfflineLocationEntity {
+        val project = localDataService.getProject(projectId)
+            ?: throw IllegalStateException("Project not found locally")
+        val propertyLocalId = project.propertyId
+            ?: throw IllegalStateException("Project has no property")
+        val property = localDataService.getProperty(propertyLocalId)
+            ?: throw IllegalStateException("Property not found locally")
+
+        val request = CreateLocationRequest(
+            name = locationName,
+            floorNumber = config.floorNumber,
+            locationTypeId = config.locationTypeId,
+            isCommon = config.isCommon,
+            isAccessible = config.isAccessible,
+            isCommercial = config.isCommercial,
+            idempotencyKey = idempotencyKey
+        )
+
+        val propertyServerId = property.serverId
+            ?: throw RoomTypeRepository.UnsyncedPropertyException()
+
+        Log.d(
+            "API",
+            "🆕 [createLocation] Creating location '$locationName' (type=${config.type}) for property $propertyServerId"
+        )
+        val dto = api.createLocation(propertyServerId, request)
+        val entity = dto.toEntity(defaultProjectId = projectId)
+        localDataService.saveLocations(listOf(entity))
+        return entity
+    }
+
+    private suspend fun createPendingLocation(
+        projectId: Long,
+        locationName: String,
+        config: LocationDefaults,
+        idempotencyKey: String
+    ): OfflineLocationEntity {
+        val project = localDataService.getProject(projectId)
+            ?: throw IllegalStateException("Project not found locally")
+        val propertyLocalId = project.propertyId
+            ?: throw IllegalStateException("Project has no property")
+
+        val timestamp = now()
+        val localId = -System.currentTimeMillis()
+        val pending = OfflineLocationEntity(
+            locationId = localId,
+            serverId = null,
+            uuid = UUID.randomUUID().toString(),
+            projectId = projectId,
+            title = locationName,
+            type = config.type,
+            parentLocationId = null,
+            isAccessible = config.isAccessible,
+            syncStatus = SyncStatus.PENDING,
+            syncVersion = 0,
+            isDirty = true,
+            isDeleted = false,
+            createdAt = timestamp,
+            updatedAt = timestamp,
+            lastSyncedAt = null
+        )
+        localDataService.saveLocations(listOf(pending))
+        enqueueLocationCreation(
+            location = pending,
+            propertyLocalId = propertyLocalId,
+            config = config,
+            idempotencyKey = idempotencyKey
+        )
+        return pending
+    }
+
+    private suspend fun enqueueLocationCreation(
+        location: OfflineLocationEntity,
+        propertyLocalId: Long,
+        config: LocationDefaults,
+        idempotencyKey: String?
+    ) {
+        val payload = PendingLocationCreationPayload(
+            localLocationId = location.locationId,
+            locationUuid = location.uuid,
+            projectId = location.projectId,
+            propertyLocalId = propertyLocalId,
+            locationName = location.title,
+            locationTypeId = config.locationTypeId,
+            type = config.type,
+            floorNumber = config.floorNumber,
+            isCommon = config.isCommon,
+            isAccessible = config.isAccessible,
+            isCommercial = config.isCommercial,
+            idempotencyKey = idempotencyKey
+        )
+        val operation = OfflineSyncQueueEntity(
+            operationId = "location-${location.locationId}-${UUID.randomUUID()}",
+            entityType = "location",
+            entityId = location.locationId,
+            entityUuid = location.uuid,
+            operationType = SyncOperationType.CREATE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+        localDataService.enqueueSyncOperation(operation)
+    }
+
+    private suspend fun handlePendingLocationCreation(
+        operation: OfflineSyncQueueEntity
+    ): Long? {
+        val payload = runCatching {
+            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingLocationCreationPayload::class.java)
+        }.getOrNull() ?: return null
+
+        val property = localDataService.getProperty(payload.propertyLocalId)
+            ?: throw IllegalStateException("Property ${payload.propertyLocalId} missing locally")
+        val propertyServerId = property.serverId
+            ?: throw RoomTypeRepository.UnsyncedPropertyException()
+
+        val request = CreateLocationRequest(
+            name = payload.locationName,
+            floorNumber = payload.floorNumber,
+            locationTypeId = payload.locationTypeId,
+            isCommon = payload.isCommon,
+            isAccessible = payload.isAccessible,
+            isCommercial = payload.isCommercial,
+            idempotencyKey = payload.idempotencyKey
+        )
+
+        val dto = api.createLocation(propertyServerId, request)
+        val existing = localDataService.getLocations(payload.projectId)
+            .firstOrNull { it.uuid == payload.locationUuid || it.locationId == payload.localLocationId }
+        val entity = dto.toEntity(defaultProjectId = payload.projectId).copy(
+            locationId = existing?.locationId ?: dto.id,
+            uuid = existing?.uuid ?: dto.uuid ?: UUID.randomUUID().toString(),
+            syncStatus = SyncStatus.SYNCED,
+            isDirty = false,
+            lastSyncedAt = now()
+        )
+        localDataService.saveLocations(listOf(entity))
+        return entity.locationId
     }
 }
 
@@ -3711,6 +3990,21 @@ private data class PendingProjectCreationPayload(
     val companyId: Long,
     val projectStatusId: Int,
     val addressRequest: CreateAddressRequest,
+    val idempotencyKey: String?
+)
+
+private data class PendingLocationCreationPayload(
+    val localLocationId: Long,
+    val locationUuid: String,
+    val projectId: Long,
+    val propertyLocalId: Long,
+    val locationName: String,
+    val locationTypeId: Long,
+    val type: String,
+    val floorNumber: Int,
+    val isCommon: Boolean,
+    val isAccessible: Boolean,
+    val isCommercial: Boolean,
     val idempotencyKey: String?
 )
 

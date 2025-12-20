@@ -33,6 +33,7 @@
     <string name="delete_project_message">This removes the project and its rooms from your device.</string>
     <string name="project_deleted">Project deleted</string>
     <string name="project_delete_failed">Unable to delete this project right now.</string>
+    <string name="project_sync_in_progress">Sync in progress…</string>
     <string name="delete">Delete</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>

@@ -22,6 +22,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
@@ -157,8 +158,13 @@ class RocketDryFragment : Fragment() {
         }
 
         roomCard.setOnClickListener {
-            Log.d(TAG, "➕ Add Room card tapped")
-            Toast.makeText(context, "Add Room", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "➕ Add Room card tapped - opening room type picker")
+            val action = RocketDryFragmentDirections
+                .actionRocketDryFragmentToRoomTypePickerFragment(
+                    projectId = args.projectId,
+                    mode = RoomTypePickerMode.ROOM.name
+                )
+            findNavController().navigate(action)
         }
 
         exteriorSpaceCard.setOnClickListener {

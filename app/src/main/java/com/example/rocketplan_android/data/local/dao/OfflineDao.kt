@@ -108,6 +108,18 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_rooms WHERE uuid = :uuid LIMIT 1")
     suspend fun getRoomByUuid(uuid: String): OfflineRoomEntity?
 
+    @Query(
+        """
+        SELECT * FROM offline_rooms
+        WHERE projectId = :projectId
+          AND isDeleted = 0
+          AND serverId IS NULL
+          AND title = :title
+        LIMIT 1
+        """
+    )
+    suspend fun getPendingRoomForProject(projectId: Long, title: String): OfflineRoomEntity?
+
     @Query("SELECT * FROM offline_rooms WHERE serverId IS NOT NULL")
     suspend fun getRoomsWithServerId(): List<OfflineRoomEntity>
 

@@ -35,7 +35,7 @@ class ManualAddressEntryFragment : Fragment() {
     private lateinit var stateLayout: TextInputLayout
     private lateinit var stateInput: MaterialAutoCompleteTextView
     private lateinit var countryLayout: TextInputLayout
-    private lateinit var countryInput: TextInputEditText
+    private lateinit var countryInput: MaterialAutoCompleteTextView
     private lateinit var postalLayout: TextInputLayout
     private lateinit var postalInput: TextInputEditText
 
@@ -63,6 +63,7 @@ class ManualAddressEntryFragment : Fragment() {
         postalInput = view.findViewById(R.id.manualPostalInput)
 
         setupStateDropdown()
+        setupCountryDropdown()
 
         streetInput.doAfterTextChanged {
             if (!it.isNullOrBlank()) {
@@ -177,7 +178,27 @@ class ManualAddressEntryFragment : Fragment() {
 
     private fun navigateToProject(projectId: Long) {
         val action = ManualAddressEntryFragmentDirections
-            .actionManualAddressEntryFragmentToProjectLandingFragment(projectId)
+            .actionManualAddressEntryFragmentToProjectTypeSelectionFragment(projectId)
         findNavController().navigate(action)
+    }
+
+    private fun setupCountryDropdown() {
+        val countryOptions = resources.getStringArray(R.array.country_options)
+        val adapter = ArrayAdapter(
+            requireContext(),
+            android.R.layout.simple_list_item_1,
+            countryOptions
+        )
+        countryInput.setAdapter(adapter)
+        countryInput.threshold = 0
+        countryInput.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                countryInput.showDropDown()
+            }
+        }
+        countryInput.setOnItemClickListener { _, _, _, _ ->
+            countryLayout.error = null
+            viewModel.clearError()
+        }
     }
 }

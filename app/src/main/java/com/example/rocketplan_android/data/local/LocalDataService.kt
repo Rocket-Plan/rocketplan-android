@@ -100,6 +100,11 @@ class LocalDataService private constructor(
     suspend fun getRoom(roomId: Long): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoom(roomId) }
 
+    suspend fun getPendingRoomForProject(projectId: Long, title: String): OfflineRoomEntity? =
+        withContext(ioDispatcher) {
+            dao.getPendingRoomForProject(projectId, title)
+        }
+
     suspend fun getPendingRoomDeletions(projectId: Long): List<OfflineRoomEntity> =
         withContext(ioDispatcher) { dao.getPendingRoomDeletions(projectId) }
 
