@@ -650,6 +650,10 @@ class OfflineSyncRepository(
         // Tie the request idempotency to the room UUID so we can reconcile pending locals
         val pendingRoom = localDataService.getPendingRoomForProject(projectId, roomName)
         val roomUuid = pendingRoom?.uuid ?: UUID.randomUUID().toString()
+        Log.d(
+            "API",
+            "🆕 [createRoom] Using roomUuid=$roomUuid (pending=${pendingRoom != null}) projectId=$projectId"
+        )
         val resolvedIdempotencyKey = idempotencyKey ?: roomUuid
         runCatching {
             val project = localDataService.getProject(projectId)
@@ -703,6 +707,10 @@ class OfflineSyncRepository(
             if (entity.serverId == null || entity.serverId == 0L || entity.roomId == 0L) {
                 throw IllegalStateException("Room response missing server id")
             }
+            Log.d(
+                "API",
+                "✅ [createRoom] Reconciled room serverId=${entity.serverId} localId=${entity.roomId} uuid=${entity.uuid} existing=${existing != null}"
+            )
             localDataService.saveRooms(listOf(entity))
             entity
         }.recoverCatching { error ->

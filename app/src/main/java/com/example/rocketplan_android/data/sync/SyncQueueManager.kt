@@ -421,6 +421,31 @@ class SyncQueueManager(
                             mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY
                         )
                     )
+                    remoteLogger.log(
+                        LogLevel.INFO,
+                        TAG,
+                        "Queued project for background sync",
+                        mapOf(
+                            "projectId" to project.projectId.toString(),
+                            "prio" to (2 + index).toString(),
+                            "lastSyncedAt" to (project.lastSyncedAt?.time?.toString() ?: "null"),
+                            "recentCutoff" to recentCutoff.toString()
+                        )
+                    )
+                }
+
+                val skipped = projects - eligible.toSet()
+                skipped.forEach { project ->
+                    remoteLogger.log(
+                        LogLevel.DEBUG,
+                        TAG,
+                        "Skipped project due to recent sync",
+                        mapOf(
+                            "projectId" to project.projectId.toString(),
+                            "lastSyncedAt" to (project.lastSyncedAt?.time?.toString() ?: "null"),
+                            "recentCutoff" to recentCutoff.toString()
+                        )
+                    )
                 }
             }
 
