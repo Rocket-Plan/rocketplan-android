@@ -348,9 +348,12 @@ class LocalDataService private constructor(
         propertyType: String?
     ) = withContext(ioDispatcher) {
         val existing = dao.getProject(projectId) ?: return@withContext
+        // Preserve local pending property (negative ID) - don't overwrite with server property
+        val existingPropertyIsPending = existing.propertyId != null && existing.propertyId < 0
+        val resolvedPropertyId = if (existingPropertyIsPending) existing.propertyId else propertyId
         val timestamp = Date()
         val updatedProject = existing.copy(
-            propertyId = propertyId,
+            propertyId = resolvedPropertyId,
             propertyType = propertyType ?: existing.propertyType,
             syncStatus = SyncStatus.SYNCED,
             isDirty = false,
