@@ -14,7 +14,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
@@ -28,6 +30,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshot
 import com.example.rocketplan_android.data.local.entity.OfflineRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogItemEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import com.example.rocketplan_android.data.local.model.ProjectWithProperty
@@ -120,6 +123,17 @@ interface OfflineDao {
     )
     suspend fun getPendingRoomForProject(projectId: Long, title: String): OfflineRoomEntity?
 
+    @Query(
+        """
+        SELECT COUNT(*) FROM offline_rooms
+        WHERE projectId = :projectId
+          AND isDeleted = 0
+          AND serverId IS NULL
+          AND title = :title
+        """
+    )
+    suspend fun countPendingRoomsForProjectTitle(projectId: Long, title: String): Int
+
     @Query("SELECT * FROM offline_rooms WHERE serverId IS NOT NULL")
     suspend fun getRoomsWithServerId(): List<OfflineRoomEntity>
 
@@ -175,6 +189,64 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_room_types WHERE propertyServerId = :propertyServerId AND filterType = :filterType")
     suspend fun clearRoomTypes(propertyServerId: Long, filterType: String)
+    // endregion
+
+    // region Work Scope Catalog
+    @Upsert
+    suspend fun upsertWorkScopeCatalogItems(items: List<OfflineWorkScopeCatalogItemEntity>)
+
+    @Query(
+        """
+        SELECT * FROM offline_work_scope_catalog_items
+        WHERE companyId = :companyId
+        ORDER BY sheetId, itemId
+        """
+    )
+    suspend fun getWorkScopeCatalogItems(companyId: Long): List<OfflineWorkScopeCatalogItemEntity>
+
+    @Query("SELECT MAX(fetchedAt) FROM offline_work_scope_catalog_items WHERE companyId = :companyId")
+    suspend fun getLatestWorkScopeCatalogFetchedAt(companyId: Long): Date?
+
+    @Query("DELETE FROM offline_work_scope_catalog_items WHERE companyId = :companyId")
+    suspend fun clearWorkScopeCatalogItems(companyId: Long)
+    // endregion
+
+    // region Damage Types / Causes
+    @Upsert
+    suspend fun upsertDamageTypes(types: List<OfflineDamageTypeEntity>)
+
+    @Query(
+        """
+        SELECT * FROM offline_damage_types
+        WHERE projectServerId = :projectServerId
+        ORDER BY COALESCE(name, title) COLLATE NOCASE
+        """
+    )
+    suspend fun getDamageTypes(projectServerId: Long): List<OfflineDamageTypeEntity>
+
+    @Query("SELECT MAX(fetchedAt) FROM offline_damage_types WHERE projectServerId = :projectServerId")
+    suspend fun getLatestDamageTypesFetchedAt(projectServerId: Long): Date?
+
+    @Query("DELETE FROM offline_damage_types WHERE projectServerId = :projectServerId")
+    suspend fun clearDamageTypes(projectServerId: Long)
+
+    @Upsert
+    suspend fun upsertDamageCauses(causes: List<OfflineDamageCauseEntity>)
+
+    @Query(
+        """
+        SELECT * FROM offline_damage_causes
+        WHERE projectServerId = :projectServerId
+        ORDER BY COALESCE(name, '') COLLATE NOCASE
+        """
+    )
+    suspend fun getDamageCauses(projectServerId: Long): List<OfflineDamageCauseEntity>
+
+    @Query("SELECT MAX(fetchedAt) FROM offline_damage_causes WHERE projectServerId = :projectServerId")
+    suspend fun getLatestDamageCausesFetchedAt(projectServerId: Long): Date?
+
+    @Query("DELETE FROM offline_damage_causes WHERE projectServerId = :projectServerId")
+    suspend fun clearDamageCauses(projectServerId: Long)
     // endregion
 
     // region Atmospheric Logs

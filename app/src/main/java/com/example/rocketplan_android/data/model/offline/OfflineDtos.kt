@@ -10,6 +10,16 @@ data class PaginatedResponse<T>(
     val meta: PaginationMeta? = null
 )
 
+/**
+ * Flexible response wrapper that handles APIs returning either an array or single object for `data`.
+ * Use with Gson's JsonElement to manually parse the ambiguous field.
+ */
+data class FlexibleDataResponse(
+    val data: com.google.gson.JsonElement?,
+    val links: PaginationLinks? = null,
+    val meta: PaginationMeta? = null
+)
+
 data class PaginationLinks(
     val first: String?,
     val last: String?,

@@ -23,9 +23,9 @@
 
         <View
             android:id="@+id/roomGradientOverlay"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="@drawable/room_card_gradient" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/room_card_gradient" />
 
         <FrameLayout
             android:id="@+id/roomIconContainer"
@@ -43,24 +43,27 @@
                 android:padding="16dp"
                 android:scaleType="centerInside"
                 android:src="@drawable/ic_door" />
-
-            <TextView
-                android:id="@+id/roomScopeTotal"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="bottom|center_horizontal"
-                android:paddingStart="8dp"
-                android:paddingEnd="8dp"
-                android:paddingTop="4dp"
-                android:paddingBottom="4dp"
-                android:textColor="@color/main_purple"
-                android:textSize="12sp"
-                android:textStyle="bold"
-                android:singleLine="true"
-                android:ellipsize="end"
-                android:visibility="gone"
-                tools:text="$1.2k" />
         </FrameLayout>
+
+        <TextView
+            android:id="@+id/roomScopeTotal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="12dp"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_room_scope_total"
+            android:ellipsize="end"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
+            android:singleLine="true"
+            android:textColor="@android:color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            tools:text="$1.2k" />
 
         <ProgressBar
             android:id="@+id/loadingSpinner"

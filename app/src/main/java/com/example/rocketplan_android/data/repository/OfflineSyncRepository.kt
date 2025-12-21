@@ -135,6 +135,7 @@ class OfflineSyncRepository(
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+    private val TAG = "API"
 
     private val gson = Gson()
     private val roomPhotoListType = object : TypeToken<List<RoomPhotoDto>>() {}.type
@@ -151,6 +152,39 @@ class OfflineSyncRepository(
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
         val project = localDataService.getProject(projectId)
         return project?.serverId ?: projectId.takeIf { it > 0 }
+    }
+
+    private suspend fun resolveExistingRoomForSync(
+        projectId: Long,
+        room: RoomDto
+    ): OfflineRoomEntity? {
+        val byServerId = localDataService.getRoomByServerId(room.id)
+        if (byServerId != null) return byServerId
+        val uuid = room.uuid?.takeIf { it.isNotBlank() }
+        val byUuid = uuid?.let { localDataService.getRoomByUuid(it) }
+        if (byUuid != null) return byUuid
+        val candidateTitle = when {
+            !room.title.isNullOrBlank() -> room.title
+            !room.name.isNullOrBlank() -> room.name
+            !room.roomType?.name.isNullOrBlank() && (room.typeOccurrence ?: 1) > 1 ->
+                "${room.roomType?.name} ${room.typeOccurrence}"
+            !room.roomType?.name.isNullOrBlank() -> room.roomType?.name
+            else -> null
+        }
+        return candidateTitle?.let { title ->
+            val pendingCount = localDataService.countPendingRoomsForProjectTitle(projectId, title)
+            when {
+                pendingCount == 1 -> localDataService.getPendingRoomForProject(projectId, title)
+                pendingCount > 1 -> {
+                    Log.w(
+                        "API",
+                        "📴 [resolveExistingRoomForSync] Multiple pending rooms named '$title' for project=$projectId; skipping title match"
+                    )
+                    null
+                }
+                else -> null
+            }
+        }
     }
 
     suspend fun syncCompanyProjects(
@@ -342,9 +376,15 @@ class OfflineSyncRepository(
         ensureActive()
 
         detail.rooms?.let { rooms ->
-            val resolvedRooms = rooms.map { room ->
-                val existing = localDataService.getRoomByServerId(room.id)
-                    ?: room.uuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
+            val resolvedRooms = rooms.mapNotNull { room ->
+                val existing = resolveExistingRoomForSync(projectId, room)
+                if (room.id <= 0 && existing == null) {
+                    Log.w(
+                        "API",
+                        "📴 [syncProjectEssentials] Skipping room with invalid id=${room.id} title=${room.title ?: room.name}"
+                    )
+                    return@mapNotNull null
+                }
                 room.toEntity(existing, projectId = detail.id, locationId = room.locationId)
             }
             localDataService.saveRooms(resolvedRooms)
@@ -389,6 +429,8 @@ class OfflineSyncRepository(
             propertyId = resolvedId,
             propertyType = resolvedPropertyType
         )
+        runCatching { primeRoomTypeCaches(projectId, forceRefresh = false) }
+            .onFailure { Log.w("API", "⚠️ [syncProjectEssentials] Unable to prefetch room types for project $projectId", it) }
         itemCount++
         ensureActive()
 
@@ -435,8 +477,7 @@ class OfflineSyncRepository(
             val rooms = fetchRoomsForLocation(locationId)
             if (rooms.isNotEmpty()) {
                 val resolvedRooms = rooms.map { room ->
-                    val existing = localDataService.getRoomByServerId(room.id)
-                        ?: room.uuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
+                    val existing = resolveExistingRoomForSync(projectId, room)
                     room.toEntity(
                         existing = existing,
                         projectId = projectId,
@@ -654,7 +695,7 @@ class OfflineSyncRepository(
         val pendingRoom = localDataService.getPendingRoomForProject(projectId, roomName)
         val roomUuid = pendingRoom?.uuid ?: UUID.randomUUID().toString()
         Log.d(
-            "API",
+            TAG,
             "🆕 [createRoom] Using roomUuid=$roomUuid (pending=${pendingRoom != null}) projectId=$projectId"
         )
         val resolvedIdempotencyKey = idempotencyKey ?: roomUuid
@@ -687,11 +728,17 @@ class OfflineSyncRepository(
             )
 
             if (seedDefaultRoom) {
+                // Try cache first, then fetch from API if empty
                 val roomTypeId = roomTypeRepository
                     .getRoomTypes(projectId, RequestType.INTERIOR, forceRefresh = false)
                     .getOrNull()
                     ?.firstOrNull()
                     ?.id
+                    ?: roomTypeRepository
+                        .getRoomTypes(projectId, RequestType.INTERIOR, forceRefresh = true)
+                        .getOrNull()
+                        ?.firstOrNull()
+                        ?.id
 
                 if (roomTypeId != null) {
                     createRoom(
@@ -963,6 +1010,7 @@ class OfflineSyncRepository(
     private enum class OperationOutcome {
         SUCCESS,
         SKIP,
+        RETRY,
         DROP
     }
 
@@ -985,7 +1033,8 @@ class OfflineSyncRepository(
                             Log.w("API", "⚠️ [$label] Dropping sync op=${operation.operationId} type=${operation.entityType}")
                             localDataService.removeSyncOperation(operation.operationId)
                         }
-                        OperationOutcome.SKIP -> Unit
+                        OperationOutcome.SKIP,
+                        OperationOutcome.RETRY -> Unit
                     }
                 }
                 .onFailure { error ->
@@ -1397,13 +1446,20 @@ class OfflineSyncRepository(
                 val damages = response.data
                 Log.d("API", "🔍 [syncProjectMetadata] Raw damages from API: ${damages.size}, roomIds=${damages.take(5).map { it.roomId }}")
                 val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId) }
-                localDataService.saveDamages(entities)
+                val (scopedDamages, unscopedDamages) = entities.partition { it.roomId != null }
+                if (unscopedDamages.isNotEmpty()) {
+                    Log.w(
+                        "API",
+                        "⚠️ [syncProjectMetadata] Dropping ${unscopedDamages.size} damages with no roomId (projectId=$projectId)"
+                    )
+                }
+                localDataService.saveDamages(scopedDamages)
                 val materialEntities = damages.map { it.toMaterialEntity() }
                 if (materialEntities.isNotEmpty()) {
                     localDataService.saveMaterials(materialEntities)
                 }
-                itemCount += entities.size
-                Log.d("API", "⚠️ [syncProjectMetadata] Saved ${entities.size} damages (from ${damages.size} API results)")
+                itemCount += scopedDamages.size
+                Log.d("API", "⚠️ [syncProjectMetadata] Saved ${scopedDamages.size} damages (from ${damages.size} API results)")
                 damages.latestTimestamp { it.updatedAt }
                     ?.let { syncCheckpointStore.updateCheckpoint(damagesCheckpointKey, it) }
             }
@@ -1505,11 +1561,23 @@ class OfflineSyncRepository(
 
     suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
-        val logs = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial").data }
+        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial") }
             .onFailure { error ->
                 Log.e("API", "❌ [syncRoomMoistureLogs] Failed for roomId=$roomId (projectId=$projectId)", error)
             }
             .getOrNull() ?: return@withContext 0
+
+        // Handle flexible data format: API may return array or single object
+        val logs: List<MoistureLogDto> = when {
+            response.data == null -> emptyList()
+            response.data.isJsonArray -> {
+                gson.fromJson(response.data, Array<MoistureLogDto>::class.java)?.toList() ?: emptyList()
+            }
+            response.data.isJsonObject -> {
+                listOfNotNull(gson.fromJson(response.data, MoistureLogDto::class.java))
+            }
+            else -> emptyList()
+        }
 
         if (logs.isEmpty()) {
             Log.d("API", "ℹ️ [syncRoomMoistureLogs] No moisture logs returned for roomId=$roomId (projectId=$projectId)")
@@ -2362,16 +2430,16 @@ class OfflineSyncRepository(
             propertyId = resolvedId,
             propertyType = propertyTypeValue
         )
-        runCatching { primeRoomTypeCaches(projectId) }
+        runCatching { primeRoomTypeCaches(projectId, forceRefresh = true) }
             .onFailure { Log.w("API", "⚠️ [syncProjectEssentials] Unable to prefetch room types for project $projectId", it) }
         return entity
     }
 
-    private suspend fun primeRoomTypeCaches(projectId: Long) {
+    private suspend fun primeRoomTypeCaches(projectId: Long, forceRefresh: Boolean) {
         RequestType.entries.forEach { requestType ->
             runCatching {
                 val types = roomTypeRepository
-                    .getRoomTypes(projectId, requestType, forceRefresh = true)
+                    .getRoomTypes(projectId, requestType, forceRefresh = forceRefresh)
                     .getOrThrow()
                 Log.d("API", "✅ [roomTypes] Prefetched ${types.size} ${requestType.name.lowercase()} room types for project $projectId")
             }.onFailure { error ->
@@ -2706,8 +2774,11 @@ class OfflineSyncRepository(
             }
         }
 
+        val payloadRoomUuid = payload.roomUuid?.takeIf { it.isNotBlank() }
+
         if (levelServerId == null || locationServerId == null) {
-            Log.w("API", "⚠️ [handlePendingRoomCreation] Missing location/level for room ${payload.roomUuid}; will retry")
+            val roomLabel = payloadRoomUuid ?: payload.roomName
+            Log.w("API", "⚠️ [handlePendingRoomCreation] Missing location/level for room $roomLabel; will retry")
             return OperationOutcome.SKIP
         }
 
@@ -2719,7 +2790,9 @@ class OfflineSyncRepository(
             )
         )
 
-        val idempotencyKey = payload.idempotencyKey ?: payload.roomUuid
+        val idempotencyKey = payload.idempotencyKey
+            ?: payloadRoomUuid
+            ?: payload.localRoomId.takeIf { it != 0L }?.toString()
         val request = CreateRoomRequest(
             name = payload.roomName,
             roomTypeId = payload.roomTypeId,
@@ -2729,20 +2802,48 @@ class OfflineSyncRepository(
         )
 
         val dto = api.createRoom(locationServerId, request)
-        val existing = localDataService.getRoomByUuid(payload.roomUuid)
-            ?: localDataService.getRoomByServerId(dto.id)
+        if (dto.id <= 0) {
+            Log.w(
+                "API",
+                "📴 [handlePendingRoomCreation] Server returned invalid room id=${dto.id} for ${payload.roomName}; keeping pending"
+            )
+            return OperationOutcome.RETRY
+        }
+        val preexistingServerRoom = localDataService.getRoomByServerId(dto.id)
+        val existing = localDataService.getRoom(payload.localRoomId)
+            ?: payloadRoomUuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
+            ?: preexistingServerRoom
+            ?: localDataService.getPendingRoomForProject(payload.projectId, payload.roomName)
+        val resolvedRoomId = existing?.roomId
+            ?: payload.localRoomId.takeIf { it != 0L }
+            ?: dto.id
+        val resolvedUuid = existing?.uuid
+            ?: payloadRoomUuid
+            ?: dto.uuid
+            ?: UUID.randomUUID().toString()
         val entity = dto.toEntity(
             existing = existing,
             projectId = payload.projectId,
             locationId = locationServerId
         ).copy(
-            roomId = existing?.roomId ?: payload.localRoomId,
-            uuid = existing?.uuid ?: payload.roomUuid,
+            roomId = resolvedRoomId,
+            uuid = resolvedUuid,
             syncStatus = SyncStatus.SYNCED,
             isDirty = false,
             lastSyncedAt = now()
         )
         localDataService.saveRooms(listOf(entity))
+        preexistingServerRoom
+            ?.takeIf { it.roomId != resolvedRoomId }
+            ?.let { duplicate ->
+                val cleaned = duplicate.copy(
+                    isDeleted = true,
+                    isDirty = false,
+                    syncStatus = SyncStatus.SYNCED,
+                    lastSyncedAt = now()
+                )
+                localDataService.saveRooms(listOf(cleaned))
+            }
         return OperationOutcome.SUCCESS
     }
 
@@ -3429,13 +3530,16 @@ class OfflineSyncRepository(
     ): OfflineRoomEntity? {
         val project = localDataService.getProject(projectId)
             ?: throw IllegalStateException("Project not found locally")
-        val locations = localDataService.getLocations(projectId)
-        if (locations.isEmpty()) {
-            Log.w("API", "📴 [createPendingRoom] No locations found for project $projectId, cannot queue room")
+        val resolvedLocationPair = resolveLocationForRoom(projectId)
+        val (level, location) = resolvedLocationPair
+            ?: run {
+                Log.w(TAG, "📴 [createPendingRoom] No valid locations for project $projectId after refresh")
+                return null
+            }
+        if (level.serverId == null || location.serverId == null) {
+            Log.w(TAG, "📴 [createPendingRoom] Missing server ids for level/location (level=${level.locationId}, location=${location.locationId})")
             return null
         }
-        val level = locations.firstOrNull { it.parentLocationId == null } ?: locations.first()
-        val location = locations.firstOrNull { it.parentLocationId == level.serverId } ?: level
         val timestamp = now()
         val localId = -System.currentTimeMillis()
         val pending = OfflineRoomEntity(
@@ -3446,6 +3550,7 @@ class OfflineSyncRepository(
             locationId = location.locationId,
             title = roomName,
             roomTypeId = roomTypeId,
+            level = level.title ?: level.type,
             syncStatus = SyncStatus.PENDING,
             syncVersion = 0,
             isDirty = true,
@@ -3618,6 +3723,73 @@ class OfflineSyncRepository(
         )
         localDataService.saveLocations(listOf(entity))
         return OperationOutcome.SUCCESS
+    }
+
+    private suspend fun resolveLocationForRoom(
+        projectId: Long
+    ): Pair<OfflineLocationEntity, OfflineLocationEntity>? {
+        suspend fun currentLocations(): List<OfflineLocationEntity> =
+            localDataService.getLocations(projectId)
+
+        var locations = currentLocations()
+        // If no server-backed locations, try a quick essentials sync to populate them.
+        if (locations.none { it.serverId != null }) {
+            runCatching { syncProjectEssentials(projectId) }
+                .onFailure {
+                    Log.w(TAG, "⚠️ [createRoom] Failed to refresh locations for project $projectId", it)
+                }
+            locations = currentLocations()
+        }
+
+        // If still empty, attempt to create a default location (without seeding a room).
+        if (locations.none { it.serverId != null }) {
+            val project = localDataService.getProject(projectId)
+            val defaultName = project?.title?.takeIf { it.isNotBlank() } ?: "Unit"
+            val propertyTypeValue = project?.propertyType
+            runCatching {
+                createDefaultLocationAndRoom(
+                    projectId = projectId,
+                    propertyTypeValue = propertyTypeValue,
+                    locationName = defaultName,
+                    seedDefaultRoom = false
+                )
+            }.onFailure {
+                Log.w(TAG, "⚠️ [createRoom] Failed to create default location for project $projectId", it)
+            }
+            locations = currentLocations()
+        }
+
+        val serverLocations = locations.filter { it.serverId != null }
+        val location = serverLocations.firstOrNull { validateLocationOnServer(it) } ?: return null
+
+        // Determine level: use parent if present, otherwise the location itself
+        val level = serverLocations.firstOrNull { it.serverId == location.parentLocationId }
+            ?: serverLocations.firstOrNull { it.locationId == location.parentLocationId }
+            ?: location
+
+        return level to location
+    }
+
+    private suspend fun validateLocationOnServer(location: OfflineLocationEntity): Boolean {
+        val serverId = location.serverId ?: return false
+        return runCatching {
+            api.getRoomsForLocation(
+                locationId = serverId,
+                page = 1,
+                updatedSince = null
+            )
+        }.map {
+            true
+        }.getOrElse { error ->
+            if (error is HttpException && error.code() == 404) {
+                Log.w(TAG, "⚠️ [createRoom] Server reports missing location $serverId; marking deleted locally")
+                runCatching { localDataService.markLocationsDeleted(listOf(serverId)) }
+                    .onFailure { Log.w(TAG, "⚠️ [createRoom] Failed to mark location $serverId as deleted", it) }
+            } else {
+                Log.w(TAG, "⚠️ [createRoom] Failed to validate location $serverId", error)
+            }
+            false
+        }
     }
 }
 
@@ -3825,13 +3997,14 @@ private fun RoomDto.toEntity(
     locationId: Long? = this.locationId
 ): OfflineRoomEntity {
     val timestamp = now()
+    val serverId = id.takeIf { it > 0 }
     val resolvedUuid = uuid ?: existing?.uuid ?: UUID.randomUUID().toString()
     val createdAtValue = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp
     val updatedAtValue = DateUtils.parseApiDate(updatedAt) ?: timestamp
 
     val base = existing ?: OfflineRoomEntity(
-        roomId = 0,
-        serverId = id,
+        roomId = existing?.roomId ?: serverId ?: -System.currentTimeMillis(),
+        serverId = serverId,
         uuid = resolvedUuid,
         projectId = projectId,
         locationId = locationId,
@@ -3862,7 +4035,8 @@ private fun RoomDto.toEntity(
     }
 
     return base.copy(
-        serverId = id,
+        roomId = existing?.roomId ?: base.roomId,
+        serverId = serverId ?: existing?.serverId,
         projectId = projectId,
         locationId = locationId,
         title = resolvedTitle,
@@ -3876,13 +4050,13 @@ private fun RoomDto.toEntity(
             ?: thumbnail?.thumbnailUrl
             ?: thumbnail?.remoteUrl
             ?: existing?.thumbnailUrl,
-        syncStatus = SyncStatus.SYNCED,
+        syncStatus = if (serverId != null) SyncStatus.SYNCED else existing?.syncStatus ?: SyncStatus.PENDING,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
-        isDirty = false,
+        isDirty = if (serverId != null) false else existing?.isDirty ?: true,
         isDeleted = false,
         createdAt = createdAtValue,
         updatedAt = updatedAtValue,
-        lastSyncedAt = timestamp
+        lastSyncedAt = if (serverId != null) timestamp else existing?.lastSyncedAt
     )
 }
 
@@ -4355,7 +4529,7 @@ private data class PendingLocationCreationPayload(
 
 private data class PendingRoomCreationPayload(
     val localRoomId: Long,
-    val roomUuid: String,
+    val roomUuid: String?,
     val projectId: Long,
     val roomName: String,
     val roomTypeId: Long,

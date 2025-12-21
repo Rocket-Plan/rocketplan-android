@@ -14,7 +14,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
@@ -28,6 +30,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshot
 import com.example.rocketplan_android.data.local.entity.OfflineRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogItemEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
@@ -41,6 +44,7 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         OfflineLocationEntity::class,
         OfflineRoomEntity::class,
         OfflineRoomTypeEntity::class,
+        OfflineWorkScopeCatalogItemEntity::class,
         OfflineAtmosphericLogEntity::class,
         OfflineAlbumEntity::class,
         OfflineAlbumPhotoEntity::class,
@@ -50,6 +54,8 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         OfflineMoistureLogEntity::class,
         OfflineNoteEntity::class,
         OfflineDamageEntity::class,
+        OfflineDamageTypeEntity::class,
+        OfflineDamageCauseEntity::class,
         OfflineWorkScopeEntity::class,
         OfflineSyncQueueEntity::class,
         OfflineConflictResolutionEntity::class,
@@ -57,7 +63,7 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         ImageProcessorAssemblyEntity::class,
         ImageProcessorPhotoEntity::class
     ],
-    version = 12,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)

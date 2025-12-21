@@ -144,7 +144,7 @@ class ProjectTypeSelectionViewModel(
                         projectId = projectId,
                         propertyTypeValue = propertyType.apiValue,
                         locationName = locationName,
-                        seedDefaultRoom = propertyType == PropertyType.SINGLE_LOCATION
+                        seedDefaultRoom = propertyType == PropertyType.SINGLE_UNIT
                     )
                     if (seedResult.isFailure) {
                         val message = seedResult.exceptionOrNull()?.message ?: genericErrorMessage

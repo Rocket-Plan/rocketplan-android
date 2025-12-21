@@ -248,7 +248,7 @@ class ProjectDetailViewModel(
                     .map { room ->
                         val roomKey = room.serverId ?: room.roomId
                         val roomPhotos = photosByRoom[roomKey].orEmpty()
-                        val resolvedPhotoCount = room.photoCount ?: roomPhotos.size
+                        val resolvedPhotoCount = maxOf(roomPhotos.size, room.photoCount ?: 0)
                         val resolvedThumbnail = room.thumbnailUrl
                             ?: roomPhotos.firstNotNullOfOrNull { photo ->
                                 photo.preferredThumbnailSourceForRoomCard()

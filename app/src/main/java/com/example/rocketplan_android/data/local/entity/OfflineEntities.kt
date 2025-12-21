@@ -193,6 +193,62 @@ data class OfflineRoomTypeEntity(
 )
 
 @Entity(
+    tableName = "offline_work_scope_catalog_items",
+    primaryKeys = ["companyId", "itemId"],
+    indices = [
+        Index(value = ["companyId"]),
+        Index(value = ["sheetId"])
+    ]
+)
+data class OfflineWorkScopeCatalogItemEntity(
+    val companyId: Long,
+    val itemId: Long,
+    val sheetId: Long,
+    val tabName: String,
+    val category: String,
+    val codePart1: String?,
+    val codePart2: String?,
+    val description: String,
+    val unit: String,
+    val rate: String?,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
+    tableName = "offline_damage_types",
+    primaryKeys = ["projectServerId", "damageTypeId"],
+    indices = [
+        Index(value = ["projectServerId"])
+    ]
+)
+data class OfflineDamageTypeEntity(
+    val projectServerId: Long,
+    val damageTypeId: Long,
+    val name: String?,
+    val title: String?,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
+    tableName = "offline_damage_causes",
+    primaryKeys = ["projectServerId", "damageCauseId"],
+    indices = [
+        Index(value = ["projectServerId"]),
+        Index(value = ["propertyDamageTypeId"])
+    ]
+)
+data class OfflineDamageCauseEntity(
+    val projectServerId: Long,
+    val damageCauseId: Long,
+    val name: String?,
+    val isStandard: Boolean?,
+    val propertyDamageTypeId: Long?,
+    val propertyDamageTypeName: String?,
+    val propertyDamageTypeTitle: String?,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
     tableName = "offline_room_photo_snapshots",
     primaryKeys = ["roomId", "orderIndex"],
     indices = [

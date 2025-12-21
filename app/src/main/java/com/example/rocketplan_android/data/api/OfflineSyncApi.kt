@@ -19,6 +19,7 @@ import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.NoteableDto
+import com.example.rocketplan_android.data.model.offline.FlexibleDataResponse
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
@@ -303,7 +304,7 @@ interface OfflineSyncApi {
     suspend fun getRoomMoistureLogs(
         @Path("roomId") roomId: Long,
         @Query("include") include: String? = null
-    ): PaginatedResponse<MoistureLogDto>
+    ): FlexibleDataResponse
 
     @POST("/api/projects/{projectId}/damage-materials")
     suspend fun createProjectDamageMaterial(

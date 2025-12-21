@@ -13,7 +13,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
@@ -27,6 +29,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshot
 import com.example.rocketplan_android.data.local.entity.OfflineRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogItemEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
 import com.example.rocketplan_android.data.local.entity.preferredImageSource
@@ -91,6 +94,54 @@ class LocalDataService private constructor(
         }
     }
 
+    suspend fun getWorkScopeCatalogItems(companyId: Long): List<OfflineWorkScopeCatalogItemEntity> =
+        withContext(ioDispatcher) { dao.getWorkScopeCatalogItems(companyId) }
+
+    suspend fun getWorkScopeCatalogFetchedAt(companyId: Long): Date? =
+        withContext(ioDispatcher) { dao.getLatestWorkScopeCatalogFetchedAt(companyId) }
+
+    suspend fun replaceWorkScopeCatalogItems(
+        companyId: Long,
+        items: List<OfflineWorkScopeCatalogItemEntity>
+    ) = withContext(ioDispatcher) {
+        dao.clearWorkScopeCatalogItems(companyId)
+        if (items.isNotEmpty()) {
+            dao.upsertWorkScopeCatalogItems(items)
+        }
+    }
+
+    suspend fun getDamageTypes(projectServerId: Long): List<OfflineDamageTypeEntity> =
+        withContext(ioDispatcher) { dao.getDamageTypes(projectServerId) }
+
+    suspend fun getDamageTypesFetchedAt(projectServerId: Long): Date? =
+        withContext(ioDispatcher) { dao.getLatestDamageTypesFetchedAt(projectServerId) }
+
+    suspend fun replaceDamageTypes(
+        projectServerId: Long,
+        types: List<OfflineDamageTypeEntity>
+    ) = withContext(ioDispatcher) {
+        dao.clearDamageTypes(projectServerId)
+        if (types.isNotEmpty()) {
+            dao.upsertDamageTypes(types)
+        }
+    }
+
+    suspend fun getDamageCauses(projectServerId: Long): List<OfflineDamageCauseEntity> =
+        withContext(ioDispatcher) { dao.getDamageCauses(projectServerId) }
+
+    suspend fun getDamageCausesFetchedAt(projectServerId: Long): Date? =
+        withContext(ioDispatcher) { dao.getLatestDamageCausesFetchedAt(projectServerId) }
+
+    suspend fun replaceDamageCauses(
+        projectServerId: Long,
+        causes: List<OfflineDamageCauseEntity>
+    ) = withContext(ioDispatcher) {
+        dao.clearDamageCauses(projectServerId)
+        if (causes.isNotEmpty()) {
+            dao.upsertDamageCauses(causes)
+        }
+    }
+
     suspend fun getProperty(propertyId: Long): OfflinePropertyEntity? =
         withContext(ioDispatcher) { dao.getProperty(propertyId) }
 
@@ -104,6 +155,9 @@ class LocalDataService private constructor(
         withContext(ioDispatcher) {
             dao.getPendingRoomForProject(projectId, title)
         }
+
+    suspend fun countPendingRoomsForProjectTitle(projectId: Long, title: String): Int =
+        withContext(ioDispatcher) { dao.countPendingRoomsForProjectTitle(projectId, title) }
 
     suspend fun getPendingRoomDeletions(projectId: Long): List<OfflineRoomEntity> =
         withContext(ioDispatcher) { dao.getPendingRoomDeletions(projectId) }
