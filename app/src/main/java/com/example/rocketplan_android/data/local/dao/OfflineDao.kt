@@ -542,6 +542,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_moisture_logs WHERE roomId = :roomId AND isDeleted = 0 ORDER BY date DESC")
     fun observeMoistureLogsForRoom(roomId: Long): Flow<List<OfflineMoistureLogEntity>>
 
+    @Query("SELECT * FROM offline_moisture_logs WHERE uuid = :uuid LIMIT 1")
+    suspend fun getMoistureLogByUuid(uuid: String): OfflineMoistureLogEntity?
+
     @Query("UPDATE offline_moisture_logs SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
@@ -710,6 +713,21 @@ interface OfflineDao {
         """
     )
     suspend fun getSyncOperationsByStatus(status: SyncStatus, now: Long): List<OfflineSyncQueueEntity>
+
+    @Query(
+        """
+        SELECT * FROM offline_sync_queue
+        WHERE entityType = :entityType
+          AND entityId = :entityId
+          AND status = :status
+        LIMIT 1
+        """
+    )
+    suspend fun getSyncOperationForEntity(
+        entityType: String,
+        entityId: Long,
+        status: SyncStatus = SyncStatus.PENDING
+    ): OfflineSyncQueueEntity?
 
     @Query("DELETE FROM offline_sync_queue WHERE operationId = :operationId")
     suspend fun deleteSyncOperation(operationId: String)

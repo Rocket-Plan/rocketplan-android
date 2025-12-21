@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.sync
 
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.repository.SyncSegment
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -69,6 +72,7 @@ class SyncQueueManager(
 
     init {
         scope.launch { processLoop() }
+        scope.launch { observePendingOperations() }
     }
 
     /**
@@ -92,6 +96,7 @@ class SyncQueueManager(
     suspend fun ensureInitialSync() {
         if (initialSyncStarted.compareAndSet(false, true)) {
             enqueue(SyncJob.EnsureUserContext)
+            enqueue(SyncJob.ProcessPendingOperations)
             enqueue(SyncJob.SyncProjects(force = false))
         }
     }
@@ -99,7 +104,14 @@ class SyncQueueManager(
     fun refreshProjects() {
         scope.launch {
             enqueue(SyncJob.EnsureUserContext)
+            enqueue(SyncJob.ProcessPendingOperations)
             enqueue(SyncJob.SyncProjects(force = true))
+        }
+    }
+
+    fun processPendingOperations() {
+        scope.launch {
+            enqueue(SyncJob.ProcessPendingOperations)
         }
     }
 
@@ -347,6 +359,20 @@ class SyncQueueManager(
                 }
                 Unit
             }
+            SyncJob.ProcessPendingOperations -> {
+                authRepository.ensureUserContext()
+                val pendingResult = syncRepository.processPendingOperations()
+                pendingResult.createdProjects.forEach { created ->
+                    enqueue(
+                        SyncJob.SyncProjectGraph(
+                            projectId = created.localProjectId,
+                            prio = 1,
+                            skipPhotos = true,
+                            mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY
+                        )
+                    )
+                }
+            }
 
             is SyncJob.SyncProjects -> {
                 val hasForeground = mutex.withLock { foregroundProjectId != null }
@@ -375,18 +401,6 @@ class SyncQueueManager(
                     val message = "Missing company context during sync. Prompting relogin."
                     remoteLogger.log(LogLevel.ERROR, TAG, message)
                     throw IllegalStateException("Please log in again.")
-                }
-
-                val pendingCreated = syncRepository.processPendingCreations()
-                pendingCreated.createdProjects.forEach { created ->
-                    enqueue(
-                        SyncJob.SyncProjectGraph(
-                            projectId = created.localProjectId,
-                            prio = 1,
-                            skipPhotos = true,
-                            mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY
-                        )
-                    )
                 }
 
                 // First, sync projects assigned to the current user (used for My Projects tab)
@@ -584,6 +598,16 @@ class SyncQueueManager(
                 }
             }
         }
+    }
+
+    private suspend fun observePendingOperations() {
+        localDataService.observeSyncOperations(SyncStatus.PENDING)
+            .debounce(750)
+            .collect { ops ->
+                if (ops.isNotEmpty()) {
+                    enqueue(SyncJob.ProcessPendingOperations)
+                }
+            }
     }
 
     private fun SyncJob.ProjectSyncMode.includesPhotos(): Boolean =

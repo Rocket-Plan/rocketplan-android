@@ -182,7 +182,7 @@ class ProjectLandingViewModel(
 
     fun updateProjectStatus(projectStatus: ProjectStatus) {
         viewModelScope.launch {
-            localDataService.updateProjectStatus(projectId, projectStatus)
+            offlineSyncRepository.updateProjectStatus(projectId, projectStatus)
         }
     }
 

@@ -137,19 +137,15 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
                         }
                         ?: throw IllegalStateException(getApplication<Application>().getString(R.string.create_project_missing_company))
 
-                val address = offlineSyncRepository.createAddress(addressRequest).getOrElse { throw it }
-                val addressId = address.id
-                    ?: throw IllegalStateException(getApplication<Application>().getString(R.string.create_project_missing_address_id))
-
                 val projectRequest = CreateCompanyProjectRequest(
                     projectStatusId = DEFAULT_PROJECT_STATUS_ID,
-                    addressId = addressId
+                    addressId = 0L
                 )
 
                 offlineSyncRepository.createCompanyProject(
                     companyId = companyId,
                     request = projectRequest,
-                    projectAddress = address,
+                    projectAddress = null,
                     addressRequest = addressRequest
                 ).getOrThrow()
             }

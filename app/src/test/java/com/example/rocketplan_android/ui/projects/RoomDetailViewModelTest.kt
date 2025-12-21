@@ -1,7 +1,6 @@
 package com.example.rocketplan_android.ui.projects
 
 import android.os.SystemClock
-import android.util.Log
 import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.example.rocketplan_android.RocketPlanApplication
@@ -48,18 +47,11 @@ class RoomDetailViewModelTest {
 
     @Before
     fun setUp() {
-        mockkStatic(Log::class)
-        every { Log.d(any<String?>(), any<String?>()) } returns 0
-        every { Log.d(any<String?>(), any<String?>(), any<Throwable?>()) } returns 0
-        every { Log.w(any<String?>(), any<String?>()) } returns 0
-        every { Log.w(any<String?>(), any<String?>(), any<Throwable?>()) } returns 0
-        every { Log.e(any<String?>(), any<String?>()) } returns 0
-        every { Log.e(any<String?>(), any<String?>(), any<Throwable?>()) } returns 0
+        // No-op: android.util.Log is stubbed in unit tests.
     }
 
     @After
     fun tearDown() {
-        unmockkStatic(Log::class)
     }
 
     @Test

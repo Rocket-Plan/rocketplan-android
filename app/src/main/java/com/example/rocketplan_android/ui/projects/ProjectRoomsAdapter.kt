@@ -37,9 +37,12 @@ class ProjectRoomsAdapter(
             }
         }
 
-    override fun getItemViewType(position: Int): Int = when (getItem(position)) {
-        is RoomListItem.Header -> VIEW_TYPE_HEADER
-        is RoomListItem.Room -> VIEW_TYPE_ROOM
+    override fun getItemViewType(position: Int): Int {
+        val item = currentList.getOrNull(position) ?: return VIEW_TYPE_ROOM
+        return when (item) {
+            is RoomListItem.Header -> VIEW_TYPE_HEADER
+            is RoomListItem.Room -> VIEW_TYPE_ROOM
+        }
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
@@ -230,7 +233,12 @@ fun RecyclerView.configureForProjectRooms(adapter: ProjectRoomsAdapter, spanCoun
     layoutManager = GridLayoutManager(context, spanCount).apply {
         spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
             override fun getSpanSize(position: Int): Int {
-                return if (adapter.getItemViewType(position) == ProjectRoomsAdapter.VIEW_TYPE_HEADER) {
+                val viewType = if (position in 0 until adapter.itemCount) {
+                    adapter.getItemViewType(position)
+                } else {
+                    ProjectRoomsAdapter.VIEW_TYPE_ROOM
+                }
+                return if (viewType == ProjectRoomsAdapter.VIEW_TYPE_HEADER) {
                     spanCount
                 } else {
                     1

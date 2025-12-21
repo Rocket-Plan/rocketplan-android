@@ -34,6 +34,7 @@ class RocketDryRoomViewModel(
 
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
+    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
 
     private val _uiState = MutableStateFlow<RocketDryRoomUiState>(RocketDryRoomUiState.Loading)
     val uiState: StateFlow<RocketDryRoomUiState> = _uiState
@@ -179,7 +180,7 @@ class RocketDryRoomViewModel(
             isDirty = true,
             isDeleted = false
         )
-        runCatching { localDataService.saveMoistureLogs(listOf(log)) }
+        runCatching { offlineSyncRepository.upsertMoistureLogOffline(log) }
             .onFailure {
                 android.util.Log.e(
                     "RocketDryRoomVM",
@@ -213,7 +214,7 @@ class RocketDryRoomViewModel(
             isDirty = true,
             isDeleted = false
         )
-        localDataService.saveMoistureLogs(listOf(log))
+        offlineSyncRepository.upsertMoistureLogOffline(log)
         true
     }
 

@@ -5,6 +5,7 @@ sealed class SyncJob(
     val key: String
 ) {
     data object EnsureUserContext : SyncJob(priority = 0, key = "ensure_user")
+    data object ProcessPendingOperations : SyncJob(priority = 0, key = "pending_ops")
 
     data class SyncProjects(val force: Boolean = false) :
         SyncJob(priority = if (force) 0 else 1, key = "sync_projects")

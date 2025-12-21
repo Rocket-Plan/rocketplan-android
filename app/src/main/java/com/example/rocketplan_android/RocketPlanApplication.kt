@@ -29,6 +29,7 @@ import com.example.rocketplan_android.realtime.NotesRealtimeManager
 import com.example.rocketplan_android.realtime.ProjectRealtimeManager
 import com.example.rocketplan_android.realtime.PhotoSyncRealtimeManager
 import com.example.rocketplan_android.realtime.PusherService
+import com.example.rocketplan_android.data.network.SyncNetworkMonitor
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -100,6 +101,7 @@ class RocketPlanApplication : Application() {
     private lateinit var imageProcessorNetworkMonitor: com.example.rocketplan_android.data.network.ImageProcessorNetworkMonitor
 
     private lateinit var imageProcessingConfigStore: ImageProcessingConfigStore
+    private lateinit var syncNetworkMonitor: SyncNetworkMonitor
 
     override fun onCreate() {
         super.onCreate()
@@ -227,6 +229,10 @@ class RocketPlanApplication : Application() {
         imageProcessorNetworkMonitor = com.example.rocketplan_android.data.network.ImageProcessorNetworkMonitor(
             context = this,
             queueManager = imageProcessorQueueManager
+        )
+        syncNetworkMonitor = SyncNetworkMonitor(
+            context = this,
+            syncQueueManager = syncQueueManager
         )
 
         // Cold-start recovery: Resume any existing assemblies that were interrupted

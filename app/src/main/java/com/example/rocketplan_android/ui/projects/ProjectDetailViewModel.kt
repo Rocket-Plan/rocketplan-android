@@ -209,11 +209,23 @@ class ProjectDetailViewModel(
         workScopes: List<OfflineWorkScopeEntity>,
         isProjectPhotoSyncing: Boolean
     ): List<RoomLevelSection> {
-        if (isEmpty()) {
+        val visibleRooms = filterNot { room ->
+            room.roomId == 0L
+        }
+        if (visibleRooms.size != size) {
+            Log.w(
+                "ProjectDetailVM",
+                "🧹 Filtering ${size - visibleRooms.size} phantom rooms (roomId=0)"
+            )
+        }
+        if (visibleRooms.isEmpty()) {
             Log.d("ProjectDetailVM", "⚠️ No rooms found for project")
             return emptyList()
         }
-        Log.d("ProjectDetailVM", "🏠 Loading ${this.size} rooms: ${this.map { "[${it.serverId}] ${it.title}" }}")
+        Log.d(
+            "ProjectDetailVM",
+            "🏠 Loading ${visibleRooms.size} rooms: ${visibleRooms.map { "[${it.serverId ?: it.roomId}] ${it.title}" }}"
+        )
         val photosByRoom = photos.groupBy { it.roomId }
         val damagesByRoom = damages.groupBy { it.roomId }
         val scopesByRoom = workScopes.groupBy { it.roomId }
@@ -226,7 +238,7 @@ class ProjectDetailViewModel(
                 if (!computedTotal.isNaN() && !computedTotal.isInfinite() && computedTotal > 0.0) computedTotal else 0.0
             }
         }
-        return this
+        return visibleRooms
             .groupBy { room ->
                 room.level?.takeIf { it.isNotBlank() } ?: "Unassigned"
             }

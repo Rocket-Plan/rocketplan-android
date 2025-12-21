@@ -268,6 +268,10 @@ class LocalDataService private constructor(
         dao.getPendingMoistureLogs(projectId)
     }
 
+    suspend fun getMoistureLogByUuid(uuid: String): OfflineMoistureLogEntity? = withContext(ioDispatcher) {
+        dao.getMoistureLogByUuid(uuid)
+    }
+
     fun observeDamages(projectId: Long): Flow<List<OfflineDamageEntity>> =
         dao.observeDamagesForProject(projectId)
 
@@ -686,6 +690,14 @@ class LocalDataService private constructor(
     suspend fun getPendingSyncOperations(): List<OfflineSyncQueueEntity> = withContext(ioDispatcher) {
         val now = System.currentTimeMillis()
         dao.getSyncOperationsByStatus(SyncStatus.PENDING, now)
+    }
+
+    suspend fun getSyncOperationForEntity(
+        entityType: String,
+        entityId: Long,
+        status: SyncStatus = SyncStatus.PENDING
+    ): OfflineSyncQueueEntity? = withContext(ioDispatcher) {
+        dao.getSyncOperationForEntity(entityType, entityId, status)
     }
 
     suspend fun removeSyncOperation(operationId: String) = withContext(ioDispatcher) {
