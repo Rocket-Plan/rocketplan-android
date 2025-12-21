@@ -152,6 +152,7 @@ class RoomTypePickerViewModel(
                 roomName = roomName,
                 roomTypeId = roomType.id,
                 isSource = false,
+                isExterior = mode == RoomTypePickerMode.EXTERIOR,
                 idempotencyKey = idempotencyKey
             )
                 .onSuccess { _ ->

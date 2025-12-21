@@ -690,6 +690,7 @@ class OfflineSyncRepository(
         roomName: String,
         roomTypeId: Long,
         isSource: Boolean = false,
+        isExterior: Boolean = false,
         idempotencyKey: String? = null
     ): Result<OfflineRoomEntity> = withContext(ioDispatcher) {
         val pendingRoom = localDataService.getPendingRoomForProject(projectId, roomName)
@@ -704,6 +705,7 @@ class OfflineSyncRepository(
             roomName = roomName,
             roomTypeId = roomTypeId,
             isSource = isSource,
+            isExterior = isExterior,
             idempotencyKey = resolvedIdempotencyKey,
             forcedUuid = roomUuid
         ) ?: throw IllegalStateException("Unable to create pending room for project $projectId")
@@ -3525,12 +3527,13 @@ class OfflineSyncRepository(
         roomName: String,
         roomTypeId: Long,
         isSource: Boolean,
+        isExterior: Boolean,
         idempotencyKey: String,
         forcedUuid: String? = null
     ): OfflineRoomEntity? {
         val project = localDataService.getProject(projectId)
             ?: throw IllegalStateException("Project not found locally")
-        val resolvedLocationPair = resolveLocationForRoom(projectId)
+        val resolvedLocationPair = resolveLocationForRoom(projectId, isExterior)
         val (level, location) = resolvedLocationPair
             ?: run {
                 Log.w(TAG, "📴 [createPendingRoom] No valid locations for project $projectId after refresh")
@@ -3726,7 +3729,8 @@ class OfflineSyncRepository(
     }
 
     private suspend fun resolveLocationForRoom(
-        projectId: Long
+        projectId: Long,
+        isExterior: Boolean
     ): Pair<OfflineLocationEntity, OfflineLocationEntity>? {
         suspend fun currentLocations(): List<OfflineLocationEntity> =
             localDataService.getLocations(projectId)
@@ -3760,11 +3764,48 @@ class OfflineSyncRepository(
         }
 
         val serverLocations = locations.filter { it.serverId != null }
-        val location = serverLocations.firstOrNull { validateLocationOnServer(it) } ?: return null
+        val validated = serverLocations.filter { validateLocationOnServer(it) }
+        if (validated.isEmpty()) return null
+
+        val preferredTitlesRaw = if (isExterior) {
+            listOf("Ground Level", "North", "South", "East", "West", "Rooftop")
+        } else {
+            listOf("Main Level", "Upper Level", "Loft", "Attic", "Basement")
+        }
+        val preferredTitles = preferredTitlesRaw.map { it.lowercase() }
+
+        fun pickPreferred(locations: List<OfflineLocationEntity>): OfflineLocationEntity? =
+            locations.firstOrNull { it.title.lowercase() in preferredTitles }
+
+        var location = pickPreferred(validated)
+
+        // If no preferred level exists, try to create one, then refresh and try again.
+        if (location == null) {
+            val project = localDataService.getProject(projectId)
+            val defaultName = preferredTitlesRaw.firstOrNull()
+                ?: project?.title
+                ?: "Unit"
+            val propertyTypeValue = project?.propertyType
+            runCatching {
+                createDefaultLocationAndRoom(
+                    projectId = projectId,
+                    propertyTypeValue = propertyTypeValue,
+                    locationName = defaultName,
+                    seedDefaultRoom = false
+                )
+            }.onFailure {
+                Log.w(TAG, "⚠️ [createRoom] Failed to seed default level '$defaultName' for project $projectId", it)
+            }
+            val refreshed = localDataService.getLocations(projectId).filter { it.serverId != null }
+            val refreshedValidated = refreshed.filter { validateLocationOnServer(it) }
+            location = pickPreferred(refreshedValidated) ?: refreshedValidated.firstOrNull()
+        }
+
+        location = location ?: validated.first()
 
         // Determine level: use parent if present, otherwise the location itself
-        val level = serverLocations.firstOrNull { it.serverId == location.parentLocationId }
-            ?: serverLocations.firstOrNull { it.locationId == location.parentLocationId }
+        val level = validated.firstOrNull { it.serverId == location.parentLocationId }
+            ?: validated.firstOrNull { it.locationId == location.parentLocationId }
             ?: location
 
         return level to location
