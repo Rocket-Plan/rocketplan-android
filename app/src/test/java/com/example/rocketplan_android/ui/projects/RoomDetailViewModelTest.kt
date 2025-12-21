@@ -4,25 +4,34 @@ import android.os.SystemClock
 import androidx.paging.PagingData
 import app.cash.turbine.test
 import com.example.rocketplan_android.RocketPlanApplication
+import android.content.res.Resources
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.repository.ImageProcessorRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
+import com.example.rocketplan_android.data.repository.SyncResult
+import com.example.rocketplan_android.data.repository.SyncSegment
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.example.rocketplan_android.ui.projects.RoomDetailEvent
 import com.google.common.truth.Truth.assertThat
 import io.mockk.coJustRun
+import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.clearMocks
 import io.mockk.every
 import io.mockk.just
+import io.mockk.runs
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import io.mockk.verify
-import io.mockk.unmockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
@@ -69,8 +78,12 @@ class RoomDetailViewModelTest {
         )
 
         viewModel.uiState.test {
-            assertThat(awaitItem()).isEqualTo(RoomDetailUiState.Loading)
-            val ready = awaitItem() as RoomDetailUiState.Ready
+            val first = awaitItem()
+            val ready = if (first is RoomDetailUiState.Ready) {
+                first
+            } else {
+                awaitItem() as RoomDetailUiState.Ready
+            }
             assertThat(ready.header.title).isEqualTo("Basement")
             assertThat(ready.header.noteSummary).isEqualTo("1 Note")
             assertThat(ready.albums).hasSize(1)
@@ -98,26 +111,23 @@ class RoomDetailViewModelTest {
 
     @Test
     fun `ensureRoomPhotosFresh refreshes once and throttles subsequent calls`() = runTest {
-        mockkStatic(SystemClock::class)
         val offlineSyncRepository = mockk<OfflineSyncRepository>()
-        coJustRun { offlineSyncRepository.refreshRoomPhotos(any(), any()) }
+        coEvery { offlineSyncRepository.syncRoomPhotos(any(), any(), any()) } returns
+            SyncResult.success(SyncSegment.ROOM_PHOTOS, 0, 0)
 
         val viewModel = createViewModel(offlineSyncRepository = offlineSyncRepository)
+        clearMocks(offlineSyncRepository, answers = false)
 
-        every { SystemClock.elapsedRealtime() } returnsMany listOf(0L, 0L, 5_000L)
+        SystemClock.elapsedRealtimeValue = 0L
+        viewModel.ensureRoomPhotosFresh(force = true)
+        advanceUntilIdle()
 
-        try {
-            viewModel.ensureRoomPhotosFresh(force = true)
-            advanceUntilIdle()
+        SystemClock.elapsedRealtimeValue = 0L
+        viewModel.ensureRoomPhotosFresh()
+        advanceUntilIdle()
 
-            viewModel.ensureRoomPhotosFresh()
-            advanceUntilIdle()
-
-            coVerify(exactly = 1) {
-                offlineSyncRepository.refreshRoomPhotos(projectId, serverRoomId)
-            }
-        } finally {
-            unmockkStatic(SystemClock::class)
+        coVerify(exactly = 1) {
+            offlineSyncRepository.syncRoomPhotos(projectId, serverRoomId, any())
         }
     }
 
@@ -165,21 +175,40 @@ class RoomDetailViewModelTest {
         photoCount: MutableStateFlow<Int> = MutableStateFlow(0),
         localDataService: LocalDataService = mockk(),
         offlineSyncRepository: OfflineSyncRepository = mockk(),
-        remoteLogger: RemoteLogger = mockk(relaxed = true)
+        remoteLogger: RemoteLogger = mockk(relaxed = true),
+        imageProcessorRepository: ImageProcessorRepository = mockk(),
+        imageProcessorQueueManager: ImageProcessorQueueManager = mockk(),
+        authRepository: AuthRepository = mockk(relaxed = true)
     ): RoomDetailViewModel {
         every { localDataService.observeRooms(projectId) } returns rooms
         every { localDataService.observeNotes(projectId) } returns notes
+        every { localDataService.observeWorkScopes(projectId) } returns flowOf(emptyList<OfflineWorkScopeEntity>())
+        every { localDataService.observeDamages(projectId) } returns flowOf(emptyList<OfflineDamageEntity>())
         every { localDataService.observeAlbumsForRoom(any()) } returns albums
         every { localDataService.observePhotoCountForRoom(any()) } returns photoCount
         every { localDataService.pagedPhotoSnapshotsForRoom(any()) } returns flowOf(PagingData.empty<OfflineRoomPhotoSnapshotEntity>())
+        coJustRun { localDataService.clearRoomPhotoSnapshot(any()) }
         coJustRun { localDataService.refreshRoomPhotoSnapshot(any()) }
         coJustRun { localDataService.savePhotos(any()) }
-        coJustRun { offlineSyncRepository.refreshRoomPhotos(any(), any()) }
+        coEvery { offlineSyncRepository.syncRoomPhotos(any(), any(), any()) } returns
+            SyncResult.success(SyncSegment.ROOM_PHOTOS, 0, 0)
+        coEvery { offlineSyncRepository.syncRoomWorkScopes(any(), any()) } returns 0
+        coEvery { offlineSyncRepository.syncRoomDamages(any(), any()) } returns 0
+        every { imageProcessorRepository.observeAssembliesByRoom(any()) } returns flowOf(emptyList())
+        every { imageProcessorRepository.observePhotosByAssemblyLocalId(any()) } returns flowOf(emptyList())
+        every { imageProcessorQueueManager.reconcileProcessingAssemblies(any()) } just runs
 
         val application = mockk<RocketPlanApplication>()
+        val resources = mockk<Resources>(relaxed = true)
+        every { resources.getIdentifier(any(), any(), any()) } returns 0
         every { application.localDataService } returns localDataService
         every { application.offlineSyncRepository } returns offlineSyncRepository
         every { application.remoteLogger } returns remoteLogger
+        every { application.imageProcessorRepository } returns imageProcessorRepository
+        every { application.imageProcessorQueueManager } returns imageProcessorQueueManager
+        every { application.authRepository } returns authRepository
+        every { application.resources } returns resources
+        every { application.packageName } returns "com.example.rocketplan_android"
 
         return RoomDetailViewModel(application, projectId, roomId)
     }

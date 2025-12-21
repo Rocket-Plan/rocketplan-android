@@ -1,16 +1,18 @@
 package com.example.rocketplan_android.ui.projects
 
-import android.util.Log
+import android.content.res.Resources
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.example.rocketplan_android.testing.MainDispatcherRule
@@ -19,10 +21,10 @@ import com.google.common.truth.Truth.assertThat
 import io.mockk.coJustRun
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.mockkStatic
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -155,25 +157,25 @@ class ProjectDetailViewModelTest {
 
     @Test
     fun `emits ready state with grouped rooms`() = runTest {
-        mockkStatic(Log::class)
-        every { Log.d(any<String>(), any<String>()) } returns 0
-        every { Log.d(any<String>(), any<String>(), any<Throwable>()) } returns 0
-        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
-        every { Log.w(any<String>(), any<String>()) } returns 0
-
-        val localDataService = mockk<LocalDataService>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
         every { localDataService.observeProjects() } returns projectsFlow
         every { localDataService.observeRooms(projectId) } returns roomsFlow
         every { localDataService.observePhotosForProject(projectId) } returns photosFlow
         every { localDataService.observeNotes(projectId) } returns notesFlow
         every { localDataService.observeAlbumsForProject(projectId) } returns albumsFlow
+        every { localDataService.observeDamages(projectId) } returns flowOf(emptyList<OfflineDamageEntity>())
+        every { localDataService.observeWorkScopes(projectId) } returns flowOf(emptyList<OfflineWorkScopeEntity>())
 
         val application = mockk<RocketPlanApplication>()
+        val resources = mockk<Resources>(relaxed = true)
+        every { resources.getIdentifier(any(), any(), any()) } returns 0
         every { application.localDataService } returns localDataService
         val offlineSyncRepository = mockk<OfflineSyncRepository>()
         coJustRun { offlineSyncRepository.syncProjectGraph(projectId) }
         every { application.offlineSyncRepository } returns offlineSyncRepository
         every { application.syncQueueManager } returns syncQueueManager
+        every { application.resources } returns resources
+        every { application.packageName } returns "com.example.rocketplan_android"
         every { syncQueueManager.photoSyncingProjects } returns photoSyncingProjectsFlow
         every { syncQueueManager.projectSyncingProjects } returns projectSyncingProjectsFlow
         every { syncQueueManager.prioritizeProject(projectId) } returns Unit
@@ -203,25 +205,25 @@ class ProjectDetailViewModelTest {
 
     @Test
     fun `updates background syncing flag when queue state changes`() = runTest {
-        mockkStatic(Log::class)
-        every { Log.d(any<String>(), any<String>()) } returns 0
-        every { Log.d(any<String>(), any<String>(), any<Throwable>()) } returns 0
-        every { Log.e(any<String>(), any<String>(), any<Throwable>()) } returns 0
-        every { Log.w(any<String>(), any<String>()) } returns 0
-
-        val localDataService = mockk<LocalDataService>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
         every { localDataService.observeProjects() } returns projectsFlow
         every { localDataService.observeRooms(projectId) } returns roomsFlow
         every { localDataService.observePhotosForProject(projectId) } returns photosFlow
         every { localDataService.observeNotes(projectId) } returns notesFlow
         every { localDataService.observeAlbumsForProject(projectId) } returns albumsFlow
+        every { localDataService.observeDamages(projectId) } returns flowOf(emptyList<OfflineDamageEntity>())
+        every { localDataService.observeWorkScopes(projectId) } returns flowOf(emptyList<OfflineWorkScopeEntity>())
 
         val application = mockk<RocketPlanApplication>()
+        val resources = mockk<Resources>(relaxed = true)
+        every { resources.getIdentifier(any(), any(), any()) } returns 0
         every { application.localDataService } returns localDataService
         val offlineSyncRepository = mockk<OfflineSyncRepository>()
         coJustRun { offlineSyncRepository.syncProjectGraph(projectId) }
         every { application.offlineSyncRepository } returns offlineSyncRepository
         every { application.syncQueueManager } returns syncQueueManager
+        every { application.resources } returns resources
+        every { application.packageName } returns "com.example.rocketplan_android"
         every { syncQueueManager.photoSyncingProjects } returns photoSyncingProjectsFlow
         every { syncQueueManager.projectSyncingProjects } returns projectSyncingProjectsFlow
         every { syncQueueManager.prioritizeProject(projectId) } returns Unit
@@ -249,9 +251,6 @@ class ProjectDetailViewModelTest {
 
     @Test
     fun `filterRoomScopedAlbums keeps only room albums`() {
-        mockkStatic(Log::class)
-        every { Log.d(any<String>(), any<String>()) } returns 0
-
         val projectAlbum = OfflineAlbumEntity(
             albumId = 26740L,
             projectId = projectId,

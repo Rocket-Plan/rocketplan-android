@@ -153,9 +153,13 @@ class OfflineSyncRepository(
         return project?.serverId ?: projectId.takeIf { it > 0 }
     }
 
-    suspend fun syncCompanyProjects(companyId: Long, assignedToMe: Boolean = false): Set<Long> = withContext(ioDispatcher) {
+    suspend fun syncCompanyProjects(
+        companyId: Long,
+        assignedToMe: Boolean = false,
+        forceFullSync: Boolean = false
+    ): Set<Long> = withContext(ioDispatcher) {
         val checkpointKey = companyProjectsKey(companyId, assignedToMe)
-        val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
+        val updatedSince = if (forceFullSync) null else syncCheckpointStore.updatedSinceParam(checkpointKey)
         val existingProjects = localDataService.getAllProjects().associateBy { it.serverId ?: it.projectId }
         val projects = fetchAllPages { page ->
             api.getCompanyProjects(
@@ -168,6 +172,47 @@ class OfflineSyncRepository(
         localDataService.saveProjects(
             projects.map { it.toEntity(existing = existingProjects[it.id], fallbackCompanyId = companyId) }
         )
+
+        // Reconcile full company sync against local data to remove stale entries.
+        if (forceFullSync && !assignedToMe) {
+            val serverProjectIds = projects.map { it.id }.toSet()
+            val localProjects = localDataService.getAllProjects()
+            val localProjectsForCompany = localProjects.filter { it.companyId == companyId }
+            val orphanedProjects = localProjectsForCompany.filter { project ->
+                project.serverId != null &&
+                    project.serverId !in serverProjectIds &&
+                    !project.isDirty
+            }
+            val foreignCompanyProjects = localProjects.filter { project ->
+                project.companyId != null &&
+                    project.companyId != companyId &&
+                    project.serverId != null &&
+                    !project.isDirty
+            }
+            val toRemove = (orphanedProjects + foreignCompanyProjects).distinctBy { it.projectId }
+            if (toRemove.isNotEmpty()) {
+                Log.d(
+                    "API",
+                    "🧹 [syncCompanyProjects] Removing ${toRemove.size} stale projects (orphans=${orphanedProjects.size}, foreignCompany=${foreignCompanyProjects.size})"
+                )
+                toRemove.forEach { stale ->
+                    Log.d(
+                        "API",
+                        "   - Removing stale: ${stale.uuid} (serverId=${stale.serverId}, companyId=${stale.companyId})"
+                    )
+                }
+                val cleared = toRemove.map {
+                    it.copy(
+                        isDeleted = true,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastSyncedAt = now()
+                    )
+                }
+                localDataService.saveProjects(cleared)
+            }
+        }
+
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
         projects.map { it.id }.toSet()
@@ -2549,8 +2594,34 @@ class OfflineSyncRepository(
             updatedAt = lockUpdatedAt
         )
         val response = api.deleteProject(serverId, request)
-        if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
-            throw HttpException(response)
+        if (!response.isSuccessful) {
+            if (response.code() == 409) {
+                // Conflict - fetch fresh and retry delete with updated timestamp
+                Log.w("API", "⚠️ [handlePendingProjectDeletion] 409 conflict for project $serverId; fetching fresh and retrying")
+                val freshProject = runCatching {
+                    api.getProjectDetail(serverId).data
+                }.getOrElse { error ->
+                    Log.e("API", "❌ [handlePendingProjectDeletion] Failed to fetch fresh project $serverId", error)
+                    val restored = project.copy(isDeleted = false, isDirty = false, syncStatus = SyncStatus.SYNCED)
+                    localDataService.saveProjects(listOf(restored))
+                    return OperationOutcome.DROP
+                }
+
+                val retryRequest = DeleteProjectRequest(projectId = serverId, updatedAt = freshProject.updatedAt)
+                val retryResponse = api.deleteProject(serverId, retryRequest)
+                if (!retryResponse.isSuccessful && retryResponse.code() !in listOf(404, 409, 410)) {
+                    throw HttpException(retryResponse)
+                }
+                if (retryResponse.code() == 409) {
+                    Log.w("API", "⚠️ [handlePendingProjectDeletion] Retry still got 409; restoring project $serverId")
+                    val restored = freshProject.toEntity(existing = project)
+                    localDataService.saveProjects(listOf(restored))
+                    return OperationOutcome.DROP
+                }
+                Log.d("API", "✅ [handlePendingProjectDeletion] Retry delete succeeded for project $serverId")
+            } else if (response.code() !in listOf(404, 410)) {
+                throw HttpException(response)
+            }
         }
         val cleaned = project.copy(
             isDirty = false,
@@ -3571,10 +3642,15 @@ private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallback
     ).firstOrNull() ?: "Project $id"
     val resolvedUuid = uuid ?: uid ?: existing?.uuid ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
-    val resolvedPropertyId = propertyId
-        ?: properties?.firstOrNull()?.id
-        ?: address?.id
-        ?: existing?.propertyId
+    // Preserve local pending property (negative ID) over server data
+    val existingPropertyIsPending = existing?.propertyId != null && existing.propertyId < 0
+    val resolvedPropertyId = if (existingPropertyIsPending) {
+        existing?.propertyId
+    } else {
+        propertyId
+            ?: properties?.firstOrNull()?.id
+            ?: existing?.propertyId
+    }
     val resolvedPropertyType = propertyType ?: existing?.propertyType
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }
@@ -3622,10 +3698,15 @@ private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.t
     ).firstOrNull() ?: "Project $id"
     val resolvedUuid = uuid ?: uid ?: existing?.uuid ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
-    val resolvedPropertyId = propertyId
-        ?: properties?.firstOrNull()?.id
-        ?: address?.id
-        ?: existing?.propertyId
+    // Preserve local pending property (negative ID) over server data
+    val existingPropertyIsPending = existing?.propertyId != null && existing.propertyId < 0
+    val resolvedPropertyId = if (existingPropertyIsPending) {
+        existing?.propertyId
+    } else {
+        propertyId
+            ?: properties?.firstOrNull()?.id
+            ?: existing?.propertyId
+    }
     val resolvedPropertyType = propertyType
         ?: properties?.firstOrNull()?.propertyType
         ?: existing?.propertyType

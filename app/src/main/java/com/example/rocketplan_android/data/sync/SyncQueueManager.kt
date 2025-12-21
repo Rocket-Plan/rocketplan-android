@@ -404,11 +404,27 @@ class SyncQueueManager(
                 }
 
                 // First, sync projects assigned to the current user (used for My Projects tab)
-                val assignedIds = syncRepository.syncCompanyProjects(companyId, assignedToMe = true)
-                assignedProjectIds.value = assignedIds
+                val assignedIds = syncRepository.syncCompanyProjects(
+                    companyId,
+                    assignedToMe = true,
+                    forceFullSync = job.force
+                )
+                // Only update assignedProjectIds on full sync.
+                // Incremental syncs return only recently-updated projects, which would
+                // cause us to lose track of older assigned projects if we replaced the set.
+                if (job.force) {
+                    assignedProjectIds.value = assignedIds
+                } else {
+                    // For incremental sync, merge new assigned IDs with existing ones
+                    assignedProjectIds.value = assignedProjectIds.value + assignedIds
+                }
 
                 // Then sync all projects for the active company (used for WIP/all)
-                syncRepository.syncCompanyProjects(companyId, assignedToMe = false)
+                syncRepository.syncCompanyProjects(
+                    companyId,
+                    assignedToMe = false,
+                    forceFullSync = job.force
+                )
 
                 val projects = localDataService.getAllProjects()
                     .filter { it.companyId == companyId }

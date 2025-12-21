@@ -100,12 +100,17 @@ class ProjectTypeSelectionFragment : Fragment() {
     }
 
     private fun navigateToProjectDetail(projectId: Long) {
+        // Guard against duplicate navigation - only navigate if we're still on this fragment
+        val navController = findNavController()
+        if (navController.currentDestination?.id != R.id.projectTypeSelectionFragment) {
+            return
+        }
         val action = ProjectTypeSelectionFragmentDirections
             .actionProjectTypeSelectionFragmentToProjectDetailFragment(projectId)
         val options = NavOptions.Builder()
             .setPopUpTo(R.id.projectTypeSelectionFragment, true)
             .build()
-        findNavController().navigate(action, options)
+        navController.navigate(action, options)
     }
 
     private fun renderState(state: ProjectTypeSelectionViewState) {

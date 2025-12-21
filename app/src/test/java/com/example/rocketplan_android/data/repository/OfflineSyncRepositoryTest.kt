@@ -2,6 +2,8 @@ package com.example.rocketplan_android.data.repository
 
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.SyncOperationType
+import com.example.rocketplan_android.data.local.SyncPriority
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
@@ -9,6 +11,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.DeleteProjectRequest
@@ -991,16 +994,14 @@ class OfflineSyncRepositoryTest {
     }
 
     @Test
-    fun `syncProjectMetadata recreates pending notes when server deleted them`() = runTest {
-        everyLog()
-        val api = mockk<OfflineSyncApi>()
+    fun `syncProjectMetadata does not recreate pending notes`() = runTest {
+        val api = mockk<OfflineSyncApi>(relaxed = true)
         val localDataService = mockk<LocalDataService>(relaxed = true)
-        every { localDataService.observeDamages(any()) } returns flowOf(emptyList<OfflineDamageEntity>())
         val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
         val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
 
         val projectId = 7L
-        val note = OfflineNoteEntity(
+        val pendingNote = OfflineNoteEntity(
             noteId = 11L,
             serverId = 22L,
             uuid = "note-uuid",
@@ -1014,24 +1015,6 @@ class OfflineSyncRepositoryTest {
             isDirty = true
         )
 
-        val notFoundBody = "missing".toResponseBody("application/json".toMediaType())
-        val notFoundResponse = Response.error<NoteResourceResponse>(404, notFoundBody)
-        coEvery { api.updateNote(note.serverId!!, any()) } throws HttpException(notFoundResponse)
-
-        val recreatedDto = NoteDto(
-            id = 999L,
-            uuid = note.uuid,
-            projectId = projectId,
-            roomId = note.roomId,
-            userId = note.userId,
-            body = note.content,
-            photoId = null,
-            categoryId = null,
-            createdAt = "2025-05-06T18:01:14.000000Z",
-            updatedAt = "2025-05-06T18:01:14.000000Z"
-        )
-        coEvery { api.createProjectNote(projectId, any()) } returns NoteResourceResponse(recreatedDto)
-
         coEvery { localDataService.getProject(projectId) } returns OfflineProjectEntity(
             projectId = projectId,
             serverId = projectId,
@@ -1040,17 +1023,8 @@ class OfflineSyncRepositoryTest {
             status = "wip",
             companyId = 1L
         )
-        coEvery { localDataService.getServerRoomIdsForProject(projectId) } returns emptyList()
-        coEvery { localDataService.getPendingNotes(projectId) } returns listOf(note)
-
-        val savedNotes = mutableListOf<OfflineNoteEntity>()
-        coEvery { localDataService.saveNote(capture(savedNotes)) } returns Unit
-        coEvery { localDataService.saveNotes(any()) } returns Unit
-        coEvery { localDataService.saveEquipment(any()) } returns Unit
-        coEvery { localDataService.saveDamages(any()) } returns Unit
-        coEvery { localDataService.saveAtmosphericLogs(any()) } returns Unit
-
-        every { checkpointStore.getCheckpoint(any()) } returns null
+        every { localDataService.observeDamages(projectId) } returns flowOf(emptyList<OfflineDamageEntity>())
+        coEvery { localDataService.getPendingNotes(projectId) } returns listOf(pendingNote)
         coEvery { api.getProjectNotes(projectId, any(), any(), any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectEquipment(projectId) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectDamageMaterials(projectId, any<String>()) } returns PaginatedResponse(data = emptyList())
@@ -1066,12 +1040,8 @@ class OfflineSyncRepositoryTest {
 
         repository.syncProjectMetadata(projectId)
 
-        assertThat(savedNotes).isNotEmpty()
-        val synced = savedNotes.last()
-        assertThat(synced.serverId).isEqualTo(recreatedDto.id)
-        assertThat(synced.isDirty).isFalse()
-        assertThat(synced.syncStatus).isEqualTo(SyncStatus.SYNCED)
-        assertThat(synced.uuid).isEqualTo(note.uuid)
+        coVerify(exactly = 0) { api.updateNote(any(), any()) }
+        coVerify(exactly = 0) { api.createProjectNote(any(), any()) }
     }
 
     @Test
@@ -1283,28 +1253,16 @@ class OfflineSyncRepositoryTest {
     }
 
     @Test
-    fun `deleteProject sends server updated_at string without reformatting`() = runTest {
+    fun `deleteProject enqueues delete with lock from project updatedAt`() = runTest {
         val localProjectId = 1L
         val serverId = 99L
         val serverUpdatedAt = "2025-12-21T00:08:11.123456Z"
+        val parsedUpdatedAt = DateUtils.parseApiDate(serverUpdatedAt) ?: error("Invalid date")
 
-        val api = mockk<OfflineSyncApi>()
-        coEvery { api.getProjectDetail(serverId) } returns ProjectDetailResourceResponse(
-            data = ProjectDetailDto(
-                id = serverId,
-                title = "Test Project",
-                status = "wip",
-                companyId = companyId,
-                updatedAt = serverUpdatedAt
-            )
-        )
-
-        val requestSlot = slot<DeleteProjectRequest>()
-        coEvery { api.deleteProject(serverId, capture(requestSlot)) } returns Response.success(Unit)
-
-        everyLog()
-
+        val api = mockk<OfflineSyncApi>(relaxed = true)
+        val operationSlot = slot<OfflineSyncQueueEntity>()
         val localDataService = mockk<LocalDataService>(relaxed = true)
+        coEvery { localDataService.getProject(localProjectId) } returns null
         coEvery { localDataService.getAllProjects() } returns listOf(
             OfflineProjectEntity(
                 projectId = localProjectId,
@@ -1312,9 +1270,22 @@ class OfflineSyncRepositoryTest {
                 uuid = "project-uuid",
                 title = "Test Project",
                 status = "wip",
-                companyId = companyId
+                companyId = companyId,
+                updatedAt = parsedUpdatedAt
             )
         )
+        coEvery { localDataService.getProject(localProjectId) } returns OfflineProjectEntity(
+            projectId = localProjectId,
+            serverId = serverId,
+            uuid = "project-uuid",
+            title = "Test Project",
+            status = "wip",
+            companyId = companyId,
+            updatedAt = parsedUpdatedAt
+        )
+        coEvery { localDataService.getSyncOperationForEntity("project", localProjectId, any()) } returns null
+        coEvery { localDataService.enqueueSyncOperation(capture(operationSlot)) } just runs
+        coEvery { localDataService.removeSyncOperationsForEntity("project", localProjectId) } just runs
 
         val repository = OfflineSyncRepository(
             api = api,
@@ -1326,7 +1297,13 @@ class OfflineSyncRepositoryTest {
 
         repository.deleteProject(localProjectId)
 
-        assertThat(requestSlot.captured.updatedAt).isEqualTo(serverUpdatedAt)
+        val payloadJson = Gson().fromJson(
+            String(operationSlot.captured.payload, Charsets.UTF_8),
+            JsonObject::class.java
+        )
+        assertThat(payloadJson["lockUpdatedAt"].asString).isEqualTo(DateUtils.formatApiDate(parsedUpdatedAt))
+        assertThat(operationSlot.captured.entityType).isEqualTo("project")
+        assertThat(operationSlot.captured.operationType).isEqualTo(SyncOperationType.DELETE)
         coVerify { localDataService.deleteProject(localProjectId) }
     }
 
@@ -1338,6 +1315,7 @@ class OfflineSyncRepositoryTest {
         everyLog()
 
         val localDataService = mockk<LocalDataService>(relaxed = true)
+        coEvery { localDataService.getProject(localProjectId) } returns null
         coEvery { localDataService.getAllProjects() } returns listOf(
             OfflineProjectEntity(
                 projectId = localProjectId,
@@ -1359,51 +1337,31 @@ class OfflineSyncRepositoryTest {
 
         repository.deleteProject(localProjectId)
 
-        coVerify(exactly = 0) { api.getProjectDetail(any()) }
-        coVerify(exactly = 0) { api.deleteProject(any(), any()) }
+        coVerify(exactly = 0) { localDataService.enqueueSyncOperation(any()) }
         coVerify { localDataService.deleteProject(localProjectId) }
     }
 
     @Test
-    fun `deleteProject retries with refreshed updated_at after conflict`() = runTest {
+    fun `deleteProject preserves existing lock when re-queued`() = runTest {
         val localProjectId = 21L
         val serverId = 120L
-        val initialUpdatedAt = "2025-12-21T00:08:11.123456Z"
-        val refreshedUpdatedAt = "2025-12-21T00:08:12.654321Z"
+        val existingLock = "2025-12-21T00:08:11+00:00"
 
-        val api = mockk<OfflineSyncApi>()
-        coEvery { api.getProjectDetail(serverId) } returnsMany listOf(
-            ProjectDetailResourceResponse(
-                data = ProjectDetailDto(
-                    id = serverId,
-                    title = "Retry Project",
-                    status = "wip",
-                    companyId = companyId,
-                    updatedAt = initialUpdatedAt
-                )
-            ),
-            ProjectDetailResourceResponse(
-                data = ProjectDetailDto(
-                    id = serverId,
-                    title = "Retry Project",
-                    status = "wip",
-                    companyId = companyId,
-                    updatedAt = refreshedUpdatedAt
-                )
-            )
+        val api = mockk<OfflineSyncApi>(relaxed = true)
+        val existingPayload = JsonObject().apply {
+            addProperty("lockUpdatedAt", existingLock)
+        }
+        val existingOperation = OfflineSyncQueueEntity(
+            operationId = "project-$localProjectId-existing",
+            entityType = "project",
+            entityId = localProjectId,
+            entityUuid = "retry-uuid",
+            operationType = SyncOperationType.DELETE,
+            payload = Gson().toJson(existingPayload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.HIGH
         )
 
-        val requests = mutableListOf<DeleteProjectRequest>()
-        coEvery { api.deleteProject(serverId, capture(requests)) } returnsMany listOf(
-            Response.error(
-                409,
-                "conflict".toResponseBody("application/json".toMediaType())
-            ),
-            Response.success(Unit)
-        )
-
-        everyLog()
-
+        val operationSlot = slot<OfflineSyncQueueEntity>()
         val localDataService = mockk<LocalDataService>(relaxed = true)
         coEvery { localDataService.getAllProjects() } returns listOf(
             OfflineProjectEntity(
@@ -1415,6 +1373,17 @@ class OfflineSyncRepositoryTest {
                 companyId = companyId
             )
         )
+        coEvery { localDataService.getProject(localProjectId) } returns OfflineProjectEntity(
+            projectId = localProjectId,
+            serverId = serverId,
+            uuid = "retry-uuid",
+            title = "Retry Project",
+            status = "wip",
+            companyId = companyId
+        )
+        coEvery { localDataService.getSyncOperationForEntity("project", localProjectId, SyncStatus.PENDING) } returns existingOperation
+        coEvery { localDataService.enqueueSyncOperation(capture(operationSlot)) } just runs
+        coEvery { localDataService.removeSyncOperationsForEntity("project", localProjectId) } just runs
 
         val repository = OfflineSyncRepository(
             api = api,
@@ -1426,9 +1395,11 @@ class OfflineSyncRepositoryTest {
 
         repository.deleteProject(localProjectId)
 
-        assertThat(requests).hasSize(2)
-        assertThat(requests[0].updatedAt).isEqualTo(initialUpdatedAt)
-        assertThat(requests[1].updatedAt).isEqualTo(refreshedUpdatedAt)
+        val payloadJson = Gson().fromJson(
+            String(operationSlot.captured.payload, Charsets.UTF_8),
+            JsonObject::class.java
+        )
+        assertThat(payloadJson["lockUpdatedAt"].asString).isEqualTo(existingLock)
         coVerify { localDataService.deleteProject(localProjectId) }
     }
 
@@ -1455,154 +1426,7 @@ class OfflineSyncRepositoryTest {
         assertThat(error).isNotNull()
     }
 
-    @Test
-    fun `deleteProject does not delete locally on non-conflict failure`() = runTest {
-        val localProjectId = 31L
-        val serverId = 131L
-        val api = mockk<OfflineSyncApi>()
-        coEvery { api.getProjectDetail(serverId) } returns ProjectDetailResourceResponse(
-            data = ProjectDetailDto(
-                id = serverId,
-                title = "Project",
-                status = "wip",
-                companyId = companyId,
-                updatedAt = "2025-12-21T00:08:11.123456Z"
-            )
-        )
-        coEvery { api.deleteProject(serverId, any()) } returns Response.error(
-            500,
-            "error".toResponseBody("application/json".toMediaType())
-        )
-
-        val localDataService = mockk<LocalDataService>(relaxed = true)
-        coEvery { localDataService.getAllProjects() } returns listOf(
-            OfflineProjectEntity(
-                projectId = localProjectId,
-                serverId = serverId,
-                uuid = "server-project",
-                title = "Server Project",
-                status = "wip",
-                companyId = companyId
-            )
-        )
-
-        val repository = OfflineSyncRepository(
-            api = api,
-            localDataService = localDataService,
-            photoCacheScheduler = mockk(relaxed = true),
-            syncCheckpointStore = mockk(relaxed = true),
-            roomTypeRepository = mockk(relaxed = true)
-        )
-
-        val error = try {
-            repository.deleteProject(localProjectId)
-            null
-        } catch (e: Exception) {
-            e
-        }
-        assertThat(error).isNotNull()
-        coVerify(exactly = 0) { localDataService.deleteProject(localProjectId) }
-    }
-
-    @Test
-    fun `deleteProject falls back to local updatedAt when detail fetch fails`() = runTest {
-        val localProjectId = 41L
-        val serverId = 141L
-        val localUpdatedAt = Date(1_700_000_000_000)
-        val api = mockk<OfflineSyncApi>()
-        coEvery { api.getProjectDetail(serverId) } throws HttpException(
-            Response.error<JsonObject>(500, "fail".toResponseBody("application/json".toMediaType()))
-        )
-        val requestSlot = slot<DeleteProjectRequest>()
-        coEvery { api.deleteProject(serverId, capture(requestSlot)) } returns Response.success(Unit)
-
-        val localDataService = mockk<LocalDataService>(relaxed = true)
-        coEvery { localDataService.getAllProjects() } returns listOf(
-            OfflineProjectEntity(
-                projectId = localProjectId,
-                serverId = serverId,
-                uuid = "fallback",
-                title = "Fallback",
-                status = "wip",
-                companyId = companyId,
-                updatedAt = localUpdatedAt
-            )
-        )
-
-        val repository = OfflineSyncRepository(
-            api = api,
-            localDataService = localDataService,
-            photoCacheScheduler = mockk(relaxed = true),
-            syncCheckpointStore = mockk(relaxed = true),
-            roomTypeRepository = mockk(relaxed = true)
-        )
-
-        repository.deleteProject(localProjectId)
-
-        assertThat(requestSlot.captured.updatedAt).isEqualTo(DateUtils.formatApiDate(localUpdatedAt))
-        coVerify { localDataService.deleteProject(localProjectId) }
-    }
-
-    @Test
-    fun `deleteProject surfaces persistent conflicts without deleting locally`() = runTest {
-        val localProjectId = 51L
-        val serverId = 151L
-        val api = mockk<OfflineSyncApi>()
-        coEvery { api.getProjectDetail(serverId) } returnsMany listOf(
-            ProjectDetailResourceResponse(
-                data = ProjectDetailDto(
-                    id = serverId,
-                    title = "Conflict Project",
-                    status = "wip",
-                    companyId = companyId,
-                    updatedAt = "2025-12-21T00:08:11.123456Z"
-                )
-            ),
-            ProjectDetailResourceResponse(
-                data = ProjectDetailDto(
-                    id = serverId,
-                    title = "Conflict Project",
-                    status = "wip",
-                    companyId = companyId,
-                    updatedAt = "2025-12-21T00:08:11.223456Z"
-                )
-            )
-        )
-
-        coEvery { api.deleteProject(serverId, any()) } returnsMany listOf(
-            Response.error(409, "conflict".toResponseBody("application/json".toMediaType())),
-            Response.error(409, "conflict".toResponseBody("application/json".toMediaType()))
-        )
-
-        val localDataService = mockk<LocalDataService>(relaxed = true)
-        coEvery { localDataService.getAllProjects() } returns listOf(
-            OfflineProjectEntity(
-                projectId = localProjectId,
-                serverId = serverId,
-                uuid = "conflict",
-                title = "Conflict Project",
-                status = "wip",
-                companyId = companyId
-            )
-        )
-
-        val repository = OfflineSyncRepository(
-            api = api,
-            localDataService = localDataService,
-            photoCacheScheduler = mockk(relaxed = true),
-            syncCheckpointStore = mockk(relaxed = true),
-            roomTypeRepository = mockk(relaxed = true)
-        )
-
-        val error = try {
-            repository.deleteProject(localProjectId)
-            null
-        } catch (e: Exception) {
-            e
-        }
-        assertThat(error).isNotNull()
-        coVerify(exactly = 0) { localDataService.deleteProject(localProjectId) }
-    }
+    // Conflict handling is exercised at queue-processing time, not during local delete.
 }
 
 private fun everyLog() {
