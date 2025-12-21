@@ -25,3 +25,6 @@ local.properties
 .auto-log.pid
 /dist
 /release.jks
+/tmp_*.logcat
+/tmp_*.txt
+/tmp_*.xml
