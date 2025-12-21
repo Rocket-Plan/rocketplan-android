@@ -10,9 +10,16 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Secure storage for authentication tokens and user credentials
@@ -63,14 +70,26 @@ class SecureStorage(private val context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val authTokenState = MutableStateFlow<String?>(
+        encryptedPrefs.getString(AUTH_TOKEN_KEY, null)
+    )
+
+    init {
+        scope.launch {
+            migrateLegacyAuthToken()
+        }
+    }
+
     // ==================== Token Management ====================
 
     /**
      * Save authentication token
      */
     suspend fun saveAuthToken(token: String) {
-        context.dataStore.edit { preferences ->
-            preferences[AUTH_TOKEN_KEY] = token
+        withContext(Dispatchers.IO) {
+            saveAuthTokenInternal(token)
+            authTokenState.value = token
         }
     }
 
@@ -78,24 +97,30 @@ class SecureStorage(private val context: Context) {
      * Get authentication token as Flow
      */
     fun getAuthToken(): Flow<String?> {
-        return context.dataStore.data.map { preferences ->
-            preferences[AUTH_TOKEN_KEY]
-        }
+        return authTokenState.asStateFlow()
     }
 
     /**
      * Get authentication token synchronously
      */
     suspend fun getAuthTokenSync(): String? {
-        return getAuthToken().first()
+        val current = authTokenState.value
+        if (current != null) return current
+
+        // One-time migration from legacy DataStore storage if present.
+        return migrateLegacyAuthToken()
     }
 
     /**
      * Clear authentication token
      */
     suspend fun clearAuthToken() {
-        context.dataStore.edit { preferences ->
-            preferences.remove(AUTH_TOKEN_KEY)
+        withContext(Dispatchers.IO) {
+            encryptedPrefs.edit().remove(AUTH_TOKEN_KEY).apply()
+            context.dataStore.edit { preferences ->
+                preferences.remove(AUTH_TOKEN_KEY)
+            }
+            authTokenState.value = null
         }
     }
 
@@ -252,5 +277,23 @@ class SecureStorage(private val context: Context) {
 
         // Clear EncryptedSharedPreferences
         encryptedPrefs.edit().clear().apply()
+        authTokenState.value = null
+    }
+
+    /**
+     * Persist token in encrypted prefs and migrate away from legacy DataStore storage.
+     */
+    private fun saveAuthTokenInternal(token: String) {
+        encryptedPrefs.edit().putString(AUTH_TOKEN_KEY, token).apply()
+    }
+
+    private suspend fun migrateLegacyAuthToken(): String? {
+        val legacyToken = context.dataStore.data.first()[AUTH_TOKEN_KEY] ?: return null
+        saveAuthTokenInternal(legacyToken)
+        context.dataStore.edit { prefs ->
+            prefs.remove(AUTH_TOKEN_KEY)
+        }
+        authTokenState.value = legacyToken
+        return legacyToken
     }
 }

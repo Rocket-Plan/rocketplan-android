@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
@@ -105,7 +106,12 @@ abstract class OfflineDatabase : RoomDatabase() {
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
                 .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
-                .fallbackToDestructiveMigration()
+                .apply {
+                    // Only allow destructive migrations in debug builds to avoid data loss in prod.
+                    if (BuildConfig.DEBUG) {
+                        fallbackToDestructiveMigration()
+                    }
+                }
                 .build()
     }
 }

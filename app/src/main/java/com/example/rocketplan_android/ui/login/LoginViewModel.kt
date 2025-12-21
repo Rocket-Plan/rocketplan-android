@@ -165,7 +165,6 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _authSession.value = session
                 if (AppConfig.isLoggingEnabled) {
                     println("Sign in successful")
-                    println("Token: ${session?.token?.take(20)}...")
                     println("User ID: ${session?.user?.id}")
                 }
                 _signInSuccess.value = true

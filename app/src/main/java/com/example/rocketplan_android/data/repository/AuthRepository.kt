@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.rocketplan_android.data.api.AuthService
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.model.ApiError
+import com.example.rocketplan_android.data.model.ApiErrorException
 import com.example.rocketplan_android.data.model.CheckEmailRequest
 import com.example.rocketplan_android.data.model.CheckEmailResponse
 import com.example.rocketplan_android.data.model.ResetPasswordRequest
@@ -216,7 +217,20 @@ class AuthRepository(
         if (token != null) {
             RetrofitClient.setAuthToken(token)
             val result = refreshUserContext()
-            return result.isSuccess
+            if (result.isSuccess) {
+                return true
+            }
+
+            val error = result.exceptionOrNull()
+            val isAuthError = (error as? ApiErrorException)?.apiError is ApiError.AuthenticationError
+            if (isAuthError) {
+                return false
+            }
+
+            // If we have cached identity, allow offline access and let sync recover when online.
+            val hasUserId = secureStorage.getUserIdSync()?.let { it > 0L } == true
+            val hasCompanyId = secureStorage.getCompanyIdSync() != null
+            return hasUserId || hasCompanyId
         }
         return false
     }
@@ -296,11 +310,11 @@ class AuthRepository(
                 Result.success(currentUser)
             } else {
                 val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
-                Result.failure(Exception(apiError.displayMessage))
+                Result.failure(ApiErrorException(apiError))
             }
         } catch (e: Exception) {
             val apiError = ApiError.fromException(e)
-            Result.failure(Exception(apiError.displayMessage))
+            Result.failure(ApiErrorException(apiError))
         }
     }
 

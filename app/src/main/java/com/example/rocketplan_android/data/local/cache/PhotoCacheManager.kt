@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
+import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import kotlinx.coroutines.CoroutineDispatcher
@@ -52,7 +53,11 @@ class PhotoCacheManager(
 
         localDataService.markPhotoCacheInProgress(photo.photoId)
 
-        val request = Request.Builder().url(remoteUrl).build()
+        val requestBuilder = Request.Builder().url(remoteUrl)
+        RetrofitClient.getAuthToken()?.takeIf { it.isNotBlank() }?.let { token ->
+            requestBuilder.addHeader("Authorization", "Bearer $token")
+        }
+        val request = requestBuilder.build()
         try {
             httpClient.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) {

@@ -1,5 +1,17 @@
 # RocketPlan Android Scripts
 
+## UI Flow Runner (adb)
+
+`adb_flow_runner.py` - Runs small, file-driven UI flows using `adb` (tap/input/dump-backed clicks).
+
+Example (dev build): 
+```bash
+python scripts/adb_flow_runner.py --flow scripts/flows/login_and_project_detail.json
+```
+- Uses `ui_dumps/001_project_detail_clickables.txt` for deterministic taps on the Project Detail screen (indices 5 and 10).
+- Override creds via env: `RP_TEST_EMAIL`, `RP_TEST_PASSWORD`.
+- App/package defaults in the sample flow target the dev variant (`com.example.rocketplan_android.dev`).
+
 ## Log Capture Script
 
 `capture-logs.sh` - Streamlined Android device log capture with intelligent filtering

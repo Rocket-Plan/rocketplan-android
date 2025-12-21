@@ -3539,10 +3539,6 @@ class OfflineSyncRepository(
                 Log.w(TAG, "📴 [createPendingRoom] No valid locations for project $projectId after refresh")
                 return null
             }
-        if (level.serverId == null || location.serverId == null) {
-            Log.w(TAG, "📴 [createPendingRoom] Missing server ids for level/location (level=${level.locationId}, location=${location.locationId})")
-            return null
-        }
         val timestamp = now()
         val localId = -System.currentTimeMillis()
         val pending = OfflineRoomEntity(
@@ -3736,8 +3732,8 @@ class OfflineSyncRepository(
             localDataService.getLocations(projectId)
 
         var locations = currentLocations()
-        // If no server-backed locations, try a quick essentials sync to populate them.
-        if (locations.none { it.serverId != null }) {
+        // If no locations, try a quick essentials sync to populate them.
+        if (locations.isEmpty()) {
             runCatching { syncProjectEssentials(projectId) }
                 .onFailure {
                     Log.w(TAG, "⚠️ [createRoom] Failed to refresh locations for project $projectId", it)
@@ -3746,7 +3742,7 @@ class OfflineSyncRepository(
         }
 
         // If still empty, attempt to create a default location (without seeding a room).
-        if (locations.none { it.serverId != null }) {
+        if (locations.isEmpty()) {
             val project = localDataService.getProject(projectId)
             val defaultName = project?.title?.takeIf { it.isNotBlank() } ?: "Unit"
             val propertyTypeValue = project?.propertyType
@@ -3763,8 +3759,7 @@ class OfflineSyncRepository(
             locations = currentLocations()
         }
 
-        val serverLocations = locations.filter { it.serverId != null }
-        val validated = serverLocations.filter { validateLocationOnServer(it) }
+        val validated = locations.filter { it.serverId == null || validateLocationOnServer(it) }
         if (validated.isEmpty()) return null
 
         val preferredTitlesRaw = if (isExterior) {
@@ -3796,15 +3791,15 @@ class OfflineSyncRepository(
             }.onFailure {
                 Log.w(TAG, "⚠️ [createRoom] Failed to seed default level '$defaultName' for project $projectId", it)
             }
-            val refreshed = localDataService.getLocations(projectId).filter { it.serverId != null }
-            val refreshedValidated = refreshed.filter { validateLocationOnServer(it) }
+            val refreshed = localDataService.getLocations(projectId)
+            val refreshedValidated = refreshed.filter { it.serverId == null || validateLocationOnServer(it) }
             location = pickPreferred(refreshedValidated) ?: refreshedValidated.firstOrNull()
         }
 
         location = location ?: validated.first()
 
         // Determine level: use parent if present, otherwise the location itself
-        val level = validated.firstOrNull { it.serverId == location.parentLocationId }
+        val level = validated.firstOrNull { it.serverId != null && it.serverId == location.parentLocationId }
             ?: validated.firstOrNull { it.locationId == location.parentLocationId }
             ?: location
 

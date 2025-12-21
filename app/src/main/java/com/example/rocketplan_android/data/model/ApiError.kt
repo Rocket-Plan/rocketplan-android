@@ -198,3 +198,8 @@ sealed class ApiError(val message: String, val displayMessage: String) {
         }
     }
 }
+
+/**
+ * Wraps an ApiError inside an Exception so callers can distinguish between auth/network errors.
+ */
+class ApiErrorException(val apiError: ApiError) : Exception(apiError.displayMessage)
