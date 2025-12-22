@@ -2797,26 +2797,68 @@ class OfflineSyncRepository(
         val project = localDataService.getProject(payload.projectId) ?: return OperationOutcome.SKIP
         val projectServerId = project.serverId ?: return OperationOutcome.SKIP
 
-        var locations = localDataService.getLocations(payload.projectId)
-        var levelServerId = payload.levelServerId
-            ?: locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId
-            ?: locations.firstOrNull { it.parentLocationId == null }?.serverId
+        fun normalizeServerId(value: Long?): Long? = value?.takeIf { it > 0 }
 
-        var locationServerId = payload.locationServerId
-            ?: locations.firstOrNull { it.locationId == payload.locationLocalId }?.serverId
-            ?: locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId
+        var refreshedEssentials = false
+        suspend fun refreshEssentialsOnce() {
+            if (!refreshedEssentials) {
+                syncProjectEssentials(payload.projectId)
+                refreshedEssentials = true
+            }
+        }
+
+        suspend fun resolvePropertyServerId(): Long? {
+            val propertyId = project.propertyId ?: return null
+            return normalizeServerId(localDataService.getProperty(propertyId)?.serverId)
+        }
+
+        var propertyServerId = resolvePropertyServerId()
+        if (propertyServerId == null) {
+            refreshEssentialsOnce()
+            propertyServerId = resolvePropertyServerId()
+        }
+        if (propertyServerId == null) {
+            Log.w(
+                "API",
+                "⚠️ [handlePendingRoomCreation] Property not synced for project ${payload.projectId} (propertyId=${project.propertyId}); will retry"
+            )
+            return OperationOutcome.SKIP
+        }
+
+        var locations = localDataService.getLocations(payload.projectId)
+        var levelServerId = normalizeServerId(payload.levelServerId)
+            ?: normalizeServerId(locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId)
+            ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == null }?.serverId)
+
+        var locationServerId = normalizeServerId(payload.locationServerId)
+            ?: normalizeServerId(locations.firstOrNull { it.locationId == payload.locationLocalId }?.serverId)
+            ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId)
+            ?: normalizeServerId(locations.firstOrNull { it.serverId == levelServerId }?.serverId)
 
         if (levelServerId == null || locationServerId == null) {
             // Try to refresh essentials to populate locations/levels
-            syncProjectEssentials(payload.projectId)
+            refreshEssentialsOnce()
             locations = localDataService.getLocations(payload.projectId)
             if (levelServerId == null) {
-                levelServerId = locations.firstOrNull { it.parentLocationId == null }?.serverId
+                levelServerId = normalizeServerId(
+                    locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId
+                ) ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == null }?.serverId)
             }
             if (locationServerId == null) {
-                locationServerId = locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId
-                    ?: locations.firstOrNull()?.serverId
+                locationServerId = normalizeServerId(
+                    locations.firstOrNull { it.locationId == payload.locationLocalId }?.serverId
+                )
+                    ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId)
+                    ?: normalizeServerId(locations.firstOrNull { it.serverId == levelServerId }?.serverId)
+                    ?: normalizeServerId(locations.firstOrNull()?.serverId)
             }
+        }
+
+        if (levelServerId == null && locationServerId != null) {
+            val resolvedLocation = locations.firstOrNull { it.serverId == locationServerId }
+                ?: locations.firstOrNull { it.locationId == payload.locationLocalId }
+            levelServerId = normalizeServerId(resolvedLocation?.parentLocationId)
+                ?: normalizeServerId(resolvedLocation?.serverId)
         }
 
         val payloadRoomUuid = payload.roomUuid?.takeIf { it.isNotBlank() }

@@ -98,7 +98,7 @@ class ImageProcessorRepository(
                         "project_id_local" to projectId.toString()
                     )
                 )
-            room.serverId
+            room.serverId?.takeIf { it > 0 }
         } else {
             null
         }

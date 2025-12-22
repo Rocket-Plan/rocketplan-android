@@ -145,7 +145,7 @@ class ImageProcessorQueueManager(
             }
 
             val roomServerId = assembly.roomId?.let { roomId ->
-                offlineDao.getRoom(roomId)?.serverId
+                offlineDao.getRoom(roomId)?.serverId?.takeIf { it > 0 }
             }
             if (assembly.roomId != null && roomServerId == null) {
                 Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} waiting for room sync (roomId=${assembly.roomId})")
@@ -820,7 +820,7 @@ class ImageProcessorQueueManager(
     ): ImageProcessorStatusSnapshot? {
         return runCatching {
             val serverRoomId = assembly.roomId?.let { roomId ->
-                offlineDao.getRoom(roomId)?.serverId
+                offlineDao.getRoom(roomId)?.serverId?.takeIf { it > 0 }
             }
 
             val response = when {
