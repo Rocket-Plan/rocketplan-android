@@ -136,6 +136,7 @@ private class ProjectLossInfoRepository(
     private val localDataService: LocalDataService,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+    private val propertyIncludes = "propertyType,asbestosStatus,propertyDamageTypes,damageCause"
 
     suspend fun load(projectId: Long): ProjectLossInfoPayload = withContext(ioDispatcher) {
         val project = localDataService.getProject(projectId)
@@ -261,7 +262,7 @@ private class ProjectLossInfoRepository(
         projectServerId: Long,
         projectDetail: ProjectDetailDto?
     ): PropertyDto? {
-        val result = runCatching { api.getProjectProperties(projectServerId) }
+        val result = runCatching { api.getProjectProperties(projectServerId, include = propertyIncludes) }
         result.onFailure { error ->
             Log.e("API", "❌ [LossInfo] getProjectProperties failed for project $projectServerId", error)
         }

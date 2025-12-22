@@ -154,6 +154,7 @@ class OfflineSyncRepository(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val TAG = "API"
+    private val propertyIncludes = "propertyType,asbestosStatus,propertyDamageTypes,damageCause"
 
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
 
@@ -658,18 +659,63 @@ class OfflineSyncRepository(
         propertyTypeValue: String?,
         idempotencyKey: String? = null
     ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
-        val resolvedIdempotencyKey = idempotencyKey ?: request.idempotencyKey ?: UUID.randomUUID().toString()
-        val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
-            ?: throw Exception("Project not found locally")
+        runCatching {
+            val resolvedIdempotencyKey = idempotencyKey ?: request.idempotencyKey ?: UUID.randomUUID().toString()
+            val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
+                ?: throw Exception("Project not found locally")
+            val projectServerId = project.serverId ?: throw Exception("Project not synced yet.")
+            val requestWithKey = request.copy(idempotencyKey = resolvedIdempotencyKey)
 
-        val pending = createPendingProperty(
-            project = project,
-            propertyTypeValue = propertyTypeValue,
-            propertyTypeId = request.propertyTypeId,
-            idempotencyKey = resolvedIdempotencyKey
-        )
-        Log.d("API", "🗃️ [createProjectProperty] Queued property create for project $projectId (local=${pending.propertyId})")
-        Result.success(pending)
+            if (AppConfig.isLoggingEnabled) {
+                Log.d(
+                    "API",
+                    "📤 [createProjectProperty] createProperty payload: " +
+                        "projectId=$projectId serverId=$projectServerId propertyTypeId=${request.propertyTypeId} " +
+                        "propertyTypeValue=${propertyTypeValue ?: "null"} idempotencyKey=$resolvedIdempotencyKey"
+                )
+            }
+
+            val created = try {
+                api.createProjectProperty(projectServerId, requestWithKey).data
+            } catch (error: HttpException) {
+                if (AppConfig.isLoggingEnabled) {
+                    val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                    Log.w(
+                        "API",
+                        "❌ [createProjectProperty] createProperty failed: code=${error.code()} " +
+                            "body=${errorBody ?: "null"}"
+                    )
+                }
+                throw error
+            }
+
+            val refreshed = runCatching {
+                api.getProjectProperties(projectServerId, include = propertyIncludes).data
+            }
+                .onFailure { error ->
+                    Log.w(
+                        "API",
+                        "⚠️ [createProjectProperty] getProjectProperties failed for project=$projectServerId",
+                        error
+                    )
+                }
+                .getOrNull()
+                ?.firstOrNull { it.id == created.id }
+
+            val resolved = refreshed ?: created
+            if (AppConfig.isLoggingEnabled) {
+                val source = if (refreshed != null) "projectProperties" else "createResponse"
+                Log.d(
+                    "API",
+                    "📥 [createProjectProperty] property resolved from $source: id=${resolved.id} " +
+                        "address=${resolved.address} city=${resolved.city} state=${resolved.state} zip=${resolved.postalCode} " +
+                        "propertyTypeId=${resolved.propertyTypeId} propertyType=${resolved.propertyType}"
+                )
+            }
+
+            val existing = project.propertyId?.let { localDataService.getProperty(it) }
+            persistProperty(projectId, resolved, propertyTypeValue, existing = existing)
+        }
     }
 
     suspend fun updateProjectProperty(
@@ -2524,9 +2570,8 @@ class OfflineSyncRepository(
         projectId: Long,
         projectDetail: ProjectDetailDto? = null
     ): PropertyDto? {
-        // Note: iOS uses include=propertyType,asbestosStatus,propertyDamageTypes,damageCause
-        // but QA backend doesn't support it - returns empty array. Use project detail for propertyType instead.
-        val result = runCatching { api.getProjectProperties(projectId) }
+        // Use include to hydrate property type and related fields when available.
+        val result = runCatching { api.getProjectProperties(projectId, include = propertyIncludes) }
         result.onFailure { error ->
             Log.e("API", "❌ [fetchProjectProperty] API call failed for project $projectId", error)
         }
