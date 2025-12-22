@@ -112,17 +112,18 @@ private val DEFAULT_DELETION_TYPES = listOf(
 )
 private const val DEFAULT_DAMAGE_TYPE_ID: Long = 1L
 private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
-    private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
-        if (assignedOnly) "company_projects_${companyId}_assigned" else "company_projects_$companyId"
-    private fun userProjectsKey(userId: Long) = "user_projects_$userId"
-    private fun roomPhotosKey(roomId: Long) = "room_photos_$roomId"
+private const val OFFLINE_PENDING_STATUS = "pending_offline"
+
+private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
+    if (assignedOnly) "company_projects_${companyId}_assigned" else "company_projects_$companyId"
+private fun userProjectsKey(userId: Long) = "user_projects_$userId"
+private fun roomPhotosKey(roomId: Long) = "room_photos_$roomId"
 private fun floorPhotosKey(projectId: Long) = "project_floor_photos_$projectId"
 private fun locationPhotosKey(projectId: Long) = "project_location_photos_$projectId"
 private fun unitPhotosKey(projectId: Long) = "project_unit_photos_$projectId"
 private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
-    private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
-    private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
-    private const val OFFLINE_PENDING_STATUS = "pending_offline"
+private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
+private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
 private fun Throwable.isConflict(): Boolean = (this as? HttpException)?.code() == 409
 private fun Throwable.isMissingOnServer(): Boolean = (this as? HttpException)?.code() in listOf(404, 410)
 private fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
@@ -665,18 +666,17 @@ class OfflineSyncRepository(
         propertyTypeValue: String?
     ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
         // Get the property to retrieve its server ID
-        var property = localDataService.getProperty(propertyId)
+        val property = localDataService.getProperty(propertyId)
         if (property == null) {
             Log.d("API", "🏠 [updateProjectProperty] Property $propertyId not found locally, creating new property")
             return@withContext createProjectProperty(projectId, request, propertyTypeValue)
         }
         runCatching {
-            val safeProperty = property ?: throw Exception("Property lookup failed unexpectedly")
-            val lockUpdatedAt = safeProperty.updatedAt.toApiTimestamp()
-            val updated = safeProperty.copy(
+            val lockUpdatedAt = property.updatedAt.toApiTimestamp()
+            val updated = property.copy(
                 updatedAt = now(),
                 syncStatus = SyncStatus.PENDING,
-                syncVersion = safeProperty.syncVersion + 1
+                syncVersion = property.syncVersion + 1
             )
             localDataService.saveProperty(updated)
             localDataService.attachPropertyToProject(
@@ -1629,7 +1629,13 @@ class OfflineSyncRepository(
             response.data.isJsonObject -> {
                 listOfNotNull(gson.fromJson(response.data, MoistureLogDto::class.java))
             }
-            else -> emptyList()
+            else -> {
+                Log.w(
+                    "API",
+                    "⚠️ [syncRoomMoistureLogs] Unexpected JSON format for roomId=$roomId: ${response.data?.javaClass?.simpleName}"
+                )
+                emptyList()
+            }
         }
 
         if (logs.isEmpty()) {
