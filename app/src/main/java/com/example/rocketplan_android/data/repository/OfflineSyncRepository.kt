@@ -68,6 +68,7 @@ import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.*
 import com.example.rocketplan_android.data.repository.sync.PhotoSyncService
+import com.example.rocketplan_android.data.repository.sync.ProjectSyncService
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.logging.LogLevel
@@ -124,9 +125,6 @@ private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
 // Status value for locally-created projects not yet synced to server
 private const val OFFLINE_PENDING_STATUS = "pending_offline"
 
-private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
-    if (assignedOnly) "company_projects_${companyId}_assigned" else "company_projects_$companyId"
-private fun userProjectsKey(userId: Long) = "user_projects_$userId"
 private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
 private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
 private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
@@ -159,6 +157,15 @@ class OfflineSyncRepository(
             syncCheckpointStore = syncCheckpointStore,
             photoCacheScheduler = photoCacheScheduler,
             remoteLogger = remoteLogger,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val projectSyncService by lazy {
+        ProjectSyncService(
+            api = api,
+            localDataService = localDataService,
+            syncCheckpointStore = syncCheckpointStore,
             ioDispatcher = ioDispatcher
         )
     }
@@ -216,84 +223,18 @@ class OfflineSyncRepository(
         }
     }
 
+    // ============================================================================
+    // Project Sync Operations - Delegated to ProjectSyncService
+    // ============================================================================
+
     suspend fun syncCompanyProjects(
         companyId: Long,
         assignedToMe: Boolean = false,
         forceFullSync: Boolean = false
-    ): Set<Long> = withContext(ioDispatcher) {
-        val checkpointKey = companyProjectsKey(companyId, assignedToMe)
-        val updatedSince = if (forceFullSync) null else syncCheckpointStore.updatedSinceParam(checkpointKey)
-        val existingProjects = localDataService.getAllProjects().associateBy { it.serverId ?: it.projectId }
-        val projects = fetchAllPages { page ->
-            api.getCompanyProjects(
-                companyId = companyId,
-                page = page,
-                updatedSince = updatedSince,
-                assignedToMe = if (assignedToMe) "1" else null
-            )
-        }
-        localDataService.saveProjects(
-            projects.map { it.toEntity(existing = existingProjects[it.id], fallbackCompanyId = companyId) }
-        )
+    ): Set<Long> = projectSyncService.syncCompanyProjects(companyId, assignedToMe, forceFullSync)
 
-        // Reconcile full company sync against local data to remove stale entries.
-        if (forceFullSync && !assignedToMe) {
-            val serverProjectIds = projects.map { it.id }.toSet()
-            val localProjects = localDataService.getAllProjects()
-            val localProjectsForCompany = localProjects.filter { it.companyId == companyId }
-            val orphanedProjects = localProjectsForCompany.filter { project ->
-                project.serverId != null &&
-                    project.serverId !in serverProjectIds &&
-                    !project.isDirty
-            }
-            val foreignCompanyProjects = localProjects.filter { project ->
-                project.companyId != null &&
-                    project.companyId != companyId &&
-                    project.serverId != null &&
-                    !project.isDirty
-            }
-            val toRemove = (orphanedProjects + foreignCompanyProjects).distinctBy { it.projectId }
-            if (toRemove.isNotEmpty()) {
-                Log.d(
-                    "API",
-                    "🧹 [syncCompanyProjects] Removing ${toRemove.size} stale projects (orphans=${orphanedProjects.size}, foreignCompany=${foreignCompanyProjects.size})"
-                )
-                toRemove.forEach { stale ->
-                    Log.d(
-                        "API",
-                        "   - Removing stale: ${stale.uuid} (serverId=${stale.serverId}, companyId=${stale.companyId})"
-                    )
-                }
-                val cleared = toRemove.map {
-                    it.copy(
-                        isDeleted = true,
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED,
-                        lastSyncedAt = now()
-                    )
-                }
-                localDataService.saveProjects(cleared)
-            }
-        }
-
-        projects.latestTimestamp { it.updatedAt }
-            ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
-        projects.map { it.id }.toSet()
-    }
-
-    suspend fun syncUserProjects(userId: Long) = withContext(ioDispatcher) {
-        val checkpointKey = userProjectsKey(userId)
-        val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
-        val existingProjects = localDataService.getAllProjects().associateBy { it.serverId ?: it.projectId }
-        val projects = fetchAllPages { page ->
-            api.getUserProjects(userId = userId, page = page, updatedSince = updatedSince)
-        }
-        localDataService.saveProjects(
-            projects.map { it.toEntity(existing = existingProjects[it.id]) }
-        )
-        projects.latestTimestamp { it.updatedAt }
-            ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
-    }
+    suspend fun syncUserProjects(userId: Long) =
+        projectSyncService.syncUserProjects(userId)
 
     suspend fun deleteProject(localProjectId: Long) = withContext(ioDispatcher) {
         Log.d("API", "🗑️ [deleteProject] Starting delete for local project ID: $localProjectId")
