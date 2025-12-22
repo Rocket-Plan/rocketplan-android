@@ -46,6 +46,7 @@ import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequ
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import retrofit2.Response
+import com.google.gson.JsonElement
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -233,7 +234,7 @@ interface OfflineSyncApi {
     suspend fun createRoom(
         @Path("locationId") locationId: Long,
         @Body request: CreateRoomRequest
-    ): RoomDto
+    ): JsonElement
 
     @HTTP(method = "DELETE", path = "/api/rooms/{roomId}", hasBody = true)
     suspend fun deleteRoom(

@@ -2967,7 +2967,7 @@ class OfflineSyncRepository(
             )
         }
 
-        val dto = try {
+        val rawResponse = try {
             api.createRoom(locationServerId, request)
         } catch (error: HttpException) {
             if (AppConfig.isLoggingEnabled) {
@@ -2979,6 +2979,16 @@ class OfflineSyncRepository(
                 )
             }
             throw error
+        }
+        if (AppConfig.isLoggingEnabled) {
+            Log.d("API", "📥 [handlePendingRoomCreation] createRoom response: ${rawResponse.toString()}")
+        }
+        val dto = when {
+            rawResponse.isJsonObject && rawResponse.asJsonObject.has("data") ->
+                gson.fromJson(rawResponse.asJsonObject.get("data"), RoomDto::class.java)
+            rawResponse.isJsonObject && rawResponse.asJsonObject.has("room") ->
+                gson.fromJson(rawResponse.asJsonObject.get("room"), RoomDto::class.java)
+            else -> gson.fromJson(rawResponse, RoomDto::class.java)
         }
         if (dto.id <= 0) {
             Log.w(
