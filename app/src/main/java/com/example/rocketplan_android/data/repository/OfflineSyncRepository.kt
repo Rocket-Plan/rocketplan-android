@@ -16,7 +16,6 @@ import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
-import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
@@ -27,6 +26,7 @@ import com.example.rocketplan_android.data.repository.sync.EquipmentSyncService
 import com.example.rocketplan_android.data.repository.sync.MoistureLogSyncService
 import com.example.rocketplan_android.data.repository.sync.NoteSyncService
 import com.example.rocketplan_android.data.repository.sync.PhotoSyncService
+import com.example.rocketplan_android.data.repository.sync.ProjectMetadataSyncService
 import com.example.rocketplan_android.data.repository.sync.PropertySyncService
 import com.example.rocketplan_android.data.repository.sync.ProjectSyncService
 import com.example.rocketplan_android.data.repository.sync.PendingOperationResult
@@ -39,20 +39,15 @@ import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
-import com.google.gson.Gson
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Date
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-
-// Pagination limits - balance between network efficiency and memory usage
-private const val NOTES_PAGE_LIMIT = 30
 
 // Checkpoint keys for incremental sync - stored in SyncCheckpointStore
 private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"
@@ -78,9 +73,6 @@ private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
 // Status value for locally-created projects not yet synced to server
 private const val OFFLINE_PENDING_STATUS = "pending_offline"
 
-private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
-private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
-private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
 data class PhotoDeletionResult(val synced: Boolean)
 data class RoomDeletionResult(val synced: Boolean)
 
@@ -173,6 +165,17 @@ class OfflineSyncRepository(
         )
     }
 
+    private val projectMetadataSyncService by lazy {
+        ProjectMetadataSyncService(
+            api = api,
+            localDataService = localDataService,
+            syncCheckpointStore = syncCheckpointStore,
+            workScopeSyncService = workScopeSyncService,
+            resolveServerProjectId = ::resolveServerProjectId,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
     private val syncQueueProcessor: SyncQueueProcessor by lazy {
         SyncQueueProcessor(
             api = api,
@@ -185,8 +188,6 @@ class OfflineSyncRepository(
             ioDispatcher = ioDispatcher
         )
     }
-
-    private val gson = Gson()
 
     fun attachImageProcessorQueueManager(manager: ImageProcessorQueueManager) {
         imageProcessorQueueManager = manager
@@ -776,46 +777,6 @@ class OfflineSyncRepository(
     ): OfflineEquipmentEntity? =
         equipmentSyncService.deleteEquipmentOffline(equipmentId, uuid)
 
-    private suspend fun syncDamagesForProject(projectId: Long): Int {
-        val start = System.currentTimeMillis()
-        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
-        if (roomIds.isEmpty()) {
-            Log.d("API", "ℹ️ [syncDamages] No server room IDs for project $projectId; skipping damage sync")
-            return 0
-        }
-        var total = 0
-        roomIds.forEach { roomId ->
-            coroutineContext.ensureActive()
-            total += syncRoomDamages(projectId, roomId)
-        }
-        val duration = System.currentTimeMillis() - start
-        Log.d(
-            "API",
-            "✅ [syncDamages] Synced $total damages across ${roomIds.size} rooms for project $projectId in ${duration}ms"
-        )
-        return total
-    }
-
-    private suspend fun syncMoistureLogsForProject(projectId: Long): Int {
-        val start = System.currentTimeMillis()
-        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
-        if (roomIds.isEmpty()) {
-            Log.d("API", "ℹ️ [syncMoistureLogs] No server room IDs for project $projectId; skipping moisture log sync")
-            return 0
-        }
-        var total = 0
-        roomIds.forEach { roomId ->
-            coroutineContext.ensureActive()
-            total += syncRoomMoistureLogs(projectId, roomId)
-        }
-        val duration = System.currentTimeMillis() - start
-        Log.d(
-            "API",
-            "✅ [syncMoistureLogs] Synced $total moisture logs across ${roomIds.size} rooms for project $projectId in ${duration}ms"
-        )
-        return total
-    }
-
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =
         workScopeSyncService.fetchWorkScopeCatalog(companyId)
 
@@ -907,201 +868,17 @@ class OfflineSyncRepository(
      * Syncs project metadata: notes, equipment, damages, logs, work scopes.
      * These are not needed for navigation but useful for offline access.
      */
-    suspend fun syncProjectMetadata(projectId: Long): SyncResult = withContext(ioDispatcher) {
-        val serverProjectId = resolveServerProjectId(projectId)
-            ?: return@withContext SyncResult.failure(
-                SyncSegment.PROJECT_METADATA,
-                IllegalStateException("Project $projectId has not been synced to server"),
-                0
-            )
-        val startTime = System.currentTimeMillis()
-        Log.d("API", "🔄 [syncProjectMetadata] Starting for project $projectId (server=$serverProjectId)")
-        var itemCount = 0
-
-        val notesCheckpointKey = projectNotesKey(projectId)
-        val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
-        // Notes
-        Log.d(
-            "API",
-            "🔄 [syncProjectMetadata] Fetching notes with pagination (limit=$NOTES_PAGE_LIMIT) since ${notesSince ?: "beginning"}"
-        )
-        runCatching {
-            fetchAllPages { page ->
-                api.getProjectNotes(
-                    projectId = serverProjectId,
-                    page = page,
-                    limit = NOTES_PAGE_LIMIT,
-                    updatedSince = notesSince
-                )
-            }
-        }
-            .onSuccess { notes ->
-                localDataService.saveNotes(notes.mapNotNull { it.toEntity() })
-                itemCount += notes.size
-                Log.d("API", "📝 [syncProjectMetadata] Saved ${notes.size} notes (paginated)")
-                notes.latestTimestamp { it.updatedAt }
-                    ?.let { syncCheckpointStore.updateCheckpoint(notesCheckpointKey, it) }
-            }
-            .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch notes", it) }
-        ensureActive()
-
-        // Equipment
-        runCatching { api.getProjectEquipment(serverProjectId) }
-            .onSuccess { response ->
-                val equipment = response.data
-                localDataService.saveEquipment(equipment.map { it.toEntity() })
-                itemCount += equipment.size
-                Log.d("API", "🔧 [syncProjectMetadata] Saved ${equipment.size} equipment (single response)")
-            }
-            .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch equipment", it) }
-        ensureActive()
-
-        val damagesCheckpointKey = projectDamagesKey(projectId)
-        val damagesSince = syncCheckpointStore.updatedSinceParam(damagesCheckpointKey)
-        // Damages
-        val projectDamagesFetched = runCatching { api.getProjectDamageMaterials(serverProjectId, updatedSince = damagesSince) }
-            .onSuccess { response ->
-                val damages = response.data
-                Log.d("API", "🔍 [syncProjectMetadata] Raw damages from API: ${damages.size}, roomIds=${damages.take(5).map { it.roomId }}")
-                val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId) }
-                val (scopedDamages, unscopedDamages) = entities.partition { it.roomId != null }
-                if (unscopedDamages.isNotEmpty()) {
-                    Log.w(
-                        "API",
-                        "⚠️ [syncProjectMetadata] Dropping ${unscopedDamages.size} damages with no roomId (projectId=$projectId)"
-                    )
-                }
-                localDataService.saveDamages(scopedDamages)
-                val materialEntities = damages.map { it.toMaterialEntity() }
-                if (materialEntities.isNotEmpty()) {
-                    localDataService.saveMaterials(materialEntities)
-                }
-                itemCount += scopedDamages.size
-                Log.d("API", "⚠️ [syncProjectMetadata] Saved ${scopedDamages.size} damages (from ${damages.size} API results)")
-                damages.latestTimestamp { it.updatedAt }
-                    ?.let { syncCheckpointStore.updateCheckpoint(damagesCheckpointKey, it) }
-            }
-            .onFailure { error ->
-                Log.e("API", "❌ [syncProjectMetadata] Failed to fetch damages", error)
-            }
-            .isSuccess
-        ensureActive()
-
-        // If project-level damages did not include room IDs, fall back to per-room fetch.
-        if (!projectDamagesFetched) {
-            Log.w("API", "⚠️ [syncProjectMetadata] Project damage fetch failed; falling back to per-room damage sync")
-        }
-        val damagesFromProject = localDataService.observeDamages(projectId).first().takeIf { it.isNotEmpty() }
-        val hasRoomScopedDamages = damagesFromProject?.any { it.roomId != null } == true
-        if (!hasRoomScopedDamages) {
-            if (projectDamagesFetched) {
-                Log.w("API", "⚠️ [syncProjectMetadata] Project damages missing roomIds; falling back to per-room damage sync (projectId=$projectId)")
-            }
-            val damageCount = syncDamagesForProject(projectId)
-            itemCount += damageCount
-        }
-
-        val moistureCount = syncMoistureLogsForProject(projectId)
-        itemCount += moistureCount
-        ensureActive()
-
-        val workScopeCount = workScopeSyncService.syncWorkScopesForProject(projectId)
-        itemCount += workScopeCount
-        ensureActive()
-
-        val atmosCheckpointKey = projectAtmosLogsKey(projectId)
-        val atmosSince = syncCheckpointStore.updatedSinceParam(atmosCheckpointKey)
-        // Atmospheric logs
-        runCatching { api.getProjectAtmosphericLogs(serverProjectId, updatedSince = atmosSince) }
-            .onSuccess { response ->
-                val logs = response.data
-                localDataService.saveAtmosphericLogs(logs.map { it.toEntity(defaultRoomId = null) })
-                itemCount += logs.size
-                Log.d("API", "🌡️ [syncProjectMetadata] Saved ${logs.size} atmospheric logs")
-                logs.latestTimestamp { it.updatedAt }
-                    ?.let { syncCheckpointStore.updateCheckpoint(atmosCheckpointKey, it) }
-            }
-            .onFailure { Log.e("API", "❌ [syncProjectMetadata] Failed to fetch atmospheric logs", it) }
-        ensureActive()
-
-        val duration = System.currentTimeMillis() - startTime
-        Log.d("API", "✅ [syncProjectMetadata] Synced $itemCount items in ${duration}ms")
-        SyncResult.success(SyncSegment.PROJECT_METADATA, itemCount, duration)
-    }
+    suspend fun syncProjectMetadata(projectId: Long): SyncResult =
+        projectMetadataSyncService.syncProjectMetadata(projectId)
 
     suspend fun syncRoomWorkScopes(projectId: Long, roomId: Long): Int =
         workScopeSyncService.syncRoomWorkScopes(projectId, roomId)
 
-    suspend fun syncRoomDamages(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
-        val startTime = System.currentTimeMillis()
-        val response = runCatching { api.getRoomDamageMaterials(roomId) }
-            .onFailure { error ->
-                Log.e("API", "❌ [syncRoomDamages] Failed for roomId=$roomId (projectId=$projectId)", error)
-            }
-            .getOrNull() ?: return@withContext 0
+    suspend fun syncRoomDamages(projectId: Long, roomId: Long): Int =
+        projectMetadataSyncService.syncRoomDamages(projectId, roomId)
 
-        val damages = response.data
-        if (damages.isEmpty()) {
-            Log.d("API", "ℹ️ [syncRoomDamages] No damages returned for roomId=$roomId (projectId=$projectId)")
-            return@withContext 0
-        }
-
-        val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId, defaultRoomId = roomId) }
-        if (entities.isNotEmpty()) {
-            localDataService.saveDamages(entities)
-            val materialEntities = damages.map { it.toMaterialEntity() }
-            if (materialEntities.isNotEmpty()) {
-                localDataService.saveMaterials(materialEntities)
-            }
-        }
-        val duration = System.currentTimeMillis() - startTime
-        Log.d(
-            "API",
-            "🛠️ [syncRoomDamages] Saved ${entities.size} damages for roomId=$roomId (projectId=$projectId) in ${duration}ms"
-        )
-        entities.size
-    }
-
-    suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
-        val startTime = System.currentTimeMillis()
-        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial") }
-            .onFailure { error ->
-                Log.e("API", "❌ [syncRoomMoistureLogs] Failed for roomId=$roomId (projectId=$projectId)", error)
-            }
-            .getOrNull() ?: return@withContext 0
-
-        // Handle flexible data format: API may return array or single object
-        val logs: List<MoistureLogDto> = when {
-            response.data == null -> emptyList()
-            response.data.isJsonArray -> {
-                gson.fromJson(response.data, Array<MoistureLogDto>::class.java)?.toList() ?: emptyList()
-            }
-            response.data.isJsonObject -> {
-                listOfNotNull(gson.fromJson(response.data, MoistureLogDto::class.java))
-            }
-            else -> {
-                Log.w(
-                    "API",
-                    "⚠️ [syncRoomMoistureLogs] Unexpected JSON format for roomId=$roomId: ${response.data?.javaClass?.simpleName}"
-                )
-                emptyList()
-            }
-        }
-
-        if (logs.isEmpty()) {
-            Log.d("API", "ℹ️ [syncRoomMoistureLogs] No moisture logs returned for roomId=$roomId (projectId=$projectId)")
-            return@withContext 0
-        }
-
-        val entities = logs.mapNotNull { it.toEntity() }
-        localDataService.saveMoistureLogs(entities)
-        val duration = System.currentTimeMillis() - startTime
-        Log.d(
-            "API",
-            "💧 [syncRoomMoistureLogs] Saved ${entities.size} moisture logs for roomId=$roomId (projectId=$projectId) in ${duration}ms"
-        )
-        entities.size
-    }
+    suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int =
+        projectMetadataSyncService.syncRoomMoistureLogs(projectId, roomId)
 
     suspend fun syncDeletedRecords(types: List<String> = DEFAULT_DELETION_TYPES) = withContext(ioDispatcher) {
         val now = Date()

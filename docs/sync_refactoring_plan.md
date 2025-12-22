@@ -824,7 +824,7 @@ override fun onPause() {
 
 ## Overview
 
-After completing the segment-based sync refactoring above, we further decomposed `OfflineSyncRepository` into focused service classes. This reduces the file size from ~2500 lines to ~1400 lines and improves testability.
+After completing the segment-based sync refactoring above, we further decomposed `OfflineSyncRepository` into focused service classes. This reduces the file size from ~2500 lines to ~1100 lines and improves testability.
 
 ## Service Hierarchy
 
@@ -832,6 +832,7 @@ After completing the segment-based sync refactoring above, we further decomposed
 OfflineSyncRepository (Coordinator/Facade)
 ├── PhotoSyncService       - Photo sync operations
 ├── ProjectSyncService     - Project list sync, company projects
+├── ProjectMetadataSyncService - Notes, equipment, damages, logs, work scopes
 ├── PropertySyncService    - Property CRUD, room type caching
 ├── RoomSyncService        - Room/location CRUD, catalog handling
 ├── NoteSyncService        - Note CRUD and queueing
@@ -859,6 +860,14 @@ Handles all photo synchronization:
 Handles project list synchronization:
 - `syncCompanyProjects(companyId, assignedToMe, forceFullSync)` - Sync company project list
 - `syncUserProjects(userId)` - Sync user's assigned projects
+
+### ProjectMetadataSyncService
+**File:** `data/repository/sync/ProjectMetadataSyncService.kt`
+
+Handles project metadata synchronization:
+- `syncProjectMetadata(projectId)` - Notes, equipment, damages, logs, work scopes
+- `syncRoomDamages(projectId, roomId)` - Per-room damage sync
+- `syncRoomMoistureLogs(projectId, roomId)` - Per-room moisture log sync
 
 ### PropertySyncService
 **File:** `data/repository/sync/PropertySyncService.kt`
@@ -923,35 +932,17 @@ Processes the offline sync queue:
 ## Dependency Graph
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                    OfflineSyncRepository                         │
-│  (coordinates services, delegates to appropriate service)        │
-└──────────────────────────────────────────────────────────────────┘
-         │           │           │           │           │
-         ▼           ▼           ▼           ▼           ▼
-   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
-   │  Photo   │ │ Project  │ │ Property │ │   Room   │ │  Note    │
-   │  Sync    │ │  Sync    │ │  Sync    │ │  Sync    │ │  Sync    │
-   │ Service  │ │ Service  │ │ Service  │ │ Service  │ │ Service  │
-   └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
-         │                         │           │           │
-         ▼                         ▼           ▼           ▼
-   ┌────────────────────┐     ┌──────────┐ ┌──────────┐ ┌──────────┐
-   │ PhotoCacheScheduler│     │Equipment │ │Moisture  │ │WorkScope │
-   └────────────────────┘     │  Sync    │ │Log Sync  │ │  Sync    │
-                              │ Service  │ │ Service  │ │ Service  │
-                              └──────────┘ └──────────┘ └──────────┘
-                                       │        │          │
-                                       └────┬───┴──────┬───┘
-                                            ▼          ▼
-                                      ┌───────────────┐
-                                      │SyncQueueEnqueuer│
-                                      └───────────────┘
-                                                ▲
-                                                │
-                                      ┌───────────────┐
-                                      │SyncQueueProcessor│
-                                      └───────────────┘
+OfflineSyncRepository
+  |-- PhotoSyncService -> PhotoCacheScheduler
+  |-- ProjectSyncService
+  |-- ProjectMetadataSyncService
+  |-- PropertySyncService
+  |-- RoomSyncService
+  |-- NoteSyncService
+  |-- EquipmentSyncService
+  |-- MoistureLogSyncService
+  |-- WorkScopeSyncService
+  '-- SyncQueueProcessor (SyncQueueEnqueuer)
 ```
 
 ## SyncQueueEnqueuer Interface (Implemented)
@@ -1001,11 +992,12 @@ With the service extraction:
 
 | File | Lines | Responsibility |
 |------|-------|----------------|
-| `OfflineSyncRepository.kt` | 1300 | Coordination, delegation |
+| `OfflineSyncRepository.kt` | 1077 | Coordination, delegation |
 | `SyncQueueProcessor.kt` | 1824 | Queue processing (candidate for further split) |
 | `SyncQueueEnqueuer.kt` | 156 | Enqueue interface contract |
 | `PhotoSyncService.kt` | 530 | Photo sync |
 | `ProjectSyncService.kt` | 149 | Project list sync |
+| `ProjectMetadataSyncService.kt` | 295 | Notes/equipment/damages/logs/work scopes |
 | `PropertySyncService.kt` | 332 | Property CRUD |
 | `RoomSyncService.kt` | 560 | Room/location CRUD |
 | `NoteSyncService.kt` | 98 | Note CRUD |
