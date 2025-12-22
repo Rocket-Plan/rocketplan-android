@@ -17,6 +17,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogPropertyTypeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
@@ -93,6 +96,36 @@ class LocalDataService private constructor(
             dao.upsertRoomTypes(types)
         }
     }
+
+    suspend fun replaceOfflineRoomTypeCatalog(
+        propertyTypes: List<OfflineCatalogPropertyTypeEntity>,
+        levels: List<OfflineCatalogLevelEntity>,
+        roomTypes: List<OfflineCatalogRoomTypeEntity>
+    ) = withContext(ioDispatcher) {
+        database.withTransaction {
+            dao.clearCatalogPropertyTypes()
+            dao.clearCatalogLevels()
+            dao.clearCatalogRoomTypes()
+            if (propertyTypes.isNotEmpty()) {
+                dao.upsertCatalogPropertyTypes(propertyTypes)
+            }
+            if (levels.isNotEmpty()) {
+                dao.upsertCatalogLevels(levels)
+            }
+            if (roomTypes.isNotEmpty()) {
+                dao.upsertCatalogRoomTypes(roomTypes)
+            }
+        }
+    }
+
+    suspend fun getOfflineCatalogPropertyTypes(): List<OfflineCatalogPropertyTypeEntity> =
+        withContext(ioDispatcher) { dao.getCatalogPropertyTypes() }
+
+    suspend fun getOfflineCatalogLevels(): List<OfflineCatalogLevelEntity> =
+        withContext(ioDispatcher) { dao.getCatalogLevels() }
+
+    suspend fun getOfflineCatalogRoomTypes(): List<OfflineCatalogRoomTypeEntity> =
+        withContext(ioDispatcher) { dao.getCatalogRoomTypes() }
 
     suspend fun getWorkScopeCatalogItems(companyId: Long): List<OfflineWorkScopeCatalogItemEntity> =
         withContext(ioDispatcher) { dao.getWorkScopeCatalogItems(companyId) }

@@ -20,6 +20,7 @@ import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.storage.ImageProcessingConfigStore
 import com.example.rocketplan_android.data.storage.ImageProcessorUploadStore
+import com.example.rocketplan_android.data.storage.OfflineRoomTypeCatalogStore
 import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.sync.SyncQueueManager
@@ -123,13 +124,15 @@ class RocketPlanApplication : Application() {
         )
         syncCheckpointStore = SyncCheckpointStore(this)
         imageProcessingConfigStore = ImageProcessingConfigStore.getInstance(this)
+        val offlineRoomTypeCatalogStore = OfflineRoomTypeCatalogStore.getInstance(this)
 
         authRepository = AuthRepository(secureStorage)
 
         val offlineSyncApi = RetrofitClient.createService<OfflineSyncApi>()
         roomTypeRepository = RoomTypeRepository(
             api = offlineSyncApi,
-            localDataService = localDataService
+            localDataService = localDataService,
+            offlineRoomTypeCatalogStore = offlineRoomTypeCatalogStore
         )
         offlineSyncRepository = OfflineSyncRepository(
             api = offlineSyncApi,

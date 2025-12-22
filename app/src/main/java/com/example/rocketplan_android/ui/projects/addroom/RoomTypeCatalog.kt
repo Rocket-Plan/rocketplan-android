@@ -252,7 +252,11 @@ object RoomTypeCatalog {
 
     fun isExteriorType(type: String?): Boolean {
         val normalized = type?.lowercase(Locale.US) ?: return false
-        return normalized == "external" || normalized == "multi-external" || normalized == "single-external"
+        return normalized == "external" ||
+            normalized == "multi-external" ||
+            normalized == "single-external" ||
+            normalized == "industrial" ||
+            normalized == "exterior"
     }
 
     private fun option(

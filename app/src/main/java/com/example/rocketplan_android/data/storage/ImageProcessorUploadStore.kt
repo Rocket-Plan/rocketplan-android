@@ -3,6 +3,7 @@ package com.example.rocketplan_android.data.storage
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import com.example.rocketplan_android.data.model.IRPhotoData
 import com.google.gson.Gson
 
 /**
@@ -76,5 +77,6 @@ data class StoredUploadData(
     val order: List<String>,
     val notes: Map<String, List<String>>,
     val entityType: String? = null,
-    val entityId: Long? = null
+    val entityId: Long? = null,
+    val irPhotos: List<Map<String, IRPhotoData>>? = null
 )

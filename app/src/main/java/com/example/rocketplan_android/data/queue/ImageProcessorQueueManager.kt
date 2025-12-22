@@ -14,6 +14,7 @@ import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
 import com.example.rocketplan_android.data.local.entity.PhotoStatus
+import com.example.rocketplan_android.data.model.ImageProcessorAssemblyRequest
 import com.example.rocketplan_android.data.model.ImageProcessorStatusSnapshot
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.storage.ImageProcessorUploadStore
@@ -115,9 +116,126 @@ class ImageProcessorQueueManager(
                 )
             }
 
+            val promoted = registerWaitingAssemblies()
+            if (promoted) {
+                Log.d(TAG, "🚚 Promoted waiting assemblies during recovery")
+            }
+
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error recovering stranded assemblies", e)
         }
+    }
+
+    private suspend fun registerWaitingAssemblies(): Boolean {
+        val waitingAssemblies = dao.getAssembliesByStatus(listOf(AssemblyStatus.WAITING_FOR_ROOM.value))
+        if (waitingAssemblies.isEmpty()) return false
+
+        var promoted = false
+
+        for (assembly in waitingAssemblies) {
+            val projectServerId = offlineDao.getProject(assembly.projectId)?.serverId
+            if (projectServerId == null) {
+                Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} waiting for project sync")
+                updateAssemblyStatus(
+                    assembly.assemblyId,
+                    AssemblyStatus.WAITING_FOR_ROOM,
+                    "Project is not synced yet"
+                )
+                continue
+            }
+
+            val roomServerId = assembly.roomId?.let { roomId ->
+                offlineDao.getRoom(roomId)?.serverId
+            }
+            if (assembly.roomId != null && roomServerId == null) {
+                Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} waiting for room sync (roomId=${assembly.roomId})")
+                updateAssemblyStatus(
+                    assembly.assemblyId,
+                    AssemblyStatus.WAITING_FOR_ROOM,
+                    "Room is not synced yet"
+                )
+                continue
+            }
+
+            val uploadData = uploadStore.read(assembly.assemblyId)
+            if (uploadData == null) {
+                Log.e(TAG, "❌ Upload data missing for waiting assembly ${assembly.assemblyId}")
+                updateAssemblyStatus(
+                    assembly.assemblyId,
+                    AssemblyStatus.WAITING_FOR_ROOM,
+                    "Upload data missing for retry"
+                )
+                continue
+            }
+
+            val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
+            val request = ImageProcessorAssemblyRequest(
+                assemblyId = assembly.assemblyId,
+                totalFiles = assembly.totalFiles,
+                roomId = roomServerId,
+                projectId = projectServerId,
+                groupUuid = assembly.groupUuid,
+                bytesReceived = assembly.bytesReceived,
+                photoNames = photos.map { it.fileName },
+                albums = uploadData.albums,
+                irPhotos = uploadData.irPhotos ?: emptyList(),
+                order = uploadData.order,
+                notes = uploadData.notes,
+                entityType = uploadData.entityType,
+                entityId = uploadData.entityId
+            )
+
+            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATING, null)
+
+            val response = runCatching {
+                if (roomServerId != null) {
+                    api.createRoomAssembly(roomServerId, request)
+                } else {
+                    api.createEntityAssembly(request)
+                }
+            }.getOrElse { error ->
+                Log.e(TAG, "❌ Failed to register waiting assembly ${assembly.assemblyId}", error)
+                remoteLogger?.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "Failed to register waiting assembly",
+                    metadata = mapOf(
+                        "assembly_id" to assembly.assemblyId,
+                        "reason" to (error.message ?: "unknown")
+                    )
+                )
+                null
+            } ?: continue
+
+            val body = response.body()
+            if (response.isSuccessful && body?.success == true) {
+                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATED, null)
+                Log.d(
+                    TAG,
+                    "✅ Registered waiting assembly ${assembly.assemblyId} (roomId=${roomServerId ?: "none"})"
+                )
+                remoteLogger?.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "Registered waiting assembly after room sync",
+                    metadata = mapOf(
+                        "assembly_id" to assembly.assemblyId,
+                        "project_id_server" to projectServerId.toString(),
+                        "room_id_server" to (roomServerId?.toString() ?: "null")
+                    )
+                )
+                promoted = true
+            } else {
+                val errorMessage = body?.message ?: response.errorBody()?.string() ?: "Unknown error"
+                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.WAITING_FOR_ROOM, errorMessage)
+                Log.w(
+                    TAG,
+                    "⚠️ Waiting assembly ${assembly.assemblyId} still pending: $errorMessage (code=${response.code()})"
+                )
+            }
+        }
+
+        return promoted
     }
 
     /**
@@ -137,6 +255,11 @@ class ImageProcessorQueueManager(
                     if (isProcessingQueue.get()) {
                         Log.d(TAG, "⏸️ Queue is locked, skipping")
                         return@launch
+                    }
+
+                    val promoted = registerWaitingAssemblies()
+                    if (promoted) {
+                        Log.d(TAG, "🚚 Promoted waiting assemblies after room sync")
                     }
 
                     // Get next created assembly (status is CREATED after backend POST in ImageProcessorRepository)
@@ -221,6 +344,12 @@ class ImageProcessorQueueManager(
             try {
                 Log.d(TAG, "🔄 Processing retry queue (bypassTimeout=$bypassTimeout)")
 
+                val promoted = registerWaitingAssemblies()
+                if (promoted) {
+                    Log.d(TAG, "🚚 Promoted waiting assemblies during retry processing")
+                    processNextQueuedAssembly()
+                }
+
                 val currentTime = System.currentTimeMillis()
                 val retryableAssemblies = dao.getRetryableAssemblies(
                     retryableStatuses = listOf(
@@ -284,6 +413,16 @@ class ImageProcessorQueueManager(
             ?: return@withContext Result.failure(IllegalArgumentException("Assembly not found"))
 
         val status = AssemblyStatus.fromValue(assembly.status)
+        if (status == AssemblyStatus.WAITING_FOR_ROOM) {
+            val promoted = registerWaitingAssemblies()
+            val refreshed = dao.getAssembly(assemblyId)
+            return@withContext if (promoted && refreshed?.status == AssemblyStatus.CREATED.value) {
+                processNextQueuedAssembly()
+                Result.success(Unit)
+            } else {
+                Result.failure(IllegalStateException("Room or project is not synced yet; please sync and retry"))
+            }
+        }
         val retryableStatuses = setOf(
             AssemblyStatus.FAILED,
             AssemblyStatus.WAITING_FOR_CONNECTIVITY,

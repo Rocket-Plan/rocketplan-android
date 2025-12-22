@@ -56,8 +56,12 @@ import retrofit2.http.Path
 import retrofit2.http.Query
 import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
 import com.example.rocketplan_android.data.model.offline.RestoreRecordsResponse
+import com.example.rocketplan_android.data.model.offline.OfflineRoomTypeCatalogResponse
 
 interface OfflineSyncApi {
+
+    @GET("/api/offline-room-types")
+    suspend fun getOfflineRoomTypes(): OfflineRoomTypeCatalogResponse
 
     // Projects
     @GET("/api/companies/{companyId}/projects")

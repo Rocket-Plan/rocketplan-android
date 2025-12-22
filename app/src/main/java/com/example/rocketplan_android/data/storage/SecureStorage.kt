@@ -35,6 +35,7 @@ class SecureStorage(private val context: Context) {
         private val USER_ID_KEY = longPreferencesKey("user_id")
         private val COMPANY_ID_KEY = longPreferencesKey("company_id")
         private const val OAUTH_STATE_KEY = "oauth_state"
+        private const val AUTH_TOKEN_PREF_KEY = "auth_token"
 
         // EncryptedSharedPreferences name
         private const val ENCRYPTED_PREFS_NAME = "rocketplan_encrypted_prefs"
@@ -72,7 +73,7 @@ class SecureStorage(private val context: Context) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val authTokenState = MutableStateFlow<String?>(
-        encryptedPrefs.getString(AUTH_TOKEN_KEY, null)
+        encryptedPrefs.getString(AUTH_TOKEN_PREF_KEY, null)
     )
 
     init {
@@ -116,7 +117,7 @@ class SecureStorage(private val context: Context) {
      */
     suspend fun clearAuthToken() {
         withContext(Dispatchers.IO) {
-            encryptedPrefs.edit().remove(AUTH_TOKEN_KEY).apply()
+            encryptedPrefs.edit().remove(AUTH_TOKEN_PREF_KEY).apply()
             context.dataStore.edit { preferences ->
                 preferences.remove(AUTH_TOKEN_KEY)
             }
@@ -284,7 +285,7 @@ class SecureStorage(private val context: Context) {
      * Persist token in encrypted prefs and migrate away from legacy DataStore storage.
      */
     private fun saveAuthTokenInternal(token: String) {
-        encryptedPrefs.edit().putString(AUTH_TOKEN_KEY, token).apply()
+        encryptedPrefs.edit().putString(AUTH_TOKEN_PREF_KEY, token).apply()
     }
 
     private suspend fun migrateLegacyAuthToken(): String? {

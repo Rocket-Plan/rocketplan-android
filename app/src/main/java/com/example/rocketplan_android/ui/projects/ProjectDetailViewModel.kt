@@ -273,7 +273,7 @@ class ProjectDetailViewModel(
                         val iconRes = RoomTypeCatalog.resolveIconRes(
                             context = getApplication(),
                             typeId = room.roomTypeId,
-                            iconName = room.roomType
+                            iconName = room.roomType ?: room.title
                         )
                         RoomCard(
                             roomId = roomKey,

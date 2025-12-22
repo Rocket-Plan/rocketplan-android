@@ -89,7 +89,8 @@ enum class AssemblyStatus(val value: String) {
     FAILED("failed"),
     CANCELLED("cancelled"),
     RETRYING("retrying"),
-    WAITING_FOR_CONNECTIVITY("waiting_for_connectivity");
+    WAITING_FOR_CONNECTIVITY("waiting_for_connectivity"),
+    WAITING_FOR_ROOM("waiting_for_room");
 
     companion object {
         fun fromValue(value: String): AssemblyStatus? =

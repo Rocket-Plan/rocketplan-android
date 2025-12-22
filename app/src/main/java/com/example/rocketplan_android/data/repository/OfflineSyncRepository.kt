@@ -12,6 +12,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
@@ -54,6 +55,7 @@ import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.PaginationMeta
 import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
 import com.example.rocketplan_android.data.model.offline.RoomDto
+import com.example.rocketplan_android.data.model.offline.RoomTypeDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
@@ -689,6 +691,7 @@ class OfflineSyncRepository(
         projectId: Long,
         roomName: String,
         roomTypeId: Long,
+        roomTypeName: String? = null,
         isSource: Boolean = false,
         isExterior: Boolean = false,
         idempotencyKey: String? = null
@@ -704,6 +707,7 @@ class OfflineSyncRepository(
             projectId = projectId,
             roomName = roomName,
             roomTypeId = roomTypeId,
+            roomTypeName = roomTypeName,
             isSource = isSource,
             isExterior = isExterior,
             idempotencyKey = resolvedIdempotencyKey,
@@ -719,15 +723,37 @@ class OfflineSyncRepository(
         seedDefaultRoom: Boolean
     ): Result<Unit> = withContext(ioDispatcher) {
         val config = resolveLocationDefaults(propertyTypeValue)
-        val idempotencyKey = UUID.randomUUID().toString()
+        val fallbackName = locationName.ifBlank { "Unit" }
 
         runCatching {
-            createPendingLocation(
-                projectId = projectId,
-                locationName = locationName,
-                config = config,
-                idempotencyKey = idempotencyKey
-            )
+            runCatching { roomTypeRepository.ensureOfflineCatalogCached() }
+                .onFailure { Log.w(TAG, "⚠️ [createDefaultLocationAndRoom] Unable to hydrate offline catalog", it) }
+            val existingLocations = localDataService.getLocations(projectId)
+            val defaultLevels = resolveDefaultCatalogLevels(propertyTypeValue)
+            if (defaultLevels.isNotEmpty()) {
+                defaultLevels.forEach { level ->
+                    val levelName = level.name?.takeIf { it.isNotBlank() } ?: fallbackName
+                    val alreadyExists = existingLocations.any { it.title.equals(levelName, ignoreCase = true) }
+                    if (!alreadyExists) {
+                        createPendingLocation(
+                            projectId = projectId,
+                            locationName = levelName,
+                            config = config,
+                            idempotencyKey = UUID.randomUUID().toString()
+                        )
+                    }
+                }
+            } else {
+                val alreadyExists = existingLocations.any { it.title.equals(fallbackName, ignoreCase = true) }
+                if (!alreadyExists) {
+                    createPendingLocation(
+                        projectId = projectId,
+                        locationName = fallbackName,
+                        config = config,
+                        idempotencyKey = UUID.randomUUID().toString()
+                    )
+                }
+            }
 
             if (seedDefaultRoom) {
                 // Try cache first, then fetch from API if empty
@@ -745,7 +771,7 @@ class OfflineSyncRepository(
                 if (roomTypeId != null) {
                     createRoom(
                         projectId = projectId,
-                        roomName = locationName.ifBlank { "Room" },
+                        roomName = fallbackName.ifBlank { "Room" },
                         roomTypeId = roomTypeId,
                         isSource = true
                     )
@@ -763,6 +789,23 @@ class OfflineSyncRepository(
                 "❌ [createDefaultLocationAndRoom] Failed to seed default location/room for project=$projectId",
                 error
             )
+        }
+    }
+
+    private suspend fun resolveDefaultCatalogLevels(propertyTypeValue: String?): List<OfflineCatalogLevelEntity> {
+        val levels = localDataService.getOfflineCatalogLevels()
+        if (levels.isEmpty()) return emptyList()
+        val propertyTypeId = roomTypeRepository.resolveCatalogPropertyTypeId(propertyTypeValue)
+        val filtered = if (propertyTypeId == null) {
+            levels
+        } else {
+            levels.filter { it.propertyTypeIds.isEmpty() || it.propertyTypeIds.contains(propertyTypeId) }
+        }
+        val defaults = filtered.filter { it.isDefault == true }
+        return when {
+            defaults.isNotEmpty() -> defaults
+            filtered.any { it.isStandard == true } -> filtered.filter { it.isStandard == true }
+            else -> filtered
         }
     }
 
@@ -2795,9 +2838,15 @@ class OfflineSyncRepository(
         val idempotencyKey = payload.idempotencyKey
             ?: payloadRoomUuid
             ?: payload.localRoomId.takeIf { it != 0L }?.toString()
+        val resolvedRoomTypeId = resolveRoomTypeIdForPayload(payload)
+        if (resolvedRoomTypeId == null) {
+            Log.w("API", "⚠️ [handlePendingRoomCreation] Unable to resolve roomTypeId for '${payload.roomName}' (name=${payload.roomTypeName}); will retry after room types sync")
+            return OperationOutcome.SKIP
+        }
+
         val request = CreateRoomRequest(
             name = payload.roomName,
-            roomTypeId = payload.roomTypeId,
+            roomTypeId = resolvedRoomTypeId,
             levelId = levelServerId,
             isSource = payload.isSource,
             idempotencyKey = idempotencyKey
@@ -2830,6 +2879,7 @@ class OfflineSyncRepository(
         ).copy(
             roomId = resolvedRoomId,
             uuid = resolvedUuid,
+            roomTypeId = resolvedRoomTypeId,
             syncStatus = SyncStatus.SYNCED,
             isDirty = false,
             lastSyncedAt = now()
@@ -3075,7 +3125,9 @@ class OfflineSyncRepository(
     private suspend fun enqueueRoomCreation(
         room: OfflineRoomEntity,
         roomTypeId: Long,
+        roomTypeName: String?,
         isSource: Boolean,
+        isExterior: Boolean,
         levelServerId: Long?,
         locationServerId: Long?,
         levelLocalId: Long?,
@@ -3088,7 +3140,9 @@ class OfflineSyncRepository(
             projectId = room.projectId,
             roomName = room.title,
             roomTypeId = roomTypeId,
+            roomTypeName = roomTypeName ?: room.title,
             isSource = isSource,
+            isExterior = isExterior,
             levelServerId = levelServerId,
             locationServerId = locationServerId,
             levelLocalId = levelLocalId,
@@ -3526,6 +3580,7 @@ class OfflineSyncRepository(
         projectId: Long,
         roomName: String,
         roomTypeId: Long,
+        roomTypeName: String?,
         isSource: Boolean,
         isExterior: Boolean,
         idempotencyKey: String,
@@ -3548,6 +3603,7 @@ class OfflineSyncRepository(
             projectId = project.projectId,
             locationId = location.locationId,
             title = roomName,
+            roomType = roomTypeName,
             roomTypeId = roomTypeId,
             level = level.title ?: level.type,
             syncStatus = SyncStatus.PENDING,
@@ -3562,7 +3618,9 @@ class OfflineSyncRepository(
         enqueueRoomCreation(
             room = pending,
             roomTypeId = roomTypeId,
+            roomTypeName = roomTypeName,
             isSource = isSource,
+            isExterior = isExterior,
             levelServerId = level.serverId,
             locationServerId = location.serverId,
             levelLocalId = level.locationId,
@@ -3700,6 +3758,89 @@ class OfflineSyncRepository(
         val propertyServerId = property.serverId
             ?: return OperationOutcome.SKIP
 
+        val currentLocations = localDataService.getLocations(payload.projectId)
+        val pendingLocation = currentLocations.firstOrNull {
+            it.uuid == payload.locationUuid || it.locationId == payload.localLocationId
+        }
+        if (pendingLocation?.serverId != null) {
+            return OperationOutcome.SUCCESS
+        }
+
+        fun matchesServerLocation(
+            title: String?,
+            type: String?,
+            payloadName: String,
+            payloadType: String
+        ): Boolean {
+            val nameMatches = title?.equals(payloadName, ignoreCase = true) ?: false
+            val typeMatches = type?.equals(payloadType, ignoreCase = true) ?: true
+            return nameMatches && typeMatches
+        }
+
+        val existingServerLocation = currentLocations.firstOrNull {
+            it.serverId != null &&
+                matchesServerLocation(it.title, it.type, payload.locationName, payload.type)
+        }
+        if (pendingLocation != null && existingServerLocation != null) {
+            val timestamp = now()
+            val merged = pendingLocation.copy(
+                serverId = existingServerLocation.serverId,
+                title = existingServerLocation.title,
+                type = existingServerLocation.type,
+                parentLocationId = existingServerLocation.parentLocationId,
+                isAccessible = existingServerLocation.isAccessible,
+                syncStatus = SyncStatus.SYNCED,
+                syncVersion = maxOf(pendingLocation.syncVersion, 1),
+                isDirty = false,
+                updatedAt = timestamp,
+                lastSyncedAt = timestamp
+            )
+            localDataService.saveLocations(listOf(merged))
+            return OperationOutcome.SUCCESS
+        }
+
+        if (pendingLocation != null) {
+            val remoteMatch = runCatching {
+                api.getPropertyLevels(propertyServerId).data
+            }.getOrNull()?.firstOrNull { level ->
+                val resolvedTitle = listOfNotNull(
+                    level.title?.takeIf { it.isNotBlank() },
+                    level.name?.takeIf { it.isNotBlank() }
+                ).firstOrNull()
+                val resolvedType = listOfNotNull(
+                    level.type?.takeIf { it.isNotBlank() },
+                    level.locationType?.takeIf { it.isNotBlank() }
+                ).firstOrNull()
+                matchesServerLocation(resolvedTitle, resolvedType, payload.locationName, payload.type)
+            }
+
+            if (remoteMatch != null) {
+                val timestamp = now()
+                val merged = pendingLocation.copy(
+                    serverId = remoteMatch.id,
+                    title = listOfNotNull(
+                        remoteMatch.title?.takeIf { it.isNotBlank() },
+                        remoteMatch.name?.takeIf { it.isNotBlank() },
+                        pendingLocation.title
+                    ).first(),
+                    type = listOfNotNull(
+                        remoteMatch.type?.takeIf { it.isNotBlank() },
+                        remoteMatch.locationType?.takeIf { it.isNotBlank() },
+                        pendingLocation.type
+                    ).first(),
+                    parentLocationId = remoteMatch.parentLocationId,
+                    isAccessible = remoteMatch.isAccessible ?: pendingLocation.isAccessible,
+                    syncStatus = SyncStatus.SYNCED,
+                    syncVersion = maxOf(pendingLocation.syncVersion, 1),
+                    isDirty = false,
+                    updatedAt = timestamp,
+                    lastSyncedAt = timestamp
+                )
+                localDataService.saveLocations(listOf(merged))
+                return OperationOutcome.SUCCESS
+            }
+        }
+
         val request = CreateLocationRequest(
             name = payload.locationName,
             floorNumber = payload.floorNumber,
@@ -3804,6 +3945,63 @@ class OfflineSyncRepository(
             ?: location
 
         return level to location
+    }
+
+    private suspend fun resolveRoomTypeIdForPayload(
+        payload: PendingRoomCreationPayload
+    ): Long? {
+        val project = localDataService.getProject(payload.projectId)
+            ?: return payload.roomTypeId.takeIf { it > 0 }
+        val propertyId = project.propertyId
+            ?: return payload.roomTypeId.takeIf { it > 0 }
+        val property = localDataService.getProperty(propertyId)
+            ?: return payload.roomTypeId.takeIf { it > 0 }
+        val propertyServerId = property.serverId ?: return null
+
+        val roomTypes = runCatching {
+            api.getPropertyRoomTypes(propertyServerId, filterType = null).data
+        }
+            .onFailure { error ->
+                Log.w(TAG, "⚠️ [resolveRoomTypeId] Failed to fetch property room types for property=$propertyServerId", error)
+            }
+            .getOrElse { return null }
+
+        val match = pickPropertyRoomTypeMatch(payload, roomTypes)
+        if (match == null) {
+            Log.w(
+                TAG,
+                "⚠️ [resolveRoomTypeId] No property room type match for roomTypeId=${payload.roomTypeId} name=${payload.roomTypeName} (property=$propertyServerId); falling back to payload id"
+            )
+            return payload.roomTypeId.takeIf { it > 0 }
+        }
+
+        Log.d(
+            TAG,
+            "✅ [resolveRoomTypeId] Resolved room type '${payload.roomTypeName}' to property id=${match.id} for property=$propertyServerId"
+        )
+        return match.id
+    }
+
+    private fun pickPropertyRoomTypeMatch(
+        payload: PendingRoomCreationPayload,
+        roomTypes: List<RoomTypeDto>
+    ): RoomTypeDto? {
+        if (roomTypes.isEmpty()) return null
+        val idMatch = payload.roomTypeId
+            .takeIf { it > 0 }
+            ?.let { id -> roomTypes.firstOrNull { it.id == id } }
+        if (idMatch != null) return idMatch
+        val name = payload.roomTypeName?.trim().takeIf { !it.isNullOrBlank() } ?: return null
+        val nameMatches = roomTypes.filter { it.name?.equals(name, ignoreCase = true) == true }
+        if (nameMatches.isEmpty()) return null
+        if (nameMatches.size == 1) return nameMatches.first()
+        val exteriorMatches = nameMatches.filter { isExteriorRoomType(it.type) == payload.isExterior }
+        return exteriorMatches.firstOrNull() ?: nameMatches.first()
+    }
+
+    private fun isExteriorRoomType(value: String?): Boolean {
+        val normalized = value?.trim()?.lowercase() ?: return false
+        return normalized.contains("external") || normalized.contains("exterior")
     }
 
     private suspend fun validateLocationOnServer(location: OfflineLocationEntity): Boolean {
@@ -4569,7 +4767,9 @@ private data class PendingRoomCreationPayload(
     val projectId: Long,
     val roomName: String,
     val roomTypeId: Long,
+    val roomTypeName: String?,
     val isSource: Boolean,
+    val isExterior: Boolean,
     val levelServerId: Long?,
     val locationServerId: Long?,
     val levelLocalId: Long?,

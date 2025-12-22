@@ -193,6 +193,60 @@ data class OfflineRoomTypeEntity(
 )
 
 @Entity(
+    tableName = "offline_catalog_property_types",
+    indices = [
+        Index(value = ["sortOrder"])
+    ]
+)
+data class OfflineCatalogPropertyTypeEntity(
+    @PrimaryKey
+    val propertyTypeId: Long,
+    val name: String?,
+    val sortOrder: Int?,
+    val updatedAt: String? = null,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
+    tableName = "offline_catalog_levels",
+    indices = [
+        Index(value = ["name"]),
+        Index(value = ["type"])
+    ]
+)
+data class OfflineCatalogLevelEntity(
+    @PrimaryKey
+    val levelId: Long,
+    val name: String?,
+    val type: String?,
+    val isDefault: Boolean? = null,
+    val isStandard: Boolean? = null,
+    val propertyTypeIds: List<Long> = emptyList(),
+    val updatedAt: String? = null,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
+    tableName = "offline_catalog_room_types",
+    indices = [
+        Index(value = ["name"]),
+        Index(value = ["type"])
+    ]
+)
+data class OfflineCatalogRoomTypeEntity(
+    @PrimaryKey
+    val roomTypeId: Long,
+    val name: String?,
+    val type: String?,
+    val isStandard: Boolean? = null,
+    val isDefault: Boolean? = null,
+    val levelIds: List<Long> = emptyList(),
+    val propertyTypeIds: List<Long> = emptyList(),
+    val updatedAt: String? = null,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
     tableName = "offline_work_scope_catalog_items",
     primaryKeys = ["companyId", "itemId"],
     indices = [

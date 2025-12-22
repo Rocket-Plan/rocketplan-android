@@ -18,6 +18,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogPropertyTypeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
@@ -189,6 +192,35 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_room_types WHERE propertyServerId = :propertyServerId AND filterType = :filterType")
     suspend fun clearRoomTypes(propertyServerId: Long, filterType: String)
+    // endregion
+
+    // region Offline catalog
+    @Upsert
+    suspend fun upsertCatalogPropertyTypes(types: List<OfflineCatalogPropertyTypeEntity>)
+
+    @Upsert
+    suspend fun upsertCatalogLevels(levels: List<OfflineCatalogLevelEntity>)
+
+    @Upsert
+    suspend fun upsertCatalogRoomTypes(types: List<OfflineCatalogRoomTypeEntity>)
+
+    @Query("DELETE FROM offline_catalog_property_types")
+    suspend fun clearCatalogPropertyTypes()
+
+    @Query("DELETE FROM offline_catalog_levels")
+    suspend fun clearCatalogLevels()
+
+    @Query("DELETE FROM offline_catalog_room_types")
+    suspend fun clearCatalogRoomTypes()
+
+    @Query("SELECT * FROM offline_catalog_property_types ORDER BY sortOrder, name")
+    suspend fun getCatalogPropertyTypes(): List<OfflineCatalogPropertyTypeEntity>
+
+    @Query("SELECT * FROM offline_catalog_levels ORDER BY name")
+    suspend fun getCatalogLevels(): List<OfflineCatalogLevelEntity>
+
+    @Query("SELECT * FROM offline_catalog_room_types ORDER BY name")
+    suspend fun getCatalogRoomTypes(): List<OfflineCatalogRoomTypeEntity>
     // endregion
 
     // region Work Scope Catalog

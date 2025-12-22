@@ -99,16 +99,10 @@ class ImageProcessorRepository(
                     )
                 )
             room.serverId
-                ?: return@withContext logFailure(
-                    message = "Room is not synced with the server",
-                    metadata = mapOf(
-                        "room_id_local" to roomId.toString(),
-                        "project_id_local" to projectId.toString()
-                    )
-                )
         } else {
             null
         }
+        val waitingForRoomSync = roomId != null && roomServerId == null
 
         val config = configurationRepository.getConfiguration()
             .getOrElse { error ->
@@ -124,7 +118,11 @@ class ImageProcessorRepository(
         val assemblyId = UUID.randomUUID().toString().replace("-", "")
         val now = System.currentTimeMillis()
         val totalBytes = preparedFiles.sumOf { getFileSize(it.uri) }
-        val status = AssemblyStatus.QUEUED.value
+        val status = if (waitingForRoomSync) {
+            AssemblyStatus.WAITING_FOR_ROOM.value
+        } else {
+            AssemblyStatus.QUEUED.value
+        }
 
         val assemblyEntity = ImageProcessorAssemblyEntity(
             assemblyId = assemblyId,
@@ -173,9 +171,24 @@ class ImageProcessorRepository(
                 order = order,
                 notes = notes,
                 entityType = entityType,
-                entityId = entityId
+                entityId = entityId,
+                irPhotos = irPhotos
             )
         )
+
+        if (waitingForRoomSync) {
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Assembly deferred until room sync completes",
+                metadata = mapOf(
+                    "assembly_id" to assemblyId,
+                    "project_id_local" to projectId.toString(),
+                    "room_id_local" to (roomId?.toString() ?: "null")
+                )
+            )
+            return@withContext Result.success(assemblyId)
+        }
 
         realtimeManager?.trackAssembly(assemblyId)
 

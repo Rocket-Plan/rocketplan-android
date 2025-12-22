@@ -35,6 +35,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import com.example.rocketplan_android.databinding.ActivityMainBinding
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
+import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.google.android.material.appbar.AppBarLayout
@@ -62,6 +63,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var syncQueueManager: SyncQueueManager
     private lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
     private lateinit var imageProcessorQueueManager: ImageProcessorQueueManager
+    private lateinit var roomTypeRepository: RoomTypeRepository
     private lateinit var contentLayoutParams: CoordinatorLayout.LayoutParams
     private lateinit var scrollingContentBehavior: AppBarLayout.ScrollingViewBehavior
 
@@ -83,6 +85,7 @@ class MainActivity : AppCompatActivity() {
         syncQueueManager = rocketPlanApp.syncQueueManager
         imageProcessingConfigurationRepository = rocketPlanApp.imageProcessingConfigurationRepository
         imageProcessorQueueManager = rocketPlanApp.imageProcessorQueueManager
+        roomTypeRepository = rocketPlanApp.roomTypeRepository
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
@@ -234,6 +237,8 @@ class MainActivity : AppCompatActivity() {
             if (!isLoggedIn) return@launch
 
             preloadImageProcessorConfiguration()
+            runCatching { roomTypeRepository.prefetchOfflineCatalog(forceRefresh = false) }
+                .onFailure { Log.w(TAG, "⚠️ Prefetch offline room type catalog failed", it) }
 
             val authDestinations = setOf(
                 R.id.emailCheckFragment,

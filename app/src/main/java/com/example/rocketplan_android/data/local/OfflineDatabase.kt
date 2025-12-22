@@ -19,6 +19,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogPropertyTypeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineCatalogRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
@@ -45,6 +48,9 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         OfflineLocationEntity::class,
         OfflineRoomEntity::class,
         OfflineRoomTypeEntity::class,
+        OfflineCatalogPropertyTypeEntity::class,
+        OfflineCatalogLevelEntity::class,
+        OfflineCatalogRoomTypeEntity::class,
         OfflineWorkScopeCatalogItemEntity::class,
         OfflineAtmosphericLogEntity::class,
         OfflineAlbumEntity::class,
@@ -64,7 +70,7 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         ImageProcessorAssemblyEntity::class,
         ImageProcessorPhotoEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -98,6 +104,84 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_catalog_property_types (
+                        propertyTypeId INTEGER NOT NULL,
+                        name TEXT,
+                        sortOrder INTEGER,
+                        updatedAt TEXT,
+                        fetchedAt INTEGER NOT NULL,
+                        PRIMARY KEY(propertyTypeId)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_offline_catalog_property_types_sortOrder
+                    ON offline_catalog_property_types(sortOrder)
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_catalog_levels (
+                        levelId INTEGER NOT NULL,
+                        name TEXT,
+                        type TEXT,
+                        isDefault INTEGER,
+                        isStandard INTEGER,
+                        propertyTypeIds TEXT NOT NULL,
+                        updatedAt TEXT,
+                        fetchedAt INTEGER NOT NULL,
+                        PRIMARY KEY(levelId)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_offline_catalog_levels_name
+                    ON offline_catalog_levels(name)
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_offline_catalog_levels_type
+                    ON offline_catalog_levels(type)
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_catalog_room_types (
+                        roomTypeId INTEGER NOT NULL,
+                        name TEXT,
+                        type TEXT,
+                        isStandard INTEGER,
+                        isDefault INTEGER,
+                        levelIds TEXT NOT NULL,
+                        propertyTypeIds TEXT NOT NULL,
+                        updatedAt TEXT,
+                        fetchedAt INTEGER NOT NULL,
+                        PRIMARY KEY(roomTypeId)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_offline_catalog_room_types_name
+                    ON offline_catalog_room_types(name)
+                    """.trimIndent()
+                )
+                database.execSQL(
+                    """
+                    CREATE INDEX IF NOT EXISTS index_offline_catalog_room_types_type
+                    ON offline_catalog_room_types(type)
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -105,7 +189,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {
