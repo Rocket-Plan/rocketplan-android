@@ -251,7 +251,26 @@ class RoomTypeRepository(
         } else {
             typeFiltered.filter { it.propertyTypeIds.isEmpty() || it.propertyTypeIds.contains(propertyTypeId) }
         }
-        return filtered.map { roomType ->
+        val deduped = filtered
+            .groupBy { roomType ->
+                val normalizedName = roomType.name?.trim()?.lowercase(Locale.US)
+                if (normalizedName.isNullOrBlank()) {
+                    "id:${roomType.roomTypeId}"
+                } else {
+                    normalizedName
+                }
+            }
+            .values
+            .mapNotNull { candidates ->
+                candidates
+                    .sortedWith(
+                        compareByDescending<OfflineCatalogRoomTypeEntity> { it.isStandard }
+                            .thenByDescending { it.isDefault }
+                            .thenBy { it.roomTypeId }
+                    )
+                    .firstOrNull()
+            }
+        return deduped.map { roomType ->
             RoomTypeDto(
                 id = roomType.roomTypeId,
                 name = roomType.name,
