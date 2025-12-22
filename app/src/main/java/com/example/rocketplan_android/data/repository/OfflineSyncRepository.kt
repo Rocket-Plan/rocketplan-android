@@ -1,90 +1,43 @@
 package com.example.rocketplan_android.data.repository
 
 import android.util.Log
-import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
-import com.example.rocketplan_android.data.local.PhotoCacheStatus
-import com.example.rocketplan_android.data.local.SyncOperationType
-import com.example.rocketplan_android.data.local.SyncPriority
 import com.example.rocketplan_android.data.local.SyncStatus
-import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
-import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
-import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
-import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
-import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
-import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
-import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
-import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
-import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
-import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
-import com.example.rocketplan_android.data.model.CreateLocationRequest
-import com.example.rocketplan_android.data.model.CategoryAlbums
-import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
-import com.example.rocketplan_android.data.model.UpdateProjectRequest
-import com.example.rocketplan_android.data.model.DeleteProjectRequest
-import com.example.rocketplan_android.data.model.offline.AlbumDto
-import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
-import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
-import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
-import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
-import com.example.rocketplan_android.data.model.offline.EquipmentDto
-import com.example.rocketplan_android.data.model.offline.EquipmentRequest
-import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
-import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
-import com.example.rocketplan_android.data.model.offline.NoteDto
-import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
-import com.example.rocketplan_android.data.model.offline.ProjectDto
-import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
-import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
-import com.example.rocketplan_android.data.model.offline.PropertyDto
-import com.example.rocketplan_android.data.model.offline.PaginationMeta
-import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
-import com.example.rocketplan_android.data.model.offline.RoomDto
-import com.example.rocketplan_android.data.model.offline.RoomTypeDto
-import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
-import com.example.rocketplan_android.data.repository.RoomTypeRepository.RequestType
-import com.example.rocketplan_android.data.model.offline.WorkScopeCatalogItemDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
-import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsRequest
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
-import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.*
 import com.example.rocketplan_android.data.repository.sync.PhotoSyncService
+import com.example.rocketplan_android.data.repository.sync.PropertySyncService
 import com.example.rocketplan_android.data.repository.sync.ProjectSyncService
+import com.example.rocketplan_android.data.repository.sync.PendingOperationResult
+import com.example.rocketplan_android.data.repository.sync.RoomSyncService
+import com.example.rocketplan_android.data.repository.sync.SyncQueueProcessor
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
-import com.example.rocketplan_android.util.parseTargetMoisture
 import com.google.gson.Gson
-import com.google.gson.JsonArray
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
-import com.google.gson.reflect.TypeToken
-import retrofit2.HttpException
 import kotlin.coroutines.coroutineContext
-import kotlin.math.min
-import kotlin.text.Charsets
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -116,9 +69,6 @@ private val DEFAULT_DELETION_TYPES = listOf(
     "work_scope_actions"
 )
 
-// Default damage type ID (1 = "Water Damage") used when creating damage materials for moisture logs
-private const val DEFAULT_DAMAGE_TYPE_ID: Long = 1L
-
 // How far back to check for deleted records on first sync (30 days)
 private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
 
@@ -128,10 +78,6 @@ private const val OFFLINE_PENDING_STATUS = "pending_offline"
 private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
 private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
 private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
-private fun Throwable.isConflict(): Boolean = (this as? HttpException)?.code() == 409
-private fun Throwable.isMissingOnServer(): Boolean = (this as? HttpException)?.code() in listOf(404, 410)
-private fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
-
 data class PhotoDeletionResult(val synced: Boolean)
 data class RoomDeletionResult(val synced: Boolean)
 
@@ -144,9 +90,6 @@ class OfflineSyncRepository(
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    private val TAG = "API"
-    private val propertyIncludes = "propertyType,asbestosStatus,propertyDamageTypes,damageCause"
-
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
 
     // Lazily initialized services for delegation
@@ -170,16 +113,43 @@ class OfflineSyncRepository(
         )
     }
 
+    private val propertySyncService by lazy {
+        PropertySyncService(
+            api = api,
+            localDataService = localDataService,
+            roomTypeRepository = roomTypeRepository,
+            syncQueueProcessorProvider = { syncQueueProcessor },
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val roomSyncService by lazy {
+        RoomSyncService(
+            api = api,
+            localDataService = localDataService,
+            roomTypeRepository = roomTypeRepository,
+            syncQueueProcessorProvider = { syncQueueProcessor },
+            syncProjectEssentials = ::syncProjectEssentials,
+            logLocalDeletion = ::logLocalDeletion,
+            removePhotoFiles = ::removePhotoFiles,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val syncQueueProcessor by lazy {
+        SyncQueueProcessor(
+            api = api,
+            localDataService = localDataService,
+            syncProjectEssentials = { projectId -> syncProjectEssentials(projectId) },
+            persistProperty = { projectId, property, propertyTypeValue, existing ->
+                propertySyncService.persistProperty(projectId, property, propertyTypeValue, existing)
+            },
+            imageProcessorQueueManagerProvider = { imageProcessorQueueManager },
+            ioDispatcher = ioDispatcher
+        )
+    }
+
     private val gson = Gson()
-
-    data class PendingOperationResult(
-        val createdProjects: List<PendingProjectSyncResult> = emptyList()
-    )
-
-    data class PendingProjectSyncResult(
-        val localProjectId: Long,
-        val serverProjectId: Long
-    )
 
     fun attachImageProcessorQueueManager(manager: ImageProcessorQueueManager) {
         imageProcessorQueueManager = manager
@@ -188,39 +158,6 @@ class OfflineSyncRepository(
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
         val project = localDataService.getProject(projectId)
         return project?.serverId ?: projectId.takeIf { it > 0 }
-    }
-
-    private suspend fun resolveExistingRoomForSync(
-        projectId: Long,
-        room: RoomDto
-    ): OfflineRoomEntity? {
-        val byServerId = localDataService.getRoomByServerId(room.id)
-        if (byServerId != null) return byServerId
-        val uuid = room.uuid?.takeIf { it.isNotBlank() }
-        val byUuid = uuid?.let { localDataService.getRoomByUuid(it) }
-        if (byUuid != null) return byUuid
-        val candidateTitle = when {
-            !room.title.isNullOrBlank() -> room.title
-            !room.name.isNullOrBlank() -> room.name
-            !room.roomType?.name.isNullOrBlank() && (room.typeOccurrence ?: 1) > 1 ->
-                "${room.roomType?.name} ${room.typeOccurrence}"
-            !room.roomType?.name.isNullOrBlank() -> room.roomType?.name
-            else -> null
-        }
-        return candidateTitle?.let { title ->
-            val pendingCount = localDataService.countPendingRoomsForProjectTitle(projectId, title)
-            when {
-                pendingCount == 1 -> localDataService.getPendingRoomForProject(projectId, title)
-                pendingCount > 1 -> {
-                    Log.w(
-                        "API",
-                        "📴 [resolveExistingRoomForSync] Multiple pending rooms named '$title' for project=$projectId; skipping title match"
-                    )
-                    null
-                }
-                else -> null
-            }
-        }
     }
 
     // ============================================================================
@@ -274,7 +211,7 @@ class OfflineSyncRepository(
             return@withContext
         }
 
-        enqueueProjectDeletion(marked, lockUpdatedAt)
+        syncQueueProcessor.enqueueProjectDeletion(marked, lockUpdatedAt)
         Log.d("API", "🗑️ [deleteProject] Queued delete for project serverId=$serverId (local=$localProjectId)")
     }
 
@@ -347,7 +284,7 @@ class OfflineSyncRepository(
 
         detail.rooms?.let { rooms ->
             val resolvedRooms = rooms.mapNotNull { room ->
-                val existing = resolveExistingRoomForSync(projectId, room)
+                val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
                 if (room.id <= 0 && existing == null) {
                     Log.w(
                         "API",
@@ -370,18 +307,17 @@ class OfflineSyncRepository(
         // === NAVIGATION CHAIN: Property → Levels → Rooms ===
 
         // 1. Property
-        val property = fetchProjectProperty(serverProjectId, detail) ?: run {
+        val property = propertySyncService.fetchProjectProperty(serverProjectId, detail) ?: run {
             val duration = System.currentTimeMillis() - startTime
-            // If user hasn't selected a property type yet, this is expected - skip property work
-            // Check both local state and API response to avoid skipping when property should exist
-            val hasPropertyType = existingProject?.propertyType != null ||
-                detail.propertyType != null ||
+            // If the project doesn't have a property yet, this is expected - skip property work.
+            // Check both local state and API response to avoid skipping when a property exists.
+            val hasPropertyReference = existingProject?.propertyId != null ||
                 detail.propertyId != null ||
                 !detail.properties.isNullOrEmpty()
-            if (!hasPropertyType) {
+            if (!hasPropertyReference) {
                 Log.d(
                     "API",
-                    "ℹ️ [syncProjectEssentials] No property yet for project $projectId (property type not selected); skipping property sync"
+                    "ℹ️ [syncProjectEssentials] No property yet for project $projectId; skipping property sync"
                 )
                 return@withContext SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, itemCount, duration)
             }
@@ -398,22 +334,21 @@ class OfflineSyncRepository(
         }
         Log.d("API", "🏠 [syncProjectEssentials] Property DTO received: id=${property.id}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}, lat=${property.latitude}, lng=${property.longitude}")
         Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail.address?.address}, city=${detail.address?.city}, state=${detail.address?.state}, zip=${detail.address?.zip}")
-        // Pass project address as fallback for missing property address fields
-        val entity = property.toEntity(projectAddress = detail.address)
-        Log.d("API", "🏠 [syncProjectEssentials] Property Entity created: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
-        localDataService.saveProperty(entity)
-        val resolvedId = entity.serverId ?: entity.propertyId
         // Try to get propertyType from: detail.propertyType, property.propertyType, or embedded properties list
         val embeddedPropertyType = detail.properties?.firstOrNull()?.propertyType
         val resolvedPropertyType = detail.propertyType ?: property.propertyType ?: embeddedPropertyType
-        Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.propertyType}, embeddedPropertyType=$embeddedPropertyType)")
-        localDataService.attachPropertyToProject(
+        val existingProperty = existingProject?.propertyId?.let { localDataService.getProperty(it) }
+        val entity = propertySyncService.persistProperty(
             projectId = projectId,
-            propertyId = resolvedId,
-            propertyType = resolvedPropertyType
+            property = property,
+            propertyTypeValue = resolvedPropertyType,
+            existing = existingProperty,
+            projectAddress = detail.address,
+            forceRoomTypeRefresh = false
         )
-        runCatching { primeRoomTypeCaches(projectId, forceRefresh = false) }
-            .onFailure { Log.w("API", "⚠️ [syncProjectEssentials] Unable to prefetch room types for project $projectId", it) }
+        val resolvedId = entity.serverId ?: entity.propertyId
+        Log.d("API", "🏠 [syncProjectEssentials] Property Entity created: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
+        Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.propertyType}, embeddedPropertyType=$embeddedPropertyType)")
         itemCount++
         ensureActive()
 
@@ -457,13 +392,13 @@ class OfflineSyncRepository(
 
         // 3. Rooms for each location
         locationIds.distinct().forEach { locationId ->
-            val rooms = fetchRoomsForLocation(locationId)
+            val rooms = roomSyncService.fetchRoomsForLocation(locationId)
             if (rooms.isNotEmpty()) {
                 val resolvedRooms = rooms.map { room ->
-                    val existing = resolveExistingRoomForSync(projectId, room)
-                    room.toEntity(
-                        existing = existing,
-                        projectId = projectId,
+                val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
+                room.toEntity(
+                    existing = existing,
+                    projectId = projectId,
                         locationId = room.locationId ?: locationId
                     )
                 }
@@ -520,7 +455,7 @@ class OfflineSyncRepository(
             addressRequest = addressReq,
             idempotencyKey = idempotencyKey
         )
-        enqueueProjectCreation(
+        syncQueueProcessor.enqueueProjectCreation(
             project = pending,
             companyId = companyId,
             statusId = request.projectStatusId,
@@ -549,7 +484,7 @@ class OfflineSyncRepository(
                 syncStatus = SyncStatus.PENDING
             )
             localDataService.saveProjects(listOf(updated))
-            enqueueProjectUpdate(updated, lockUpdatedAt)
+            syncQueueProcessor.enqueueProjectUpdate(updated, lockUpdatedAt)
             updated
         }
     }
@@ -572,43 +507,9 @@ class OfflineSyncRepository(
                 syncStatus = SyncStatus.PENDING
             )
             localDataService.saveProjects(listOf(updated))
-            enqueueProjectUpdate(updated, lockUpdatedAt)
+            syncQueueProcessor.enqueueProjectUpdate(updated, lockUpdatedAt)
             updated
         }
-    }
-
-    private fun OfflineProjectEntity.withAddressFallback(
-        projectAddress: ProjectAddressDto?,
-        addressRequest: CreateAddressRequest?
-    ): OfflineProjectEntity {
-        val resolvedLine1 = listOfNotNull(
-            addressLine1?.takeIf { it.isNotBlank() },
-            projectAddress?.address?.takeIf { it.isNotBlank() },
-            addressRequest?.address?.takeIf { it.isNotBlank() }
-        ).firstOrNull()
-
-        val resolvedLine2 = listOfNotNull(
-            addressLine2?.takeIf { it.isNotBlank() },
-            projectAddress?.address2?.takeIf { it.isNotBlank() },
-            addressRequest?.address2?.takeIf { it.isNotBlank() }
-        ).firstOrNull()
-
-        val resolvedPropertyId = propertyId ?: projectAddress?.id
-
-        val resolvedTitle = listOfNotNull(
-            resolvedLine1,
-            title.takeIf { it.isNotBlank() },
-            alias?.takeIf { it.isNotBlank() },
-            projectNumber?.takeIf { it.isNotBlank() },
-            uid?.takeIf { it.isNotBlank() }
-        ).firstOrNull() ?: title
-
-        return copy(
-            addressLine1 = resolvedLine1,
-            addressLine2 = resolvedLine2,
-            propertyId = resolvedPropertyId,
-            title = resolvedTitle
-        )
     }
 
     suspend fun createProjectProperty(
@@ -616,101 +517,16 @@ class OfflineSyncRepository(
         request: PropertyMutationRequest,
         propertyTypeValue: String?,
         idempotencyKey: String? = null
-    ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
-        runCatching {
-            val resolvedIdempotencyKey = idempotencyKey ?: request.idempotencyKey ?: UUID.randomUUID().toString()
-            val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
-                ?: throw Exception("Project not found locally")
-            val projectServerId = project.serverId ?: throw Exception("Project not synced yet.")
-            val requestWithKey = request.copy(idempotencyKey = resolvedIdempotencyKey)
-
-            if (AppConfig.isLoggingEnabled) {
-                Log.d(
-                    "API",
-                    "📤 [createProjectProperty] createProperty payload: " +
-                        "projectId=$projectId serverId=$projectServerId propertyTypeId=${request.propertyTypeId} " +
-                        "propertyTypeValue=${propertyTypeValue ?: "null"} idempotencyKey=$resolvedIdempotencyKey"
-                )
-            }
-
-            val created = try {
-                api.createProjectProperty(projectServerId, requestWithKey).data
-            } catch (error: HttpException) {
-                if (AppConfig.isLoggingEnabled) {
-                    val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
-                    Log.w(
-                        "API",
-                        "❌ [createProjectProperty] createProperty failed: code=${error.code()} " +
-                            "body=${errorBody ?: "null"}"
-                    )
-                }
-                throw error
-            }
-
-            val refreshed = runCatching {
-                api.getProjectProperties(projectServerId, include = propertyIncludes).data
-            }
-                .onFailure { error ->
-                    Log.w(
-                        "API",
-                        "⚠️ [createProjectProperty] getProjectProperties failed for project=$projectServerId",
-                        error
-                    )
-                }
-                .getOrNull()
-                ?.firstOrNull { it.id == created.id }
-
-            val resolved = refreshed ?: created
-            if (AppConfig.isLoggingEnabled) {
-                val source = if (refreshed != null) "projectProperties" else "createResponse"
-                Log.d(
-                    "API",
-                    "📥 [createProjectProperty] property resolved from $source: id=${resolved.id} " +
-                        "address=${resolved.address} city=${resolved.city} state=${resolved.state} zip=${resolved.postalCode} " +
-                        "propertyTypeId=${resolved.propertyTypeId} propertyType=${resolved.propertyType}"
-                )
-            }
-
-            val existing = project.propertyId?.let { localDataService.getProperty(it) }
-            persistProperty(projectId, resolved, propertyTypeValue, existing = existing)
-        }
-    }
+    ): Result<OfflinePropertyEntity> =
+        propertySyncService.createProjectProperty(projectId, request, propertyTypeValue, idempotencyKey)
 
     suspend fun updateProjectProperty(
         projectId: Long,
         propertyId: Long,
         request: PropertyMutationRequest,
         propertyTypeValue: String?
-    ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
-        // Get the property to retrieve its server ID
-        val property = localDataService.getProperty(propertyId)
-        if (property == null) {
-            Log.d("API", "🏠 [updateProjectProperty] Property $propertyId not found locally, creating new property")
-            return@withContext createProjectProperty(projectId, request, propertyTypeValue)
-        }
-        runCatching {
-            val lockUpdatedAt = property.updatedAt.toApiTimestamp()
-            val updated = property.copy(
-                updatedAt = now(),
-                syncStatus = SyncStatus.PENDING,
-                syncVersion = property.syncVersion + 1
-            )
-            localDataService.saveProperty(updated)
-            localDataService.attachPropertyToProject(
-                projectId = projectId,
-                propertyId = updated.propertyId,
-                propertyType = propertyTypeValue
-            )
-            enqueuePropertyUpdate(
-                property = updated,
-                projectId = projectId,
-                request = request.copy(updatedAt = null, idempotencyKey = null),
-                propertyTypeValue = propertyTypeValue,
-                lockUpdatedAt = lockUpdatedAt
-            )
-            updated
-        }
-    }
+    ): Result<OfflinePropertyEntity> =
+        propertySyncService.updateProjectProperty(projectId, propertyId, request, propertyTypeValue)
 
     suspend fun createRoom(
         projectId: Long,
@@ -720,119 +536,16 @@ class OfflineSyncRepository(
         isSource: Boolean = false,
         isExterior: Boolean = false,
         idempotencyKey: String? = null
-    ): Result<OfflineRoomEntity> = withContext(ioDispatcher) {
-        val pendingRoom = localDataService.getPendingRoomForProject(projectId, roomName)
-        val roomUuid = pendingRoom?.uuid ?: UUID.randomUUID().toString()
-        Log.d(
-            TAG,
-            "🆕 [createRoom] Using roomUuid=$roomUuid (pending=${pendingRoom != null}) projectId=$projectId"
-        )
-        val resolvedIdempotencyKey = idempotencyKey ?: roomUuid
-        val localRoom = pendingRoom ?: createPendingRoom(
-            projectId = projectId,
-            roomName = roomName,
-            roomTypeId = roomTypeId,
-            roomTypeName = roomTypeName,
-            isSource = isSource,
-            isExterior = isExterior,
-            idempotencyKey = resolvedIdempotencyKey,
-            forcedUuid = roomUuid
-        ) ?: throw IllegalStateException("Unable to create pending room for project $projectId")
-        Result.success(localRoom)
-    }
+    ): Result<OfflineRoomEntity> =
+        roomSyncService.createRoom(projectId, roomName, roomTypeId, roomTypeName, isSource, isExterior, idempotencyKey)
 
     suspend fun createDefaultLocationAndRoom(
         projectId: Long,
         propertyTypeValue: String?,
         locationName: String,
         seedDefaultRoom: Boolean
-    ): Result<Unit> = withContext(ioDispatcher) {
-        val config = resolveLocationDefaults(propertyTypeValue)
-        val fallbackName = locationName.ifBlank { "Unit" }
-
-        runCatching {
-            runCatching { roomTypeRepository.ensureOfflineCatalogCached() }
-                .onFailure { Log.w(TAG, "⚠️ [createDefaultLocationAndRoom] Unable to hydrate offline catalog", it) }
-            val existingLocations = localDataService.getLocations(projectId)
-            val defaultLevels = resolveDefaultCatalogLevels(propertyTypeValue)
-            if (defaultLevels.isNotEmpty()) {
-                defaultLevels.forEach { level ->
-                    val levelName = level.name?.takeIf { it.isNotBlank() } ?: fallbackName
-                    val alreadyExists = existingLocations.any { it.title.equals(levelName, ignoreCase = true) }
-                    if (!alreadyExists) {
-                        createPendingLocation(
-                            projectId = projectId,
-                            locationName = levelName,
-                            config = config,
-                            idempotencyKey = UUID.randomUUID().toString()
-                        )
-                    }
-                }
-            } else {
-                val alreadyExists = existingLocations.any { it.title.equals(fallbackName, ignoreCase = true) }
-                if (!alreadyExists) {
-                    createPendingLocation(
-                        projectId = projectId,
-                        locationName = fallbackName,
-                        config = config,
-                        idempotencyKey = UUID.randomUUID().toString()
-                    )
-                }
-            }
-
-            if (seedDefaultRoom) {
-                // Try cache first, then fetch from API if empty
-                val roomTypeId = roomTypeRepository
-                    .getRoomTypes(projectId, RequestType.INTERIOR, forceRefresh = false)
-                    .getOrNull()
-                    ?.firstOrNull()
-                    ?.id
-                    ?: roomTypeRepository
-                        .getRoomTypes(projectId, RequestType.INTERIOR, forceRefresh = true)
-                        .getOrNull()
-                        ?.firstOrNull()
-                        ?.id
-
-                if (roomTypeId != null) {
-                    createRoom(
-                        projectId = projectId,
-                        roomName = fallbackName.ifBlank { "Room" },
-                        roomTypeId = roomTypeId,
-                        isSource = true
-                    )
-                } else {
-                    Log.w(
-                        "API",
-                        "ℹ️ [createDefaultLocationAndRoom] No room types available; skipping default room creation"
-                    )
-                }
-            }
-            Unit
-        }.onFailure { error ->
-            Log.e(
-                "API",
-                "❌ [createDefaultLocationAndRoom] Failed to seed default location/room for project=$projectId",
-                error
-            )
-        }
-    }
-
-    private suspend fun resolveDefaultCatalogLevels(propertyTypeValue: String?): List<OfflineCatalogLevelEntity> {
-        val levels = localDataService.getOfflineCatalogLevels()
-        if (levels.isEmpty()) return emptyList()
-        val propertyTypeId = roomTypeRepository.resolveCatalogPropertyTypeId(propertyTypeValue)
-        val filtered = if (propertyTypeId == null) {
-            levels
-        } else {
-            levels.filter { it.propertyTypeIds.isEmpty() || it.propertyTypeIds.contains(propertyTypeId) }
-        }
-        val defaults = filtered.filter { it.isDefault == true }
-        return when {
-            defaults.isNotEmpty() -> defaults
-            filtered.any { it.isStandard == true } -> filtered.filter { it.isStandard == true }
-            else -> filtered
-        }
-    }
+    ): Result<Unit> =
+        roomSyncService.createDefaultLocationAndRoom(projectId, propertyTypeValue, locationName, seedDefaultRoom)
 
     suspend fun createNote(
         projectId: Long,
@@ -859,7 +572,7 @@ class OfflineSyncRepository(
         )
         localDataService.saveNotes(listOf(pending))
         val saved = localDataService.getNoteByUuid(pending.uuid) ?: pending
-        enqueueNoteUpsert(saved)
+        syncQueueProcessor.enqueueNoteUpsert(saved)
         saved
     }
 
@@ -877,7 +590,7 @@ class OfflineSyncRepository(
         )
         val lockUpdatedAt = note.updatedAt.toApiTimestamp()
         localDataService.saveNote(updated)
-        enqueueNoteUpsert(updated, lockUpdatedAt)
+        syncQueueProcessor.enqueueNoteUpsert(updated, lockUpdatedAt)
         updated
     }
 
@@ -902,52 +615,12 @@ class OfflineSyncRepository(
                 )
             )
         } else {
-            enqueueNoteDeletion(updated, lockUpdatedAt)
+            syncQueueProcessor.enqueueNoteDeletion(updated, lockUpdatedAt)
         }
     }
 
-    suspend fun deleteRoom(projectId: Long, roomId: Long): RoomDeletionResult = withContext(ioDispatcher) {
-        val room = localDataService.getRoom(roomId)
-            ?: throw IllegalArgumentException("Room not found: $roomId")
-
-        Log.d(
-            "API",
-            "🗑️ [deleteRoom] Marking room for deletion (projectId=$projectId, localId=${room.roomId}, serverId=${room.serverId})"
-        )
-
-        val lockUpdatedAt = room.updatedAt.toApiTimestamp()
-        val timestamp = now()
-        val marked = room.copy(
-            isDeleted = true,
-            isDirty = true,
-            syncStatus = SyncStatus.PENDING,
-            updatedAt = timestamp
-        )
-        localDataService.saveRooms(listOf(marked))
-
-        val snapshotRoomId = room.serverId ?: room.roomId
-        runCatching { localDataService.clearRoomPhotoSnapshot(snapshotRoomId) }
-            .onFailure {
-                Log.w("API", "⚠️ [deleteRoom] Failed to clear photo snapshot for roomId=$snapshotRoomId", it)
-            }
-
-        val photosToDelete = localDataService.cascadeDeleteRoom(room)
-        photosToDelete.forEach { photo -> removePhotoFiles(photo) }
-
-        if (room.serverId == null) {
-            localDataService.removeSyncOperationsForEntity(entityType = "room", entityId = room.roomId)
-            logLocalDeletion("room", room.roomId, room.uuid)
-            val cleaned = marked.copy(
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = now()
-            )
-            localDataService.saveRooms(listOf(cleaned))
-            return@withContext RoomDeletionResult(synced = true)
-        }
-        enqueueRoomDeletion(marked, lockUpdatedAt)
-        RoomDeletionResult(synced = false)
-    }
+    suspend fun deleteRoom(projectId: Long, roomId: Long): RoomDeletionResult =
+        roomSyncService.deleteRoom(projectId, roomId)
 
     suspend fun deletePhoto(photoId: Long): PhotoDeletionResult = withContext(ioDispatcher) {
         val photo = localDataService.getPhoto(photoId)
@@ -982,7 +655,7 @@ class OfflineSyncRepository(
             localDataService.savePhotos(listOf(cleaned))
             return@withContext PhotoDeletionResult(synced = true)
         }
-        enqueuePhotoDeletion(marked, lockUpdatedAt)
+        syncQueueProcessor.enqueuePhotoDeletion(marked, lockUpdatedAt)
         PhotoDeletionResult(synced = false)
     }
 
@@ -1077,116 +750,8 @@ class OfflineSyncRepository(
             )
         )
 
-    private enum class OperationOutcome {
-        SUCCESS,
-        SKIP,
-        RETRY,
-        DROP
-    }
-
-    suspend fun processPendingOperations(): PendingOperationResult = withContext(ioDispatcher) {
-        val operations = localDataService.getPendingSyncOperations()
-        if (operations.isEmpty()) return@withContext PendingOperationResult()
-
-        val createdProjects = mutableListOf<PendingProjectSyncResult>()
-
-        suspend fun handleOperation(
-            operation: OfflineSyncQueueEntity,
-            label: String,
-            block: suspend () -> OperationOutcome
-        ) {
-            runCatching { block() }
-                .onSuccess { outcome ->
-                    when (outcome) {
-                        OperationOutcome.SUCCESS -> localDataService.removeSyncOperation(operation.operationId)
-                        OperationOutcome.DROP -> {
-                            Log.w("API", "⚠️ [$label] Dropping sync op=${operation.operationId} type=${operation.entityType}")
-                            localDataService.removeSyncOperation(operation.operationId)
-                        }
-                        OperationOutcome.SKIP,
-                        OperationOutcome.RETRY -> Unit
-                    }
-                }
-                .onFailure { error ->
-                    Log.w("API", "⚠️ [$label] Sync operation failed", error)
-                    markSyncOperationFailure(operation, error)
-                }
-        }
-
-        operations.forEach { operation ->
-            when (operation.entityType) {
-                "project" -> handleOperation(operation, "pending:project") {
-                    when (operation.operationType) {
-                        SyncOperationType.CREATE -> {
-                            val result = handlePendingProjectCreation(operation)
-                            if (result != null) {
-                                createdProjects += result
-                                OperationOutcome.SUCCESS
-                            } else {
-                                OperationOutcome.DROP
-                            }
-                        }
-                        SyncOperationType.UPDATE -> handlePendingProjectUpdate(operation)
-                        SyncOperationType.DELETE -> handlePendingProjectDeletion(operation)
-                    }
-                }
-                "property" -> handleOperation(operation, "pending:property") {
-                    when (operation.operationType) {
-                        SyncOperationType.CREATE -> handlePendingPropertyCreation(operation)
-                        SyncOperationType.UPDATE -> handlePendingPropertyUpdate(operation)
-                        SyncOperationType.DELETE -> OperationOutcome.DROP
-                    }
-                }
-                "location" -> handleOperation(operation, "pending:location") {
-                    when (operation.operationType) {
-                        SyncOperationType.CREATE -> handlePendingLocationCreation(operation)
-                        SyncOperationType.UPDATE -> OperationOutcome.DROP
-                        SyncOperationType.DELETE -> OperationOutcome.DROP
-                    }
-                }
-                "room" -> handleOperation(operation, "pending:room") {
-                    when (operation.operationType) {
-                        SyncOperationType.CREATE -> handlePendingRoomCreation(operation)
-                        SyncOperationType.UPDATE -> OperationOutcome.DROP
-                        SyncOperationType.DELETE -> handlePendingRoomDeletion(operation)
-                    }
-                }
-                "note" -> handleOperation(operation, "pending:note") {
-                    when (operation.operationType) {
-                        SyncOperationType.CREATE,
-                        SyncOperationType.UPDATE -> handlePendingNoteUpsert(operation)
-                        SyncOperationType.DELETE -> handlePendingNoteDeletion(operation)
-                    }
-                }
-                "equipment" -> handleOperation(operation, "pending:equipment") {
-                    when (operation.operationType) {
-                        SyncOperationType.CREATE,
-                        SyncOperationType.UPDATE -> handlePendingEquipmentUpsert(operation)
-                        SyncOperationType.DELETE -> handlePendingEquipmentDeletion(operation)
-                    }
-                }
-                "moisture_log" -> handleOperation(operation, "pending:moisture") {
-                    when (operation.operationType) {
-                        SyncOperationType.CREATE,
-                        SyncOperationType.UPDATE -> handlePendingMoistureLogUpsert(operation)
-                        SyncOperationType.DELETE -> handlePendingMoistureLogDeletion(operation)
-                    }
-                }
-                "photo" -> handleOperation(operation, "pending:photo") {
-                    when (operation.operationType) {
-                        SyncOperationType.DELETE -> handlePendingPhotoDeletion(operation)
-                        else -> OperationOutcome.DROP
-                    }
-                }
-                else -> {
-                    Log.w("API", "⚠️ [processPendingOperations] Unknown operation type=${operation.entityType}, removing")
-                    localDataService.removeSyncOperation(operation.operationId)
-                }
-            }
-        }
-
-        PendingOperationResult(createdProjects = createdProjects)
-    }
+    suspend fun processPendingOperations(): PendingOperationResult =
+        syncQueueProcessor.processPendingOperations()
 
     suspend fun upsertEquipmentOffline(
         projectId: Long,
@@ -1235,7 +800,7 @@ class OfflineSyncRepository(
 
         localDataService.saveEquipment(listOf(entity))
         val saved = localDataService.getEquipmentByUuid(resolvedUuid) ?: entity
-        enqueueEquipmentUpsert(saved, lockUpdatedAt)
+        syncQueueProcessor.enqueueEquipmentUpsert(saved, lockUpdatedAt)
         saved
     }
 
@@ -1246,7 +811,7 @@ class OfflineSyncRepository(
         val lockUpdatedAt = existing?.serverId?.let { existing.updatedAt.toApiTimestamp() }
         localDataService.saveMoistureLogs(listOf(log))
         val saved = localDataService.getMoistureLogByUuid(log.uuid) ?: log
-        enqueueMoistureLogUpsert(saved, lockUpdatedAt)
+        syncQueueProcessor.enqueueMoistureLogUpsert(saved, lockUpdatedAt)
         saved
     }
 
@@ -1280,7 +845,7 @@ class OfflineSyncRepository(
             localDataService.saveEquipment(listOf(cleaned))
             return@withContext cleaned
         }
-        enqueueEquipmentDeletion(updated, lockUpdatedAt)
+        syncQueueProcessor.enqueueEquipmentDeletion(updated, lockUpdatedAt)
         updated
     }
 
@@ -1811,1536 +1376,6 @@ class OfflineSyncRepository(
         localDataService.markWorkScopesDeleted(response.workScopeActions)
     }
 
-    private suspend fun restoreDeletedParents(targets: Map<String, List<Long>>) {
-        targets.forEach { (type, ids) ->
-            val filteredIds = ids.filter { it > 0 }
-            if (filteredIds.isEmpty()) return@forEach
-
-            runCatching {
-                api.restoreDeletedRecords(RestoreRecordsRequest(type = type, ids = filteredIds))
-            }
-                .onSuccess { response ->
-                    Log.d(
-                        "API",
-                        "♻️ [syncRestore] type=$type restored=${response.restored.size}, already_restored=${response.alreadyRestored.size}, not_found=${response.notFound.size}, unauthorized=${response.unauthorized.size}"
-                    )
-                }
-                .onFailure { error ->
-                    Log.w("API", "⚠️ [syncRestore] Failed to restore $type ids=${filteredIds.joinToString()}", error)
-                }
-        }
-    }
-
-    private suspend fun pushPendingEquipmentDeletion(
-        equipment: OfflineEquipmentEntity,
-        lockUpdatedAt: String? = null
-    ): OfflineEquipmentEntity? {
-        if (equipment.serverId == null) {
-            // Never reached server; treat as resolved locally
-            return equipment.copy(
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = now()
-            )
-        }
-
-        val deleteRequest = DeleteWithTimestampRequest(updatedAt = lockUpdatedAt ?: equipment.updatedAt.toApiTimestamp())
-        return runCatching {
-            api.deleteEquipment(equipment.serverId, deleteRequest)
-            equipment.copy(
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = now()
-            )
-        }.recoverCatching { error ->
-            when {
-                error.isMissingOnServer() -> equipment.copy(
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = now()
-                )
-                else -> throw error
-            }
-        }.onFailure {
-            Log.w("API", "⚠️ [syncPendingEquipment] Failed to delete equipment ${equipment.uuid}", it)
-        }.getOrNull()
-    }
-
-    private suspend fun pushPendingEquipmentUpsert(
-        equipment: OfflineEquipmentEntity,
-        projectServerId: Long,
-        roomServerIdOverride: Long? = null,
-        lockUpdatedAt: String? = null
-    ): OfflineEquipmentEntity? {
-        val roomServerId = roomServerIdOverride ?: equipment.roomId?.let { roomId ->
-            localDataService.getRoom(roomId)?.serverId ?: roomId
-        }
-        val request = equipment.toRequest(projectServerId, roomServerId, lockUpdatedAt)
-        val synced = runCatching {
-            val dto = if (equipment.serverId == null) {
-                api.createProjectEquipment(projectServerId, request.copy(updatedAt = null))
-            } else {
-                api.updateEquipment(equipment.serverId, request)
-            }
-            dto.toEntity().copy(
-                equipmentId = equipment.equipmentId,
-                uuid = equipment.uuid,
-                projectId = equipment.projectId,
-                roomId = equipment.roomId ?: dto.roomId,
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                isDeleted = false,
-                lastSyncedAt = now()
-            )
-        }.recoverCatching { error ->
-            when {
-                equipment.serverId != null && error.isMissingOnServer() -> {
-                    val created = api.createProjectEquipment(projectServerId, request.copy(updatedAt = null))
-                    created.toEntity().copy(
-                        equipmentId = equipment.equipmentId,
-                        uuid = equipment.uuid,
-                        projectId = equipment.projectId,
-                        roomId = equipment.roomId ?: created.roomId,
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED,
-                        isDeleted = false,
-                        lastSyncedAt = now()
-                    )
-                }
-                else -> throw error
-            }
-        }.onFailure { error ->
-            Log.w("API", "⚠️ [syncPendingEquipment] Failed to push equipment ${equipment.uuid}", error)
-        }.getOrNull()
-
-        return synced
-    }
-
-    private suspend fun pushPendingMoistureLogDeletion(
-        log: OfflineMoistureLogEntity,
-        lockUpdatedAt: String? = null
-    ): OfflineMoistureLogEntity? {
-        if (log.serverId == null) {
-            return log.copy(
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                isDeleted = true,
-                lastSyncedAt = now()
-            )
-        }
-
-        val deleteRequest = DeleteWithTimestampRequest(updatedAt = lockUpdatedAt ?: log.updatedAt.toApiTimestamp())
-        return runCatching {
-            api.deleteMoistureLog(log.serverId, deleteRequest)
-            log.copy(
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = now()
-            )
-        }.recoverCatching { error ->
-            when {
-                error.isMissingOnServer() -> log.copy(
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = now()
-                )
-                else -> throw error
-            }
-        }.onFailure {
-            Log.w("API", "⚠️ [syncPendingMoistureLogs] Failed to delete moisture log ${log.uuid}", it)
-        }.getOrNull()
-    }
-
-    private suspend fun pushPendingMoistureLogUpsert(
-        log: OfflineMoistureLogEntity,
-        lockUpdatedAt: String? = null
-    ): OfflineMoistureLogEntity? {
-        val room = localDataService.getRoom(log.roomId)
-        val roomServerId = room?.serverId ?: log.roomId.takeIf { it > 0 }
-        var material = localDataService.getMaterial(log.materialId)
-        val projectServerId = resolveServerProjectId(log.projectId)
-        if (projectServerId == null || roomServerId == null) {
-            Log.w(
-                "API",
-                "⚠️ [syncPendingMoistureLogs] Missing server ids (project=$projectServerId, room=$roomServerId) for log uuid=${log.uuid}"
-            )
-            return null
-        }
-
-        if (material?.serverId == null) {
-            material = material?.let { ensureMaterialSynced(it, projectServerId, roomServerId, log) }
-        }
-        val materialServerId = material?.serverId ?: log.materialId.takeIf { it > 0 }
-        if (materialServerId == null) {
-            Log.w(
-                "API",
-                "⚠️ [syncPendingMoistureLogs] Unable to resolve material server id for log uuid=${log.uuid}"
-            )
-            return null
-        }
-
-        val request = log.toRequest(lockUpdatedAt)
-        val synced = runCatching {
-            val dto = if (log.serverId == null) {
-                api.createMoistureLog(roomServerId, materialServerId, request.copy(updatedAt = null))
-            } else {
-                api.updateMoistureLog(log.serverId, request)
-            }
-            dto.toEntity()?.copy(
-                logId = log.logId,
-                uuid = log.uuid,
-                projectId = log.projectId,
-                roomId = log.roomId,
-                materialId = materialServerId,
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                isDeleted = false,
-                lastSyncedAt = now()
-            )
-        }.recoverCatching { error ->
-            when {
-                log.serverId != null && error.isMissingOnServer() -> {
-                    val created = api.createMoistureLog(roomServerId, materialServerId, request.copy(updatedAt = null))
-                    created.toEntity()?.copy(
-                        logId = log.logId,
-                        uuid = log.uuid,
-                        projectId = log.projectId,
-                        roomId = log.roomId,
-                        materialId = materialServerId,
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED,
-                        isDeleted = false,
-                        lastSyncedAt = now()
-                    )
-                }
-                else -> throw error
-            }
-        }.onFailure { error ->
-            Log.w("API", "⚠️ [syncPendingMoistureLogs] Failed to push moisture log ${log.uuid}", error)
-        }.getOrNull()
-
-        return synced
-    }
-
-    private suspend fun ensureMaterialSynced(
-        material: OfflineMaterialEntity,
-        projectServerId: Long,
-        roomServerId: Long,
-        log: OfflineMoistureLogEntity
-    ): OfflineMaterialEntity? {
-        val request = DamageMaterialRequest(
-            name = material.name.ifBlank { "Material ${material.materialId}" },
-            damageTypeId = DEFAULT_DAMAGE_TYPE_ID,
-            description = material.description,
-            dryingGoal = material.description?.let { parseTargetMoisture(it) },
-            idempotencyKey = material.uuid
-        )
-
-        val created = runCatching {
-            api.createProjectDamageMaterial(projectServerId, request.copy(updatedAt = null))
-        }.recoverCatching { error ->
-            if (error.isConflict()) {
-                val existing = runCatching { api.getProjectDamageMaterials(projectServerId).data }
-                    .getOrElse { emptyList() }
-                    .firstOrNull { dto ->
-                        dto.title.equals(material.name, ignoreCase = true) &&
-                            (dto.damageTypeId ?: DEFAULT_DAMAGE_TYPE_ID) == request.damageTypeId
-                    }
-                existing ?: throw error
-            } else {
-                throw error
-            }
-        }.onFailure {
-            Log.w(
-                "API",
-                "⚠️ [materials] Failed to create damage material for log uuid=${log.uuid} name=${material.name}",
-                it
-            )
-        }.getOrNull() ?: return material
-
-        runCatching {
-            api.attachDamageMaterialToRoom(
-                roomId = roomServerId,
-                damageMaterialId = created.id,
-                body = DamageMaterialRequest(
-                    name = created.title ?: material.name,
-                    damageTypeId = created.damageTypeId ?: DEFAULT_DAMAGE_TYPE_ID,
-                    dryingGoal = material.description?.let { parseTargetMoisture(it) },
-                    idempotencyKey = material.uuid
-                )
-            )
-        }.onFailure {
-            Log.w(
-                "API",
-                "⚠️ [materials] Failed to attach damage material ${created.id} to room $roomServerId for log uuid=${log.uuid}",
-                it
-            )
-        }
-
-        val timestamp = now()
-        val updated = material.copy(
-            serverId = created.id,
-            syncStatus = SyncStatus.SYNCED,
-            syncVersion = (material.syncVersion + 1),
-            lastSyncedAt = timestamp,
-            updatedAt = timestamp
-        )
-        localDataService.saveMaterials(listOf(updated))
-        return updated
-    }
-
-
-    private suspend fun persistProperty(
-        projectId: Long,
-        property: PropertyDto,
-        propertyTypeValue: String?,
-        existing: OfflinePropertyEntity? = null
-    ): OfflinePropertyEntity {
-        // Fetch project address for fallback if property doesn't have address data
-        val projectAddress = if (property.address.isNullOrBlank() || property.city.isNullOrBlank()) {
-            runCatching { api.getProjectDetail(projectId).data.address }.getOrNull()
-        } else null
-        val entity = property.toEntity(existing = existing, projectAddress = projectAddress)
-        localDataService.saveProperty(entity)
-        val resolvedId = entity.propertyId
-        localDataService.attachPropertyToProject(
-            projectId = projectId,
-            propertyId = resolvedId,
-            propertyType = propertyTypeValue
-        )
-        runCatching { primeRoomTypeCaches(projectId, forceRefresh = true) }
-            .onFailure { Log.w("API", "⚠️ [syncProjectEssentials] Unable to prefetch room types for project $projectId", it) }
-        return entity
-    }
-
-    private suspend fun primeRoomTypeCaches(projectId: Long, forceRefresh: Boolean) {
-        RequestType.entries.forEach { requestType ->
-            runCatching {
-                val types = roomTypeRepository
-                    .getRoomTypes(projectId, requestType, forceRefresh = forceRefresh)
-                    .getOrThrow()
-                Log.d("API", "✅ [roomTypes] Prefetched ${types.size} ${requestType.name.lowercase()} room types for project $projectId")
-            }.onFailure { error ->
-                Log.w("API", "⚠️ [roomTypes] Prefetch failed for project $projectId (${requestType.name})", error)
-            }
-        }
-    }
-
-    private suspend fun fetchProjectProperty(
-        projectId: Long,
-        projectDetail: ProjectDetailDto? = null
-    ): PropertyDto? {
-        // Use include to hydrate property type and related fields when available.
-        val result = runCatching { api.getProjectProperties(projectId, include = propertyIncludes) }
-        result.onFailure { error ->
-            Log.e("API", "❌ [fetchProjectProperty] API call failed for project $projectId", error)
-        }
-        val response = result.getOrNull()
-        Log.d("API", "🔍 [fetchProjectProperty] Response for project $projectId: ${response?.data?.size ?: 0} properties returned")
-        val property = response?.data?.firstOrNull()
-        if (property != null) {
-            Log.d("API", "🔍 [fetchProjectProperty] PropertyDto for project $projectId: id=${property.id}, propertyTypeId=${property.propertyTypeId}, propertyType=${property.propertyType}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}")
-            return property
-        }
-
-        Log.d("API", "⚠️ [fetchProjectProperty] No property in response for project $projectId")
-        val detail = projectDetail ?: runCatching { api.getProjectDetail(projectId).data }
-            .onFailure { Log.w("API", "⚠️ [fetchProjectProperty] Unable to load project detail for fallback (project $projectId)", it) }
-            .getOrNull()
-        val detailPropertyId = detail?.propertyId ?: detail?.properties?.firstOrNull()?.id
-
-        if (detailPropertyId != null) {
-            val fetchedById = runCatching { api.getProperty(detailPropertyId).data }
-                .onSuccess { fetched ->
-                    Log.d("API", "🏠 [fetchProjectProperty] Fallback getProperty succeeded for project $projectId (id=$detailPropertyId, address=${fetched.address}, city=${fetched.city}, state=${fetched.state}, zip=${fetched.postalCode})")
-                }
-                .onFailure {
-                    Log.e("API", "❌ [fetchProjectProperty] Fallback getProperty failed for project $projectId (id=$detailPropertyId)", it)
-                }
-                .getOrNull()
-            if (fetchedById != null) {
-                return fetchedById
-            }
-        }
-
-        val embedded = detail?.properties?.firstOrNull()
-        if (embedded != null) {
-            Log.d("API", "🏠 [fetchProjectProperty] Using embedded property from project detail for project $projectId: id=${embedded.id}, address=${embedded.address}, city=${embedded.city}, state=${embedded.state}, zip=${embedded.postalCode}")
-            return embedded
-        }
-
-        Log.d("API", "⚠️ [fetchProjectProperty] No property found for project $projectId after fallback attempts")
-        return null
-    }
-
-    private suspend fun fetchRoomsForLocation(locationId: Long): List<RoomDto> {
-        if (locationId <= 0) {
-            Log.w("API", "⚠️ [syncProjectGraph] Skipping invalid locationId=$locationId")
-            return emptyList()
-        }
-        val collected = mutableListOf<RoomDto>()
-        var page = 1
-        val updatedSince = localDataService.getLatestRoomUpdateForLocation(locationId)
-            ?.let { DateUtils.formatApiDate(it) }
-
-        if (updatedSince != null) {
-            Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId since $updatedSince (incremental)")
-        } else {
-            Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId (full sync - first run)")
-        }
-
-        while (true) {
-            val response = runCatching {
-                api.getRoomsForLocation(
-                    locationId,
-                    page = page,
-                    updatedSince = updatedSince
-                )
-            }
-                .onSuccess { result ->
-                    val size = result.data.size
-                    if (size == 0 && page == 1) {
-                        Log.d("API", "INFO [FAST] No rooms returned for location $locationId")
-                    } else if (size > 0) {
-                        Log.d("API", "✅ [FAST] Fetched $size rooms for location $locationId (page $page)")
-                    }
-                }
-                .onFailure { error ->
-                    if (error is retrofit2.HttpException && error.code() == 404) {
-                        Log.d("API", "INFO [syncProjectGraph] Location $locationId has no rooms (404)")
-                        runCatching { localDataService.markLocationsDeleted(listOf(locationId)) }
-                            .onFailure { Log.w("API", "⚠️ [syncProjectGraph] Failed to mark missing location $locationId as deleted", it) }
-                    } else {
-                        Log.e("API", "❌ [syncProjectGraph] Failed to fetch rooms for location $locationId", error)
-                    }
-                }
-                .getOrNull()
-
-            // If request failed, return what we've collected so far
-            if (response == null) {
-                if (collected.isNotEmpty()) {
-                    Log.d("API", "⚠️ [syncProjectGraph] Returning ${collected.size} rooms collected before error for location $locationId")
-                }
-                return collected
-            }
-
-            val data = response.data
-
-            // Debug: Log first room's fields to inspect payload
-            if (data.isNotEmpty() && page == 1) {
-                val firstRoom = data.first()
-                Log.d("API", "🔍 [DEBUG] Room payload - id: ${firstRoom.id}, name: ${firstRoom.name}, title: ${firstRoom.title}, roomType.name: ${firstRoom.roomType?.name}, level.name: ${firstRoom.level?.name}")
-            }
-
-            collected += data
-
-            val meta = response.meta
-            val current = meta?.currentPage ?: page
-            val last = meta?.lastPage ?: current
-            val hasMore = current < last && data.isNotEmpty()
-            if (!hasMore) {
-                break
-            }
-            page = current + 1
-        }
-        return collected
-    }
-
-    private suspend fun handlePendingProjectCreation(
-        operation: OfflineSyncQueueEntity
-    ): PendingProjectSyncResult? {
-        val payload = runCatching {
-            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingProjectCreationPayload::class.java)
-        }.getOrNull() ?: return null
-
-        val existing = localDataService.getProject(payload.localProjectId)
-            ?: return null
-
-        val addressDto = api.createAddress(payload.addressRequest).data
-        val addressId = addressDto.id
-            ?: throw IllegalStateException("Address creation succeeded but returned null id")
-
-        val idempotencyKey = payload.idempotencyKey ?: payload.projectUuid
-        val projectRequest = CreateCompanyProjectRequest(
-            projectStatusId = payload.projectStatusId,
-            addressId = addressId,
-            idempotencyKey = idempotencyKey
-        )
-
-        val dto = api.createCompanyProject(payload.companyId, projectRequest).data
-        val entity = dto.toEntity(existing = existing).withAddressFallback(
-            projectAddress = addressDto,
-            addressRequest = payload.addressRequest
-        ).copy(
-            projectId = existing.projectId,
-            uuid = existing.uuid,
-            syncStatus = SyncStatus.SYNCED,
-            isDirty = false,
-            lastSyncedAt = now()
-        )
-
-        localDataService.saveProjects(listOf(entity))
-        val pendingAlias = existing.alias?.takeIf { it.isNotBlank() }
-        if (!pendingAlias.isNullOrBlank() && pendingAlias != entity.alias) {
-            val updatedDto = api.updateProject(
-                projectId = dto.id,
-                body = UpdateProjectRequest(
-                    alias = pendingAlias,
-                    projectStatusId = null,
-                    updatedAt = dto.updatedAt
-                )
-            ).data
-            val updated = updatedDto.toEntity(existing = entity).copy(
-                projectId = entity.projectId,
-                uuid = entity.uuid,
-                syncStatus = SyncStatus.SYNCED,
-                isDirty = false,
-                lastSyncedAt = now()
-            )
-            localDataService.saveProjects(listOf(updated))
-        }
-        return PendingProjectSyncResult(localProjectId = entity.projectId, serverProjectId = dto.id)
-    }
-
-    private suspend fun handlePendingProjectUpdate(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val project = localDataService.getProject(operation.entityId) ?: return OperationOutcome.DROP
-        val serverId = project.serverId ?: return OperationOutcome.SKIP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: project.updatedAt.toApiTimestamp()
-        val statusId = ProjectStatus.fromApiValue(project.status)?.backendId
-        val request = UpdateProjectRequest(
-            alias = project.alias?.takeIf { it.isNotBlank() },
-            projectStatusId = statusId,
-            updatedAt = lockUpdatedAt
-        )
-        val dto = api.updateProject(serverId, request).data
-        val entity = dto.toEntity(existing = project).copy(
-            projectId = project.projectId,
-            uuid = project.uuid,
-            syncStatus = SyncStatus.SYNCED,
-            isDirty = false,
-            lastSyncedAt = now()
-        )
-        localDataService.saveProjects(listOf(entity))
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingProjectDeletion(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val project = localDataService.getProject(operation.entityId) ?: return OperationOutcome.DROP
-        val serverId = project.serverId ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: project.updatedAt.toApiTimestamp()
-        val request = DeleteProjectRequest(
-            projectId = serverId,
-            updatedAt = lockUpdatedAt
-        )
-        val response = api.deleteProject(serverId, request)
-        if (!response.isSuccessful) {
-            if (response.code() == 409) {
-                // Conflict - fetch fresh and retry delete with updated timestamp
-                Log.w("API", "⚠️ [handlePendingProjectDeletion] 409 conflict for project $serverId; fetching fresh and retrying")
-                val freshProject = runCatching {
-                    api.getProjectDetail(serverId).data
-                }.getOrElse { error ->
-                    Log.e("API", "❌ [handlePendingProjectDeletion] Failed to fetch fresh project $serverId", error)
-                    val restored = project.copy(isDeleted = false, isDirty = false, syncStatus = SyncStatus.SYNCED)
-                    localDataService.saveProjects(listOf(restored))
-                    return OperationOutcome.DROP
-                }
-
-                val retryRequest = DeleteProjectRequest(projectId = serverId, updatedAt = freshProject.updatedAt)
-                val retryResponse = api.deleteProject(serverId, retryRequest)
-                if (!retryResponse.isSuccessful && retryResponse.code() !in listOf(404, 409, 410)) {
-                    throw HttpException(retryResponse)
-                }
-                if (retryResponse.code() == 409) {
-                    Log.w("API", "⚠️ [handlePendingProjectDeletion] Retry still got 409; restoring project $serverId")
-                    val restored = freshProject.toEntity(existing = project)
-                    localDataService.saveProjects(listOf(restored))
-                    return OperationOutcome.DROP
-                }
-                Log.d("API", "✅ [handlePendingProjectDeletion] Retry delete succeeded for project $serverId")
-            } else if (response.code() !in listOf(404, 410)) {
-                throw HttpException(response)
-            }
-        }
-        val cleaned = project.copy(
-            isDirty = false,
-            syncStatus = SyncStatus.SYNCED,
-            lastSyncedAt = now()
-        )
-        localDataService.saveProjects(listOf(cleaned))
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingPropertyCreation(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val payload = runCatching {
-            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingPropertyCreationPayload::class.java)
-        }.getOrNull() ?: return OperationOutcome.DROP
-
-        val project = localDataService.getProject(payload.projectId) ?: return OperationOutcome.SKIP
-        val projectServerId = project.serverId ?: return OperationOutcome.SKIP
-
-        val request = PropertyMutationRequest(
-            propertyTypeId = payload.propertyTypeId,
-            idempotencyKey = payload.idempotencyKey
-        )
-
-        if (AppConfig.isLoggingEnabled) {
-            Log.d(
-                "API",
-                "📤 [handlePendingPropertyCreation] createProperty payload: " +
-                    "projectId=${payload.projectId} propertyTypeId=${payload.propertyTypeId} " +
-                    "propertyTypeValue=${payload.propertyTypeValue ?: "null"} " +
-                    "idempotencyKey=${payload.idempotencyKey ?: "null"} localPropertyId=${payload.localPropertyId}"
-            )
-        }
-
-        val created = try {
-            api.createProjectProperty(projectServerId, request).data
-        } catch (error: HttpException) {
-            if (AppConfig.isLoggingEnabled) {
-                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
-                Log.w(
-                    "API",
-                    "❌ [handlePendingPropertyCreation] createProperty failed: code=${error.code()} " +
-                        "body=${errorBody ?: "null"}"
-                )
-            }
-            throw error
-        }
-
-        if (AppConfig.isLoggingEnabled) {
-            Log.d(
-                "API",
-                "📥 [handlePendingPropertyCreation] createProperty response: id=${created.id} " +
-                    "address=${created.address} city=${created.city} state=${created.state} zip=${created.postalCode} " +
-                    "propertyTypeId=${created.propertyTypeId} propertyType=${created.propertyType}"
-            )
-        }
-
-        val refreshed = runCatching { api.getProperty(created.id).data }
-            .onFailure {
-                Log.w(
-                    "API",
-                    "⚠️ [handlePendingPropertyCreation] getProperty failed for id=${created.id}",
-                    it
-                )
-            }
-            .getOrNull()
-        val resolved = refreshed ?: created
-        if (AppConfig.isLoggingEnabled) {
-            val source = if (refreshed != null) "getProperty" else "createResponse"
-            Log.d(
-                "API",
-                "📥 [handlePendingPropertyCreation] property resolved from $source: id=${resolved.id} " +
-                    "address=${resolved.address} city=${resolved.city} state=${resolved.state} zip=${resolved.postalCode} " +
-                    "propertyTypeId=${resolved.propertyTypeId} propertyType=${resolved.propertyType}"
-            )
-        }
-        val existing = localDataService.getProperty(payload.localPropertyId)
-        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing = existing)
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingPropertyUpdate(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val payload = runCatching {
-            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingPropertyUpdatePayload::class.java)
-        }.getOrNull() ?: return OperationOutcome.DROP
-
-        val property = localDataService.getProperty(payload.propertyId) ?: return OperationOutcome.DROP
-        val serverId = property.serverId ?: return OperationOutcome.SKIP
-        val lockUpdatedAt = payload.lockUpdatedAt ?: property.updatedAt.toApiTimestamp()
-        val request = payload.request.copy(
-            updatedAt = lockUpdatedAt,
-            idempotencyKey = null
-        )
-        if (AppConfig.isLoggingEnabled) {
-            Log.d(
-                "API",
-                "📤 [handlePendingPropertyUpdate] updateProperty payload: " +
-                    "projectId=${payload.projectId} propertyId=${payload.propertyId} serverId=${serverId} " +
-                    "propertyTypeId=${request.propertyTypeId} name=${request.name ?: "null"} " +
-                    "lockUpdatedAt=$lockUpdatedAt"
-            )
-        }
-
-        val updated = try {
-            api.updateProperty(serverId, request).data
-        } catch (error: HttpException) {
-            if (AppConfig.isLoggingEnabled) {
-                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
-                Log.w(
-                    "API",
-                    "❌ [handlePendingPropertyUpdate] updateProperty failed: code=${error.code()} " +
-                        "body=${errorBody ?: "null"}"
-                )
-            }
-            throw error
-        }
-
-        if (AppConfig.isLoggingEnabled) {
-            Log.d(
-                "API",
-                "📥 [handlePendingPropertyUpdate] updateProperty response: id=${updated.id} " +
-                    "address=${updated.address} city=${updated.city} state=${updated.state} zip=${updated.postalCode} " +
-                    "propertyTypeId=${updated.propertyTypeId} propertyType=${updated.propertyType}"
-            )
-        }
-
-        val refreshed = runCatching { api.getProperty(updated.id).data }
-            .onFailure {
-                Log.w(
-                    "API",
-                    "⚠️ [handlePendingPropertyUpdate] getProperty failed for id=${updated.id}",
-                    it
-                )
-            }
-            .getOrNull()
-        val resolved = refreshed ?: updated
-        if (AppConfig.isLoggingEnabled) {
-            val source = if (refreshed != null) "getProperty" else "updateResponse"
-            Log.d(
-                "API",
-                "📥 [handlePendingPropertyUpdate] property resolved from $source: id=${resolved.id} " +
-                    "address=${resolved.address} city=${resolved.city} state=${resolved.state} zip=${resolved.postalCode} " +
-                    "propertyTypeId=${resolved.propertyTypeId} propertyType=${resolved.propertyType}"
-            )
-        }
-
-        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing = property)
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingRoomCreation(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val payload = runCatching {
-            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingRoomCreationPayload::class.java)
-        }.getOrNull() ?: return OperationOutcome.DROP
-
-        val project = localDataService.getProject(payload.projectId) ?: return OperationOutcome.SKIP
-        val projectServerId = project.serverId ?: return OperationOutcome.SKIP
-
-        fun normalizeServerId(value: Long?): Long? = value?.takeIf { it > 0 }
-
-        var refreshedEssentials = false
-        suspend fun refreshEssentialsOnce() {
-            if (!refreshedEssentials) {
-                syncProjectEssentials(payload.projectId)
-                refreshedEssentials = true
-            }
-        }
-
-        suspend fun resolvePropertyServerId(): Long? {
-            val propertyId = project.propertyId ?: return null
-            return normalizeServerId(localDataService.getProperty(propertyId)?.serverId)
-        }
-
-        var propertyServerId = resolvePropertyServerId()
-        if (propertyServerId == null) {
-            refreshEssentialsOnce()
-            propertyServerId = resolvePropertyServerId()
-        }
-        if (propertyServerId == null) {
-            Log.w(
-                "API",
-                "⚠️ [handlePendingRoomCreation] Property not synced for project ${payload.projectId} (propertyId=${project.propertyId}); will retry"
-            )
-            return OperationOutcome.SKIP
-        }
-
-        var locations = localDataService.getLocations(payload.projectId)
-        var levelServerId = normalizeServerId(payload.levelServerId)
-            ?: normalizeServerId(locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId)
-            ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == null }?.serverId)
-
-        var locationServerId = normalizeServerId(payload.locationServerId)
-            ?: normalizeServerId(locations.firstOrNull { it.locationId == payload.locationLocalId }?.serverId)
-            ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId)
-            ?: normalizeServerId(locations.firstOrNull { it.serverId == levelServerId }?.serverId)
-
-        if (levelServerId == null || locationServerId == null) {
-            // Try to refresh essentials to populate locations/levels
-            refreshEssentialsOnce()
-            locations = localDataService.getLocations(payload.projectId)
-            if (levelServerId == null) {
-                levelServerId = normalizeServerId(
-                    locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId
-                ) ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == null }?.serverId)
-            }
-            if (locationServerId == null) {
-                locationServerId = normalizeServerId(
-                    locations.firstOrNull { it.locationId == payload.locationLocalId }?.serverId
-                )
-                    ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId)
-                    ?: normalizeServerId(locations.firstOrNull { it.serverId == levelServerId }?.serverId)
-                    ?: normalizeServerId(locations.firstOrNull()?.serverId)
-            }
-        }
-
-        if (levelServerId == null && locationServerId != null) {
-            val resolvedLocation = locations.firstOrNull { it.serverId == locationServerId }
-                ?: locations.firstOrNull { it.locationId == payload.locationLocalId }
-            levelServerId = normalizeServerId(resolvedLocation?.parentLocationId)
-                ?: normalizeServerId(resolvedLocation?.serverId)
-        }
-
-        if (levelServerId != null && locationServerId != null && levelServerId == locationServerId) {
-            val localLevel = payload.levelLocalId?.let { levelId ->
-                locations.firstOrNull { it.locationId == levelId }
-            }
-            val localLocation = payload.locationLocalId?.let { locationId ->
-                locations.firstOrNull { it.locationId == locationId }
-            }
-            val levelName = localLevel?.title?.takeIf { it.isNotBlank() }
-                ?: localLevel?.type?.takeIf { it.isNotBlank() }
-                ?: localLocation?.title?.takeIf { it.isNotBlank() }
-            val locationName = localLocation?.title?.takeIf { it.isNotBlank() }
-                ?: localLocation?.type?.takeIf { it.isNotBlank() }
-                ?: levelName
-            val locationType = localLocation?.type?.takeIf { it.isNotBlank() }
-
-            val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull()
-            val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull()
-
-            val resolvedLevelId = remoteLevels
-                ?.firstOrNull { level ->
-                    val resolvedName = listOfNotNull(
-                        level.title?.takeIf { it.isNotBlank() },
-                        level.name?.takeIf { it.isNotBlank() }
-                    ).firstOrNull()
-                    resolvedName?.equals(levelName, ignoreCase = true) == true
-                }
-                ?.id
-
-            val resolvedLocationId = remoteLocations
-                ?.firstOrNull { location ->
-                    val resolvedName = listOfNotNull(
-                        location.title?.takeIf { it.isNotBlank() },
-                        location.name?.takeIf { it.isNotBlank() }
-                    ).firstOrNull()
-                    val resolvedType = listOfNotNull(
-                        location.type?.takeIf { it.isNotBlank() },
-                        location.locationType?.takeIf { it.isNotBlank() }
-                    ).firstOrNull()
-                    val nameMatches = resolvedName?.equals(locationName, ignoreCase = true) == true
-                    val typeMatches = locationType?.let { type ->
-                        resolvedType?.equals(type, ignoreCase = true) ?: true
-                    } ?: true
-                    nameMatches && typeMatches
-                }
-                ?.id
-
-            if (resolvedLevelId != null) {
-                levelServerId = resolvedLevelId
-            }
-            if (resolvedLocationId != null) {
-                locationServerId = resolvedLocationId
-            }
-        }
-
-        val payloadRoomUuid = payload.roomUuid?.takeIf { it.isNotBlank() }
-
-        if (levelServerId == null || locationServerId == null) {
-            val roomLabel = payloadRoomUuid ?: payload.roomName
-            Log.w("API", "⚠️ [handlePendingRoomCreation] Missing location/level for room $roomLabel; will retry")
-            return OperationOutcome.SKIP
-        }
-
-        restoreDeletedParents(
-            mapOf(
-                "projects" to listOf(projectServerId),
-                "locations" to listOf(locationServerId),
-                "levels" to listOf(levelServerId)
-            )
-        )
-
-        val idempotencyKey = payload.idempotencyKey
-            ?: payloadRoomUuid
-            ?: payload.localRoomId.takeIf { it != 0L }?.toString()
-        val resolvedRoomTypeId = resolveRoomTypeIdForPayload(payload)
-        if (resolvedRoomTypeId == null) {
-            Log.w("API", "⚠️ [handlePendingRoomCreation] Unable to resolve roomTypeId for '${payload.roomName}' (name=${payload.roomTypeName}); will retry after room types sync")
-            return OperationOutcome.SKIP
-        }
-
-        val request = CreateRoomRequest(
-            name = payload.roomName,
-            roomTypeId = resolvedRoomTypeId,
-            levelId = levelServerId,
-            isSource = payload.isSource,
-            idempotencyKey = idempotencyKey
-        )
-
-        if (AppConfig.isLoggingEnabled) {
-            Log.d(
-                "API",
-                "📤 [handlePendingRoomCreation] createRoom payload: " +
-                    "locationId=$locationServerId levelId=$levelServerId " +
-                    "roomTypeId=$resolvedRoomTypeId name='${payload.roomName}' " +
-                    "typeName='${payload.roomTypeName}' isSource=${payload.isSource} " +
-                    "idempotencyKey=${idempotencyKey ?: "null"} projectId=${payload.projectId}"
-            )
-        }
-
-        val rawResponse = try {
-            api.createRoom(locationServerId, request)
-        } catch (error: HttpException) {
-            if (AppConfig.isLoggingEnabled) {
-                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
-                Log.w(
-                    "API",
-                    "❌ [handlePendingRoomCreation] createRoom failed: code=${error.code()} " +
-                        "body=${errorBody ?: "null"}"
-                )
-            }
-            throw error
-        }
-        if (AppConfig.isLoggingEnabled) {
-            Log.d("API", "📥 [handlePendingRoomCreation] createRoom response: ${rawResponse.toString()}")
-        }
-        val dto = when {
-            rawResponse.isJsonObject && rawResponse.asJsonObject.has("data") ->
-                gson.fromJson(rawResponse.asJsonObject.get("data"), RoomDto::class.java)
-            rawResponse.isJsonObject && rawResponse.asJsonObject.has("room") ->
-                gson.fromJson(rawResponse.asJsonObject.get("room"), RoomDto::class.java)
-            else -> gson.fromJson(rawResponse, RoomDto::class.java)
-        }
-        if (dto.id <= 0) {
-            Log.w(
-                "API",
-                "📴 [handlePendingRoomCreation] Server returned invalid room id=${dto.id} for ${payload.roomName}; keeping pending"
-            )
-            return OperationOutcome.RETRY
-        }
-        val preexistingServerRoom = localDataService.getRoomByServerId(dto.id)
-        val existing = localDataService.getRoom(payload.localRoomId)
-            ?: payloadRoomUuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
-            ?: preexistingServerRoom
-            ?: localDataService.getPendingRoomForProject(payload.projectId, payload.roomName)
-        val resolvedRoomId = existing?.roomId
-            ?: payload.localRoomId.takeIf { it != 0L }
-            ?: dto.id
-        val resolvedUuid = existing?.uuid
-            ?: payloadRoomUuid
-            ?: dto.uuid
-            ?: UUID.randomUUID().toString()
-        val entity = dto.toEntity(
-            existing = existing,
-            projectId = payload.projectId,
-            locationId = locationServerId
-        ).copy(
-            roomId = resolvedRoomId,
-            uuid = resolvedUuid,
-            roomTypeId = resolvedRoomTypeId,
-            syncStatus = SyncStatus.SYNCED,
-            isDirty = false,
-            lastSyncedAt = now()
-        )
-        localDataService.saveRooms(listOf(entity))
-        preexistingServerRoom
-            ?.takeIf { it.roomId != resolvedRoomId }
-            ?.let { duplicate ->
-                val cleaned = duplicate.copy(
-                    isDeleted = true,
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = now()
-                )
-                localDataService.saveRooms(listOf(cleaned))
-            }
-        imageProcessorQueueManager?.processNextQueuedAssembly()
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingRoomDeletion(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val room = localDataService.getRoom(operation.entityId) ?: return OperationOutcome.DROP
-        val serverId = room.serverId ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: room.updatedAt.toApiTimestamp()
-        try {
-            api.deleteRoom(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
-        } catch (error: Throwable) {
-            if (!error.isMissingOnServer()) {
-                throw error
-            }
-        }
-        val cleaned = room.copy(
-            isDirty = false,
-            syncStatus = SyncStatus.SYNCED,
-            lastSyncedAt = now()
-        )
-        localDataService.saveRooms(listOf(cleaned))
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingNoteUpsert(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val note = localDataService.getNoteByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
-        if (note.isDeleted) return OperationOutcome.DROP
-        val projectServerId = resolveServerProjectId(note.projectId) ?: return OperationOutcome.SKIP
-        val roomServerId = note.roomId?.let { roomId ->
-            localDataService.getRoom(roomId)?.serverId ?: roomId.takeIf { it > 0 }
-        }
-        if (note.roomId != null && roomServerId == null) {
-            return OperationOutcome.SKIP
-        }
-
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: note.updatedAt.toApiTimestamp()
-        val request = CreateNoteRequest(
-            projectId = projectServerId,
-            roomId = roomServerId,
-            body = note.content,
-            photoId = note.photoId,
-            categoryId = note.categoryId,
-            idempotencyKey = note.uuid,
-            updatedAt = lockUpdatedAt
-        )
-        val dto = if (note.serverId == null) {
-            api.createProjectNote(projectServerId, request.copy(updatedAt = null)).data
-        } else {
-            api.updateNote(note.serverId, request).data
-        }
-        val entity = dto.toEntity()?.copy(
-            noteId = note.noteId,
-            uuid = note.uuid,
-            projectId = note.projectId,
-            roomId = note.roomId ?: dto.roomId,
-            isDirty = false,
-            syncStatus = SyncStatus.SYNCED,
-            isDeleted = false,
-            lastSyncedAt = now()
-        ) ?: return OperationOutcome.SKIP
-        localDataService.saveNote(entity)
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingNoteDeletion(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val note = localDataService.getNoteByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
-        val serverId = note.serverId ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: note.updatedAt.toApiTimestamp()
-        val response = api.deleteNote(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
-        if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
-            throw HttpException(response)
-        }
-        val cleaned = note.copy(
-            isDirty = false,
-            syncStatus = SyncStatus.SYNCED,
-            lastSyncedAt = now()
-        )
-        localDataService.saveNote(cleaned)
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun handlePendingEquipmentUpsert(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val equipment = localDataService.getEquipmentByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
-        if (equipment.isDeleted) return OperationOutcome.DROP
-        val projectServerId = resolveServerProjectId(equipment.projectId) ?: return OperationOutcome.SKIP
-        val roomServerId = equipment.roomId?.let { roomId ->
-            localDataService.getRoom(roomId)?.serverId
-        }
-        if (equipment.roomId != null && roomServerId == null) {
-            return OperationOutcome.SKIP
-        }
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: equipment.updatedAt.toApiTimestamp()
-        val synced = pushPendingEquipmentUpsert(equipment, projectServerId, roomServerId, lockUpdatedAt)
-        synced?.let { localDataService.saveEquipment(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
-    }
-
-    private suspend fun handlePendingEquipmentDeletion(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val equipment = localDataService.getEquipmentByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: equipment.updatedAt.toApiTimestamp()
-        val synced = pushPendingEquipmentDeletion(equipment, lockUpdatedAt)
-        synced?.let { localDataService.saveEquipment(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
-    }
-
-    private suspend fun handlePendingMoistureLogUpsert(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val log = localDataService.getMoistureLogByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
-        if (log.isDeleted) return OperationOutcome.DROP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: log.updatedAt.toApiTimestamp()
-        val synced = pushPendingMoistureLogUpsert(log, lockUpdatedAt)
-        synced?.let { localDataService.saveMoistureLogs(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
-    }
-
-    private suspend fun handlePendingMoistureLogDeletion(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val log = localDataService.getMoistureLogByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: log.updatedAt.toApiTimestamp()
-        val synced = pushPendingMoistureLogDeletion(log, lockUpdatedAt)
-        synced?.let { localDataService.saveMoistureLogs(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
-    }
-
-    private suspend fun handlePendingPhotoDeletion(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val photo = localDataService.getPhoto(operation.entityId) ?: return OperationOutcome.DROP
-        val serverId = photo.serverId ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: photo.updatedAt.toApiTimestamp()
-        val response = api.deletePhoto(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
-        if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
-            throw HttpException(response)
-        }
-        val cleaned = photo.copy(
-            isDirty = false,
-            syncStatus = SyncStatus.SYNCED,
-            lastSyncedAt = now()
-        )
-        localDataService.savePhotos(listOf(cleaned))
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun markSyncOperationFailure(
-        operation: OfflineSyncQueueEntity,
-        error: Throwable
-    ) {
-        val nextRetry = operation.retryCount + 1
-        val now = Date()
-        val backoffSeconds = min(30 * 60, 10 * (1 shl operation.retryCount))
-        val willRetry = nextRetry < operation.maxRetries
-        val updated = operation.copy(
-            retryCount = nextRetry,
-            lastAttemptAt = now,
-            scheduledAt = if (willRetry) Date(now.time + backoffSeconds * 1000L) else null,
-            status = if (willRetry) SyncStatus.PENDING else SyncStatus.FAILED,
-            errorMessage = error.message
-        )
-        localDataService.enqueueSyncOperation(updated)
-    }
-
-    private suspend fun enqueueProjectCreation(
-        project: OfflineProjectEntity,
-        companyId: Long,
-        statusId: Int,
-        addressRequest: CreateAddressRequest,
-        idempotencyKey: String? = null
-    ) {
-        val payload = PendingProjectCreationPayload(
-            localProjectId = project.projectId,
-            projectUuid = project.uuid,
-            companyId = companyId,
-            projectStatusId = statusId,
-            addressRequest = addressRequest,
-            idempotencyKey = idempotencyKey
-        )
-        val operation = OfflineSyncQueueEntity(
-            operationId = "project-${project.projectId}-${UUID.randomUUID()}",
-            entityType = "project",
-            entityId = project.projectId,
-            entityUuid = project.uuid,
-            operationType = SyncOperationType.CREATE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.HIGH
-        )
-        localDataService.enqueueSyncOperation(operation)
-    }
-
-    private suspend fun enqueuePropertyCreation(
-        property: OfflinePropertyEntity,
-        projectId: Long,
-        propertyTypeId: Int,
-        propertyTypeValue: String?,
-        idempotencyKey: String?
-    ) {
-        val payload = PendingPropertyCreationPayload(
-            localPropertyId = property.propertyId,
-            propertyUuid = property.uuid,
-            projectId = projectId,
-            propertyTypeId = propertyTypeId,
-            propertyTypeValue = propertyTypeValue,
-            idempotencyKey = idempotencyKey
-        )
-        val operation = OfflineSyncQueueEntity(
-            operationId = "property-${property.propertyId}-${UUID.randomUUID()}",
-            entityType = "property",
-            entityId = property.propertyId,
-            entityUuid = property.uuid,
-            operationType = SyncOperationType.CREATE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-        localDataService.enqueueSyncOperation(operation)
-    }
-
-    private suspend fun enqueueRoomCreation(
-        room: OfflineRoomEntity,
-        roomTypeId: Long,
-        roomTypeName: String?,
-        isSource: Boolean,
-        isExterior: Boolean,
-        levelServerId: Long?,
-        locationServerId: Long?,
-        levelLocalId: Long?,
-        locationLocalId: Long?,
-        idempotencyKey: String?
-    ) {
-        val payload = PendingRoomCreationPayload(
-            localRoomId = room.roomId,
-            roomUuid = room.uuid,
-            projectId = room.projectId,
-            roomName = room.title,
-            roomTypeId = roomTypeId,
-            roomTypeName = roomTypeName ?: room.title,
-            isSource = isSource,
-            isExterior = isExterior,
-            levelServerId = levelServerId,
-            locationServerId = locationServerId,
-            levelLocalId = levelLocalId,
-            locationLocalId = locationLocalId,
-            idempotencyKey = idempotencyKey
-        )
-        val operation = OfflineSyncQueueEntity(
-            operationId = "room-${room.roomId}-${UUID.randomUUID()}",
-            entityType = "room",
-            entityId = room.roomId,
-            entityUuid = room.uuid,
-            operationType = SyncOperationType.CREATE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-        localDataService.enqueueSyncOperation(operation)
-    }
-
-    private fun resolveEntityId(entityId: Long, uuid: String): Long =
-        if (entityId != 0L) entityId else runCatching {
-            UUID.fromString(uuid).mostSignificantBits
-        }.getOrElse { uuid.hashCode().toLong() }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            gson.fromJson(String(payload, Charsets.UTF_8), PendingLockPayload::class.java).lockUpdatedAt
-        }.getOrNull()
-
-    private suspend fun resolveLockUpdatedAt(
-        entityType: String,
-        entityId: Long,
-        fallback: String?
-    ): String? {
-        val existing = localDataService.getSyncOperationForEntity(entityType, entityId) ?: return fallback
-        return extractLockUpdatedAt(existing.payload) ?: fallback
-    }
-
-    private suspend fun updateCreateOperationPayload(
-        entityType: String,
-        entityId: Long,
-        updater: (ByteArray) -> ByteArray?
-    ): Boolean {
-        val existing = localDataService.getSyncOperationForEntity(entityType, entityId) ?: return false
-        if (existing.operationType != SyncOperationType.CREATE) return false
-        val updatedPayload = updater(existing.payload) ?: return false
-        localDataService.enqueueSyncOperation(existing.copy(payload = updatedPayload))
-        return true
-    }
-
-    private suspend fun enqueueOperation(
-        entityType: String,
-        entityId: Long,
-        entityUuid: String,
-        operationType: SyncOperationType,
-        payload: ByteArray,
-        priority: SyncPriority
-    ) {
-        localDataService.removeSyncOperationsForEntity(entityType, entityId)
-        val operation = OfflineSyncQueueEntity(
-            operationId = "$entityType-$entityId-${UUID.randomUUID()}",
-            entityType = entityType,
-            entityId = entityId,
-            entityUuid = entityUuid,
-            operationType = operationType,
-            payload = payload,
-            priority = priority
-        )
-        localDataService.enqueueSyncOperation(operation)
-    }
-
-    private suspend fun enqueueProjectUpdate(
-        project: OfflineProjectEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        if (project.serverId == null) {
-            val statusId = ProjectStatus.fromApiValue(project.status)?.backendId
-            val updated = updateCreateOperationPayload("project", project.projectId) { payload ->
-                val existing = runCatching {
-                    gson.fromJson(String(payload, Charsets.UTF_8), PendingProjectCreationPayload::class.java)
-                }.getOrNull() ?: return@updateCreateOperationPayload null
-                val resolvedStatus = statusId ?: existing.projectStatusId
-                val refreshed = existing.copy(projectStatusId = resolvedStatus)
-                gson.toJson(refreshed).toByteArray(Charsets.UTF_8)
-            }
-            if (!updated) {
-                Log.w("API", "⚠️ [enqueueProjectUpdate] No pending create for project ${project.projectId}; skipping update")
-            }
-            return
-        }
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "project",
-            entityId = project.projectId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        enqueueOperation(
-            entityType = "project",
-            entityId = project.projectId,
-            entityUuid = project.uuid,
-            operationType = SyncOperationType.UPDATE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.HIGH
-        )
-    }
-
-    private suspend fun enqueueProjectDeletion(
-        project: OfflineProjectEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "project",
-            entityId = project.projectId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        enqueueOperation(
-            entityType = "project",
-            entityId = project.projectId,
-            entityUuid = project.uuid,
-            operationType = SyncOperationType.DELETE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.HIGH
-        )
-    }
-
-    private suspend fun enqueuePropertyUpdate(
-        property: OfflinePropertyEntity,
-        projectId: Long,
-        request: PropertyMutationRequest,
-        propertyTypeValue: String?,
-        lockUpdatedAt: String? = null
-    ) {
-        if (property.serverId == null) {
-            val updated = updateCreateOperationPayload("property", property.propertyId) { payload ->
-                val existing = runCatching {
-                    gson.fromJson(String(payload, Charsets.UTF_8), PendingPropertyCreationPayload::class.java)
-                }.getOrNull() ?: return@updateCreateOperationPayload null
-                val refreshed = existing.copy(
-                    propertyTypeId = request.propertyTypeId,
-                    propertyTypeValue = propertyTypeValue
-                )
-                gson.toJson(refreshed).toByteArray(Charsets.UTF_8)
-            }
-            if (!updated) {
-                Log.w("API", "⚠️ [enqueuePropertyUpdate] No pending create for property ${property.propertyId}; skipping update")
-            }
-            return
-        }
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "property",
-            entityId = property.propertyId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingPropertyUpdatePayload(
-            projectId = projectId,
-            propertyId = property.propertyId,
-            request = request,
-            propertyTypeValue = propertyTypeValue,
-            lockUpdatedAt = resolvedLockUpdatedAt
-        )
-        enqueueOperation(
-            entityType = "property",
-            entityId = property.propertyId,
-            entityUuid = property.uuid,
-            operationType = SyncOperationType.UPDATE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueueRoomDeletion(
-        room: OfflineRoomEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "room",
-            entityId = room.roomId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        enqueueOperation(
-            entityType = "room",
-            entityId = room.roomId,
-            entityUuid = room.uuid,
-            operationType = SyncOperationType.DELETE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueueNoteUpsert(
-        note: OfflineNoteEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val entityId = resolveEntityId(note.noteId, note.uuid)
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "note",
-            entityId = entityId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        val opType = if (note.serverId == null) SyncOperationType.CREATE else SyncOperationType.UPDATE
-        enqueueOperation(
-            entityType = "note",
-            entityId = entityId,
-            entityUuid = note.uuid,
-            operationType = opType,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueueNoteDeletion(
-        note: OfflineNoteEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val entityId = resolveEntityId(note.noteId, note.uuid)
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "note",
-            entityId = entityId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        enqueueOperation(
-            entityType = "note",
-            entityId = entityId,
-            entityUuid = note.uuid,
-            operationType = SyncOperationType.DELETE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueueEquipmentUpsert(
-        equipment: OfflineEquipmentEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "equipment",
-            entityId = equipment.equipmentId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        val opType = if (equipment.serverId == null) SyncOperationType.CREATE else SyncOperationType.UPDATE
-        enqueueOperation(
-            entityType = "equipment",
-            entityId = equipment.equipmentId,
-            entityUuid = equipment.uuid,
-            operationType = opType,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueueEquipmentDeletion(
-        equipment: OfflineEquipmentEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "equipment",
-            entityId = equipment.equipmentId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        enqueueOperation(
-            entityType = "equipment",
-            entityId = equipment.equipmentId,
-            entityUuid = equipment.uuid,
-            operationType = SyncOperationType.DELETE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueueMoistureLogUpsert(
-        log: OfflineMoistureLogEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val entityId = resolveEntityId(log.logId, log.uuid)
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "moisture_log",
-            entityId = entityId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        val opType = if (log.serverId == null) SyncOperationType.CREATE else SyncOperationType.UPDATE
-        enqueueOperation(
-            entityType = "moisture_log",
-            entityId = entityId,
-            entityUuid = log.uuid,
-            operationType = opType,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueueMoistureLogDeletion(
-        log: OfflineMoistureLogEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val entityId = resolveEntityId(log.logId, log.uuid)
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "moisture_log",
-            entityId = entityId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        enqueueOperation(
-            entityType = "moisture_log",
-            entityId = entityId,
-            entityUuid = log.uuid,
-            operationType = SyncOperationType.DELETE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-    }
-
-    private suspend fun enqueuePhotoDeletion(
-        photo: OfflinePhotoEntity,
-        lockUpdatedAt: String? = null
-    ) {
-        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
-            entityType = "photo",
-            entityId = photo.photoId,
-            fallback = lockUpdatedAt
-        )
-        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
-        enqueueOperation(
-            entityType = "photo",
-            entityId = photo.photoId,
-            entityUuid = photo.uuid,
-            operationType = SyncOperationType.DELETE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.LOW
-        )
-    }
-
     private fun logLocalDeletion(entityType: String, entityId: Long, entityUuid: String?) {
         remoteLogger?.log(
             level = LogLevel.INFO,
@@ -3394,498 +1429,4 @@ class OfflineSyncRepository(
         return entity
     }
 
-    private suspend fun createPendingProperty(
-        project: OfflineProjectEntity,
-        propertyTypeValue: String?,
-        propertyTypeId: Int,
-        idempotencyKey: String
-    ): OfflinePropertyEntity {
-        val timestamp = now()
-        val localId = -System.currentTimeMillis()
-        val resolvedAddress = listOfNotNull(
-            project.addressLine1?.takeIf { it.isNotBlank() },
-            project.title.takeIf { it.isNotBlank() },
-            "Pending property"
-        ).first()
-        val pending = OfflinePropertyEntity(
-            propertyId = localId,
-            serverId = null,
-            uuid = UUID.randomUUID().toString(),
-            address = resolvedAddress,
-            city = null,
-            state = null,
-            zipCode = null,
-            latitude = null,
-            longitude = null,
-            syncStatus = SyncStatus.PENDING,
-            syncVersion = 0,
-            createdAt = timestamp,
-            updatedAt = timestamp,
-            lastSyncedAt = null
-        )
-        localDataService.saveProperty(pending)
-        localDataService.attachPropertyToProject(
-            projectId = project.projectId,
-            propertyId = pending.propertyId,
-            propertyType = propertyTypeValue
-        )
-        enqueuePropertyCreation(
-            property = pending,
-            projectId = project.projectId,
-            propertyTypeId = propertyTypeId,
-            propertyTypeValue = propertyTypeValue,
-            idempotencyKey = idempotencyKey
-        )
-        return pending
-    }
-
-    private suspend fun createPendingRoom(
-        projectId: Long,
-        roomName: String,
-        roomTypeId: Long,
-        roomTypeName: String?,
-        isSource: Boolean,
-        isExterior: Boolean,
-        idempotencyKey: String,
-        forcedUuid: String? = null
-    ): OfflineRoomEntity? {
-        val project = localDataService.getProject(projectId)
-            ?: throw IllegalStateException("Project not found locally")
-        val resolvedLocationPair = resolveLocationForRoom(projectId, isExterior)
-        val (level, location) = resolvedLocationPair
-            ?: run {
-                Log.w(TAG, "📴 [createPendingRoom] No valid locations for project $projectId after refresh")
-                return null
-            }
-        val timestamp = now()
-        val localId = -System.currentTimeMillis()
-        val pending = OfflineRoomEntity(
-            roomId = localId,
-            serverId = null,
-            uuid = forcedUuid ?: UUID.randomUUID().toString(),
-            projectId = project.projectId,
-            locationId = location.locationId,
-            title = roomName,
-            roomType = roomTypeName,
-            roomTypeId = roomTypeId,
-            level = level.title ?: level.type,
-            syncStatus = SyncStatus.PENDING,
-            syncVersion = 0,
-            isDirty = true,
-            isDeleted = false,
-            createdAt = timestamp,
-            updatedAt = timestamp,
-            lastSyncedAt = null
-        )
-        localDataService.saveRooms(listOf(pending))
-        enqueueRoomCreation(
-            room = pending,
-            roomTypeId = roomTypeId,
-            roomTypeName = roomTypeName,
-            isSource = isSource,
-            isExterior = isExterior,
-            levelServerId = level.serverId,
-            locationServerId = location.serverId,
-            levelLocalId = level.locationId,
-            locationLocalId = location.locationId,
-            idempotencyKey = idempotencyKey
-        )
-        return pending
-    }
-
-    private data class LocationDefaults(
-        val locationTypeId: Long,
-        val type: String,
-        val floorNumber: Int,
-        val isCommon: Boolean,
-        val isAccessible: Boolean,
-        val isCommercial: Boolean
-    )
-
-    private fun resolveLocationDefaults(propertyTypeValue: String?): LocationDefaults {
-        val normalized = propertyTypeValue
-            ?.lowercase()
-            ?.replace("-", "_")
-            ?.replace("\\s+".toRegex(), "_")
-            ?.trim('_')
-
-        return when (normalized) {
-            "exterior" -> LocationDefaults(
-                locationTypeId = 3,
-                type = "exterior",
-                floorNumber = 0,
-                isCommon = true,
-                isAccessible = true,
-                isCommercial = false
-            )
-            "commercial", "multi_unit", "multi-unit" -> LocationDefaults(
-                locationTypeId = 2,
-                type = "floor",
-                floorNumber = 1,
-                isCommon = true,
-                isAccessible = true,
-                isCommercial = normalized == "commercial"
-            )
-            else -> LocationDefaults(
-                locationTypeId = 1,
-                type = "unit",
-                floorNumber = 1,
-                isCommon = true,
-                isAccessible = true,
-                isCommercial = false
-            )
-        }
-    }
-
-    private suspend fun createPendingLocation(
-        projectId: Long,
-        locationName: String,
-        config: LocationDefaults,
-        idempotencyKey: String
-    ): OfflineLocationEntity {
-        val project = localDataService.getProject(projectId)
-            ?: throw IllegalStateException("Project not found locally")
-        val propertyLocalId = project.propertyId
-            ?: throw IllegalStateException("Project has no property")
-
-        val timestamp = now()
-        val localId = -System.currentTimeMillis()
-        val pending = OfflineLocationEntity(
-            locationId = localId,
-            serverId = null,
-            uuid = UUID.randomUUID().toString(),
-            projectId = projectId,
-            title = locationName,
-            type = config.type,
-            parentLocationId = null,
-            isAccessible = config.isAccessible,
-            syncStatus = SyncStatus.PENDING,
-            syncVersion = 0,
-            isDirty = true,
-            isDeleted = false,
-            createdAt = timestamp,
-            updatedAt = timestamp,
-            lastSyncedAt = null
-        )
-        localDataService.saveLocations(listOf(pending))
-        enqueueLocationCreation(
-            location = pending,
-            propertyLocalId = propertyLocalId,
-            config = config,
-            idempotencyKey = idempotencyKey
-        )
-        return pending
-    }
-
-    private suspend fun enqueueLocationCreation(
-        location: OfflineLocationEntity,
-        propertyLocalId: Long,
-        config: LocationDefaults,
-        idempotencyKey: String?
-    ) {
-        val payload = PendingLocationCreationPayload(
-            localLocationId = location.locationId,
-            locationUuid = location.uuid,
-            projectId = location.projectId,
-            propertyLocalId = propertyLocalId,
-            locationName = location.title,
-            locationTypeId = config.locationTypeId,
-            type = config.type,
-            floorNumber = config.floorNumber,
-            isCommon = config.isCommon,
-            isAccessible = config.isAccessible,
-            isCommercial = config.isCommercial,
-            idempotencyKey = idempotencyKey
-        )
-        val operation = OfflineSyncQueueEntity(
-            operationId = "location-${location.locationId}-${UUID.randomUUID()}",
-            entityType = "location",
-            entityId = location.locationId,
-            entityUuid = location.uuid,
-            operationType = SyncOperationType.CREATE,
-            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-            priority = SyncPriority.MEDIUM
-        )
-        localDataService.enqueueSyncOperation(operation)
-    }
-
-    private suspend fun handlePendingLocationCreation(
-        operation: OfflineSyncQueueEntity
-    ): OperationOutcome {
-        val payload = runCatching {
-            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingLocationCreationPayload::class.java)
-        }.getOrNull() ?: return OperationOutcome.DROP
-
-        val property = localDataService.getProperty(payload.propertyLocalId)
-            ?: return OperationOutcome.SKIP
-        val propertyServerId = property.serverId
-            ?: return OperationOutcome.SKIP
-
-        val currentLocations = localDataService.getLocations(payload.projectId)
-        val pendingLocation = currentLocations.firstOrNull {
-            it.uuid == payload.locationUuid || it.locationId == payload.localLocationId
-        }
-        if (pendingLocation?.serverId != null) {
-            return OperationOutcome.SUCCESS
-        }
-
-        fun matchesServerLocation(
-            title: String?,
-            type: String?,
-            payloadName: String,
-            payloadType: String
-        ): Boolean {
-            val nameMatches = title?.equals(payloadName, ignoreCase = true) ?: false
-            val typeMatches = type?.equals(payloadType, ignoreCase = true) ?: true
-            return nameMatches && typeMatches
-        }
-
-        val existingServerLocation = currentLocations.firstOrNull {
-            it.serverId != null &&
-                matchesServerLocation(it.title, it.type, payload.locationName, payload.type)
-        }
-        if (pendingLocation != null && existingServerLocation != null) {
-            val timestamp = now()
-            val merged = pendingLocation.copy(
-                serverId = existingServerLocation.serverId,
-                title = existingServerLocation.title,
-                type = existingServerLocation.type,
-                parentLocationId = existingServerLocation.parentLocationId,
-                isAccessible = existingServerLocation.isAccessible,
-                syncStatus = SyncStatus.SYNCED,
-                syncVersion = maxOf(pendingLocation.syncVersion, 1),
-                isDirty = false,
-                updatedAt = timestamp,
-                lastSyncedAt = timestamp
-            )
-            localDataService.saveLocations(listOf(merged))
-            return OperationOutcome.SUCCESS
-        }
-
-        if (pendingLocation != null) {
-            val remoteMatch = runCatching {
-                api.getPropertyLevels(propertyServerId).data
-            }.getOrNull()?.firstOrNull { level ->
-                val resolvedTitle = listOfNotNull(
-                    level.title?.takeIf { it.isNotBlank() },
-                    level.name?.takeIf { it.isNotBlank() }
-                ).firstOrNull()
-                val resolvedType = listOfNotNull(
-                    level.type?.takeIf { it.isNotBlank() },
-                    level.locationType?.takeIf { it.isNotBlank() }
-                ).firstOrNull()
-                matchesServerLocation(resolvedTitle, resolvedType, payload.locationName, payload.type)
-            }
-
-            if (remoteMatch != null) {
-                val timestamp = now()
-                val merged = pendingLocation.copy(
-                    serverId = remoteMatch.id,
-                    title = listOfNotNull(
-                        remoteMatch.title?.takeIf { it.isNotBlank() },
-                        remoteMatch.name?.takeIf { it.isNotBlank() },
-                        pendingLocation.title
-                    ).first(),
-                    type = listOfNotNull(
-                        remoteMatch.type?.takeIf { it.isNotBlank() },
-                        remoteMatch.locationType?.takeIf { it.isNotBlank() },
-                        pendingLocation.type
-                    ).first(),
-                    parentLocationId = remoteMatch.parentLocationId,
-                    isAccessible = remoteMatch.isAccessible ?: pendingLocation.isAccessible,
-                    syncStatus = SyncStatus.SYNCED,
-                    syncVersion = maxOf(pendingLocation.syncVersion, 1),
-                    isDirty = false,
-                    updatedAt = timestamp,
-                    lastSyncedAt = timestamp
-                )
-                localDataService.saveLocations(listOf(merged))
-                return OperationOutcome.SUCCESS
-            }
-        }
-
-        val request = CreateLocationRequest(
-            name = payload.locationName,
-            floorNumber = payload.floorNumber,
-            locationTypeId = payload.locationTypeId,
-            isCommon = payload.isCommon,
-            isAccessible = payload.isAccessible,
-            isCommercial = payload.isCommercial,
-            idempotencyKey = payload.idempotencyKey
-        )
-
-        val dto = api.createLocation(propertyServerId, request)
-        val existing = localDataService.getLocations(payload.projectId)
-            .firstOrNull { it.uuid == payload.locationUuid || it.locationId == payload.localLocationId }
-        val entity = dto.toEntity(defaultProjectId = payload.projectId).copy(
-            locationId = existing?.locationId ?: dto.id,
-            uuid = existing?.uuid ?: dto.uuid ?: UUID.randomUUID().toString(),
-            syncStatus = SyncStatus.SYNCED,
-            isDirty = false,
-            lastSyncedAt = now()
-        )
-        localDataService.saveLocations(listOf(entity))
-        return OperationOutcome.SUCCESS
-    }
-
-    private suspend fun resolveLocationForRoom(
-        projectId: Long,
-        isExterior: Boolean
-    ): Pair<OfflineLocationEntity, OfflineLocationEntity>? {
-        suspend fun currentLocations(): List<OfflineLocationEntity> =
-            localDataService.getLocations(projectId)
-
-        var locations = currentLocations()
-        // If no locations, try a quick essentials sync to populate them.
-        if (locations.isEmpty()) {
-            runCatching { syncProjectEssentials(projectId) }
-                .onFailure {
-                    Log.w(TAG, "⚠️ [createRoom] Failed to refresh locations for project $projectId", it)
-                }
-            locations = currentLocations()
-        }
-
-        // If still empty, attempt to create a default location (without seeding a room).
-        if (locations.isEmpty()) {
-            val project = localDataService.getProject(projectId)
-            val defaultName = project?.title?.takeIf { it.isNotBlank() } ?: "Unit"
-            val propertyTypeValue = project?.propertyType
-            runCatching {
-                createDefaultLocationAndRoom(
-                    projectId = projectId,
-                    propertyTypeValue = propertyTypeValue,
-                    locationName = defaultName,
-                    seedDefaultRoom = false
-                )
-            }.onFailure {
-                Log.w(TAG, "⚠️ [createRoom] Failed to create default location for project $projectId", it)
-            }
-            locations = currentLocations()
-        }
-
-        val validated = locations.filter { it.serverId == null || validateLocationOnServer(it) }
-        if (validated.isEmpty()) return null
-
-        val preferredTitlesRaw = if (isExterior) {
-            listOf("Ground Level", "North", "South", "East", "West", "Rooftop")
-        } else {
-            listOf("Main Level", "Upper Level", "Loft", "Attic", "Basement")
-        }
-        val preferredTitles = preferredTitlesRaw.map { it.lowercase() }
-
-        fun pickPreferred(locations: List<OfflineLocationEntity>): OfflineLocationEntity? =
-            locations.firstOrNull { it.title.lowercase() in preferredTitles }
-
-        var location = pickPreferred(validated)
-
-        // If no preferred level exists, try to create one, then refresh and try again.
-        if (location == null) {
-            val project = localDataService.getProject(projectId)
-            val defaultName = preferredTitlesRaw.firstOrNull()
-                ?: project?.title
-                ?: "Unit"
-            val propertyTypeValue = project?.propertyType
-            runCatching {
-                createDefaultLocationAndRoom(
-                    projectId = projectId,
-                    propertyTypeValue = propertyTypeValue,
-                    locationName = defaultName,
-                    seedDefaultRoom = false
-                )
-            }.onFailure {
-                Log.w(TAG, "⚠️ [createRoom] Failed to seed default level '$defaultName' for project $projectId", it)
-            }
-            val refreshed = localDataService.getLocations(projectId)
-            val refreshedValidated = refreshed.filter { it.serverId == null || validateLocationOnServer(it) }
-            location = pickPreferred(refreshedValidated) ?: refreshedValidated.firstOrNull()
-        }
-
-        location = location ?: validated.first()
-
-        // Determine level: use parent if present, otherwise the location itself
-        val level = validated.firstOrNull { it.serverId != null && it.serverId == location.parentLocationId }
-            ?: validated.firstOrNull { it.locationId == location.parentLocationId }
-            ?: location
-
-        return level to location
-    }
-
-    private suspend fun resolveRoomTypeIdForPayload(
-        payload: PendingRoomCreationPayload
-    ): Long? {
-        val project = localDataService.getProject(payload.projectId)
-            ?: return payload.roomTypeId.takeIf { it > 0 }
-        val propertyId = project.propertyId
-            ?: return payload.roomTypeId.takeIf { it > 0 }
-        val property = localDataService.getProperty(propertyId)
-            ?: return payload.roomTypeId.takeIf { it > 0 }
-        val propertyServerId = property.serverId ?: return null
-
-        val roomTypes = runCatching {
-            api.getPropertyRoomTypes(propertyServerId, filterType = null).data
-        }
-            .onFailure { error ->
-                Log.w(TAG, "⚠️ [resolveRoomTypeId] Failed to fetch property room types for property=$propertyServerId", error)
-            }
-            .getOrElse { return null }
-
-        val match = pickPropertyRoomTypeMatch(payload, roomTypes)
-        if (match == null) {
-            Log.w(
-                TAG,
-                "⚠️ [resolveRoomTypeId] No property room type match for roomTypeId=${payload.roomTypeId} name=${payload.roomTypeName} (property=$propertyServerId); falling back to payload id"
-            )
-            return payload.roomTypeId.takeIf { it > 0 }
-        }
-
-        Log.d(
-            TAG,
-            "✅ [resolveRoomTypeId] Resolved room type '${payload.roomTypeName}' to property id=${match.id} for property=$propertyServerId"
-        )
-        return match.id
-    }
-
-    private fun pickPropertyRoomTypeMatch(
-        payload: PendingRoomCreationPayload,
-        roomTypes: List<RoomTypeDto>
-    ): RoomTypeDto? {
-        if (roomTypes.isEmpty()) return null
-        val idMatch = payload.roomTypeId
-            .takeIf { it > 0 }
-            ?.let { id -> roomTypes.firstOrNull { it.id == id } }
-        if (idMatch != null) return idMatch
-        val name = payload.roomTypeName?.trim().takeIf { !it.isNullOrBlank() } ?: return null
-        val nameMatches = roomTypes.filter { it.name?.equals(name, ignoreCase = true) == true }
-        if (nameMatches.isEmpty()) return null
-        if (nameMatches.size == 1) return nameMatches.first()
-        val exteriorMatches = nameMatches.filter { isExteriorRoomType(it.type) == payload.isExterior }
-        return exteriorMatches.firstOrNull() ?: nameMatches.first()
-    }
-
-    private fun isExteriorRoomType(value: String?): Boolean {
-        val normalized = value?.trim()?.lowercase() ?: return false
-        return normalized.contains("external") || normalized.contains("exterior")
-    }
-
-    private suspend fun validateLocationOnServer(location: OfflineLocationEntity): Boolean {
-        val serverId = location.serverId ?: return false
-        return runCatching {
-            api.getRoomsForLocation(
-                locationId = serverId,
-                page = 1,
-                updatedSince = null
-            )
-        }.map {
-            true
-        }.getOrElse { error ->
-            if (error is HttpException && error.code() == 404) {
-                Log.w(TAG, "⚠️ [createRoom] Server reports missing location $serverId; marking deleted locally")
-                runCatching { localDataService.markLocationsDeleted(listOf(serverId)) }
-                    .onFailure { Log.w(TAG, "⚠️ [createRoom] Failed to mark location $serverId as deleted", it) }
-            } else {
-                Log.w(TAG, "⚠️ [createRoom] Failed to validate location $serverId", error)
-            }
-            false
-        }
-    }
 }
