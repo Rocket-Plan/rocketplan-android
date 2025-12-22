@@ -81,7 +81,7 @@ class SyncQueueProcessor(
     ) -> OfflinePropertyEntity,
     private val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-) {
+) : SyncQueueEnqueuer {
     private val gson = Gson()
 
     private enum class OperationOutcome {
@@ -197,12 +197,12 @@ class SyncQueueProcessor(
         PendingOperationResult(createdProjects = createdProjects)
     }
 
-    internal suspend fun enqueueProjectCreation(
+    override suspend fun enqueueProjectCreation(
         project: OfflineProjectEntity,
         companyId: Long,
         statusId: Int,
         addressRequest: CreateAddressRequest,
-        idempotencyKey: String? = null
+        idempotencyKey: String?
     ) {
         val payload = PendingProjectCreationPayload(
             localProjectId = project.projectId,
@@ -224,7 +224,7 @@ class SyncQueueProcessor(
         localDataService.enqueueSyncOperation(operation)
     }
 
-    internal suspend fun enqueuePropertyCreation(
+    override suspend fun enqueuePropertyCreation(
         property: OfflinePropertyEntity,
         projectId: Long,
         propertyTypeId: Int,
@@ -251,7 +251,7 @@ class SyncQueueProcessor(
         localDataService.enqueueSyncOperation(operation)
     }
 
-    internal suspend fun enqueueLocationCreation(
+    override suspend fun enqueueLocationCreation(
         location: OfflineLocationEntity,
         propertyLocalId: Long,
         locationName: String,
@@ -289,7 +289,7 @@ class SyncQueueProcessor(
         localDataService.enqueueSyncOperation(operation)
     }
 
-    internal suspend fun enqueueRoomCreation(
+    override suspend fun enqueueRoomCreation(
         room: OfflineRoomEntity,
         roomTypeId: Long,
         roomTypeName: String?,
@@ -328,9 +328,9 @@ class SyncQueueProcessor(
         localDataService.enqueueSyncOperation(operation)
     }
 
-    internal suspend fun enqueueProjectUpdate(
+    override suspend fun enqueueProjectUpdate(
         project: OfflineProjectEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         if (project.serverId == null) {
             val statusId = ProjectStatus.fromApiValue(project.status)?.backendId
@@ -363,9 +363,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueProjectDeletion(
+    override suspend fun enqueueProjectDeletion(
         project: OfflineProjectEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
             entityType = "project",
@@ -383,12 +383,12 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueuePropertyUpdate(
+    override suspend fun enqueuePropertyUpdate(
         property: OfflinePropertyEntity,
         projectId: Long,
         request: PropertyMutationRequest,
         propertyTypeValue: String?,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         if (property.serverId == null) {
             val updated = updateCreateOperationPayload("property", property.propertyId) { payload ->
@@ -428,9 +428,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueRoomDeletion(
+    override suspend fun enqueueRoomDeletion(
         room: OfflineRoomEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
             entityType = "room",
@@ -448,9 +448,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueNoteUpsert(
+    override suspend fun enqueueNoteUpsert(
         note: OfflineNoteEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val entityId = resolveEntityId(note.noteId, note.uuid)
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
@@ -470,9 +470,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueNoteDeletion(
+    override suspend fun enqueueNoteDeletion(
         note: OfflineNoteEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val entityId = resolveEntityId(note.noteId, note.uuid)
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
@@ -491,9 +491,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueEquipmentUpsert(
+    override suspend fun enqueueEquipmentUpsert(
         equipment: OfflineEquipmentEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
             entityType = "equipment",
@@ -512,9 +512,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueEquipmentDeletion(
+    override suspend fun enqueueEquipmentDeletion(
         equipment: OfflineEquipmentEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
             entityType = "equipment",
@@ -532,9 +532,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueMoistureLogUpsert(
+    override suspend fun enqueueMoistureLogUpsert(
         log: OfflineMoistureLogEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val entityId = resolveEntityId(log.logId, log.uuid)
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
@@ -554,9 +554,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueueMoistureLogDeletion(
+    override suspend fun enqueueMoistureLogDeletion(
         log: OfflineMoistureLogEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val entityId = resolveEntityId(log.logId, log.uuid)
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
@@ -575,9 +575,9 @@ class SyncQueueProcessor(
         )
     }
 
-    internal suspend fun enqueuePhotoDeletion(
+    override suspend fun enqueuePhotoDeletion(
         photo: OfflinePhotoEntity,
-        lockUpdatedAt: String? = null
+        lockUpdatedAt: String?
     ) {
         val resolvedLockUpdatedAt = resolveLockUpdatedAt(
             entityType = "photo",
@@ -792,7 +792,7 @@ class SyncQueueProcessor(
             )
         }
         val existing = localDataService.getProperty(payload.localPropertyId)
-        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing = existing)
+        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing)
         return OperationOutcome.SUCCESS
     }
 
@@ -863,7 +863,7 @@ class SyncQueueProcessor(
             )
         }
 
-        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing = property)
+        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, property)
         return OperationOutcome.SUCCESS
     }
 

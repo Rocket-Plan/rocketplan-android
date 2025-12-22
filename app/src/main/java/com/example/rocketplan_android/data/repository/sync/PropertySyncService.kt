@@ -30,7 +30,7 @@ class PropertySyncService(
     private val api: OfflineSyncApi,
     private val localDataService: LocalDataService,
     private val roomTypeRepository: RoomTypeRepository,
-    private val syncQueueProcessorProvider: () -> SyncQueueProcessor,
+    private val syncQueueEnqueuer: () -> SyncQueueEnqueuer,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val propertyIncludes = "propertyType,asbestosStatus,propertyDamageTypes,damageCause"
@@ -132,7 +132,7 @@ class PropertySyncService(
                 propertyId = updated.propertyId,
                 propertyType = propertyTypeValue
             )
-            syncQueueProcessorProvider().enqueuePropertyUpdate(
+            syncQueueEnqueuer().enqueuePropertyUpdate(
                 property = updated,
                 projectId = projectId,
                 request = request.copy(updatedAt = null, idempotencyKey = null),
@@ -303,7 +303,7 @@ class PropertySyncService(
             propertyId = pending.propertyId,
             propertyType = propertyTypeValue
         )
-        syncQueueProcessorProvider().enqueuePropertyCreation(
+        syncQueueEnqueuer().enqueuePropertyCreation(
             property = pending,
             projectId = project.projectId,
             propertyTypeId = propertyTypeId,

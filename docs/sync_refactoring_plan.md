@@ -817,3 +817,205 @@ override fun onPause() {
 3. **Test thoroughly** - run full test suite
 4. **Ship Phase 2** - update callers selectively
 5. **Measure improvement** - collect metrics
+
+---
+
+# Service Layer Architecture (Implemented)
+
+## Overview
+
+After completing the segment-based sync refactoring above, we further decomposed `OfflineSyncRepository` into focused service classes. This reduces the file size from ~2500 lines to ~1400 lines and improves testability.
+
+## Service Hierarchy
+
+```
+OfflineSyncRepository (Coordinator/Facade)
+├── PhotoSyncService       - Photo sync operations
+├── ProjectSyncService     - Project list sync, company projects
+├── PropertySyncService    - Property CRUD, room type caching
+├── RoomSyncService        - Room/location CRUD, catalog handling
+├── NoteSyncService        - Note CRUD and queueing
+├── EquipmentSyncService   - Equipment CRUD and queueing
+├── MoistureLogSyncService - Moisture log upsert and queueing
+├── WorkScopeSyncService   - Work scope sync and catalog
+└── SyncQueueProcessor     - Pending operation queue processing (implements SyncQueueEnqueuer)
+```
+
+## Service Responsibilities
+
+### PhotoSyncService
+**File:** `data/repository/sync/PhotoSyncService.kt`
+
+Handles all photo synchronization:
+- `syncAllRoomPhotos(projectId)` - Bulk room photo sync
+- `syncRoomPhotos(projectId, roomId)` - Single room photo sync
+- `syncProjectLevelPhotos(projectId, serverProjectId)` - Floor/location/unit photos
+- `refreshRoomPhotos(projectId, roomId)` - Legacy API wrapper
+- `persistPhotos(photos)` - Save photos to local DB + schedule cache prefetch
+
+### ProjectSyncService
+**File:** `data/repository/sync/ProjectSyncService.kt`
+
+Handles project list synchronization:
+- `syncCompanyProjects(companyId, assignedToMe, forceFullSync)` - Sync company project list
+- `syncUserProjects(userId)` - Sync user's assigned projects
+
+### PropertySyncService
+**File:** `data/repository/sync/PropertySyncService.kt`
+
+Handles property operations:
+- `createProjectProperty(projectId, request, propertyTypeValue)` - Create property online-first
+- `updateProjectProperty(projectId, propertyId, request, propertyTypeValue)` - Update property
+- `persistProperty(projectId, property, propertyTypeValue, existing)` - Save property entity
+- `fetchProjectProperty(projectId, projectDetail)` - Fetch property from API with fallbacks
+- Room type cache priming
+
+### RoomSyncService
+**File:** `data/repository/sync/RoomSyncService.kt`
+
+Handles room and location operations:
+- `createRoom(projectId, roomName, roomTypeId, ...)` - Create room with pending location resolution
+- `createDefaultLocationAndRoom(projectId, propertyTypeValue, locationName, seedDefaultRoom)` - Seed default structure
+- `deleteRoom(projectId, roomId)` - Soft delete with cascade
+- `fetchRoomsForLocation(locationId)` - Paginated room fetch
+- `resolveExistingRoomForSync(projectId, room)` - Match incoming room to existing local entity
+
+### NoteSyncService
+**File:** `data/repository/sync/NoteSyncService.kt`
+
+Handles note CRUD and queueing:
+- `createNote(projectId, content, roomId, categoryId, photoId)` - Create pending note and enqueue upsert
+- `updateNote(note, newContent)` - Update content and enqueue upsert
+- `deleteNote(projectId, note)` - Soft delete and enqueue delete
+
+### EquipmentSyncService
+**File:** `data/repository/sync/EquipmentSyncService.kt`
+
+Handles equipment CRUD and queueing:
+- `upsertEquipmentOffline(...)` - Create/update equipment and enqueue upsert
+- `deleteEquipmentOffline(equipmentId, uuid)` - Soft delete and enqueue delete
+
+### MoistureLogSyncService
+**File:** `data/repository/sync/MoistureLogSyncService.kt`
+
+Handles moisture log updates and queueing:
+- `upsertMoistureLogOffline(log)` - Save and enqueue upsert
+
+### WorkScopeSyncService
+**File:** `data/repository/sync/WorkScopeSyncService.kt`
+
+Handles work scope sync and catalog operations:
+- `syncWorkScopesForProject(projectId)` - Sync work scopes for all rooms
+- `syncRoomWorkScopes(projectId, roomId)` - Sync room work scopes
+- `fetchWorkScopeCatalog(companyId)` - Fetch work scope sheets
+- `addWorkScopeItems(projectId, roomId, items)` - Push selected items
+
+### SyncQueueProcessor
+**File:** `data/repository/sync/SyncQueueProcessor.kt`
+
+Processes the offline sync queue:
+- `processPendingOperations()` - Main loop processing all queued operations
+- Entity-specific handlers: `handlePendingProjectCreation`, `handlePendingRoomCreation`, etc.
+- Enqueue methods: `enqueueProjectCreation`, `enqueueRoomDeletion`, etc.
+- Conflict resolution and retry logic
+- Implements `SyncQueueEnqueuer`
+
+## Dependency Graph
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    OfflineSyncRepository                         │
+│  (coordinates services, delegates to appropriate service)        │
+└──────────────────────────────────────────────────────────────────┘
+         │           │           │           │           │
+         ▼           ▼           ▼           ▼           ▼
+   ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+   │  Photo   │ │ Project  │ │ Property │ │   Room   │ │  Note    │
+   │  Sync    │ │  Sync    │ │  Sync    │ │  Sync    │ │  Sync    │
+   │ Service  │ │ Service  │ │ Service  │ │ Service  │ │ Service  │
+   └──────────┘ └──────────┘ └──────────┘ └──────────┘ └──────────┘
+         │                         │           │           │
+         ▼                         ▼           ▼           ▼
+   ┌────────────────────┐     ┌──────────┐ ┌──────────┐ ┌──────────┐
+   │ PhotoCacheScheduler│     │Equipment │ │Moisture  │ │WorkScope │
+   └────────────────────┘     │  Sync    │ │Log Sync  │ │  Sync    │
+                              │ Service  │ │ Service  │ │ Service  │
+                              └──────────┘ └──────────┘ └──────────┘
+                                       │        │          │
+                                       └────┬───┴──────┬───┘
+                                            ▼          ▼
+                                      ┌───────────────┐
+                                      │SyncQueueEnqueuer│
+                                      └───────────────┘
+                                                ▲
+                                                │
+                                      ┌───────────────┐
+                                      │SyncQueueProcessor│
+                                      └───────────────┘
+```
+
+## SyncQueueEnqueuer Interface (Implemented)
+
+Services depend on the `SyncQueueEnqueuer` interface to queue operations:
+
+```kotlin
+private val propertySyncService by lazy {
+    PropertySyncService(
+        syncQueueEnqueuer = { syncQueueProcessor },  // SyncQueueProcessor implements the interface
+        ...
+    )
+}
+```
+
+**Benefits:**
+- Services depend on interface, not concrete `SyncQueueProcessor`
+- Easy to mock for unit tests
+- Clear contract for what operations can be queued
+
+## Shared Utilities
+
+Common utilities:
+
+```kotlin
+// Timestamp formatting (SyncEntityMappers.kt)
+fun Date?.toApiTimestamp(): String?
+
+// Payload data classes (SyncPayloads.kt)
+data class PendingProjectCreationPayload(...)
+data class PendingPropertyCreationPayload(...)
+data class PendingRoomCreationPayload(...)
+data class PendingLocationCreationPayload(...)
+data class PendingLockPayload(lockUpdatedAt: String?)
+data class PendingPropertyUpdatePayload(...)
+```
+
+## Testing Strategy
+
+With the service extraction:
+
+1. **Unit tests per service** - Mock dependencies, test business logic
+2. **Integration tests** - Test service interactions via `OfflineSyncRepository`
+3. **Mock `SyncQueueEnqueuer`** - Verify correct operations are enqueued without hitting real queue
+
+## File Sizes (Post-Refactoring)
+
+| File | Lines | Responsibility |
+|------|-------|----------------|
+| `OfflineSyncRepository.kt` | 1300 | Coordination, delegation |
+| `SyncQueueProcessor.kt` | 1824 | Queue processing (candidate for further split) |
+| `SyncQueueEnqueuer.kt` | 156 | Enqueue interface contract |
+| `PhotoSyncService.kt` | 530 | Photo sync |
+| `ProjectSyncService.kt` | 149 | Project list sync |
+| `PropertySyncService.kt` | 332 | Property CRUD |
+| `RoomSyncService.kt` | 560 | Room/location CRUD |
+| `NoteSyncService.kt` | 98 | Note CRUD |
+| `EquipmentSyncService.kt` | 108 | Equipment CRUD |
+| `MoistureLogSyncService.kt` | 28 | Moisture log upsert |
+| `WorkScopeSyncService.kt` | 99 | Work scope sync and catalog |
+| `SyncEntityMappers.kt` | 752 | Mappers and helpers |
+
+## Future Work
+
+1. **Split `SyncQueueProcessor` (if needed)** - Per-entity handlers (~300 lines each)
+2. **Add unit tests** - Test each service in isolation
+3. **Consider DI framework** - Hilt/Koin for cleaner dependency management

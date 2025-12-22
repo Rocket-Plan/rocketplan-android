@@ -21,15 +21,18 @@ import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
-import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsRequest
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.repository.mapper.*
+import com.example.rocketplan_android.data.repository.sync.EquipmentSyncService
+import com.example.rocketplan_android.data.repository.sync.MoistureLogSyncService
+import com.example.rocketplan_android.data.repository.sync.NoteSyncService
 import com.example.rocketplan_android.data.repository.sync.PhotoSyncService
 import com.example.rocketplan_android.data.repository.sync.PropertySyncService
 import com.example.rocketplan_android.data.repository.sync.ProjectSyncService
 import com.example.rocketplan_android.data.repository.sync.PendingOperationResult
 import com.example.rocketplan_android.data.repository.sync.RoomSyncService
 import com.example.rocketplan_android.data.repository.sync.SyncQueueProcessor
+import com.example.rocketplan_android.data.repository.sync.WorkScopeSyncService
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.logging.LogLevel
@@ -118,7 +121,7 @@ class OfflineSyncRepository(
             api = api,
             localDataService = localDataService,
             roomTypeRepository = roomTypeRepository,
-            syncQueueProcessorProvider = { syncQueueProcessor },
+            syncQueueEnqueuer = { syncQueueProcessor },
             ioDispatcher = ioDispatcher
         )
     }
@@ -128,7 +131,7 @@ class OfflineSyncRepository(
             api = api,
             localDataService = localDataService,
             roomTypeRepository = roomTypeRepository,
-            syncQueueProcessorProvider = { syncQueueProcessor },
+            syncQueueEnqueuer = { syncQueueProcessor },
             syncProjectEssentials = ::syncProjectEssentials,
             logLocalDeletion = ::logLocalDeletion,
             removePhotoFiles = ::removePhotoFiles,
@@ -136,7 +139,41 @@ class OfflineSyncRepository(
         )
     }
 
-    private val syncQueueProcessor by lazy {
+    private val noteSyncService by lazy {
+        NoteSyncService(
+            localDataService = localDataService,
+            syncQueueEnqueuer = { syncQueueProcessor },
+            logLocalDeletion = ::logLocalDeletion,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val equipmentSyncService by lazy {
+        EquipmentSyncService(
+            localDataService = localDataService,
+            syncQueueEnqueuer = { syncQueueProcessor },
+            logLocalDeletion = ::logLocalDeletion,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val moistureLogSyncService by lazy {
+        MoistureLogSyncService(
+            localDataService = localDataService,
+            syncQueueEnqueuer = { syncQueueProcessor },
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val workScopeSyncService by lazy {
+        WorkScopeSyncService(
+            api = api,
+            localDataService = localDataService,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val syncQueueProcessor: SyncQueueProcessor by lazy {
         SyncQueueProcessor(
             api = api,
             localDataService = localDataService,
@@ -553,71 +590,17 @@ class OfflineSyncRepository(
         roomId: Long? = null,
         categoryId: Long? = null,
         photoId: Long? = null
-    ): OfflineNoteEntity = withContext(ioDispatcher) {
-        val timestamp = now()
-        val pending = OfflineNoteEntity(
-            uuid = UUID.randomUUID().toString(),
-            projectId = projectId,
-            roomId = roomId,
-            photoId = photoId,
-            content = content,
-            categoryId = categoryId,
-            createdAt = timestamp,
-            updatedAt = timestamp,
-            lastSyncedAt = null,
-            syncStatus = SyncStatus.PENDING,
-            syncVersion = 0,
-            isDirty = true,
-            isDeleted = false
-        )
-        localDataService.saveNotes(listOf(pending))
-        val saved = localDataService.getNoteByUuid(pending.uuid) ?: pending
-        syncQueueProcessor.enqueueNoteUpsert(saved)
-        saved
-    }
+    ): OfflineNoteEntity =
+        noteSyncService.createNote(projectId, content, roomId, categoryId, photoId)
 
     suspend fun updateNote(
         note: OfflineNoteEntity,
         newContent: String
-    ): OfflineNoteEntity = withContext(ioDispatcher) {
-        val trimmed = newContent.trim()
-        if (trimmed.isEmpty() || trimmed == note.content) return@withContext note
-        val updated = note.copy(
-            content = trimmed,
-            updatedAt = now(),
-            isDirty = true,
-            syncStatus = SyncStatus.PENDING
-        )
-        val lockUpdatedAt = note.updatedAt.toApiTimestamp()
-        localDataService.saveNote(updated)
-        syncQueueProcessor.enqueueNoteUpsert(updated, lockUpdatedAt)
-        updated
-    }
+    ): OfflineNoteEntity =
+        noteSyncService.updateNote(note, newContent)
 
-    suspend fun deleteNote(projectId: Long, note: OfflineNoteEntity) = withContext(ioDispatcher) {
-        val lockUpdatedAt = note.updatedAt.toApiTimestamp()
-        val updated = note.copy(
-            isDeleted = true,
-            isDirty = true,
-            syncStatus = SyncStatus.PENDING,
-            updatedAt = now()
-        )
-        localDataService.saveNote(updated)
-
-        if (note.serverId == null) {
-            localDataService.removeSyncOperationsForEntity(entityType = "note", entityId = note.noteId)
-            logLocalDeletion("note", note.noteId, note.uuid)
-            localDataService.saveNote(
-                updated.copy(
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = now()
-                )
-            )
-        } else {
-            syncQueueProcessor.enqueueNoteDeletion(updated, lockUpdatedAt)
-        }
-    }
+    suspend fun deleteNote(projectId: Long, note: OfflineNoteEntity) =
+        noteSyncService.deleteNote(projectId, note)
 
     suspend fun deleteRoom(projectId: Long, roomId: Long): RoomDeletionResult =
         roomSyncService.deleteRoom(projectId, roomId)
@@ -766,110 +749,32 @@ class OfflineSyncRepository(
         endDate: Date? = null,
         equipmentId: Long? = null,
         uuid: String? = null
-    ): OfflineEquipmentEntity = withContext(ioDispatcher) {
-        val timestamp = now()
-        val existing = equipmentId?.let { localDataService.getEquipment(it) }
-            ?: uuid?.let { localDataService.getEquipmentByUuid(it) }
-        val lockUpdatedAt = existing?.serverId?.let { existing.updatedAt.toApiTimestamp() }
-
-        val resolvedId = existing?.equipmentId ?: equipmentId ?: -System.currentTimeMillis()
-        val resolvedUuid = existing?.uuid ?: uuid ?: UUID.randomUUID().toString()
-
-        val entity = OfflineEquipmentEntity(
-            equipmentId = resolvedId,
-            serverId = existing?.serverId,
-            uuid = resolvedUuid,
-            projectId = existing?.projectId ?: projectId,
-            roomId = roomId ?: existing?.roomId,
+    ): OfflineEquipmentEntity =
+        equipmentSyncService.upsertEquipmentOffline(
+            projectId = projectId,
+            roomId = roomId,
             type = type,
             brand = brand,
             model = model,
             serialNumber = serialNumber,
             quantity = quantity,
             status = status,
-            startDate = startDate ?: existing?.startDate,
-            endDate = endDate ?: existing?.endDate,
-            createdAt = existing?.createdAt ?: timestamp,
-            updatedAt = timestamp,
-            lastSyncedAt = existing?.lastSyncedAt,
-            syncStatus = SyncStatus.PENDING,
-            syncVersion = existing?.syncVersion ?: 0,
-            isDirty = true,
-            isDeleted = false
+            startDate = startDate,
+            endDate = endDate,
+            equipmentId = equipmentId,
+            uuid = uuid
         )
-
-        localDataService.saveEquipment(listOf(entity))
-        val saved = localDataService.getEquipmentByUuid(resolvedUuid) ?: entity
-        syncQueueProcessor.enqueueEquipmentUpsert(saved, lockUpdatedAt)
-        saved
-    }
 
     suspend fun upsertMoistureLogOffline(
         log: OfflineMoistureLogEntity
-    ): OfflineMoistureLogEntity = withContext(ioDispatcher) {
-        val existing = localDataService.getMoistureLogByUuid(log.uuid)
-        val lockUpdatedAt = existing?.serverId?.let { existing.updatedAt.toApiTimestamp() }
-        localDataService.saveMoistureLogs(listOf(log))
-        val saved = localDataService.getMoistureLogByUuid(log.uuid) ?: log
-        syncQueueProcessor.enqueueMoistureLogUpsert(saved, lockUpdatedAt)
-        saved
-    }
+    ): OfflineMoistureLogEntity =
+        moistureLogSyncService.upsertMoistureLogOffline(log)
 
     suspend fun deleteEquipmentOffline(
         equipmentId: Long? = null,
         uuid: String? = null
-    ): OfflineEquipmentEntity? = withContext(ioDispatcher) {
-        val existing = when {
-            equipmentId != null -> localDataService.getEquipment(equipmentId)
-            uuid != null -> localDataService.getEquipmentByUuid(uuid)
-            else -> null
-        } ?: return@withContext null
-
-        val lockUpdatedAt = existing.serverId?.let { existing.updatedAt.toApiTimestamp() }
-        val timestamp = now()
-        val updated = existing.copy(
-            isDeleted = true,
-            isDirty = true,
-            syncStatus = SyncStatus.PENDING,
-            updatedAt = timestamp
-        )
-        localDataService.saveEquipment(listOf(updated))
-        if (existing.serverId == null) {
-            localDataService.removeSyncOperationsForEntity(entityType = "equipment", entityId = existing.equipmentId)
-            logLocalDeletion("equipment", existing.equipmentId, existing.uuid)
-            val cleaned = updated.copy(
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = now()
-            )
-            localDataService.saveEquipment(listOf(cleaned))
-            return@withContext cleaned
-        }
-        syncQueueProcessor.enqueueEquipmentDeletion(updated, lockUpdatedAt)
-        updated
-    }
-
-    private suspend fun syncWorkScopesForProject(projectId: Long): Int {
-        val start = System.currentTimeMillis()
-        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
-        if (roomIds.isEmpty()) {
-            Log.d("API", "ℹ️ [syncWorkScopes] No server room IDs for project $projectId; skipping work scope sync")
-            return 0
-        }
-
-        var total = 0
-        roomIds.forEach { roomId ->
-            coroutineContext.ensureActive()
-            total += syncRoomWorkScopes(projectId, roomId)
-        }
-
-        val duration = System.currentTimeMillis() - start
-        Log.d(
-            "API",
-            "✅ [syncWorkScopes] Synced $total work scope items across ${roomIds.size} rooms for project $projectId in ${duration}ms"
-        )
-        return total
-    }
+    ): OfflineEquipmentEntity? =
+        equipmentSyncService.deleteEquipmentOffline(equipmentId, uuid)
 
     private suspend fun syncDamagesForProject(projectId: Long): Int {
         val start = System.currentTimeMillis()
@@ -911,37 +816,15 @@ class OfflineSyncRepository(
         return total
     }
 
-    suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> = withContext(ioDispatcher) {
-        val start = System.currentTimeMillis()
-        runCatching { api.getWorkScopeCatalog(companyId).data }
-            .onFailure { Log.e("API", "❌ [workScopeCatalog] Failed for companyId=$companyId", it) }
-            .getOrElse { emptyList() }
-            .also { sheets ->
-                val duration = System.currentTimeMillis() - start
-                Log.d("API", "📑 [workScopeCatalog] Fetched ${sheets.size} sheets for companyId=$companyId in ${duration}ms")
-            }
-    }
+    suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =
+        workScopeSyncService.fetchWorkScopeCatalog(companyId)
 
     suspend fun addWorkScopeItems(
         projectId: Long,
         roomId: Long,
         items: List<WorkScopeItemRequest>
-    ): Boolean = withContext(ioDispatcher) {
-        if (items.isEmpty()) return@withContext true
-        val body = AddWorkScopeItemsRequest(selectedItems = items)
-        val start = System.currentTimeMillis()
-        val response = runCatching { api.addRoomWorkScopeItems(roomId, body) }
-            .onFailure { Log.e("API", "❌ [addWorkScopeItems] Failed roomId=$roomId projectId=$projectId", it) }
-            .getOrNull()
-        val duration = System.currentTimeMillis() - start
-        if (response?.isSuccessful == true) {
-            Log.d("API", "✅ [addWorkScopeItems] Pushed ${items.size} items for roomId=$roomId in ${duration}ms")
-            true
-        } else {
-            Log.e("API", "❌ [addWorkScopeItems] Non-success response roomId=$roomId projectId=$projectId code=${response?.code()}")
-            false
-        }
-    }
+    ): Boolean =
+        workScopeSyncService.addWorkScopeItems(projectId, roomId, items)
 
     /**
      * Full project sync: syncs essentials + metadata + all photos.
@@ -1122,7 +1005,7 @@ class OfflineSyncRepository(
         itemCount += moistureCount
         ensureActive()
 
-        val workScopeCount = syncWorkScopesForProject(projectId)
+        val workScopeCount = workScopeSyncService.syncWorkScopesForProject(projectId)
         itemCount += workScopeCount
         ensureActive()
 
@@ -1146,23 +1029,8 @@ class OfflineSyncRepository(
         SyncResult.success(SyncSegment.PROJECT_METADATA, itemCount, duration)
     }
 
-    suspend fun syncRoomWorkScopes(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
-        val startTime = System.currentTimeMillis()
-        val response = runCatching { api.getRoomWorkScope(roomId) }
-            .onFailure { Log.e("API", "❌ [syncRoomWorkScopes] Failed for roomId=$roomId (projectId=$projectId)", it) }
-            .getOrNull() ?: return@withContext 0
-
-        val entities = response.data.mapNotNull { it.toEntity(defaultProjectId = projectId, defaultRoomId = roomId) }
-        if (entities.isNotEmpty()) {
-            localDataService.saveWorkScopes(entities)
-        }
-        val duration = System.currentTimeMillis() - startTime
-        Log.d(
-            "API",
-            "🛠️ [syncRoomWorkScopes] Saved ${entities.size} scope items for roomId=$roomId (projectId=$projectId) in ${duration}ms"
-        )
-        entities.size
-    }
+    suspend fun syncRoomWorkScopes(projectId: Long, roomId: Long): Int =
+        workScopeSyncService.syncRoomWorkScopes(projectId, roomId)
 
     suspend fun syncRoomDamages(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()

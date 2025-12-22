@@ -30,7 +30,7 @@ class RoomSyncService(
     private val api: OfflineSyncApi,
     private val localDataService: LocalDataService,
     private val roomTypeRepository: RoomTypeRepository,
-    private val syncQueueProcessorProvider: () -> SyncQueueProcessor,
+    private val syncQueueEnqueuer: () -> SyncQueueEnqueuer,
     private val syncProjectEssentials: suspend (Long) -> SyncResult,
     private val logLocalDeletion: (String, Long, String?) -> Unit,
     private val removePhotoFiles: (OfflinePhotoEntity) -> Unit,
@@ -214,7 +214,7 @@ class RoomSyncService(
             localDataService.saveRooms(listOf(cleaned))
             return@withContext RoomDeletionResult(synced = true)
         }
-        syncQueueProcessorProvider().enqueueRoomDeletion(marked, lockUpdatedAt)
+        syncQueueEnqueuer().enqueueRoomDeletion(marked, lockUpdatedAt)
         RoomDeletionResult(synced = false)
     }
 
@@ -349,7 +349,7 @@ class RoomSyncService(
             lastSyncedAt = null
         )
         localDataService.saveRooms(listOf(pending))
-        syncQueueProcessorProvider().enqueueRoomCreation(
+        syncQueueEnqueuer().enqueueRoomCreation(
             room = pending,
             roomTypeId = roomTypeId,
             roomTypeName = roomTypeName,
@@ -439,7 +439,7 @@ class RoomSyncService(
             lastSyncedAt = null
         )
         localDataService.saveLocations(listOf(pending))
-        syncQueueProcessorProvider().enqueueLocationCreation(
+        syncQueueEnqueuer().enqueueLocationCreation(
             location = pending,
             propertyLocalId = propertyLocalId,
             locationName = locationName,
