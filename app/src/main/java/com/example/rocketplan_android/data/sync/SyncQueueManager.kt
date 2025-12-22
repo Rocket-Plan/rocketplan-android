@@ -26,6 +26,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
@@ -73,6 +74,28 @@ class SyncQueueManager(
     init {
         scope.launch { processLoop() }
         scope.launch { observePendingOperations() }
+        scope.launch { scheduledRetryTicker() }
+    }
+
+    /**
+     * Periodically checks for backoff-scheduled operations that are now due.
+     * This ensures ops with future scheduledAt don't stall indefinitely waiting
+     * for another DB change to trigger observePendingOperations.
+     */
+    private suspend fun scheduledRetryTicker() {
+        while (true) {
+            delay(SCHEDULED_RETRY_CHECK_INTERVAL_MS)
+            try {
+                if (localDataService.hasDueScheduledOperations()) {
+                    Log.d(TAG, "⏰ Scheduled retry ticker: found due operations, triggering process")
+                    enqueue(SyncJob.ProcessPendingOperations)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ Scheduled retry ticker check failed", e)
+            }
+        }
     }
 
     /**
@@ -668,6 +691,8 @@ class SyncQueueManager(
         private const val FOREGROUND_PHOTO_PRIORITY = 0
         // Avoid re-queuing projects that have synced very recently when building background queues
         private const val RECENT_SYNC_THRESHOLD_MS = 5 * 60 * 1000L
+        // Interval to check for backoff-scheduled operations that are now due
+        private const val SCHEDULED_RETRY_CHECK_INTERVAL_MS = 30_000L
     }
 
     private suspend fun focusProjectSync(projectId: Long) {

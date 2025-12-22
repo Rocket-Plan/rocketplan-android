@@ -782,6 +782,15 @@ class LocalDataService private constructor(
         dao.getSyncOperationsByStatus(SyncStatus.PENDING, now)
     }
 
+    /**
+     * Check if there are any scheduled operations that are now due for retry.
+     * Used by the periodic retry ticker to wake up stalled backoff operations.
+     */
+    suspend fun hasDueScheduledOperations(): Boolean = withContext(ioDispatcher) {
+        val now = System.currentTimeMillis()
+        dao.countDueScheduledOperations(SyncStatus.PENDING, now) > 0
+    }
+
     suspend fun getSyncOperationForEntity(
         entityType: String,
         entityId: Long,

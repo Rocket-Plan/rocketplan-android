@@ -1240,12 +1240,23 @@ class SyncQueueProcessor(
             return OperationOutcome.SKIP
         }
 
+        // Resolve photoId to serverId - notes on unuploaded photos must wait
+        val photoServerId = note.photoId?.let { photoId ->
+            val photo = localDataService.getPhoto(photoId)
+            photo?.serverId ?: photoId.takeIf { it > 0 && photo == null }
+            // If photo exists locally but has no serverId, it hasn't uploaded yet - skip
+        }
+        if (note.photoId != null && photoServerId == null) {
+            Log.d(TAG, "⏳ [handlePendingNoteUpsert] Note ${note.uuid} attached to photo ${note.photoId} which hasn't uploaded yet; will retry")
+            return OperationOutcome.SKIP
+        }
+
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: note.updatedAt.toApiTimestamp()
         val request = CreateNoteRequest(
             projectId = projectServerId,
             roomId = roomServerId,
             body = note.content,
-            photoId = note.photoId,
+            photoId = photoServerId,
             categoryId = note.categoryId,
             idempotencyKey = note.uuid,
             updatedAt = lockUpdatedAt

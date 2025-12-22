@@ -820,6 +820,16 @@ interface OfflineDao {
 
     @Query(
         """
+        SELECT COUNT(*) FROM offline_sync_queue
+        WHERE status = :status
+          AND scheduledAt IS NOT NULL
+          AND scheduledAt <= :now
+        """
+    )
+    suspend fun countDueScheduledOperations(status: SyncStatus, now: Long): Int
+
+    @Query(
+        """
         SELECT * FROM offline_sync_queue
         WHERE entityType = :entityType
           AND entityId = :entityId
