@@ -57,7 +57,6 @@ import com.example.rocketplan_android.data.model.offline.PaginationMeta
 import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
-import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository.RequestType
@@ -68,6 +67,7 @@ import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsReques
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.*
+import com.example.rocketplan_android.data.repository.sync.PhotoSyncService
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.logging.LogLevel
@@ -94,11 +94,7 @@ import java.util.Date
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-// API include parameter for room photo requests - fetches related data in single call
-private const val ROOM_PHOTO_INCLUDE = "photo,albums,notes_count,creator"
-
 // Pagination limits - balance between network efficiency and memory usage
-private const val ROOM_PHOTO_PAGE_LIMIT = 30
 private const val NOTES_PAGE_LIMIT = 30
 
 // Checkpoint keys for incremental sync - stored in SyncCheckpointStore
@@ -131,10 +127,6 @@ private const val OFFLINE_PENDING_STATUS = "pending_offline"
 private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
     if (assignedOnly) "company_projects_${companyId}_assigned" else "company_projects_$companyId"
 private fun userProjectsKey(userId: Long) = "user_projects_$userId"
-private fun roomPhotosKey(roomId: Long) = "room_photos_$roomId"
-private fun floorPhotosKey(projectId: Long) = "project_floor_photos_$projectId"
-private fun locationPhotosKey(projectId: Long) = "project_location_photos_$projectId"
-private fun unitPhotosKey(projectId: Long) = "project_unit_photos_$projectId"
 private fun projectNotesKey(projectId: Long) = "project_notes_$projectId"
 private fun projectDamagesKey(projectId: Long) = "project_damages_$projectId"
 private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectId"
@@ -159,8 +151,19 @@ class OfflineSyncRepository(
 
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
 
+    // Lazily initialized services for delegation
+    private val photoSyncService by lazy {
+        PhotoSyncService(
+            api = api,
+            localDataService = localDataService,
+            syncCheckpointStore = syncCheckpointStore,
+            photoCacheScheduler = photoCacheScheduler,
+            remoteLogger = remoteLogger,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
     private val gson = Gson()
-    private val roomPhotoListType = object : TypeToken<List<RoomPhotoDto>>() {}.type
 
     data class PendingOperationResult(
         val createdProjects: List<PendingProjectSyncResult> = emptyList()
@@ -419,7 +422,7 @@ class OfflineSyncRepository(
         ensureActive()
 
         detail.photos?.let {
-            if (persistPhotos(it)) itemCount += it.size
+            if (photoSyncService.persistPhotos(it)) itemCount += it.size
         }
         ensureActive()
 
@@ -429,7 +432,12 @@ class OfflineSyncRepository(
         val property = fetchProjectProperty(serverProjectId, detail) ?: run {
             val duration = System.currentTimeMillis() - startTime
             // If user hasn't selected a property type yet, this is expected - skip property work
-            if (existingProject?.propertyType == null) {
+            // Check both local state and API response to avoid skipping when property should exist
+            val hasPropertyType = existingProject?.propertyType != null ||
+                detail.propertyType != null ||
+                detail.propertyId != null ||
+                !detail.properties.isNullOrEmpty()
+            if (!hasPropertyType) {
                 Log.d(
                     "API",
                     "ℹ️ [syncProjectEssentials] No property yet for project $projectId (property type not selected); skipping property sync"
@@ -1789,45 +1797,16 @@ class OfflineSyncRepository(
         )
     }
 
+    // ============================================================================
+    // Photo Sync Operations - Delegated to PhotoSyncService
+    // ============================================================================
+
     /**
      * Syncs photos for all rooms in a project.
      * Fetches room list from database and syncs photos for each.
      */
-    suspend fun syncAllRoomPhotos(projectId: Long): SyncResult = withContext(ioDispatcher) {
-        val startTime = System.currentTimeMillis()
-        Log.d("API", "🔄 [syncAllRoomPhotos] Starting for project $projectId")
-
-        // Get current room list from database (must already be synced by syncProjectEssentials)
-        val rooms = localDataService.observeRooms(projectId).first()
-        if (rooms.isEmpty()) {
-            Log.d("API", "⚠️ [syncAllRoomPhotos] No rooms found for project $projectId")
-            return@withContext SyncResult.success(SyncSegment.ALL_ROOM_PHOTOS, 0, 0)
-        }
-
-        var totalPhotos = 0
-        var failedRooms = 0
-        val roomIds = rooms.mapNotNull { it.serverId }
-
-        Log.d("API", "📸 [syncAllRoomPhotos] Fetching photos for ${roomIds.size} rooms")
-        for (roomId in roomIds) {
-            val result = syncRoomPhotos(projectId, roomId)
-            if (result.success) {
-                totalPhotos += result.itemsSynced
-            } else {
-                failedRooms++
-                Log.w("API", "⚠️ [syncAllRoomPhotos] Failed room $roomId", result.error)
-            }
-            ensureActive()
-        }
-
-        if (totalPhotos > 0) {
-            photoCacheScheduler.schedulePrefetch()
-        }
-
-        val duration = System.currentTimeMillis() - startTime
-        Log.d("API", "✅ [syncAllRoomPhotos] Synced $totalPhotos photos from ${roomIds.size - failedRooms}/${roomIds.size} rooms in ${duration}ms")
-        SyncResult.success(SyncSegment.ALL_ROOM_PHOTOS, totalPhotos, duration)
-    }
+    suspend fun syncAllRoomPhotos(projectId: Long): SyncResult =
+        photoSyncService.syncAllRoomPhotos(projectId)
 
     /**
      * Syncs photos for a single room. Returns SyncResult for composability.
@@ -1836,169 +1815,27 @@ class OfflineSyncRepository(
         projectId: Long,
         roomId: Long,
         ignoreCheckpoint: Boolean = false
-    ): SyncResult = withContext(ioDispatcher) {
-        val startTime = System.currentTimeMillis()
-        val checkpointKey = roomPhotosKey(roomId)
-        val checkpointValue = syncCheckpointStore.getCheckpoint(checkpointKey)
-            ?.let { DateUtils.formatApiDate(it) }
-            ?: "none"
-        val updatedSince = if (ignoreCheckpoint) null else syncCheckpointStore.updatedSinceParam(checkpointKey)
-        if (ignoreCheckpoint) {
-            Log.d(
-                "API",
-                "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) - " +
-                    "full sync (checkpoint ignored, checkpoint=$checkpointValue)"
-            )
-        } else if (updatedSince != null) {
-            Log.d(
-                "API",
-                "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) since " +
-                    "$updatedSince (checkpoint=$checkpointValue)"
-            )
-        } else {
-            Log.d(
-                "API",
-                "🔄 [syncRoomPhotos] Requesting photos for room $roomId (project $projectId) - " +
-                    "full sync (checkpoint=$checkpointValue)"
-            )
-        }
-
-        val photos = runCatching {
-            fetchRoomPhotoPages(
-                roomId = roomId,
-                projectId = projectId,
-                updatedSince = updatedSince
-            )
-        }.onFailure { error ->
-            if (error is retrofit2.HttpException && error.code() == 404) {
-                Log.d("API", "INFO [syncRoomPhotos] Room $roomId has no photos (404)")
-            } else {
-                Log.e("API", "❌ [syncRoomPhotos] Failed to fetch photos for room $roomId", error)
-                val duration = System.currentTimeMillis() - startTime
-                return@withContext SyncResult.failure(SyncSegment.ROOM_PHOTOS, error, duration)
-            }
-        }.getOrElse { emptyList() }
-
-        if (photos.isEmpty()) {
-            Log.d("API", "ℹ️ [syncRoomPhotos] No photos returned for room $roomId")
-            val duration = System.currentTimeMillis() - startTime
-            return@withContext SyncResult.success(SyncSegment.ROOM_PHOTOS, 0, duration)
-        }
-
-        if (persistPhotos(photos, defaultRoomId = roomId, defaultProjectId = projectId)) {
-            Log.d("API", "💾 [syncRoomPhotos] Saved ${photos.size} photos for room $roomId")
-            photoCacheScheduler.schedulePrefetch()
-        }
-        photos.latestTimestamp { it.serverBackedTimestamp() }
-            ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
-
-        val duration = System.currentTimeMillis() - startTime
-        SyncResult.success(SyncSegment.ROOM_PHOTOS, photos.size, duration)
-    }
+    ): SyncResult = photoSyncService.syncRoomPhotos(projectId, roomId, ignoreCheckpoint)
 
     /**
      * Legacy API: syncs photos for a single room without returning SyncResult.
      * Kept for backward compatibility. Prefer syncRoomPhotos() for new code.
      */
-    suspend fun refreshRoomPhotos(projectId: Long, roomId: Long) = withContext(ioDispatcher) {
-        syncRoomPhotos(projectId, roomId)
-    }
+    suspend fun refreshRoomPhotos(projectId: Long, roomId: Long) =
+        photoSyncService.refreshRoomPhotos(projectId, roomId)
 
     /**
      * Syncs project-level photos (floor, location, unit).
      * This is typically done in the background as it's not needed for room navigation.
      */
-    suspend fun syncProjectLevelPhotos(projectId: Long): SyncResult = withContext(ioDispatcher) {
+    suspend fun syncProjectLevelPhotos(projectId: Long): SyncResult {
         val serverProjectId = resolveServerProjectId(projectId)
-            ?: return@withContext SyncResult.failure(
+            ?: return SyncResult.failure(
                 SyncSegment.PROJECT_LEVEL_PHOTOS,
                 IllegalStateException("Project $projectId has not been synced to server"),
                 0
             )
-        val startTime = System.currentTimeMillis()
-        Log.d("API", "🔄 [syncProjectLevelPhotos] Starting for project $projectId (server=$serverProjectId)")
-
-        var totalPhotos = 0
-        var failedCount = 0
-
-        val floorKey = floorPhotosKey(projectId)
-        val floorSince = syncCheckpointStore.updatedSinceParam(floorKey)
-        // Floor photos
-        runCatching {
-            fetchAllPages { page ->
-                api.getProjectFloorPhotos(serverProjectId, page, updatedSince = floorSince)
-            }
-                .map { it.toPhotoDto(projectId) }
-        }.onSuccess { photos ->
-            if (persistPhotos(photos)) {
-                totalPhotos += photos.size
-                Log.d("API", "📸 [syncProjectLevelPhotos] Saved ${photos.size} floor photos")
-            }
-            photos.latestTimestamp { it.updatedAt }
-                ?.let { syncCheckpointStore.updateCheckpoint(floorKey, it) }
-        }.onFailure { error ->
-            failedCount++
-            Log.e("API", "❌ [syncProjectLevelPhotos] Failed to fetch floor photos", error)
-        }
-        ensureActive()
-
-        // Location photos (THE SLOW ONE that was blocking room loading)
-        val locationKey = locationPhotosKey(projectId)
-        val locationSince = syncCheckpointStore.updatedSinceParam(locationKey)
-        runCatching {
-            fetchAllPages { page ->
-                api.getProjectLocationPhotos(serverProjectId, page, updatedSince = locationSince)
-            }
-                .map { it.toPhotoDto(projectId) }
-        }.onSuccess { photos ->
-            if (persistPhotos(photos)) {
-                totalPhotos += photos.size
-                Log.d("API", "📸 [syncProjectLevelPhotos] Saved ${photos.size} location photos")
-            }
-            photos.latestTimestamp { it.updatedAt }
-                ?.let { syncCheckpointStore.updateCheckpoint(locationKey, it) }
-        }.onFailure { error ->
-            failedCount++
-            Log.e("API", "❌ [syncProjectLevelPhotos] Failed to fetch location photos", error)
-        }
-        ensureActive()
-
-        // Unit photos
-        val unitKey = unitPhotosKey(projectId)
-        val unitSince = syncCheckpointStore.updatedSinceParam(unitKey)
-        runCatching {
-            fetchAllPages { page ->
-                api.getProjectUnitPhotos(serverProjectId, page, updatedSince = unitSince)
-            }
-                .map { it.toPhotoDto(projectId) }
-        }.onSuccess { photos ->
-            if (persistPhotos(photos)) {
-                totalPhotos += photos.size
-                Log.d("API", "📸 [syncProjectLevelPhotos] Saved ${photos.size} unit photos")
-            }
-            photos.latestTimestamp { it.updatedAt }
-                ?.let { syncCheckpointStore.updateCheckpoint(unitKey, it) }
-        }.onFailure { error ->
-            failedCount++
-            Log.e("API", "❌ [syncProjectLevelPhotos] Failed to fetch unit photos", error)
-        }
-
-        if (totalPhotos > 0) {
-            photoCacheScheduler.schedulePrefetch()
-        }
-
-        val duration = System.currentTimeMillis() - startTime
-        if (failedCount == 3) {
-            // All three photo types failed
-            Log.e("API", "❌ [syncProjectLevelPhotos] All photo types failed")
-            return@withContext SyncResult.failure(
-                SyncSegment.PROJECT_LEVEL_PHOTOS,
-                Exception("All project-level photo fetches failed"),
-                duration
-            )
-        }
-        Log.d("API", "✅ [syncProjectLevelPhotos] Synced $totalPhotos photos in ${duration}ms (${failedCount}/3 types failed)")
-        SyncResult.success(SyncSegment.PROJECT_LEVEL_PHOTOS, totalPhotos, duration)
+        return photoSyncService.syncProjectLevelPhotos(projectId, serverProjectId)
     }
 
     private suspend fun <T> fetchAllPages(
@@ -2018,228 +1855,6 @@ class OfflineSyncRepository(
             page = current + 1
         }
         return results
-    }
-
-    private suspend fun fetchRoomPhotoPages(
-        roomId: Long,
-        projectId: Long,
-        updatedSince: String?
-    ): List<PhotoDto> {
-        val collected = mutableListOf<PhotoDto>()
-        var page = 1
-
-        while (true) {
-            val json = api.getRoomPhotos(
-                roomId = roomId,
-                page = page,
-                limit = ROOM_PHOTO_PAGE_LIMIT,
-                include = ROOM_PHOTO_INCLUDE,
-                updatedSince = updatedSince
-            )
-
-            val parsed = parseRoomPhotoResponse(json, projectId, roomId)
-            collected += parsed.photos
-
-            if (!parsed.hasMore || parsed.nextPage == null || parsed.photos.isEmpty()) {
-                break
-            }
-            if (parsed.nextPage == page) {
-                break
-            }
-            page = parsed.nextPage
-        }
-
-        return collected
-    }
-
-    private fun parseRoomPhotoResponse(
-        json: JsonObject,
-        projectId: Long,
-        roomId: Long
-    ): RoomPhotoPageResult {
-        val photos = mutableListOf<PhotoDto>()
-
-        fun collect(element: JsonElement?) {
-            if (element == null || element.isJsonNull) return
-            when {
-                element is JsonArray -> {
-                    val list: List<RoomPhotoDto> = gson.fromJson(element, roomPhotoListType)
-                    photos += list.mapNotNull { it.toPhotoDto(defaultProjectId = projectId, defaultRoomId = roomId) }
-                }
-                element.isJsonObject -> {
-                    val obj = element.asJsonObject
-                    collect(obj.get("data"))
-                    collect(obj.get("photos"))
-                }
-            }
-        }
-
-        collect(json.get("data"))
-        collect(json.get("photos"))
-
-        val dataObject = json.get("data")?.takeIf { it.isJsonObject }?.asJsonObject
-        val metaElement = when {
-            json.get("meta")?.isJsonObject == true -> json.getAsJsonObject("meta")
-            dataObject?.get("meta")?.isJsonObject == true -> dataObject.getAsJsonObject("meta")
-            else -> null
-        }
-
-        val meta = metaElement?.let { gson.fromJson(it, PaginationMeta::class.java) }
-        val currentFromMeta = meta?.currentPage
-        val lastFromMeta = meta?.lastPage
-        val currentFromData = dataObject?.get("current_page")?.takeIf { it.isJsonPrimitive }?.asInt
-        val lastFromData = dataObject?.get("last_page")?.takeIf { it.isJsonPrimitive }?.asInt
-
-        val current = currentFromMeta ?: currentFromData ?: -1
-        val last = lastFromMeta ?: lastFromData ?: current
-        val hasMore = current > 0 && last > current
-        val nextPage = if (hasMore) current + 1 else null
-
-        return RoomPhotoPageResult(
-            photos = photos,
-            hasMore = hasMore,
-            nextPage = nextPage
-        )
-    }
-
-    private suspend fun persistPhotos(
-        photos: List<PhotoDto>,
-        defaultRoomId: Long? = null,
-        defaultProjectId: Long? = null
-    ): Boolean {
-        if (photos.isEmpty()) {
-            return false
-        }
-
-        val entities = mutableListOf<OfflinePhotoEntity>()
-        var mismatchCount = 0
-        val roomsNeedingSnapshotRefresh = mutableMapOf<Long, Int>()
-        for (photo in photos) {
-            val existing = localDataService.getPhotoByServerId(photo.id)
-            val preservedRoom = existing?.roomId
-
-            // Always use provided defaults to maintain sync context integrity
-            val resolvedRoomId = defaultRoomId ?: photo.roomId ?: preservedRoom
-            val resolvedProjectId = defaultProjectId ?: photo.projectId
-
-            // Log mismatches for debugging data integrity issues
-            if (defaultProjectId != null && photo.projectId != defaultProjectId) {
-                mismatchCount++
-                Log.w("API", "⚠️ [persistPhotos] Photo ${photo.id} has projectId=${photo.projectId} but syncing for project $defaultProjectId - using $defaultProjectId")
-            }
-            if (defaultRoomId != null && photo.roomId != null && photo.roomId != defaultRoomId) {
-                Log.w("API", "⚠️ [persistPhotos] Photo ${photo.id} has roomId=${photo.roomId} but syncing for room $defaultRoomId - using $defaultRoomId")
-            }
-
-            val resolvedFileName = photo.fileName ?: "photo_${photo.id}.jpg"
-            val removedCount = pruneLocalPlaceholderForIncomingPhoto(
-                projectId = resolvedProjectId,
-                roomId = resolvedRoomId,
-                fileName = resolvedFileName
-            )
-            if (removedCount > 0 && resolvedRoomId != null) {
-                roomsNeedingSnapshotRefresh.merge(resolvedRoomId, removedCount, Int::plus)
-            }
-
-            entities += photo.toEntity(
-                defaultRoomId = resolvedRoomId,
-                defaultProjectId = resolvedProjectId
-            )
-        }
-
-        if (mismatchCount > 0) {
-            Log.w("API", "⚠️ [persistPhotos] Fixed $mismatchCount photos with mismatched projectId")
-        }
-
-        localDataService.savePhotos(entities)
-
-        // Extract and save albums from photos
-        val albums = buildList<OfflineAlbumEntity> {
-            photos.forEach { photo ->
-                photo.albums?.forEach { album ->
-                    // Always use defaultProjectId when provided (sync context) over DTO value
-                    val projectId = defaultProjectId ?: photo.projectId ?: 0L
-                    // Prioritize defaultRoomId (canonical server ID) when available
-                    val roomId = defaultRoomId ?: photo.roomId
-                    add(album.toEntity(defaultProjectId = projectId, defaultRoomId = roomId))
-                }
-            }
-        }.distinctBy { it.albumId }
-
-        if (albums.isNotEmpty()) {
-            localDataService.saveAlbums(albums)
-            Log.d("API", "📂 [persistPhotos] Saved ${albums.size} albums from photos (defaultRoomId=$defaultRoomId)")
-            albums.forEach { album ->
-                Log.d("API", "  Album '${album.name}' (id=${album.albumId}): roomId=${album.roomId}, projectId=${album.projectId}")
-            }
-        }
-
-        val albumPhotoRelationships = buildList<OfflineAlbumPhotoEntity> {
-            photos.forEach { photo ->
-                photo.albums?.forEach { album ->
-                    add(
-                        OfflineAlbumPhotoEntity(
-                            albumId = album.id,
-                            photoServerId = photo.id
-                        )
-                    )
-                }
-            }
-        }
-        if (albumPhotoRelationships.isNotEmpty()) {
-            localDataService.saveAlbumPhotos(albumPhotoRelationships)
-            Log.d("API", "📸 [persistPhotos] Saved ${albumPhotoRelationships.size} album-photo relationships")
-        }
-
-        roomsNeedingSnapshotRefresh.forEach { (roomId, _) ->
-            runCatching { localDataService.refreshRoomPhotoSnapshot(roomId) }
-                .onFailure {
-                    Log.w("API", "⚠️ [persistPhotos] Failed to refresh snapshot after placeholder cleanup for room $roomId", it)
-                    remoteLogger?.log(
-                        level = LogLevel.WARN,
-                        tag = "OfflineSyncRepository",
-                        message = "Failed to refresh snapshot after placeholder cleanup",
-                        metadata = mapOf(
-                            "room_id" to roomId.toString(),
-                            "error" to (it.message ?: "unknown")
-                        )
-                    )
-                }
-        }
-
-        if (roomsNeedingSnapshotRefresh.isNotEmpty()) {
-            val totalRemoved = roomsNeedingSnapshotRefresh.values.sum()
-            remoteLogger?.log(
-                level = LogLevel.INFO,
-                tag = "OfflineSyncRepository",
-                message = "Removed local pending placeholders before applying server photos",
-                metadata = mapOf(
-                    "total_removed" to totalRemoved.toString(),
-                    "rooms" to roomsNeedingSnapshotRefresh.entries.joinToString { "${it.key}:${it.value}" }
-                )
-            )
-        }
-
-        return true
-    }
-
-    private suspend fun pruneLocalPlaceholderForIncomingPhoto(
-        projectId: Long?,
-        roomId: Long?,
-        fileName: String
-    ): Int {
-        if (projectId == null || roomId == null) return 0
-
-        val removed = localDataService.deleteLocalPendingRoomPhoto(projectId, roomId, fileName)
-        if (removed <= 0) return 0
-
-        Log.d(
-            "API",
-            "🧹 [persistPhotos] Removed $removed local pending photo(s) named '$fileName' " +
-                "for roomId=$roomId projectId=$projectId before applying server update"
-        )
-
-        return removed
     }
 
     private suspend fun applyDeletedRecords(response: DeletedRecordsResponse) {
@@ -2533,11 +2148,6 @@ class OfflineSyncRepository(
         return updated
     }
 
-    private data class RoomPhotoPageResult(
-        val photos: List<PhotoDto>,
-        val hasMore: Boolean,
-        val nextPage: Int?
-    )
 
     private suspend fun persistProperty(
         projectId: Long,
