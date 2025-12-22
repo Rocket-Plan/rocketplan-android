@@ -26,6 +26,7 @@ import androidx.viewpager2.widget.ViewPager2
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -135,6 +136,10 @@ class ProjectsFragment : Fragment() {
             findNavController().navigate(R.id.action_nav_projects_to_createProjectFragment)
         }
 
+        assemblyUploadBubble.setOnClickListener {
+            findNavController().navigate(R.id.imageProcessorAssembliesFragment)
+        }
+
         userInitials.setOnClickListener {
             showProfileMenu(it)
         }
@@ -186,22 +191,27 @@ class ProjectsFragment : Fragment() {
                         assemblyUploadIconProgress.setProgressCompat(spinnerProgress, true)
                     }
 
-                    val statusText = if (state.isPaused) {
-                        getString(R.string.projects_uploading_paused)
-                    } else {
-                        getString(R.string.projects_uploading_progress, state.progressPercent)
+                    val isWaitingForRoom = state.status == AssemblyStatus.WAITING_FOR_ROOM
+                    val statusText = when {
+                        isWaitingForRoom -> getString(R.string.projects_uploading_waiting_for_room)
+                        state.isPaused -> getString(R.string.projects_uploading_paused)
+                        else -> getString(R.string.projects_uploading_progress, state.progressPercent)
                     }
                     assemblyUploadStatus.text = statusText
 
-                    val chipColor = if (state.isPaused) {
-                        ContextCompat.getColor(requireContext(), R.color.error_fill)
-                    } else {
-                        ContextCompat.getColor(requireContext(), R.color.light_purple)
-                    }
-                    val textColor = if (state.isPaused) {
-                        ContextCompat.getColor(requireContext(), R.color.dark_red)
-                    } else {
-                        ContextCompat.getColor(requireContext(), R.color.main_purple)
+                    val (chipColor, textColor) = when {
+                        isWaitingForRoom -> {
+                            ContextCompat.getColor(requireContext(), R.color.team_member_tag) to
+                                ContextCompat.getColor(requireContext(), R.color.team_member_tag_dark)
+                        }
+                        state.isPaused -> {
+                            ContextCompat.getColor(requireContext(), R.color.error_fill) to
+                                ContextCompat.getColor(requireContext(), R.color.dark_red)
+                        }
+                        else -> {
+                            ContextCompat.getColor(requireContext(), R.color.light_purple) to
+                                ContextCompat.getColor(requireContext(), R.color.main_purple)
+                        }
                     }
                     ViewCompat.setBackgroundTintList(
                         assemblyUploadStatus,

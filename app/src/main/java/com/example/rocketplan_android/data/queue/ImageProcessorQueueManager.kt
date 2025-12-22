@@ -18,9 +18,11 @@ import com.example.rocketplan_android.data.model.ImageProcessorAssemblyRequest
 import com.example.rocketplan_android.data.model.ImageProcessorStatusSnapshot
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.storage.ImageProcessorUploadStore
+import com.example.rocketplan_android.data.storage.StoredUploadData
 import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -54,7 +56,8 @@ class ImageProcessorQueueManager(
     private val api: ImageProcessorApi,
     private val configRepository: ImageProcessingConfigurationRepository,
     private val secureStorage: SecureStorage,
-    private val remoteLogger: RemoteLogger?
+    private val remoteLogger: RemoteLogger?,
+    private val realtimeManager: ImageProcessorRealtimeManager? = null
 ) {
     companion object {
         private const val TAG = "ImgProcessorQueueMgr"
@@ -144,9 +147,7 @@ class ImageProcessorQueueManager(
                 continue
             }
 
-            val roomServerId = assembly.roomId?.let { roomId ->
-                offlineDao.getRoom(roomId)?.serverId?.takeIf { it > 0 }
-            }
+            val roomServerId = resolveServerRoomId(assembly.roomId)
             if (assembly.roomId != null && roomServerId == null) {
                 Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} waiting for room sync (roomId=${assembly.roomId})")
                 updateAssemblyStatus(
@@ -155,6 +156,10 @@ class ImageProcessorQueueManager(
                     "Room is not synced yet"
                 )
                 continue
+            }
+
+            if (roomServerId != null && assembly.roomId != roomServerId) {
+                updateAssemblyRoomId(assembly.assemblyId, roomServerId)
             }
 
             val uploadData = uploadStore.read(assembly.assemblyId)
@@ -168,6 +173,16 @@ class ImageProcessorQueueManager(
                 continue
             }
 
+            val resolvedUploadData = ensureUploadConfig(assembly.assemblyId, uploadData)
+            if (resolvedUploadData == null) {
+                updateAssemblyStatus(
+                    assembly.assemblyId,
+                    AssemblyStatus.WAITING_FOR_ROOM,
+                    "Image processor config unavailable"
+                )
+                continue
+            }
+
             val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
             val request = ImageProcessorAssemblyRequest(
                 assemblyId = assembly.assemblyId,
@@ -177,12 +192,12 @@ class ImageProcessorQueueManager(
                 groupUuid = assembly.groupUuid,
                 bytesReceived = assembly.bytesReceived,
                 photoNames = photos.map { it.fileName },
-                albums = uploadData.albums,
-                irPhotos = uploadData.irPhotos ?: emptyList(),
-                order = uploadData.order,
-                notes = uploadData.notes,
-                entityType = uploadData.entityType,
-                entityId = uploadData.entityId
+                albums = resolvedUploadData.albums,
+                irPhotos = resolvedUploadData.irPhotos ?: emptyList(),
+                order = resolvedUploadData.order,
+                notes = resolvedUploadData.notes,
+                entityType = resolvedUploadData.entityType,
+                entityId = resolvedUploadData.entityId
             )
 
             updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATING, null)
@@ -210,6 +225,7 @@ class ImageProcessorQueueManager(
             val body = response.body()
             if (response.isSuccessful && body?.success == true) {
                 updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATED, null)
+                realtimeManager?.trackAssembly(assembly.assemblyId)
                 Log.d(
                     TAG,
                     "✅ Registered waiting assembly ${assembly.assemblyId} (roomId=${roomServerId ?: "none"})"
@@ -236,6 +252,46 @@ class ImageProcessorQueueManager(
         }
 
         return promoted
+    }
+
+    private suspend fun ensureUploadConfig(
+        assemblyId: String,
+        uploadData: StoredUploadData
+    ): StoredUploadData? {
+        if (uploadData.processingUrl.isNotBlank()) return uploadData
+
+        val config = configRepository.getConfiguration().getOrElse { error ->
+            Log.w(TAG, "WARN: Missing image processor config for assembly $assemblyId", error)
+            remoteLogger?.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "Missing image processor config for assembly",
+                metadata = mapOf(
+                    "assembly_id" to assemblyId,
+                    "reason" to (error.message ?: "unknown")
+                )
+            )
+            return null
+        }
+
+        val processingUrl = config.url.takeIf { it.isNotBlank() }
+            ?: run {
+                Log.w(TAG, "WARN: Image processor config has empty URL for assembly $assemblyId")
+                remoteLogger?.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Image processor config missing URL",
+                    metadata = mapOf("assembly_id" to assemblyId)
+                )
+                return null
+            }
+
+        val updated = uploadData.copy(
+            processingUrl = processingUrl,
+            apiKey = config.apiKey
+        )
+        uploadStore.write(assemblyId, updated)
+        return updated
     }
 
     /**
@@ -613,10 +669,10 @@ class ImageProcessorQueueManager(
             Log.d(TAG, "📸 Uploading assembly ${assembly.assemblyId}")
 
             // Get upload data
-        val uploadData = uploadStore.read(assembly.assemblyId)
-        if (uploadData == null) {
-            val errorMessage = "Upload data missing - cannot retry without stored credentials"
-            Log.e(TAG, "❌ No upload data for assembly ${assembly.assemblyId}")
+            val uploadData = uploadStore.read(assembly.assemblyId)
+            if (uploadData == null) {
+                val errorMessage = "Upload data missing - cannot retry without stored credentials"
+                Log.e(TAG, "❌ No upload data for assembly ${assembly.assemblyId}")
 
                 // Mark assembly as FAILED (terminal state - no retry possible without upload data)
                 updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.FAILED, errorMessage)
@@ -625,15 +681,23 @@ class ImageProcessorQueueManager(
                 return
             }
 
+            val resolvedUploadData = ensureUploadConfig(assembly.assemblyId, uploadData)
+            if (resolvedUploadData == null) {
+                val errorMessage = "Image processor config unavailable"
+                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.WAITING_FOR_CONNECTIVITY, errorMessage)
+                onAssemblyCompleted(assembly.assemblyId, success = false, errorMessage = errorMessage)
+                return
+            }
+
             // Get photos for this assembly
-        val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
+            val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
 
-        Log.d(
-            TAG,
-            "🌐 Upload target: ${uploadData.processingUrl} (apiKey=${uploadData.apiKey ?: "missing"})"
-        )
+            Log.d(
+                TAG,
+                "🌐 Upload target: ${resolvedUploadData.processingUrl} (apiKey=${resolvedUploadData.apiKey ?: "missing"})"
+            )
 
-            if (uploadData.apiKey.isNullOrBlank()) {
+            if (resolvedUploadData.apiKey.isNullOrBlank()) {
                 Log.e(TAG, "❌ Missing image processor API key; uploads will omit x-api-key header")
                 remoteLogger?.log(
                     level = LogLevel.ERROR,
@@ -641,7 +705,7 @@ class ImageProcessorQueueManager(
                     message = "Missing API key for image processor upload",
                     metadata = mapOf(
                         "assembly_id" to assembly.assemblyId,
-                        "processing_url" to uploadData.processingUrl
+                        "processing_url" to resolvedUploadData.processingUrl
                     )
                 )
             }
@@ -671,7 +735,7 @@ class ImageProcessorQueueManager(
 
             for (photo in pendingPhotos) {
                 try {
-                    uploadPhoto(assembly, photo, uploadData.processingUrl, uploadData.apiKey)
+                    uploadPhoto(assembly, photo, resolvedUploadData.processingUrl, resolvedUploadData.apiKey)
                     successCount++
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Failed to upload photo ${photo.fileName}", e)
@@ -819,9 +883,7 @@ class ImageProcessorQueueManager(
         assembly: ImageProcessorAssemblyEntity
     ): ImageProcessorStatusSnapshot? {
         return runCatching {
-            val serverRoomId = assembly.roomId?.let { roomId ->
-                offlineDao.getRoom(roomId)?.serverId?.takeIf { it > 0 }
-            }
+            val serverRoomId = resolveServerRoomId(assembly.roomId)
 
             val response = when {
                 serverRoomId != null -> api.getRoomAssemblyStatus(serverRoomId, assembly.assemblyId)
@@ -854,6 +916,22 @@ class ImageProcessorQueueManager(
             )
             null
         }
+    }
+
+    private suspend fun resolveServerRoomId(roomId: Long?): Long? {
+        if (roomId == null) return null
+        val localRoom = offlineDao.getRoom(roomId)
+        return localRoom?.serverId?.takeIf { it > 0 } ?: roomId.takeIf { it > 0 }
+    }
+
+    private suspend fun updateAssemblyRoomId(assemblyId: String, roomServerId: Long) {
+        val existing = dao.getAssembly(assemblyId) ?: return
+        if (existing.roomId == roomServerId) return
+        val updated = existing.copy(
+            roomId = roomServerId,
+            lastUpdatedAt = System.currentTimeMillis()
+        )
+        dao.updateAssembly(updated)
     }
 
     private suspend fun checkIfAssemblyComplete(assemblyId: String) {

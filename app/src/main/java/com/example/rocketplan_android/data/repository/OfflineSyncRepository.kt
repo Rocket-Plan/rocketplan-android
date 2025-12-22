@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository
 
 import android.util.Log
+import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
@@ -67,6 +68,7 @@ import com.example.rocketplan_android.data.model.offline.AddWorkScopeItemsReques
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
+import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.work.PhotoCacheScheduler
@@ -139,6 +141,8 @@ class OfflineSyncRepository(
 ) {
     private val TAG = "API"
 
+    private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
+
     private val gson = Gson()
     private val roomPhotoListType = object : TypeToken<List<RoomPhotoDto>>() {}.type
 
@@ -150,6 +154,10 @@ class OfflineSyncRepository(
         val localProjectId: Long,
         val serverProjectId: Long
     )
+
+    fun attachImageProcessorQueueManager(manager: ImageProcessorQueueManager) {
+        imageProcessorQueueManager = manager
+    }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
         val project = localDataService.getProject(projectId)
@@ -2861,6 +2869,60 @@ class OfflineSyncRepository(
                 ?: normalizeServerId(resolvedLocation?.serverId)
         }
 
+        if (levelServerId != null && locationServerId != null && levelServerId == locationServerId) {
+            val localLevel = payload.levelLocalId?.let { levelId ->
+                locations.firstOrNull { it.locationId == levelId }
+            }
+            val localLocation = payload.locationLocalId?.let { locationId ->
+                locations.firstOrNull { it.locationId == locationId }
+            }
+            val levelName = localLevel?.title?.takeIf { it.isNotBlank() }
+                ?: localLevel?.type?.takeIf { it.isNotBlank() }
+                ?: localLocation?.title?.takeIf { it.isNotBlank() }
+            val locationName = localLocation?.title?.takeIf { it.isNotBlank() }
+                ?: localLocation?.type?.takeIf { it.isNotBlank() }
+                ?: levelName
+            val locationType = localLocation?.type?.takeIf { it.isNotBlank() }
+
+            val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull()
+            val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull()
+
+            val resolvedLevelId = remoteLevels
+                ?.firstOrNull { level ->
+                    val resolvedName = listOfNotNull(
+                        level.title?.takeIf { it.isNotBlank() },
+                        level.name?.takeIf { it.isNotBlank() }
+                    ).firstOrNull()
+                    resolvedName?.equals(levelName, ignoreCase = true) == true
+                }
+                ?.id
+
+            val resolvedLocationId = remoteLocations
+                ?.firstOrNull { location ->
+                    val resolvedName = listOfNotNull(
+                        location.title?.takeIf { it.isNotBlank() },
+                        location.name?.takeIf { it.isNotBlank() }
+                    ).firstOrNull()
+                    val resolvedType = listOfNotNull(
+                        location.type?.takeIf { it.isNotBlank() },
+                        location.locationType?.takeIf { it.isNotBlank() }
+                    ).firstOrNull()
+                    val nameMatches = resolvedName?.equals(locationName, ignoreCase = true) == true
+                    val typeMatches = locationType?.let { type ->
+                        resolvedType?.equals(type, ignoreCase = true) ?: true
+                    } ?: true
+                    nameMatches && typeMatches
+                }
+                ?.id
+
+            if (resolvedLevelId != null) {
+                levelServerId = resolvedLevelId
+            }
+            if (resolvedLocationId != null) {
+                locationServerId = resolvedLocationId
+            }
+        }
+
         val payloadRoomUuid = payload.roomUuid?.takeIf { it.isNotBlank() }
 
         if (levelServerId == null || locationServerId == null) {
@@ -2894,7 +2956,30 @@ class OfflineSyncRepository(
             idempotencyKey = idempotencyKey
         )
 
-        val dto = api.createRoom(locationServerId, request)
+        if (AppConfig.isLoggingEnabled) {
+            Log.d(
+                "API",
+                "📤 [handlePendingRoomCreation] createRoom payload: " +
+                    "locationId=$locationServerId levelId=$levelServerId " +
+                    "roomTypeId=$resolvedRoomTypeId name='${payload.roomName}' " +
+                    "typeName='${payload.roomTypeName}' isSource=${payload.isSource} " +
+                    "idempotencyKey=${idempotencyKey ?: "null"} projectId=${payload.projectId}"
+            )
+        }
+
+        val dto = try {
+            api.createRoom(locationServerId, request)
+        } catch (error: HttpException) {
+            if (AppConfig.isLoggingEnabled) {
+                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                Log.w(
+                    "API",
+                    "❌ [handlePendingRoomCreation] createRoom failed: code=${error.code()} " +
+                        "body=${errorBody ?: "null"}"
+                )
+            }
+            throw error
+        }
         if (dto.id <= 0) {
             Log.w(
                 "API",
@@ -2938,6 +3023,7 @@ class OfflineSyncRepository(
                 )
                 localDataService.saveRooms(listOf(cleaned))
             }
+        imageProcessorQueueManager?.processNextQueuedAssembly()
         return OperationOutcome.SUCCESS
     }
 

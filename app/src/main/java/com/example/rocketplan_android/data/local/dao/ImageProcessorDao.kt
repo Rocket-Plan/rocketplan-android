@@ -32,9 +32,11 @@ interface ImageProcessorDao {
 
     @Query(
         """
-        SELECT * FROM image_processor_assemblies
-        WHERE roomId = :roomId
-        ORDER BY createdAt DESC
+        SELECT a.* FROM image_processor_assemblies AS a
+        LEFT JOIN offline_rooms AS r ON r.roomId = :roomId
+        WHERE a.roomId = :roomId
+           OR (r.serverId IS NOT NULL AND a.roomId = r.serverId)
+        ORDER BY a.createdAt DESC
         """
     )
     fun observeAssembliesByRoom(roomId: Long): Flow<List<ImageProcessorAssemblyEntity>>

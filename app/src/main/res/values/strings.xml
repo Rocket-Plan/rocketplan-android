@@ -520,6 +520,7 @@
     <string name="projects_uploading_title">Uploading photos</string>
     <string name="projects_uploading_progress">Uploading (%1$d%%)</string>
     <string name="projects_uploading_paused">Paused</string>
+    <string name="projects_uploading_waiting_for_room">Waiting for room sync</string>
     <string name="projects_uploading_photo_count">%1$d of %2$d photos</string>
     <string name="projects_uploading_photo_counter">%1$d/%2$d</string>
     <string name="projects_uploading_photo_counter_placeholder">0/0</string>

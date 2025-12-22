@@ -374,6 +374,7 @@ private class ImageProcessorAssembliesViewHolder(
             }
 
             AssemblyStatus.WAITING_FOR_CONNECTIVITY,
+            AssemblyStatus.WAITING_FOR_ROOM,
             AssemblyStatus.QUEUED,
             AssemblyStatus.PENDING -> {
                 ContextCompat.getColor(context, R.color.team_member_tag) to

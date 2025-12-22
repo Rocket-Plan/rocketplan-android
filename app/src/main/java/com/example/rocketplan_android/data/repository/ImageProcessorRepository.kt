@@ -103,17 +103,35 @@ class ImageProcessorRepository(
             null
         }
         val waitingForRoomSync = roomId != null && roomServerId == null
+        val resolvedRoomId = roomServerId ?: roomId
 
-        val config = configurationRepository.getConfiguration()
-            .getOrElse { error ->
-                remoteLogger?.log(
-                    level = LogLevel.ERROR,
-                    tag = TAG,
-                    message = "Failed to load image processing configuration",
-                    metadata = mapOf("reason" to (error.message ?: "unknown"))
+        val config = if (waitingForRoomSync) {
+            configurationRepository.getCachedConfiguration()
+        } else {
+            configurationRepository.getConfiguration()
+                .getOrElse { error ->
+                    remoteLogger?.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "Failed to load image processing configuration",
+                        metadata = mapOf("reason" to (error.message ?: "unknown"))
+                    )
+                    return@withContext Result.failure(error)
+                }
+        }
+        val processingUrl = config?.url?.takeIf { it.isNotBlank() } ?: ""
+        val apiKey = config?.apiKey
+        if (processingUrl.isBlank() && waitingForRoomSync) {
+            remoteLogger?.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "Image processor config unavailable; deferring assembly until room sync",
+                metadata = mapOf(
+                    "project_id_local" to projectId.toString(),
+                    "room_id_local" to (roomId?.toString() ?: "null")
                 )
-                return@withContext Result.failure(error)
-            }
+            )
+        }
 
         val assemblyId = UUID.randomUUID().toString().replace("-", "")
         val now = System.currentTimeMillis()
@@ -126,7 +144,7 @@ class ImageProcessorRepository(
 
         val assemblyEntity = ImageProcessorAssemblyEntity(
             assemblyId = assemblyId,
-            roomId = roomId,
+            roomId = resolvedRoomId,
             projectId = projectId,
             groupUuid = groupUuid,
             status = status,
@@ -160,11 +178,11 @@ class ImageProcessorRepository(
         uploadStore.write(
             assemblyId,
             StoredUploadData(
-                processingUrl = config.url,
-                apiKey = config.apiKey,
+                processingUrl = processingUrl,
+                apiKey = apiKey,
                 templateId = templateId,
                 projectId = projectId,
-                roomId = roomId,
+                roomId = resolvedRoomId,
                 groupUuid = groupUuid,
                 userId = userId,
                 albums = albums,

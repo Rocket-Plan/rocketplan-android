@@ -272,6 +272,14 @@ class RoomTypeRepository(
 
     private fun logOfflineCatalog(response: OfflineRoomTypeCatalogResponse) {
         if (!AppConfig.isLoggingEnabled) return
+        Log.d(
+            "RoomTypeRepository",
+            "offline-room-types summary: version=${response.version ?: "unknown"}, " +
+                "property_types=${response.propertyTypes.size}, " +
+                "levels=${response.levels.size}, " +
+                "room_types=${response.roomTypes.size}"
+        )
+        if (!AppConfig.isDevelopment) return
         val json = logGson.toJson(response)
         val maxChunkSize = 3500
         var offset = 0

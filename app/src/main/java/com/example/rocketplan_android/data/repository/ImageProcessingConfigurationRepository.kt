@@ -51,6 +51,14 @@ class ImageProcessingConfigurationRepository(
         }
     }
 
+    suspend fun getCachedConfiguration(): ImageProcessingConfiguration? {
+        return mutex.withLock {
+            _configuration.value ?: loadFromCacheLocked()?.also { cached ->
+                _configuration.value = cached
+            }
+        }
+    }
+
     private suspend fun fetchAndCacheLocked(): Result<ImageProcessingConfiguration> {
         return runCatching {
             val response = service.getProcessingConfiguration()

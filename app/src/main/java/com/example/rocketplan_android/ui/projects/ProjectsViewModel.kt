@@ -176,7 +176,8 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         return when (AssemblyStatus.fromValue(statusValue)) {
             AssemblyStatus.UPLOADING -> 0
             AssemblyStatus.RETRYING -> 1
-            AssemblyStatus.WAITING_FOR_CONNECTIVITY -> 2
+            AssemblyStatus.WAITING_FOR_CONNECTIVITY,
+            AssemblyStatus.WAITING_FOR_ROOM -> 2
             AssemblyStatus.CREATED,
             AssemblyStatus.CREATING -> 3
             AssemblyStatus.QUEUED,

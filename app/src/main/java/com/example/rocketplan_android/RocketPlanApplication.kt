@@ -207,8 +207,10 @@ class RocketPlanApplication : Application() {
             api = imageProcessorApi,
             configRepository = imageProcessingConfigurationRepository,
             secureStorage = secureStorage,
-            remoteLogger = remoteLogger
+            remoteLogger = remoteLogger,
+            realtimeManager = imageProcessorRealtimeManager
         )
+        offlineSyncRepository.attachImageProcessorQueueManager(imageProcessorQueueManager)
 
         // Schedule periodic retry worker (every 15 minutes)
         val retryConstraints = Constraints.Builder()
