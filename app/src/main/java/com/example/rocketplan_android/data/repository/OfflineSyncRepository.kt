@@ -93,11 +93,18 @@ import java.util.Date
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+// API include parameter for room photo requests - fetches related data in single call
 private const val ROOM_PHOTO_INCLUDE = "photo,albums,notes_count,creator"
+
+// Pagination limits - balance between network efficiency and memory usage
 private const val ROOM_PHOTO_PAGE_LIMIT = 30
 private const val NOTES_PAGE_LIMIT = 30
+
+// Checkpoint keys for incremental sync - stored in SyncCheckpointStore
 private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"
 private const val SERVER_TIME_CHECKPOINT_KEY = "deleted_records_server_date"
+
+// Entity types to check for server-side deletions during sync
 private val DEFAULT_DELETION_TYPES = listOf(
     "projects",
     "photos",
@@ -110,8 +117,14 @@ private val DEFAULT_DELETION_TYPES = listOf(
     "atmospheric_logs",
     "work_scope_actions"
 )
+
+// Default damage type ID (1 = "Water Damage") used when creating damage materials for moisture logs
 private const val DEFAULT_DAMAGE_TYPE_ID: Long = 1L
+
+// How far back to check for deleted records on first sync (30 days)
 private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
+
+// Status value for locally-created projects not yet synced to server
 private const val OFFLINE_PENDING_STATUS = "pending_offline"
 
 private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
@@ -2565,12 +2578,10 @@ class OfflineSyncRepository(
         val updatedSince = localDataService.getLatestRoomUpdateForLocation(locationId)
             ?.let { DateUtils.formatApiDate(it) }
 
-        if (page == 1) {
-            if (updatedSince != null) {
-                Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId since $updatedSince (incremental)")
-            } else {
-                Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId (full sync - first run)")
-            }
+        if (updatedSince != null) {
+            Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId since $updatedSince (incremental)")
+        } else {
+            Log.d("API", "🔄 [FAST] Requesting rooms for location $locationId (full sync - first run)")
         }
 
         while (true) {
@@ -2774,10 +2785,60 @@ class OfflineSyncRepository(
             idempotencyKey = payload.idempotencyKey
         )
 
-        val created = api.createProjectProperty(projectServerId, request).data
-        val refreshed = runCatching { api.getProperty(created.id).data }.getOrNull() ?: created
+        if (AppConfig.isLoggingEnabled) {
+            Log.d(
+                "API",
+                "📤 [handlePendingPropertyCreation] createProperty payload: " +
+                    "projectId=${payload.projectId} propertyTypeId=${payload.propertyTypeId} " +
+                    "propertyTypeValue=${payload.propertyTypeValue ?: "null"} " +
+                    "idempotencyKey=${payload.idempotencyKey ?: "null"} localPropertyId=${payload.localPropertyId}"
+            )
+        }
+
+        val created = try {
+            api.createProjectProperty(projectServerId, request).data
+        } catch (error: HttpException) {
+            if (AppConfig.isLoggingEnabled) {
+                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                Log.w(
+                    "API",
+                    "❌ [handlePendingPropertyCreation] createProperty failed: code=${error.code()} " +
+                        "body=${errorBody ?: "null"}"
+                )
+            }
+            throw error
+        }
+
+        if (AppConfig.isLoggingEnabled) {
+            Log.d(
+                "API",
+                "📥 [handlePendingPropertyCreation] createProperty response: id=${created.id} " +
+                    "address=${created.address} city=${created.city} state=${created.state} zip=${created.postalCode} " +
+                    "propertyTypeId=${created.propertyTypeId} propertyType=${created.propertyType}"
+            )
+        }
+
+        val refreshed = runCatching { api.getProperty(created.id).data }
+            .onFailure {
+                Log.w(
+                    "API",
+                    "⚠️ [handlePendingPropertyCreation] getProperty failed for id=${created.id}",
+                    it
+                )
+            }
+            .getOrNull()
+        val resolved = refreshed ?: created
+        if (AppConfig.isLoggingEnabled) {
+            val source = if (refreshed != null) "getProperty" else "createResponse"
+            Log.d(
+                "API",
+                "📥 [handlePendingPropertyCreation] property resolved from $source: id=${resolved.id} " +
+                    "address=${resolved.address} city=${resolved.city} state=${resolved.state} zip=${resolved.postalCode} " +
+                    "propertyTypeId=${resolved.propertyTypeId} propertyType=${resolved.propertyType}"
+            )
+        }
         val existing = localDataService.getProperty(payload.localPropertyId)
-        persistProperty(payload.projectId, refreshed, payload.propertyTypeValue, existing = existing)
+        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing = existing)
         return OperationOutcome.SUCCESS
     }
 
@@ -2795,9 +2856,60 @@ class OfflineSyncRepository(
             updatedAt = lockUpdatedAt,
             idempotencyKey = null
         )
-        val updated = api.updateProperty(serverId, request).data
-        val refreshed = runCatching { api.getProperty(updated.id).data }.getOrNull() ?: updated
-        persistProperty(payload.projectId, refreshed, payload.propertyTypeValue, existing = property)
+        if (AppConfig.isLoggingEnabled) {
+            Log.d(
+                "API",
+                "📤 [handlePendingPropertyUpdate] updateProperty payload: " +
+                    "projectId=${payload.projectId} propertyId=${payload.propertyId} serverId=${serverId} " +
+                    "propertyTypeId=${request.propertyTypeId} name=${request.name ?: "null"} " +
+                    "lockUpdatedAt=$lockUpdatedAt"
+            )
+        }
+
+        val updated = try {
+            api.updateProperty(serverId, request).data
+        } catch (error: HttpException) {
+            if (AppConfig.isLoggingEnabled) {
+                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                Log.w(
+                    "API",
+                    "❌ [handlePendingPropertyUpdate] updateProperty failed: code=${error.code()} " +
+                        "body=${errorBody ?: "null"}"
+                )
+            }
+            throw error
+        }
+
+        if (AppConfig.isLoggingEnabled) {
+            Log.d(
+                "API",
+                "📥 [handlePendingPropertyUpdate] updateProperty response: id=${updated.id} " +
+                    "address=${updated.address} city=${updated.city} state=${updated.state} zip=${updated.postalCode} " +
+                    "propertyTypeId=${updated.propertyTypeId} propertyType=${updated.propertyType}"
+            )
+        }
+
+        val refreshed = runCatching { api.getProperty(updated.id).data }
+            .onFailure {
+                Log.w(
+                    "API",
+                    "⚠️ [handlePendingPropertyUpdate] getProperty failed for id=${updated.id}",
+                    it
+                )
+            }
+            .getOrNull()
+        val resolved = refreshed ?: updated
+        if (AppConfig.isLoggingEnabled) {
+            val source = if (refreshed != null) "getProperty" else "updateResponse"
+            Log.d(
+                "API",
+                "📥 [handlePendingPropertyUpdate] property resolved from $source: id=${resolved.id} " +
+                    "address=${resolved.address} city=${resolved.city} state=${resolved.state} zip=${resolved.postalCode} " +
+                    "propertyTypeId=${resolved.propertyTypeId} propertyType=${resolved.propertyType}"
+            )
+        }
+
+        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing = property)
         return OperationOutcome.SUCCESS
     }
 
@@ -3306,7 +3418,7 @@ class OfflineSyncRepository(
     }
 
     private fun resolveEntityId(entityId: Long, uuid: String): Long =
-        if (entityId != 0L) entityId else uuid.hashCode().toLong()
+        if (entityId != 0L) entityId else UUID.fromString(uuid).mostSignificantBits
 
     private fun extractLockUpdatedAt(payload: ByteArray): String? =
         runCatching {
@@ -4174,36 +4286,60 @@ class OfflineSyncRepository(
 // region Mappers
 private fun now(): Date = Date()
 
-private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallbackCompanyId: Long? = null): OfflineProjectEntity {
+/**
+ * Shared helper for building OfflineProjectEntity from common project fields.
+ * Used by both ProjectDto.toEntity() and ProjectDetailDto.toEntity() to reduce duplication.
+ */
+private fun buildProjectEntity(
+    id: Long,
+    uuid: String?,
+    uid: String?,
+    title: String?,
+    alias: String?,
+    projectNumber: String?,
+    status: String?,
+    addressLine1: String?,
+    addressLine2: String?,
+    propertyId: Long?,
+    embeddedPropertyId: Long?,
+    propertyType: String?,
+    companyId: Long?,
+    createdAt: String?,
+    updatedAt: String?,
+    existing: OfflineProjectEntity?,
+    fallbackCompanyId: Long?,
+    includeExistingTitle: Boolean,
+    dtoName: String
+): OfflineProjectEntity {
     if (id == 0L) {
-        Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDto.toEntity() called with id=0", Exception("Stack trace"))
-        Log.e("OfflineSyncRepository", "   ProjectDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
+        Log.e("OfflineSyncRepository", "🚨 BUG FOUND! $dtoName.toEntity() called with id=0", Exception("Stack trace"))
+        Log.e("OfflineSyncRepository", "   $dtoName: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
     }
     val timestamp = now()
-    val addressLine1 = address?.address?.takeIf { it.isNotBlank() } ?: existing?.addressLine1
-    val addressLine2 = address?.address2?.takeIf { it.isNotBlank() } ?: existing?.addressLine2
-    val resolvedTitle = listOfNotNull(
-        addressLine1,
-        title?.takeIf { it.isNotBlank() },
-        existing?.title?.takeIf { it.isNotBlank() },
-        alias?.takeIf { it.isNotBlank() },
-        projectNumber?.takeIf { it.isNotBlank() },
-        uid?.takeIf { it.isNotBlank() }
-    ).firstOrNull() ?: "Project $id"
+
+    val titleCandidates = buildList {
+        add(addressLine1)
+        add(title?.takeIf { it.isNotBlank() })
+        if (includeExistingTitle) add(existing?.title?.takeIf { it.isNotBlank() })
+        add(alias?.takeIf { it.isNotBlank() })
+        add(projectNumber?.takeIf { it.isNotBlank() })
+        add(uid?.takeIf { it.isNotBlank() })
+    }
+    val resolvedTitle = titleCandidates.firstOrNull { it != null } ?: "Project $id"
     val resolvedUuid = uuid ?: uid ?: existing?.uuid ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
+
     // Preserve local pending property (negative ID) over server data
     val existingPropertyIsPending = existing?.propertyId != null && existing.propertyId < 0
     val resolvedPropertyId = if (existingPropertyIsPending) {
         existing?.propertyId
     } else {
-        propertyId
-            ?: properties?.firstOrNull()?.id
-            ?: existing?.propertyId
+        propertyId ?: embeddedPropertyId ?: existing?.propertyId
     }
-    val resolvedPropertyType = propertyType ?: existing?.propertyType
+
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }
+
     return OfflineProjectEntity(
         projectId = id,
         serverId = id,
@@ -4215,7 +4351,7 @@ private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallback
         addressLine1 = addressLine1,
         addressLine2 = addressLine2,
         status = resolvedStatus,
-        propertyType = resolvedPropertyType,
+        propertyType = propertyType,
         companyId = companyId ?: existing?.companyId ?: fallbackCompanyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
@@ -4228,63 +4364,54 @@ private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallback
     )
 }
 
+private fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallbackCompanyId: Long? = null): OfflineProjectEntity =
+    buildProjectEntity(
+        id = id,
+        uuid = uuid,
+        uid = uid,
+        title = title,
+        alias = alias,
+        projectNumber = projectNumber,
+        status = status,
+        addressLine1 = address?.address?.takeIf { it.isNotBlank() } ?: existing?.addressLine1,
+        addressLine2 = address?.address2?.takeIf { it.isNotBlank() } ?: existing?.addressLine2,
+        propertyId = propertyId,
+        embeddedPropertyId = properties?.firstOrNull()?.id,
+        propertyType = propertyType ?: existing?.propertyType,
+        companyId = companyId,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        existing = existing,
+        fallbackCompanyId = fallbackCompanyId,
+        includeExistingTitle = true,
+        dtoName = "ProjectDto"
+    )
+
 private fun com.example.rocketplan_android.data.model.offline.ProjectDetailDto.toEntity(
     existing: OfflineProjectEntity? = null,
     fallbackCompanyId: Long? = null
-): OfflineProjectEntity {
-    if (id == 0L) {
-        Log.e("OfflineSyncRepository", "🚨 BUG FOUND! ProjectDetailDto.toEntity() called with id=0", Exception("Stack trace"))
-        Log.e("OfflineSyncRepository", "   ProjectDetailDto: id=$id, uuid=$uuid, uid=$uid, title=$title, propertyId=$propertyId")
-    }
-    val timestamp = now()
-    val addressLine1 = address?.address?.takeIf { it.isNotBlank() }
-    val addressLine2 = address?.address2?.takeIf { it.isNotBlank() }
-    val resolvedTitle = listOfNotNull(
-        addressLine1,
-        title?.takeIf { it.isNotBlank() },
-        alias?.takeIf { it.isNotBlank() },
-        projectNumber?.takeIf { it.isNotBlank() },
-        uid?.takeIf { it.isNotBlank() }
-    ).firstOrNull() ?: "Project $id"
-    val resolvedUuid = uuid ?: uid ?: existing?.uuid ?: "project-$id"
-    val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
-    // Preserve local pending property (negative ID) over server data
-    val existingPropertyIsPending = existing?.propertyId != null && existing.propertyId < 0
-    val resolvedPropertyId = if (existingPropertyIsPending) {
-        existing?.propertyId
-    } else {
-        propertyId
-            ?: properties?.firstOrNull()?.id
-            ?: existing?.propertyId
-    }
-    val resolvedPropertyType = propertyType
-        ?: properties?.firstOrNull()?.propertyType
-        ?: existing?.propertyType
-    val normalizedAlias = alias?.takeIf { it.isNotBlank() }
-    val normalizedUid = uid?.takeIf { it.isNotBlank() }
-    return OfflineProjectEntity(
-        projectId = id,
-        serverId = id,
-        uuid = resolvedUuid,
-        title = resolvedTitle,
+): OfflineProjectEntity =
+    buildProjectEntity(
+        id = id,
+        uuid = uuid,
+        uid = uid,
+        title = title,
+        alias = alias,
         projectNumber = projectNumber,
-        uid = normalizedUid,
-        alias = normalizedAlias,
-        addressLine1 = addressLine1,
-        addressLine2 = addressLine2,
-        status = resolvedStatus,
-        propertyType = resolvedPropertyType,
-        companyId = companyId ?: existing?.companyId ?: fallbackCompanyId,
-        propertyId = resolvedPropertyId,
-        syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
-        isDirty = false,
-        isDeleted = false,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
-        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
-        lastSyncedAt = timestamp
+        status = status,
+        addressLine1 = address?.address?.takeIf { it.isNotBlank() },
+        addressLine2 = address?.address2?.takeIf { it.isNotBlank() },
+        propertyId = propertyId,
+        embeddedPropertyId = properties?.firstOrNull()?.id,
+        propertyType = propertyType ?: properties?.firstOrNull()?.propertyType ?: existing?.propertyType,
+        companyId = companyId,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        existing = existing,
+        fallbackCompanyId = fallbackCompanyId,
+        includeExistingTitle = false,
+        dtoName = "ProjectDetailDto"
     )
-}
 
 private fun UserDto.toEntity(): OfflineUserEntity {
     val timestamp = now()
