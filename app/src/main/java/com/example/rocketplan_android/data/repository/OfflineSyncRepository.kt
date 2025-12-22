@@ -3418,7 +3418,9 @@ class OfflineSyncRepository(
     }
 
     private fun resolveEntityId(entityId: Long, uuid: String): Long =
-        if (entityId != 0L) entityId else UUID.fromString(uuid).mostSignificantBits
+        if (entityId != 0L) entityId else runCatching {
+            UUID.fromString(uuid).mostSignificantBits
+        }.getOrElse { uuid.hashCode().toLong() }
 
     private fun extractLockUpdatedAt(payload: ByteArray): String? =
         runCatching {
