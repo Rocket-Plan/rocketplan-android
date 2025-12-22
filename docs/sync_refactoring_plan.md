@@ -2,10 +2,11 @@
 
 ## Goal
 Break `syncProjectGraph()` (253 lines) into composable functions that can be called independently based on priority.
+Status: implemented via `SyncSegment`, `SyncResult`, and segmented sync functions.
 
 ---
 
-## Current Problem
+## Current Problem (pre-refactor)
 
 **One monolithic function does everything:**
 ```kotlin
@@ -23,7 +24,7 @@ When user navigates to Room Detail, the sync is often at step 5 (location photos
 
 ---
 
-## Proposed Architecture
+## Segmented Sync Architecture (Implemented)
 
 ### Data Ownership Model
 
@@ -31,634 +32,212 @@ To avoid duplicate network calls and conflicting DB writes, each function owns s
 
 | Data Type | Owner Function | Source | Notes |
 |-----------|---------------|---------|-------|
-| Project entity | `syncProjectCore` | `/api/projects/{id}` | Single source of truth |
-| Locations (snapshot) | `syncProjectCore` | Embedded in project detail | Preview only |
-| Locations (authoritative) | `syncProjectStructure` | `/api/properties/{id}/levels` | Overwrites snapshot |
-| Rooms (snapshot) | `syncProjectCore` | Embedded in project detail | Preview only |
-| Rooms (authoritative) | `syncProjectStructure` | `/api/locations/{id}/rooms` | Overwrites snapshot |
-| Room photos | `syncRoomPhotos` | `/api/rooms/{id}/photos` | Per-room basis |
+| Project entity | `syncProjectEssentials` | `/api/projects/{id}` | Single source of truth |
+| Locations (snapshot) | `syncProjectEssentials` | Embedded in project detail | Preview only |
+| Locations (authoritative) | `syncProjectEssentials` | `/api/properties/{id}/levels` + `/api/properties/{id}/locations` | Overwrites snapshot |
+| Rooms (snapshot) | `syncProjectEssentials` | Embedded in project detail | Preview only |
+| Rooms (authoritative) | `syncProjectEssentials` | `/api/locations/{id}/rooms` | Overwrites snapshot |
+| Users | `syncProjectEssentials` | Embedded in project detail | Required for photo metadata |
+| Albums | `syncProjectEssentials` | `/api/projects/{id}/albums` | Needed for navigation |
+| Room photos | `syncRoomPhotos` | `/api/rooms/{id}/photos` | Per-room on demand |
 | Project-level photos | `syncProjectLevelPhotos` | `/api/projects/{id}/{type}-photos` | Background only |
-| Notes, users, equipment | `syncProjectMetadata` | Dedicated endpoints | Never from detail embed |
+| Notes, equipment, damages, logs, work scopes | `syncProjectMetadata` | Dedicated endpoints | No detail-embed reliance |
 
 **Contract:**
-- Core gives "fast preview" from 1 API call
-- Structure refreshes with authoritative property data
-- Metadata hits dedicated endpoints (no duplicates)
+- Essentials gives a complete navigation chain (Project -> Property -> Levels -> Rooms -> Albums)
+- Room photos are fetched on demand per room
+- Metadata uses dedicated endpoints and can be deferred
 
-### New Modular Functions
+### Segmented Functions
 
 ```kotlin
-// 1. CORE: Project metadata + immediate data
-suspend fun syncProjectCore(projectId: Long): SyncResult
+suspend fun syncProjectEssentials(projectId: Long): SyncResult
 
-// 2. STRUCTURE: Property, locations, rooms list
-suspend fun syncProjectStructure(projectId: Long): SyncResult
-
-// 3. ROOM PHOTOS: Single room's photos (high priority)
-suspend fun syncRoomPhotos(projectId: Long, roomId: Long): SyncResult
-
-// 4. ALL ROOM PHOTOS: Bulk sync (for background)
-suspend fun syncAllRoomPhotos(projectId: Long, roomIds: List<Long>): SyncResult
-
-// 5. PROJECT PHOTOS: Floor/location/unit photos (low priority)
+suspend fun syncRoomPhotos(projectId: Long, roomId: Long, ignoreCheckpoint: Boolean = false): SyncResult
+suspend fun syncAllRoomPhotos(projectId: Long): SyncResult
 suspend fun syncProjectLevelPhotos(projectId: Long): SyncResult
-
-// 6. METADATA: Equipment, damages, notes, albums
 suspend fun syncProjectMetadata(projectId: Long): SyncResult
 
-// 7. LEGACY: Keep existing behavior
-suspend fun syncProjectGraph(projectId: Long) {
-    syncProjectCore(projectId)
-    syncProjectStructure(projectId)
-    val roomIds = localDataService.getRoomIdsForProject(projectId)
-    syncAllRoomPhotos(projectId, roomIds)
-    syncProjectLevelPhotos(projectId)
-    syncProjectMetadata(projectId)
-}
+suspend fun syncProjectSegments(projectId: Long, segments: List<SyncSegment>): List<SyncResult>
+suspend fun syncProjectContent(projectId: Long): List<SyncResult>
+suspend fun syncProjectGraph(projectId: Long, skipPhotos: Boolean = false): List<SyncResult>
 ```
 
-### SyncResult Data Class
+### SyncResult Model
 
 ```kotlin
 enum class SyncSegment {
-    PROJECT_CORE,
-    PROJECT_STRUCTURE,
+    PROJECT_ESSENTIALS,
     ROOM_PHOTOS,
     ALL_ROOM_PHOTOS,
     PROJECT_LEVEL_PHOTOS,
     PROJECT_METADATA
 }
 
-data class SyncResult(
-    val segment: SyncSegment,
-    val success: Boolean,
-    val itemsSynced: Int = 0,
-    val error: Throwable? = null,
-    val durationMs: Long = 0
-) {
+enum class IncompleteReason {
+    MISSING_PROPERTY
+}
+
+sealed class SyncResult {
+    abstract val segment: SyncSegment
+    abstract val itemsSynced: Int
+    abstract val durationMs: Long
+    open val error: Throwable? = null
+
+    data class Success(
+        override val segment: SyncSegment,
+        override val itemsSynced: Int = 0,
+        override val durationMs: Long = 0
+    ) : SyncResult()
+
+    data class Failure(
+        override val segment: SyncSegment,
+        val cause: Throwable,
+        override val durationMs: Long = 0,
+        override val itemsSynced: Int = 0
+    ) : SyncResult() {
+        override val error: Throwable = cause
+    }
+
+    data class Incomplete(
+        override val segment: SyncSegment,
+        val reason: IncompleteReason,
+        override val durationMs: Long = 0,
+        override val itemsSynced: Int = 0,
+        val cause: Throwable? = null
+    ) : SyncResult() {
+        override val error: Throwable? = cause
+    }
+
     companion object {
         fun success(segment: SyncSegment, items: Int, duration: Long) =
-            SyncResult(segment, true, items, null, duration)
+            Success(segment, items, duration)
 
         fun failure(segment: SyncSegment, error: Throwable, duration: Long) =
-            SyncResult(segment, false, 0, error, duration)
+            Failure(segment, error, duration)
+
+        fun incomplete(
+            segment: SyncSegment,
+            reason: IncompleteReason,
+            duration: Long,
+            items: Int = 0,
+            error: Throwable? = null
+        ) = Incomplete(segment, reason, duration, items, error)
     }
-}
-
----
-
-## Detailed Function Breakdown
-
-### 1. `syncProjectEssentials(projectId)` - NAVIGATION CHAIN
-**What it syncs (COMPLETE NAVIGATION PATH):**
-- ✅ Project detail entity
-- ✅ Property (linked to project)
-- ✅ Levels/Locations (linked to property)
-- ✅ Rooms (linked to locations)
-- ✅ Albums (project-level + room-level)
-- ✅ Photos (embedded in detail, if any)
-- ✅ Users (needed for photo metadata)
-
-**What this enables:**
-- Complete drill-down: Project → Property → Levels → Rooms → Albums → Photos
-- All navigation works without additional API calls
-
-**What it SKIPS** (not needed for navigation):
-- ~~Notes~~ (separate feature)
-- ~~Equipment, damages, work scopes~~ (not in navigation path)
-- ~~Atmospheric/moisture logs~~ (separate feature)
-
-**Why separate:** Everything needed to navigate from project to photos, nothing more.
-
-**Design Decision:**
-This is the "quick sync" for project overview + navigation. Photos themselves sync on-demand per room.
-
-**Implementation:**
-```kotlin
-suspend fun syncProjectEssentials(projectId: Long): SyncResult = withContext(ioDispatcher) {
-    val startTime = System.currentTimeMillis()
-    Log.d("API", "🔄 [syncProjectEssentials] Starting navigation chain for project $projectId")
-
-    val detail = runCatching { api.getProjectDetail(projectId) }
-        .onFailure {
-            Log.e("API", "❌ [syncProjectCore] Failed", it)
-            val duration = System.currentTimeMillis() - startTime
-            return@withContext SyncResult.failure(SyncSegment.PROJECT_CORE, it, duration)
-        }
-        .getOrNull() ?: run {
-            val duration = System.currentTimeMillis() - startTime
-            return@withContext SyncResult.failure(
-                SyncSegment.PROJECT_CORE,
-                Exception("Project detail returned null"),
-                duration
-            )
-        }
-
-    var itemCount = 0
-
-    // Save project entity
-    localDataService.saveProjects(listOf(detail.toEntity()))
-    itemCount++
-    ensureActive()
-
-    // Save USERS (essential)
-    detail.users?.let {
-        localDataService.saveUsers(it.map { user -> user.toEntity() })
-        itemCount += it.size
-    }
-    ensureActive()
-
-    // Save embedded SNAPSHOTS (not authoritative, but fast)
-    detail.locations?.let {
-        localDataService.saveLocations(it.map { loc -> loc.toEntity(defaultProjectId = detail.id) })
-        itemCount += it.size
-    }
-    ensureActive()
-
-    detail.rooms?.let { rooms ->
-        val resolvedRooms = rooms.map { room ->
-            val existing = localDataService.getRoomByServerId(room.id)
-                ?: room.uuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
-            room.toEntity(existing, projectId = detail.id, locationId = room.locationId)
-        }
-        localDataService.saveRooms(resolvedRooms)
-        itemCount += rooms.size
-    }
-    ensureActive()
-
-    detail.photos?.let {
-        if (persistPhotos(it)) itemCount += it.size
-    }
-    ensureActive()
-
-    // === NAVIGATION CHAIN: Property → Levels → Rooms ===
-
-    // 1. Property
-    val property = fetchProjectProperty(projectId)
-    if (property != null) {
-        localDataService.saveProperty(property.toEntity())
-        itemCount++
-    }
-    ensureActive()
-
-    // 2. Levels (Locations from property)
-    val propertyLocations = property?.id?.let { propertyId ->
-        val levels = runCatching { api.getPropertyLevels(propertyId) }
-            .getOrNull()?.data ?: emptyList()
-        val nested = runCatching { api.getPropertyLocations(propertyId) }
-            .getOrNull()?.data ?: emptyList()
-        levels + nested
-    } ?: emptyList()
-
-    val locationIds = mutableSetOf<Long>()
-    if (propertyLocations.isNotEmpty()) {
-        localDataService.saveLocations(
-            propertyLocations.map { it.toEntity(defaultProjectId = projectId) }
-        )
-        locationIds += propertyLocations.map { it.id }
-        itemCount += propertyLocations.size
-    }
-    ensureActive()
-
-    // 3. Rooms for each location
-    locationIds.distinct().forEach { locationId ->
-        val rooms = fetchRoomsForLocation(locationId)
-        if (rooms.isNotEmpty()) {
-            val resolvedRooms = rooms.map { room ->
-                val existing = localDataService.getRoomByServerId(room.id)
-                    ?: room.uuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
-                room.toEntity(
-                    existing = existing,
-                    projectId = projectId,
-                    locationId = room.locationId ?: locationId
-                )
-            }
-            localDataService.saveRooms(resolvedRooms)
-            itemCount += rooms.size
-        }
-        ensureActive()
-    }
-
-    // 4. Relink room-scoped data (ensures foreign keys are correct)
-    runCatching { localDataService.relinkRoomScopedData() }
-        .onFailure { Log.e("API", "❌ [syncProjectEssentials] Relink failed", it) }
-    ensureActive()
-
-    // 5. Albums (needed for photo organization)
-    runCatching {
-        fetchAllPages { page -> api.getProjectAlbums(projectId, page) }
-    }.onSuccess { albums ->
-        val albumEntities = albums.map { it.toEntity(defaultProjectId = projectId) }
-        localDataService.saveAlbums(albumEntities)
-        itemCount += albums.size
-    }
-    ensureActive()
-
-    // NOTE: Notes, equipment, damages, logs SKIPPED (not in navigation path)
-
-    val duration = System.currentTimeMillis() - startTime
-    Log.d("API", "✅ [syncProjectEssentials] Synced $itemCount items in ${duration}ms")
-    Log.d("API", "   Navigation chain complete: Property → ${locationIds.size} Levels → Rooms → Albums")
-    SyncResult.success(SyncSegment.PROJECT_CORE, itemCount, duration)
 }
 ```
 
 ---
 
-### 2. `syncProjectStructure(projectId)`
-**Lines:** 163-233 (from current code)
+## Detailed Function Summary
+
+### 1. `syncProjectEssentials(projectId)` - navigation chain
 **What it syncs:**
-- Property entity
-- Property levels (locations)
-- Property nested locations
-- Rooms for each location
+- Project detail entity
+- Users
+- Embedded location/room snapshots + embedded photos (if present)
+- Property + levels/locations + rooms (authoritative)
+- Albums
 - Relinks room-scoped data
 
-**Why separate:** Needed for project navigation, but not urgent for viewing a specific room.
+**Skips:**
+- Notes, equipment, damages, work scopes
+- Moisture and atmospheric logs
 
-**Implementation:**
-```kotlin
-suspend fun syncProjectStructure(projectId: Long): SyncResult = withContext(ioDispatcher) {
-    Log.d("API", "🔄 [syncProjectStructure] Starting for project $projectId")
-
-    var itemCount = 0
-
-    // Property
-    val property = fetchProjectProperty(projectId)
-    if (property != null) {
-        localDataService.saveProperty(property.toEntity())
-        itemCount++
-    }
-
-    // Property locations
-    val propertyLocations = property?.id?.let { propertyId ->
-        val levels = runCatching { api.getPropertyLevels(propertyId) }
-            .getOrNull()?.data ?: emptyList()
-        val nested = runCatching { api.getPropertyLocations(propertyId) }
-            .getOrNull()?.data ?: emptyList()
-        levels + nested
-    } ?: emptyList()
-
-    val locationIds = mutableSetOf<Long>()
-    if (propertyLocations.isNotEmpty()) {
-        localDataService.saveLocations(
-            propertyLocations.map { it.toEntity(defaultProjectId = projectId) }
-        )
-        locationIds += propertyLocations.map { it.id }
-        itemCount += propertyLocations.size
-    }
-
-    // Rooms for each location
-    locationIds.distinct().forEach { locationId ->
-        val rooms = fetchRoomsForLocation(locationId)
-        if (rooms.isNotEmpty()) {
-            val resolvedRooms = rooms.map { room ->
-                val existing = localDataService.getRoomByServerId(room.id)
-                    ?: room.uuid?.let { uuid -> localDataService.getRoomByUuid(uuid) }
-                room.toEntity(
-                    existing = existing,
-                    projectId = projectId,
-                    locationId = room.locationId ?: locationId
-                )
-            }
-            localDataService.saveRooms(resolvedRooms)
-            itemCount += rooms.size
-        }
-    }
-
-    // Relink room-scoped data
-    runCatching { localDataService.relinkRoomScopedData() }
-        .onFailure { Log.e("API", "❌ [syncProjectStructure] Relink failed", it) }
-
-    Log.d("API", "✅ [syncProjectStructure] Synced $itemCount items")
-    SyncResult(success = true, itemsSynced = itemCount)
-}
-```
+**Notes:**
+- Returns `SyncResult.Incomplete(MISSING_PROPERTY)` when a project should have a property but none can be resolved.
+- Uses incremental location sync when a recent location timestamp is available.
 
 ---
 
-### 3. `syncRoomPhotos(projectId, roomId)` ⚡ HIGH PRIORITY
-**Lines:** 335-357 (existing `refreshRoomPhotos`)
-**What it syncs:**
-- Photos for ONE specific room (paginated)
-
-**Why separate:** This is what Room Detail screen needs IMMEDIATELY.
-
-**Implementation:**
-```kotlin
-// THIS ALREADY EXISTS! Just expose it prominently
-suspend fun syncRoomPhotos(projectId: Long, roomId: Long): SyncResult = withContext(ioDispatcher) {
-    Log.d("API", "🔄 [syncRoomPhotos] Starting for room $roomId")
-
-    val photos = runCatching {
-        fetchRoomPhotoPages(roomId = roomId, projectId = projectId)
-    }.onFailure {
-        Log.e("API", "❌ [syncRoomPhotos] Failed", it)
-        return@withContext SyncResult(success = false, error = it)
-    }.getOrNull() ?: return@withContext SyncResult(success = false)
-
-    val saved = if (photos.isNotEmpty()) {
-        persistPhotos(photos, defaultRoomId = roomId)
-    } else {
-        false
-    }
-
-    if (saved) {
-        photoCacheScheduler.schedulePrefetch()
-    }
-
-    Log.d("API", "✅ [syncRoomPhotos] Synced ${photos.size} photos")
-    SyncResult(success = true, itemsSynced = photos.size)
-}
-```
+### 2. `syncProjectSegments(projectId, segments)` and `syncProjectContent(projectId)`
+**What it does:**
+- Executes a list of `SyncSegment` values sequentially and returns `List<SyncResult>`.
+- Logs failures and incomplete results.
+- `ROOM_PHOTOS` requires a roomId and is treated as an error when run as a project segment.
+- `syncProjectContent` is a convenience wrapper for metadata + photos.
 
 ---
 
-### 4. `syncAllRoomPhotos(projectId, roomIds)`
-**Lines:** 235-266 (from current code)
+### 3. `syncRoomPhotos(projectId, roomId)` - high priority
 **What it syncs:**
-- Photos for ALL rooms in the list (bulk operation)
+- Photos for one room (paginated).
 
-**Why separate:** Background operation, shouldn't block anything.
-
-**Implementation:**
-```kotlin
-suspend fun syncAllRoomPhotos(projectId: Long, roomIds: List<Long>): SyncResult = withContext(ioDispatcher) {
-    Log.d("API", "🔄 [syncAllRoomPhotos] Starting for ${roomIds.size} rooms")
-
-    var totalPhotos = 0
-    var didFetchAny = false
-
-    roomIds.distinct().forEach { roomId ->
-        // Check for cancellation between rooms
-        ensureActive()
-
-        val photos = runCatching {
-            fetchRoomPhotoPages(roomId = roomId, projectId = projectId)
-        }.onFailure { error ->
-            if (error is retrofit2.HttpException && error.code() == 404) {
-                Log.d("API", "INFO [syncAllRoomPhotos] Room $roomId has no photos")
-            } else {
-                Log.e("API", "❌ [syncAllRoomPhotos] Failed for room $roomId", error)
-            }
-            return@forEach
-        }.getOrNull() ?: return@forEach
-
-        if (photos.isNotEmpty()) {
-            val saved = persistPhotos(photos, defaultRoomId = roomId)
-            if (saved) {
-                totalPhotos += photos.size
-                didFetchAny = true
-            }
-        }
-    }
-
-    if (didFetchAny) {
-        photoCacheScheduler.schedulePrefetch()
-    }
-
-    Log.d("API", "✅ [syncAllRoomPhotos] Synced $totalPhotos photos across ${roomIds.size} rooms")
-    SyncResult(success = true, itemsSynced = totalPhotos)
-}
-```
+**Notes:**
+- Uses per-room checkpoints (updatedSince); `ignoreCheckpoint=true` forces a full resync.
+- Schedules photo cache prefetch when new photos are saved.
 
 ---
 
-### 5. `syncProjectLevelPhotos(projectId)` ⚠️ LOW PRIORITY
-**Lines:** 273-295 (from current code)
+### 4. `syncAllRoomPhotos(projectId)`
 **What it syncs:**
-- Floor photos (paginated)
-- Location photos (paginated) ← **THIS IS THE CULPRIT**
-- Unit photos (paginated)
+- Photos for all rooms in the local DB (server ids).
 
-**Why separate:** These are NOT needed for room viewing. Can run in background.
+**Notes:**
+- Delegates to `syncRoomPhotos` per room and aggregates results.
+- Intended for background passes.
 
-**Implementation:**
-```kotlin
-suspend fun syncProjectLevelPhotos(projectId: Long): SyncResult = withContext(ioDispatcher) {
-    Log.d("API", "🔄 [syncProjectLevelPhotos] Starting for project $projectId")
+---
 
-    var totalPhotos = 0
-    var didFetchAny = false
+### 5. `syncProjectLevelPhotos(projectId)` - low priority
+**What it syncs:**
+- Floor, location, and unit photos (paginated).
 
-    // Floor photos
-    val floorPhotos = runCatching {
-        fetchAllPages { page -> api.getProjectFloorPhotos(projectId, page) }
-            .map { it.toPhotoDto(projectId) }
-    }.getOrDefault(emptyList())
-    if (persistPhotos(floorPhotos)) {
-        totalPhotos += floorPhotos.size
-        didFetchAny = true
-    }
-
-    // Check for cancellation
-    ensureActive()
-
-    // Location photos (THE SLOW ONE)
-    val locationPhotos = runCatching {
-        fetchAllPages { page -> api.getProjectLocationPhotos(projectId, page) }
-            .map { it.toPhotoDto(projectId) }
-    }.getOrDefault(emptyList())
-    if (persistPhotos(locationPhotos)) {
-        totalPhotos += locationPhotos.size
-        didFetchAny = true
-    }
-
-    // Check for cancellation
-    ensureActive()
-
-    // Unit photos
-    val unitPhotos = runCatching {
-        fetchAllPages { page -> api.getProjectUnitPhotos(projectId, page) }
-            .map { it.toPhotoDto(projectId) }
-    }.getOrDefault(emptyList())
-    if (persistPhotos(unitPhotos)) {
-        totalPhotos += unitPhotos.size
-        didFetchAny = true
-    }
-
-    if (didFetchAny) {
-        photoCacheScheduler.schedulePrefetch()
-    }
-
-    Log.d("API", "✅ [syncProjectLevelPhotos] Synced $totalPhotos photos")
-    SyncResult(success = true, itemsSynced = totalPhotos)
-}
-```
+**Notes:**
+- Uses separate checkpoints per photo type.
+- Requires a resolved server project id (handled by `OfflineSyncRepository`).
 
 ---
 
 ### 6. `syncProjectMetadata(projectId)`
-**Lines:** 269-326 (from current code)
 **What it syncs:**
-- Project-level atmospheric logs
+- Notes (paginated with updatedSince)
 - Equipment
-- Damage materials
-- Notes
-- Users
-- Albums
+- Damages (project-level with fallback to per-room)
+- Moisture logs (per-room)
+- Work scopes
+- Atmospheric logs (updatedSince)
 
-**Why separate:** Nice-to-have data, not critical for room viewing.
-
-**Implementation:**
-```kotlin
-suspend fun syncProjectMetadata(projectId: Long): SyncResult = withContext(ioDispatcher) {
-    Log.d("API", "🔄 [syncProjectMetadata] Starting for project $projectId")
-
-    var itemCount = 0
-
-    // Atmospheric logs
-    runCatching { api.getProjectAtmosphericLogs(projectId) }.onSuccess { logs ->
-        localDataService.saveAtmosphericLogs(logs.map { it.toEntity(defaultRoomId = null) })
-        itemCount += logs.size
-    }
-
-    // Equipment
-    runCatching { api.getProjectEquipment(projectId) }.onSuccess { equipment ->
-        localDataService.saveEquipment(equipment.map { it.toEntity() })
-        itemCount += equipment.size
-    }
-
-    // Damages
-    runCatching { api.getProjectDamageMaterials(projectId) }.onSuccess { damages ->
-        localDataService.saveDamages(damages.mapNotNull { it.toEntity(defaultProjectId = projectId) })
-        itemCount += damages.size
-    }
-
-    // Notes
-    runCatching { api.getProjectNotes(projectId) }.onSuccess { notes ->
-        localDataService.saveNotes(notes.mapNotNull { it.toEntity() })
-        itemCount += notes.size
-    }
-
-    // Users
-    runCatching { api.getProjectUsers(projectId) }.onSuccess { users ->
-        localDataService.saveUsers(users.map { it.toEntity() })
-        itemCount += users.size
-    }
-
-    // Albums
-    runCatching {
-        fetchAllPages { page -> api.getProjectAlbums(projectId, page) }
-    }.onSuccess { albums ->
-        val albumEntities = albums.map { it.toEntity(defaultProjectId = projectId) }
-        localDataService.saveAlbums(albumEntities)
-        itemCount += albums.size
-    }
-
-    Log.d("API", "✅ [syncProjectMetadata] Synced $itemCount items")
-    SyncResult(success = true, itemsSynced = itemCount)
-}
-```
+**Notes:**
+- Updates checkpoints for notes, damages, and atmospheric logs.
 
 ---
 
-### 7. `syncProjectGraph(projectId)` - LEGACY WRAPPER
-
-**Keep existing behavior for backward compatibility:**
-
-```kotlin
-suspend fun syncProjectGraph(projectId: Long): SyncResult = withContext(ioDispatcher) {
-    Log.d("API", "🔄 [syncProjectGraph] Starting FULL sync for project $projectId")
-
-    val results = mutableListOf<SyncResult>()
-
-    // 1. Core data
-    results += syncProjectCore(projectId)
-
-    // 2. Structure
-    results += syncProjectStructure(projectId)
-
-    // 3. All room photos
-    val roomIds = localDataService.getRoomIdsForProject(projectId)
-    if (roomIds.isNotEmpty()) {
-        results += syncAllRoomPhotos(projectId, roomIds)
-    }
-
-    // 4. Project-level photos
-    results += syncProjectLevelPhotos(projectId)
-
-    // 5. Metadata
-    results += syncProjectMetadata(projectId)
-
-    val totalItems = results.sumOf { it.itemsSynced }
-    val allSuccess = results.all { it.success }
-
-    Log.d("API", "✅ [syncProjectGraph] Completed - Total items: $totalItems, Success: $allSuccess")
-    SyncResult(success = allSuccess, itemsSynced = totalItems)
-}
-```
+### 7. `syncProjectGraph(projectId, skipPhotos = false)` - legacy wrapper
+**What it does:**
+- Composes essentials + optional metadata/photos via `syncProjectSegments`.
+- Returns `List<SyncResult>`.
+- When essentials fails or is incomplete, later segments are skipped.
 
 ---
 
 ## Usage Examples
 
-### Room Detail Screen (HIGH PRIORITY)
+### Room Detail Screen (current)
 ```kotlin
 // RoomDetailViewModel.kt
-fun onRoomVisible() {
-    viewModelScope.launch {
-        // Only sync THIS room's photos
-        val result = offlineSyncRepository.syncRoomPhotos(projectId, roomId)
-        if (result.success) {
-            Log.d("RoomDetail", "Synced ${result.itemsSynced} photos")
-        }
-    }
-}
+val result = offlineSyncRepository.syncRoomPhotos(
+    projectId,
+    remoteRoomId,
+    ignoreCheckpoint = ignoreCheckpoint
+)
 ```
 
-### Project List Screen (MEDIUM PRIORITY)
+### Project Detail Pull-to-Refresh (current)
 ```kotlin
-// HomeViewModel.kt
-fun refreshProject(projectId: Long) {
-    viewModelScope.launch {
-        // Quick overview - no photos yet
-        offlineSyncRepository.syncProjectCore(projectId)
-        offlineSyncRepository.syncProjectStructure(projectId)
-
-        // Photos in background (can be cancelled)
-        backgroundScope.launch {
-            delay(2000) // Let UI load first
-            offlineSyncRepository.syncProjectLevelPhotos(projectId)
-        }
-    }
-}
+// ProjectDetailViewModel.kt
+val results = offlineSyncRepository.syncProjectGraph(projectId, skipPhotos = true)
 ```
 
-### Background Sync (LOW PRIORITY)
+### Background Sync (current)
 ```kotlin
-// WorkManager or background task
-fun fullProjectSync(projectId: Long) {
-    scope.launch {
-        // Full sync, can take minutes
-        offlineSyncRepository.syncProjectGraph(projectId)
-    }
-}
-```
-
-### Smart Cancellation
-```kotlin
-// RoomDetailFragment.kt
-private var backgroundSyncJob: Job? = null
-
-override fun onResume() {
-    super.onResume()
-
-    // Cancel any background photo sync
-    backgroundSyncJob?.cancel()
-
-    // Start high-priority room sync
-    viewModel.onRoomVisible()
-}
-
-override fun onPause() {
-    super.onPause()
-
-    // Resume background sync when leaving room
-    backgroundSyncJob = lifecycleScope.launch {
-        offlineSyncRepository.syncProjectLevelPhotos(projectId)
-    }
-}
+// SyncQueueManager or WorkManager
+val results = offlineSyncRepository.syncProjectContent(projectId)
+// or selectively:
+val results = offlineSyncRepository.syncProjectSegments(
+    projectId,
+    listOf(SyncSegment.PROJECT_METADATA)
+)
 ```
 
 ---
@@ -666,20 +245,18 @@ override fun onPause() {
 ## Implementation Steps
 
 ### Phase 1: Extract Functions (2-3 hours)
-**Status:** 🔴 Not Started
+**Status:** Completed
 **No behavior changes, just reorganization**
 
-1. ⬜ Create `SyncResult` data class + `SyncSegment` enum
-2. ⬜ Extract `syncProjectCore()` (lines 83-161) - LEAN version (no metadata duplication)
-3. ⬜ Extract `syncProjectStructure()` (lines 163-233) - Add ensureActive() checks
-4. ⬜ Rename `refreshRoomPhotos()` → `syncRoomPhotos()` (minimal change, already exists)
-5. ⬜ Extract `syncAllRoomPhotos()` (lines 235-266) - Add ensureActive() between rooms
-6. ⬜ Extract `syncProjectLevelPhotos()` (lines 273-295) - Add ensureActive() between types
-7. ⬜ Extract `syncProjectMetadata()` (lines 269-326) - Add ensureActive() checks
-8. ⬜ Rewrite `syncProjectGraph()` to call new functions
-9. ⬜ Add duration tracking to all functions
+1. [x] Create `SyncResult` sealed class + `SyncSegment` enum
+2. [x] Extract `syncProjectEssentials()` for the navigation chain
+3. [x] Extract `syncRoomPhotos()`, `syncAllRoomPhotos()`, `syncProjectLevelPhotos()`
+4. [x] Extract `syncProjectMetadata()`
+5. [x] Add `syncProjectSegments()` + `syncProjectContent()`
+6. [x] Rewrite `syncProjectGraph()` to compose segments and return `List<SyncResult>`
+7. [x] Add duration tracking and segment logging
 
-**Testing:** Run existing tests, verify `syncProjectGraph()` still works identically.
+**Testing:** Not run as part of doc update.
 
 **Owner:** [ASSIGN]
 **Due Date:** [TBD]
@@ -687,16 +264,16 @@ override fun onPause() {
 ---
 
 ### Phase 2: Update Callers (1 hour)
-**Status:** 🔴 Not Started
+**Status:** Partial
 **Start using selective sync**
 
-1. ⬜ Update `RoomDetailViewModel` to use `syncRoomPhotos()` instead of full sync
-2. ⬜ Update `HomeViewModel` to use `syncProjectCore()` + `syncProjectStructure()`
-3. ⬜ Keep `ProjectDetailViewModel` using full `syncProjectGraph()` (no change)
-4. ⬜ Add cancellation in `RoomDetailFragment.onResume()` / `onPause()`
-5. ⬜ Add telemetry to track which segments are called per screen
+1. [x] `RoomDetailViewModel` uses `syncRoomPhotos()`
+2. [x] `ProjectDetailViewModel` uses `syncProjectGraph(skipPhotos = true)`
+3. [x] `SyncQueueManager` uses `syncProjectSegments()` and `syncProjectContent()`
+4. [ ] Add cancellation around background photo sync in `RoomDetailFragment`
+5. [ ] Add telemetry to track which segments are called per screen
 
-**Testing:** Manual test - verify room loads fast, background sync doesn't interfere.
+**Testing:** Manual verification pending.
 
 **Owner:** [ASSIGN]
 **Due Date:** [TBD after Phase 1]
@@ -704,15 +281,15 @@ override fun onPause() {
 ---
 
 ### Phase 3: Measure & Optimize (30 min)
-**Status:** 🔴 Not Started
+**Status:** Not started
 **Verify improvement**
 
-1. ⬜ Collect baseline metrics (time-to-first-photo, API call counts)
-2. ⬜ Deploy Phase 1 + 2 to test device
-3. ⬜ Test on device with slow network (throttled to 3G)
-4. ⬜ Verify logs show no `/location-photos` calls when entering room
-5. ⬜ Measure time-to-first-photo improvement
-6. ⬜ Monitor for any data inconsistencies (missing rooms, etc.)
+1. [ ] Collect baseline metrics (time-to-first-photo, API call counts)
+2. [ ] Deploy Phase 1 + 2 to test device
+3. [ ] Test on device with slow network (throttled to 3G)
+4. [ ] Verify logs show no `/location-photos` calls when entering room
+5. [ ] Measure time-to-first-photo improvement
+6. [ ] Monitor for any data inconsistencies (missing rooms, etc.)
 
 **Success Criteria:**
 - Room photos visible in < 1 second (from cache) or < 3 seconds (fresh sync)
@@ -728,13 +305,13 @@ override fun onPause() {
 ## Migration Strategy
 
 ### Backward Compatibility
-- ✅ Keep `syncProjectGraph()` unchanged behavior
-- ✅ All existing callers continue working
-- ✅ New callers opt-in to selective sync
+- [x] `syncProjectGraph()` behavior preserved; now returns `List<SyncResult>` and supports `skipPhotos`
+- [x] Existing callers updated to new return type
+- [x] New callers can opt into selective sync via `syncProjectSegments` and `syncProjectContent`
 
 ### Rollout
-1. **Week 1:** Implement Phase 1, test in dev
-2. **Week 2:** Implement Phase 2, test on staging
+1. **Week 1:** Phase 1 complete, test in dev
+2. **Week 2:** Phase 2 in progress, test on staging
 3. **Week 3:** Ship to production, monitor metrics
 
 ### Rollback Plan
@@ -766,7 +343,7 @@ override fun onPause() {
 
 ### Risk 1: Data Consistency
 **Problem:** Calling functions individually might leave data incomplete.
-**Mitigation:** Each function is self-contained. If core data is needed, call `syncProjectCore()` first.
+**Mitigation:** Each function is self-contained. If core data is needed, call `syncProjectEssentials()` first.
 
 ### Risk 2: Increased Complexity
 **Problem:** More functions = more maintenance.
@@ -812,11 +389,9 @@ override fun onPause() {
 
 ## Next Steps
 
-1. **Review this plan** - any concerns or questions?
-2. **Start Phase 1** - extract functions (2-3 hours of focused work)
-3. **Test thoroughly** - run full test suite
-4. **Ship Phase 2** - update callers selectively
-5. **Measure improvement** - collect metrics
+1. **Add cancellation hooks** for background photo sync in `RoomDetailFragment`
+2. **Add segment telemetry** to track usage per screen
+3. **Run Phase 3 metrics** to validate time-to-first-photo improvements
 
 ---
 
@@ -832,13 +407,14 @@ After completing the segment-based sync refactoring above, we further decomposed
 OfflineSyncRepository (Coordinator/Facade)
 ├── PhotoSyncService       - Photo sync operations
 ├── ProjectSyncService     - Project list sync, company projects
-├── ProjectMetadataSyncService - Notes, equipment, damages, logs, work scopes
+├── ProjectMetadataSyncService - Notes, equipment, damages, moisture/atmos logs, work scopes
 ├── PropertySyncService    - Property CRUD, room type caching
 ├── RoomSyncService        - Room/location CRUD, catalog handling
 ├── NoteSyncService        - Note CRUD and queueing
 ├── EquipmentSyncService   - Equipment CRUD and queueing
 ├── MoistureLogSyncService - Moisture log upsert and queueing
 ├── WorkScopeSyncService   - Work scope sync and catalog
+├── DeletedRecordsSyncService - Server-side deletions
 └── SyncQueueProcessor     - Pending operation queue processing (implements SyncQueueEnqueuer)
 ```
 
@@ -865,7 +441,7 @@ Handles project list synchronization:
 **File:** `data/repository/sync/ProjectMetadataSyncService.kt`
 
 Handles project metadata synchronization:
-- `syncProjectMetadata(projectId)` - Notes, equipment, damages, logs, work scopes
+- `syncProjectMetadata(projectId)` - Notes, equipment, damages, moisture logs, atmospheric logs, work scopes
 - `syncRoomDamages(projectId, roomId)` - Per-room damage sync
 - `syncRoomMoistureLogs(projectId, roomId)` - Per-room moisture log sync
 
@@ -919,6 +495,13 @@ Handles work scope sync and catalog operations:
 - `fetchWorkScopeCatalog(companyId)` - Fetch work scope sheets
 - `addWorkScopeItems(projectId, roomId, items)` - Push selected items
 
+### DeletedRecordsSyncService
+**File:** `data/repository/sync/DeletedRecordsSyncService.kt`
+
+Syncs server-side deletions:
+- `syncDeletedRecords(types)` - Fetches deletions, applies them locally, updates checkpoints
+- Returns `Result<Unit>` so callers can react to failures
+
 ### SyncQueueProcessor
 **File:** `data/repository/sync/SyncQueueProcessor.kt`
 
@@ -942,6 +525,7 @@ OfflineSyncRepository
   |-- EquipmentSyncService
   |-- MoistureLogSyncService
   |-- WorkScopeSyncService
+  |-- DeletedRecordsSyncService
   '-- SyncQueueProcessor (SyncQueueEnqueuer)
 ```
 
@@ -992,19 +576,21 @@ With the service extraction:
 
 | File | Lines | Responsibility |
 |------|-------|----------------|
-| `OfflineSyncRepository.kt` | 1077 | Coordination, delegation |
+| `OfflineSyncRepository.kt` | 987 | Coordination, delegation |
 | `SyncQueueProcessor.kt` | 1824 | Queue processing (candidate for further split) |
 | `SyncQueueEnqueuer.kt` | 156 | Enqueue interface contract |
 | `PhotoSyncService.kt` | 530 | Photo sync |
 | `ProjectSyncService.kt` | 149 | Project list sync |
-| `ProjectMetadataSyncService.kt` | 295 | Notes/equipment/damages/logs/work scopes |
+| `ProjectMetadataSyncService.kt` | 295 | Notes/equipment/damages/work scopes/logs |
 | `PropertySyncService.kt` | 332 | Property CRUD |
 | `RoomSyncService.kt` | 560 | Room/location CRUD |
 | `NoteSyncService.kt` | 98 | Note CRUD |
 | `EquipmentSyncService.kt` | 108 | Equipment CRUD |
 | `MoistureLogSyncService.kt` | 28 | Moisture log upsert |
 | `WorkScopeSyncService.kt` | 99 | Work scope sync and catalog |
+| `DeletedRecordsSyncService.kt` | 131 | Server-side deletions |
 | `SyncEntityMappers.kt` | 752 | Mappers and helpers |
+| `SyncPayloads.kt` | 70 | Sync queue payload data classes |
 
 ## Future Work
 

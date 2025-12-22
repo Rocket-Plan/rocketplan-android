@@ -994,11 +994,112 @@ class SyncQueueProcessor(
             return OperationOutcome.SKIP
         }
 
+        // Validate that resolved server IDs actually exist on the server
+        // This prevents using stale/invalid IDs that would cause API errors
+        val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull().orEmpty()
+        val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull().orEmpty()
+        val validLevelIds = remoteLevels.map { it.id }.toSet()
+        val validLocationIds = remoteLocations.map { it.id }.toSet()
+        val levelValid = levelServerId in validLevelIds
+        val locationValid = locationServerId in validLocationIds
+
+        if (!levelValid || !locationValid) {
+            Log.w(
+                TAG,
+                "⚠️ [handlePendingRoomCreation] Resolved IDs not found on server: " +
+                    "levelServerId=$levelServerId (valid=$levelValid), " +
+                    "locationServerId=$locationServerId (valid=$locationValid); " +
+                    "attempting to resolve from remote data"
+            )
+
+            // Try to resolve correct IDs from remote data using name matching
+            val localLevel = payload.levelLocalId?.let { levelId ->
+                locations.firstOrNull { it.locationId == levelId }
+            }
+            val localLocation = payload.locationLocalId?.let { locationId ->
+                locations.firstOrNull { it.locationId == locationId }
+            }
+            val levelName = localLevel?.title?.takeIf { it.isNotBlank() }
+                ?: localLevel?.type?.takeIf { it.isNotBlank() }
+                ?: localLocation?.title?.takeIf { it.isNotBlank() }
+            val locationName = localLocation?.title?.takeIf { it.isNotBlank() }
+                ?: localLocation?.type?.takeIf { it.isNotBlank() }
+                ?: levelName
+            val locationType = localLocation?.type?.takeIf { it.isNotBlank() }
+
+            val matchedLevelId = remoteLevels
+                .firstOrNull { level ->
+                    val resolvedName = listOfNotNull(
+                        level.title?.takeIf { it.isNotBlank() },
+                        level.name?.takeIf { it.isNotBlank() }
+                    ).firstOrNull()
+                    resolvedName?.equals(levelName, ignoreCase = true) == true
+                }
+                ?.id
+
+            val locationCandidates = remoteLocations.filter { location ->
+                val resolvedName = listOfNotNull(
+                    location.title?.takeIf { it.isNotBlank() },
+                    location.name?.takeIf { it.isNotBlank() }
+                ).firstOrNull()
+                val resolvedType = listOfNotNull(
+                    location.type?.takeIf { it.isNotBlank() },
+                    location.locationType?.takeIf { it.isNotBlank() }
+                ).firstOrNull()
+                resolvedName?.equals(locationName, ignoreCase = true) == true &&
+                    (locationType == null || resolvedType?.equals(locationType, ignoreCase = true) == true)
+            }
+
+            val resolvedLevelFromRemote = when {
+                levelValid -> levelServerId
+                locationValid ->
+                    remoteLocations.firstOrNull { it.id == locationServerId }?.parentLocationId ?: matchedLevelId
+                else -> matchedLevelId
+            }
+
+            val resolvedLocationFromRemote = when {
+                locationValid -> locationServerId
+                resolvedLevelFromRemote != null ->
+                    locationCandidates.firstOrNull { it.parentLocationId == resolvedLevelFromRemote }?.id
+                        ?: locationCandidates.firstOrNull()?.id
+                else -> locationCandidates.firstOrNull()?.id
+            }
+
+            val resolvedLevelValid = resolvedLevelFromRemote in validLevelIds
+            val resolvedLocationValid = resolvedLocationFromRemote in validLocationIds
+
+            if (resolvedLevelValid && resolvedLocationValid &&
+                resolvedLevelFromRemote != null && resolvedLocationFromRemote != null
+            ) {
+                Log.d(
+                    TAG,
+                    "✅ [handlePendingRoomCreation] Resolved from remote: " +
+                        "levelServerId=$resolvedLevelFromRemote, locationServerId=$resolvedLocationFromRemote"
+                )
+                levelServerId = resolvedLevelFromRemote
+                locationServerId = resolvedLocationFromRemote
+            } else {
+                Log.w(
+                    TAG,
+                    "⚠️ [handlePendingRoomCreation] Could not resolve valid IDs from remote; " +
+                        "validLevelIds=${validLevelIds.size} validLocationIds=${validLocationIds.size}; " +
+                        "refreshing essentials and retrying"
+                )
+                refreshEssentialsOnce()
+                return OperationOutcome.SKIP
+            }
+        }
+
+        // At this point levelServerId and locationServerId are guaranteed non-null
+        // (we returned SKIP above if they couldn't be resolved)
+        val finalLevelId = levelServerId!!
+        val finalLocationId = locationServerId!!
+
         restoreDeletedParents(
             mapOf(
                 "projects" to listOf(projectServerId),
-                "locations" to listOf(locationServerId),
-                "levels" to listOf(levelServerId)
+                "locations" to listOf(finalLocationId),
+                "levels" to listOf(finalLevelId)
             )
         )
 
@@ -1018,7 +1119,7 @@ class SyncQueueProcessor(
         val request = CreateRoomRequest(
             name = payload.roomName,
             roomTypeId = resolvedRoomTypeId,
-            levelId = levelServerId,
+            levelId = finalLevelId,
             isSource = payload.isSource,
             idempotencyKey = idempotencyKey
         )
@@ -1027,7 +1128,7 @@ class SyncQueueProcessor(
             Log.d(
                 TAG,
                 "📤 [handlePendingRoomCreation] createRoom payload: " +
-                    "locationId=$locationServerId levelId=$levelServerId " +
+                    "locationId=$finalLocationId levelId=$finalLevelId " +
                     "roomTypeId=$resolvedRoomTypeId name='${payload.roomName}' " +
                     "typeName='${payload.roomTypeName}' isSource=${payload.isSource} " +
                     "idempotencyKey=${idempotencyKey ?: "null"} projectId=${payload.projectId}"
@@ -1035,7 +1136,7 @@ class SyncQueueProcessor(
         }
 
         val rawResponse = try {
-            api.createRoom(locationServerId, request)
+            api.createRoom(finalLocationId, request)
         } catch (error: HttpException) {
             if (AppConfig.isLoggingEnabled) {
                 val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()

@@ -677,7 +677,10 @@ class SyncQueueManager(
             return
         }
         try {
-            syncRepository.syncDeletedRecords()
+            val result = syncRepository.syncDeletedRecords()
+            result.exceptionOrNull()?.let { error ->
+                Log.w(TAG, "⚠️ Failed to sync deleted records before focusing project $projectId", error)
+            }
         } catch (ce: CancellationException) {
             throw ce
         } catch (t: Throwable) {

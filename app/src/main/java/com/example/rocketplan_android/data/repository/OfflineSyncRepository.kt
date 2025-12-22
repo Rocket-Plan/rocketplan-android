@@ -15,13 +15,13 @@ import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
-import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.repository.mapper.*
+import com.example.rocketplan_android.data.repository.sync.DeletedRecordsSyncService
 import com.example.rocketplan_android.data.repository.sync.EquipmentSyncService
 import com.example.rocketplan_android.data.repository.sync.MoistureLogSyncService
 import com.example.rocketplan_android.data.repository.sync.NoteSyncService
@@ -47,28 +47,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.Date
 import java.util.UUID
-import java.util.concurrent.TimeUnit
-
-// Checkpoint keys for incremental sync - stored in SyncCheckpointStore
-private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"
-private const val SERVER_TIME_CHECKPOINT_KEY = "deleted_records_server_date"
-
-// Entity types to check for server-side deletions during sync
-private val DEFAULT_DELETION_TYPES = listOf(
-    "projects",
-    "photos",
-    "notes",
-    "rooms",
-    "locations",
-    "equipment",
-    "damage_materials",
-    "damage_material_room_logs",
-    "atmospheric_logs",
-    "work_scope_actions"
-)
-
-// How far back to check for deleted records on first sync (30 days)
-private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
 
 // Status value for locally-created projects not yet synced to server
 private const val OFFLINE_PENDING_STATUS = "pending_offline"
@@ -172,6 +150,15 @@ class OfflineSyncRepository(
             syncCheckpointStore = syncCheckpointStore,
             workScopeSyncService = workScopeSyncService,
             resolveServerProjectId = ::resolveServerProjectId,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val deletedRecordsSyncService by lazy {
+        DeletedRecordsSyncService(
+            api = api,
+            localDataService = localDataService,
+            syncCheckpointStore = syncCheckpointStore,
             ioDispatcher = ioDispatcher
         )
     }
@@ -880,73 +867,9 @@ class OfflineSyncRepository(
     suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int =
         projectMetadataSyncService.syncRoomMoistureLogs(projectId, roomId)
 
-    suspend fun syncDeletedRecords(types: List<String> = DEFAULT_DELETION_TYPES) = withContext(ioDispatcher) {
-        val now = Date()
-        val lastServerDate = syncCheckpointStore.getCheckpoint(SERVER_TIME_CHECKPOINT_KEY)
-        val rawSinceDate = syncCheckpointStore.getCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY)
-            ?: Date(now.time - DEFAULT_DELETION_LOOKBACK_MS)
-        val sinceDate = when {
-            lastServerDate != null && rawSinceDate.after(lastServerDate) -> {
-                Log.w(
-                    "API",
-                    "⚠️ [syncDeletedRecords] Future checkpoint $rawSinceDate clamped to last server time $lastServerDate (device now=$now)"
-                )
-                syncCheckpointStore.updateCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY, lastServerDate)
-                lastServerDate
-            }
-            lastServerDate == null && rawSinceDate.after(now) -> {
-                val clamped = Date(0) // Safe epoch fallback avoids future-dated requests
-                Log.w(
-                    "API",
-                    "⚠️ [syncDeletedRecords] Future checkpoint $rawSinceDate with no server time; clamping to epoch (device now=$now)"
-                )
-                syncCheckpointStore.updateCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY, clamped)
-                clamped
-            }
-            else -> rawSinceDate
-        }
-        val sinceParam = DateUtils.formatApiDate(sinceDate)
-        val filteredTypes = types.filter { it.isNotBlank() }
-
-        Log.d("API", "🔄 [syncDeletedRecords] Fetching deletions since $sinceParam (types=${filteredTypes.joinToString()})")
-        val response = runCatching {
-            api.getDeletedRecords(
-                since = sinceParam,
-                types = filteredTypes.takeIf { it.isNotEmpty() }
-            )
-        }.onFailure {
-            Log.e("API", "❌ [syncDeletedRecords] Failed to fetch deletions", it)
-        }.getOrElse { return@withContext }
-
-        if (!response.isSuccessful) {
-            Log.e(
-                "API",
-                "❌ [syncDeletedRecords] Non-success response ${response.code()}"
-            )
-            return@withContext
-        }
-
-        val body = response.body()
-        if (body == null) {
-            Log.w("API", "⚠️ [syncDeletedRecords] Empty body; skipping apply")
-            return@withContext
-        }
-
-        applyDeletedRecords(body)
-
-        val serverTimestamp = DateUtils.parseHttpDate(response.headers()["Date"])
-        if (serverTimestamp != null) {
-            syncCheckpointStore.updateCheckpoint(DELETED_RECORDS_CHECKPOINT_KEY, serverTimestamp)
-            syncCheckpointStore.updateCheckpoint(SERVER_TIME_CHECKPOINT_KEY, serverTimestamp)
-        } else {
-            Log.w("API", "⚠️ [syncDeletedRecords] Missing Date header; checkpoint not advanced")
-        }
-
-        Log.d(
-            "API",
-            "✅ [syncDeletedRecords] Applied deletions projects=${body.projects.size}, rooms=${body.rooms.size}, photos=${body.photos.size}, notes=${body.notes.size}"
-        )
-    }
+    suspend fun syncDeletedRecords(
+        types: List<String> = DeletedRecordsSyncService.DEFAULT_TYPES
+    ): Result<Unit> = deletedRecordsSyncService.syncDeletedRecords(types)
 
     // ============================================================================
     // Photo Sync Operations - Delegated to PhotoSyncService
@@ -1006,19 +929,6 @@ class OfflineSyncRepository(
             page = current + 1
         }
         return results
-    }
-
-    private suspend fun applyDeletedRecords(response: DeletedRecordsResponse) {
-        localDataService.markProjectsDeleted(response.projects)
-        localDataService.markRoomsDeleted(response.rooms)
-        localDataService.markLocationsDeleted(response.locations)
-        localDataService.markPhotosDeleted(response.photos)
-        localDataService.markNotesDeleted(response.notes)
-        localDataService.markEquipmentDeleted(response.equipment)
-        localDataService.markDamagesDeleted(response.damageMaterials)
-        localDataService.markAtmosphericLogsDeleted(response.atmosphericLogs)
-        localDataService.markMoistureLogsDeleted(response.moistureLogs)
-        localDataService.markWorkScopesDeleted(response.workScopeActions)
     }
 
     private fun logLocalDeletion(entityType: String, entityId: Long, entityUuid: String?) {
