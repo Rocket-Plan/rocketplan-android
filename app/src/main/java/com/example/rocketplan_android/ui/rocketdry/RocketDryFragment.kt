@@ -283,6 +283,10 @@ class RocketDryFragment : Fragment() {
     private fun renderState(state: RocketDryUiState.Ready) {
         latestReadyState = state
         projectAddress.text = state.projectAddress
+        Log.d(TAG, "📍 renderState: locationLevels=${state.locationLevels.size}, equipmentLevels=${state.equipmentLevels.size}")
+        state.locationLevels.forEach { level ->
+            Log.d(TAG, "📍 Level '${level.levelName}': ${level.locations.size} rooms")
+        }
         renderAtmosphericAreaFilters(state.atmosphericAreas, state.selectedAtmosphericRoomId)
         updateAtmosphericLogs(state.atmosphericLogs)
         locationLevelAdapter.submitLevels(state.locationLevels)

@@ -5,7 +5,6 @@ import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageButton
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -37,7 +36,6 @@ class ProjectDetailFragment : Fragment() {
         ProjectDetailViewModel.provideFactory(requireActivity().application, args.projectId)
     }
 
-    private lateinit var editButton: ImageButton
     private lateinit var headerTitle: TextView
     private lateinit var projectTitle: TextView
     private lateinit var projectCode: TextView
@@ -104,7 +102,6 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private fun bindViews(root: View) {
-        editButton = root.findViewById(R.id.editProjectButton)
         headerTitle = root.findViewById(R.id.headerTitle)
         projectTitle = root.findViewById(R.id.projectTitle)
         projectCode = root.findViewById(R.id.projectCode)
@@ -171,9 +168,6 @@ class ProjectDetailFragment : Fragment() {
     }
 
     private fun bindListeners() {
-        editButton.setOnClickListener {
-            Toast.makeText(requireContext(), getString(R.string.edit_project), Toast.LENGTH_SHORT).show()
-        }
         swipeRefreshLayout.setOnRefreshListener {
             viewModel.refreshRoomsAndThumbnails()
         }

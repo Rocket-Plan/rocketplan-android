@@ -60,9 +60,10 @@ class DeletedRecordsSyncService(
         }.getOrElse { return@withContext Result.failure(it) }
 
         if (!response.isSuccessful) {
-            Log.e(TAG, "❌ [syncDeletedRecords] Non-success response ${response.code()}")
+            val errorBody = runCatching { response.errorBody()?.string() }.getOrNull()
+            Log.e(TAG, "❌ [syncDeletedRecords] Non-success response ${response.code()}: $errorBody")
             return@withContext Result.failure(
-                IllegalStateException("Deleted records sync failed with HTTP ${response.code()}")
+                IllegalStateException("Deleted records sync failed with HTTP ${response.code()}: $errorBody")
             )
         }
 
