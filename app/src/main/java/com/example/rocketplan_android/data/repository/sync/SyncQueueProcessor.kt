@@ -118,6 +118,10 @@ class SyncQueueProcessor(
                 }
                 .onFailure { error ->
                     Log.w(TAG, "⚠️ [$label] Sync operation failed", error)
+                    if (error is HttpException) {
+                        val body = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                        Log.w(TAG, "⚠️ [$label] HTTP ${error.code()} response: $body")
+                    }
                     markSyncOperationFailure(operation, error)
                 }
         }

@@ -3,6 +3,7 @@ package com.example.rocketplan_android.ui.projects
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.text.InputType
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
@@ -126,6 +127,11 @@ class ProjectLandingFragment : Fragment() {
         }
         rocketScanCard.setOnClickListener {
             val summary = latestSummary ?: return@setOnClickListener
+            Log.d(
+                "ProjectLanding",
+                "RocketScan click: hasProperty=${summary.hasProperty}, hasLevels=${summary.hasLevels}, " +
+                    "isSyncing=${summary.isSyncing}, hasRooms=${summary.hasRooms}"
+            )
 
             when {
                 // No property at all - need to create one via type selection

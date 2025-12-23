@@ -140,22 +140,21 @@ class RoomSyncService(
             }
 
             if (seedDefaultRoom) {
-                val roomTypeId = roomTypeRepository
+                val roomType = roomTypeRepository
                     .getRoomTypes(projectId, RequestType.INTERIOR, forceRefresh = false)
                     .getOrNull()
                     ?.firstOrNull()
-                    ?.id
                     ?: roomTypeRepository
                         .getRoomTypes(projectId, RequestType.INTERIOR, forceRefresh = true)
                         .getOrNull()
                         ?.firstOrNull()
-                        ?.id
 
-                if (roomTypeId != null) {
+                if (roomType != null) {
                     createRoom(
                         projectId = projectId,
-                        roomName = fallbackName.ifBlank { "Room" },
-                        roomTypeId = roomTypeId,
+                        roomName = roomType.name ?: "Room",
+                        roomTypeId = roomType.id,
+                        roomTypeName = roomType.name,
                         isSource = true
                     )
                 } else {

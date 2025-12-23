@@ -47,7 +47,16 @@ class PropertySyncService(
             val resolvedIdempotencyKey = idempotencyKey ?: request.idempotencyKey ?: UUID.randomUUID().toString()
             val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
                 ?: throw Exception("Project not found locally")
-            val projectServerId = project.serverId ?: throw Exception("Project not synced yet.")
+            val projectServerId = project.serverId
+            if (projectServerId == null) {
+                Log.d(TAG, "[createProjectProperty] Project $projectId not synced yet; creating pending property")
+                return@runCatching createPendingProperty(
+                    project = project,
+                    propertyTypeValue = propertyTypeValue,
+                    propertyTypeId = request.propertyTypeId,
+                    idempotencyKey = resolvedIdempotencyKey
+                )
+            }
             val requestWithKey = request.copy(idempotencyKey = resolvedIdempotencyKey)
 
             if (AppConfig.isLoggingEnabled) {

@@ -58,8 +58,6 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var damagesButton: MaterialButton
     private lateinit var sketchButton: MaterialButton
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
-    private lateinit var syncInProgressBanner: View
-    private lateinit var syncInProgressText: TextView
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -122,8 +120,6 @@ class ProjectDetailFragment : Fragment() {
         roomsProgressBar = root.findViewById(R.id.roomsProgressBar)
         roomsPlaceholder = root.findViewById(R.id.roomsPlaceholder)
         tabPlaceholder = root.findViewById(R.id.tabPlaceholder)
-        syncInProgressBanner = root.findViewById(R.id.syncInProgressBanner)
-        syncInProgressText = root.findViewById(R.id.syncInProgressText)
         toggleGroup = root.findViewById(R.id.tabToggleGroup)
         photosButton = root.findViewById(R.id.photosTabButton)
         damagesButton = root.findViewById(R.id.damagesTabButton)
@@ -259,7 +255,6 @@ class ProjectDetailFragment : Fragment() {
         isBackgroundSyncing = false
         lastSubmittedRoomCount = 0
         tabPlaceholder.isVisible = false
-        syncInProgressBanner.isVisible = false
         updateRoomCreationUi()
         updateRoomsSectionVisibility()
     }
@@ -296,12 +291,6 @@ class ProjectDetailFragment : Fragment() {
         roomsSectionIsLoading = false
         updateRoomCreationUi()
         updateRoomsSectionVisibility()
-        syncInProgressBanner.isVisible = state.isBackgroundSyncing
-        if (state.isBackgroundSyncing) {
-            syncInProgressText.text = getString(R.string.project_sync_in_progress)
-        } else {
-            syncInProgressBanner.isVisible = false
-        }
     }
 
     private fun applyTabVisibility(tab: ProjectDetailTab) {

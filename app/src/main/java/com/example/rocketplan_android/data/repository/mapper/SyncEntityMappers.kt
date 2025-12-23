@@ -318,7 +318,7 @@ internal fun RoomDto.toEntity(
         title = resolvedTitle,
         roomType = roomType?.name,
         roomTypeId = roomType?.id ?: existing?.roomTypeId,
-        level = level?.name ?: level?.title,
+        level = level?.name ?: level?.title ?: existing?.level,
         squareFootage = squareFootage,
         isAccessible = isAccessible ?: true,
         photoCount = photosCount ?: existing?.photoCount,

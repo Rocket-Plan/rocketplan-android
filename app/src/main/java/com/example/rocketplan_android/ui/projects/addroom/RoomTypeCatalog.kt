@@ -240,7 +240,11 @@ object RoomTypeCatalog {
     fun resolveIconRes(context: Context, typeId: Long?, iconName: String?): Int {
         val candidate = resolveIconName(typeId, iconName)
         val resolvedId = candidate?.let { context.resources.getIdentifier(it, "drawable", context.packageName) } ?: 0
-        return if (resolvedId != 0) resolvedId else R.drawable.ic_door
+        // Validate the resource ID is actually a drawable (app resources start at 0x7f000000)
+        if (resolvedId != 0 && resolvedId >= 0x7f000000) {
+            return resolvedId
+        }
+        return R.drawable.ic_door
     }
 
     private fun resolveIconName(typeId: Long?, iconName: String?): String? {
