@@ -34,14 +34,15 @@ val sentryDsnProd = readSentryDsn("sentry.dsn.prod", "SENTRY_DSN_PROD")
 
 android {
     namespace = "com.example.rocketplan_android"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.rocketplan_android"
+        applicationId = "com.rocketplantech.rocketplan"
         minSdk = 24
-        targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 35
+        val buildNumber = 1
+        versionCode = buildNumber
+        versionName = "1.29 ($buildNumber)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("maps.api.key", "")

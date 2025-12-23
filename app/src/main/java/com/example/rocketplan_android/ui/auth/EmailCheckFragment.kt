@@ -1,5 +1,7 @@
 package com.example.rocketplan_android.ui.auth
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -164,25 +166,32 @@ class EmailCheckFragment : Fragment() {
 
         val state = authRepository.createOAuthState()
         val encodedState = URLEncoder.encode(state, StandardCharsets.UTF_8.toString())
-        val oauthUrl = "${BuildConfig.API_BASE_URL}/oauth2/redirect/$provider?schema=$schema&state=$encodedState"
+        val baseUrl = BuildConfig.API_BASE_URL.trimEnd('/')
+        val oauthUrl = "$baseUrl/oauth2/redirect/$provider?schema=$schema&state=$encodedState"
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "Starting $provider OAuth flow: $oauthUrl")
         }
 
         runCatching {
-            val title = when (provider) {
-                PROVIDER_GOOGLE -> getString(R.string.google_sign_in_title)
-                PROVIDER_APPLE -> getString(R.string.apple_sign_in_title)
-                PROVIDER_FACEBOOK -> getString(R.string.facebook_sign_in_title)
-                else -> getString(R.string.oauth_sign_in_title, provider.replaceFirstChar { it.uppercase() })
+            // Google requires external browser - WebView is blocked with disallowed_useragent
+            if (provider == PROVIDER_GOOGLE) {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(oauthUrl))
+                startActivity(intent)
+            } else {
+                // Facebook and Apple can use WebView
+                val title = when (provider) {
+                    PROVIDER_APPLE -> getString(R.string.apple_sign_in_title)
+                    PROVIDER_FACEBOOK -> getString(R.string.facebook_sign_in_title)
+                    else -> getString(R.string.oauth_sign_in_title, provider.replaceFirstChar { it.uppercase() })
+                }
+                val action =
+                    EmailCheckFragmentDirections.actionEmailCheckFragmentToOauthWebViewFragment(
+                        url = oauthUrl,
+                        title = title
+                    )
+                findNavController().navigate(action)
             }
-            val action =
-                EmailCheckFragmentDirections.actionEmailCheckFragmentToOauthWebViewFragment(
-                    url = oauthUrl,
-                    title = title
-                )
-            findNavController().navigate(action)
         }.onFailure { throwable ->
             Log.e(TAG, "Failed to launch $provider OAuth flow", throwable)
             Toast.makeText(

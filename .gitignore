@@ -29,3 +29,8 @@ local.properties
 /tmp_*.logcat
 /tmp_*.txt
 /tmp_*.xml
+
+# Release keystore - DO NOT COMMIT
+keystore/
+*.jks
+*.keystore
