@@ -31,11 +31,29 @@
 -keep class org.java_websocket.** { *; }
 -dontwarn org.java_websocket.**
 
-# Retrofit
+# Retrofit with Kotlin coroutines
 -keepattributes Signature
 -keepattributes Exceptions
+-keepattributes RuntimeVisibleAnnotations
+-keepattributes RuntimeInvisibleAnnotations
+-keepattributes RuntimeVisibleParameterAnnotations
+-keepattributes RuntimeInvisibleParameterAnnotations
+
 -keep class retrofit2.** { *; }
+-keepclassmembers,allowshrinking,allowobfuscation interface * {
+    @retrofit2.http.* <methods>;
+}
 -dontwarn retrofit2.**
+
+# Keep generic signature of Call, Response (R8 strips signature from non-kept items)
+-keep,allowobfuscation,allowshrinking interface retrofit2.Call
+-keep,allowobfuscation,allowshrinking class retrofit2.Response
+
+# Kotlin coroutines with Retrofit
+-keepclassmembers class kotlin.coroutines.Continuation {
+    *;
+}
+-keep class kotlin.coroutines.Continuation
 
 # Gson - preserve generic signatures for TypeToken
 -keep class com.google.gson.** { *; }

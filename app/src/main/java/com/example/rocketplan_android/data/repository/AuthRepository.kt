@@ -35,7 +35,9 @@ class AuthRepository(
      */
     suspend fun checkEmail(email: String): Result<CheckEmailResponse> {
         return try {
+            android.util.Log.d("AuthRepository", "checkEmail: calling API for $email")
             val response = authService.checkEmail(CheckEmailRequest(email))
+            android.util.Log.d("AuthRepository", "checkEmail: response code=${response.code()}")
 
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
@@ -47,6 +49,7 @@ class AuthRepository(
                 Result.failure(Exception(apiError.displayMessage))
             }
         } catch (e: Exception) {
+            android.util.Log.e("AuthRepository", "checkEmail EXCEPTION: ${e.javaClass.name}: ${e.message}", e)
             val apiError = ApiError.fromException(e)
             Result.failure(Exception(apiError.displayMessage))
         }
