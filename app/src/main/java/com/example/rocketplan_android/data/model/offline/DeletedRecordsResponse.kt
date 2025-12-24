@@ -15,6 +15,6 @@ data class DeletedRecordsResponse(
     val atmosphericLogs: List<Long> = emptyList(),
     @SerializedName("work_scope_actions")
     val workScopeActions: List<Long> = emptyList(),
-    @SerializedName("damage_material_room_logs")
+    @SerializedName("moisture_logs")
     val moistureLogs: List<Long> = emptyList()
 )

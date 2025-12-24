@@ -218,6 +218,7 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             if (authRepository.isLoggedIn()) {
                 imageProcessorQueueManager.reconcileProcessingAssemblies(source = "foreground")
+                syncQueueManager.syncOnForeground()
             }
         }
     }

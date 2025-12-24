@@ -100,13 +100,11 @@ internal fun buildProjectEntity(
     val resolvedUuid = uuid ?: uid ?: existing?.uuid ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
 
-    // Preserve local pending property (negative ID) over server data
-    val existingPropertyIsPending = existing?.propertyId != null && existing.propertyId < 0
-    val resolvedPropertyId = if (existingPropertyIsPending) {
-        existing?.propertyId
-    } else {
-        propertyId ?: embeddedPropertyId ?: existing?.propertyId
-    }
+    // Preserve existing propertyId - only update if we have no local property
+    // This prevents project list sync from overwriting with wrong propertyId
+    val resolvedPropertyId = existing?.propertyId
+        ?: propertyId
+        ?: embeddedPropertyId
 
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }
@@ -174,7 +172,7 @@ internal fun ProjectDetailDto.toEntity(
         addressLine2 = address?.address2?.takeIf { it.isNotBlank() },
         propertyId = propertyId,
         embeddedPropertyId = properties?.firstOrNull()?.id,
-        propertyType = propertyType ?: properties?.firstOrNull()?.propertyType ?: existing?.propertyType,
+        propertyType = propertyType ?: properties?.firstOrNull()?.resolvedPropertyType() ?: existing?.propertyType,
         companyId = companyId,
         createdAt = createdAt,
         updatedAt = updatedAt,
@@ -216,7 +214,13 @@ internal fun PropertyDto.toEntity(
     val resolvedLat = latitude ?: projectAddress?.latitude?.toDoubleOrNull()
     val resolvedLng = longitude ?: projectAddress?.longitude?.toDoubleOrNull()
     val resolvedUuid = existing?.uuid ?: uuid ?: UUID.randomUUID().toString()
-    val resolvedId = existing?.propertyId ?: id
+    // When existing is a pending property (negative ID) but server returned a positive ID,
+    // use the server ID to complete the ID resolution
+    val resolvedId = if (existing?.propertyId != null && existing.propertyId < 0 && id > 0) {
+        id
+    } else {
+        existing?.propertyId ?: id
+    }
 
     return OfflinePropertyEntity(
         propertyId = resolvedId,

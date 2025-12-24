@@ -168,8 +168,8 @@ class OfflineSyncRepository(
             api = api,
             localDataService = localDataService,
             syncProjectEssentials = { projectId -> syncProjectEssentials(projectId) },
-            persistProperty = { projectId, property, propertyTypeValue, existing ->
-                propertySyncService.persistProperty(projectId, property, propertyTypeValue, existing)
+            persistProperty = { projectId, property, propertyTypeValue, existing, forcePropertyIdUpdate ->
+                propertySyncService.persistProperty(projectId, property, propertyTypeValue, existing, forcePropertyIdUpdate = forcePropertyIdUpdate)
             },
             imageProcessorQueueManagerProvider = { imageProcessorQueueManager },
             remoteLogger = remoteLogger,
@@ -361,8 +361,8 @@ class OfflineSyncRepository(
         Log.d("API", "🏠 [syncProjectEssentials] Property DTO received: id=${property.id}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}, lat=${property.latitude}, lng=${property.longitude}")
         Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail.address?.address}, city=${detail.address?.city}, state=${detail.address?.state}, zip=${detail.address?.zip}")
         // Try to get propertyType from: detail.propertyType, property.propertyType, or embedded properties list
-        val embeddedPropertyType = detail.properties?.firstOrNull()?.propertyType
-        val resolvedPropertyType = detail.propertyType ?: property.propertyType ?: embeddedPropertyType
+        val embeddedPropertyType = detail.properties?.firstOrNull()?.resolvedPropertyType()
+        val resolvedPropertyType = detail.propertyType ?: property.resolvedPropertyType() ?: embeddedPropertyType
         val existingProperty = existingProject?.propertyId?.let { localDataService.getProperty(it) }
         val entity = propertySyncService.persistProperty(
             projectId = projectId,
@@ -374,7 +374,7 @@ class OfflineSyncRepository(
         )
         val resolvedId = entity.serverId ?: entity.propertyId
         Log.d("API", "🏠 [syncProjectEssentials] Property Entity created: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
-        Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.propertyType}, embeddedPropertyType=$embeddedPropertyType)")
+        Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.resolvedPropertyType()}, embeddedPropertyType=$embeddedPropertyType)")
         itemCount++
         ensureActive()
 

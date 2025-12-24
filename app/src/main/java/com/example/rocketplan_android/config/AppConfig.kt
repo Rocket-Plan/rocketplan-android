@@ -91,6 +91,12 @@ object AppConfig {
     val isRocketDryEnabled: Boolean = BuildConfig.ENABLE_ROCKET_DRY
 
     /**
+     * Minimum interval between foreground sync checks (milliseconds).
+     * Prevents hammering the server on rapid app switches.
+     */
+    const val FOREGROUND_SYNC_THRESHOLD_MS: Long = 60 * 1000L // 1 minute
+
+    /**
      * Print current configuration to logs
      */
     fun logConfiguration() {

@@ -178,6 +178,9 @@ class LocalDataService private constructor(
     suspend fun getProperty(propertyId: Long): OfflinePropertyEntity? =
         withContext(ioDispatcher) { dao.getProperty(propertyId) }
 
+    suspend fun getPropertyByServerId(serverId: Long): OfflinePropertyEntity? =
+        withContext(ioDispatcher) { dao.getPropertyByServerId(serverId) }
+
     suspend fun getRoomByServerId(serverId: Long): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoomByServerId(serverId) }
 
@@ -432,12 +435,15 @@ class LocalDataService private constructor(
     suspend fun attachPropertyToProject(
         projectId: Long,
         propertyId: Long,
-        propertyType: String?
+        propertyType: String?,
+        forceUpdate: Boolean = false
     ) = withContext(ioDispatcher) {
         val existing = dao.getProject(projectId) ?: return@withContext
         // Preserve local pending property (negative ID) - don't overwrite with server property
+        // unless forceUpdate is true (used when pending property creation completes)
         val existingPropertyIsPending = existing.propertyId != null && existing.propertyId < 0
-        val resolvedPropertyId = if (existingPropertyIsPending) existing.propertyId else propertyId
+        val resolvedPropertyId = if (existingPropertyIsPending && !forceUpdate) existing.propertyId else propertyId
+        Log.d("API", "[attachPropertyToProject] projectId=$projectId existingPropertyId=${existing.propertyId} newPropertyId=$propertyId forceUpdate=$forceUpdate -> resolvedPropertyId=$resolvedPropertyId")
         val timestamp = Date()
         val updatedProject = existing.copy(
             propertyId = resolvedPropertyId,

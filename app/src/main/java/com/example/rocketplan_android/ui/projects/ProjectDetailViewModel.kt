@@ -409,8 +409,19 @@ enum class RoomCreationStatus {
 private suspend fun OfflineProjectEntity.resolveRoomCreationStatus(
     localDataService: LocalDataService
 ): RoomCreationStatus {
-    val propertyLocalId = propertyId ?: return RoomCreationStatus.MISSING_PROPERTY
-    localDataService.getProperty(propertyLocalId) ?: return RoomCreationStatus.MISSING_PROPERTY
+    val propertyLocalId = propertyId
+    if (propertyLocalId == null) {
+        android.util.Log.d("RoomCreation", "❌ MISSING_PROPERTY: project $projectId has null propertyId")
+        return RoomCreationStatus.MISSING_PROPERTY
+    }
+    // Try to find property by propertyId first, then by serverId as fallback
+    val property = localDataService.getProperty(propertyLocalId)
+        ?: localDataService.getPropertyByServerId(propertyLocalId)
+    if (property == null) {
+        android.util.Log.d("RoomCreation", "❌ MISSING_PROPERTY: project $projectId has propertyId=$propertyLocalId but getProperty returned null")
+        return RoomCreationStatus.MISSING_PROPERTY
+    }
+    android.util.Log.d("RoomCreation", "✅ AVAILABLE: project $projectId has property ${property.propertyId} (serverId=${property.serverId})")
     // Allow room creation as long as property exists locally - rooms will sync when online
     return RoomCreationStatus.AVAILABLE
 }

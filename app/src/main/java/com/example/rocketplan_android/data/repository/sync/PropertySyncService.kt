@@ -158,7 +158,8 @@ class PropertySyncService(
         propertyTypeValue: String?,
         existing: OfflinePropertyEntity? = null,
         projectAddress: ProjectAddressDto? = null,
-        forceRoomTypeRefresh: Boolean = true
+        forceRoomTypeRefresh: Boolean = true,
+        forcePropertyIdUpdate: Boolean = false
     ): OfflinePropertyEntity {
         val needsFallback = property.address.isNullOrBlank() || property.city.isNullOrBlank()
         val serverProjectId = localDataService.getProject(projectId)?.serverId ?: projectId.takeIf { it > 0 }
@@ -204,10 +205,13 @@ class PropertySyncService(
         } else null
         val entity = property.toEntity(existing = existing, projectAddress = fallbackAddress)
         localDataService.saveProperty(entity)
+        // Force update if we're upgrading from a pending property (negative ID) to a server property (positive ID)
+        val isPendingToServerUpgrade = existing?.propertyId != null && existing.propertyId < 0 && property.id > 0
         localDataService.attachPropertyToProject(
             projectId = projectId,
             propertyId = entity.propertyId,
-            propertyType = propertyTypeValue
+            propertyType = propertyTypeValue,
+            forceUpdate = forcePropertyIdUpdate || isPendingToServerUpgrade
         )
         runCatching { primeRoomTypeCaches(projectId, forceRefresh = forceRoomTypeRefresh) }
             .onFailure { Log.w(TAG, "[persistProperty] Unable to prefetch room types for project $projectId", it) }

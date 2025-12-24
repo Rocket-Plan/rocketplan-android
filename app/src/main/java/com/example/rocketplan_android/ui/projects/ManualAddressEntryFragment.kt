@@ -62,8 +62,14 @@ class ManualAddressEntryFragment : Fragment() {
         postalLayout = view.findViewById(R.id.manualPostalLayout)
         postalInput = view.findViewById(R.id.manualPostalInput)
 
-        setupStateDropdown()
         setupCountryDropdown()
+        // State dropdown is set up when country is selected
+        // Show hint if user taps state before selecting country
+        stateLayout.setOnClickListener {
+            if (!stateInput.isEnabled) {
+                Toast.makeText(requireContext(), R.string.manual_address_select_country_first, Toast.LENGTH_SHORT).show()
+            }
+        }
 
         streetInput.doAfterTextChanged {
             if (!it.isNullOrBlank()) {
@@ -156,8 +162,12 @@ class ManualAddressEntryFragment : Fragment() {
         }
     }
 
-    private fun setupStateDropdown() {
-        val stateOptions = resources.getStringArray(R.array.state_province_options)
+    private fun setupStateDropdown(country: String) {
+        val stateOptions = when (country) {
+            "United States" -> resources.getStringArray(R.array.us_state_options)
+            "Canada" -> resources.getStringArray(R.array.canada_province_options)
+            else -> emptyArray()
+        }
         val adapter = ArrayAdapter(
             requireContext(),
             android.R.layout.simple_list_item_1,
@@ -165,10 +175,9 @@ class ManualAddressEntryFragment : Fragment() {
         )
         stateInput.setAdapter(adapter)
         stateInput.threshold = 0
-        stateInput.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                stateInput.showDropDown()
-            }
+        stateInput.isEnabled = true
+        stateInput.setOnClickListener {
+            stateInput.showDropDown()
         }
         stateInput.setOnItemClickListener { _, _, _, _ ->
             stateLayout.error = null
@@ -191,14 +200,16 @@ class ManualAddressEntryFragment : Fragment() {
         )
         countryInput.setAdapter(adapter)
         countryInput.threshold = 0
-        countryInput.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) {
-                countryInput.showDropDown()
-            }
+        countryInput.setOnClickListener {
+            countryInput.showDropDown()
         }
-        countryInput.setOnItemClickListener { _, _, _, _ ->
+        countryInput.setOnItemClickListener { _, _, position, _ ->
             countryLayout.error = null
             viewModel.clearError()
+            // Clear and update state dropdown based on selected country
+            stateInput.setText("", false)
+            stateLayout.error = null
+            setupStateDropdown(countryOptions[position])
         }
     }
 }

@@ -572,6 +572,7 @@
     <string name="manual_address_state_error">State / province is required.</string>
     <string name="manual_address_country_error">Country is required.</string>
     <string name="manual_address_postal_error">ZIP / postal code is required.</string>
+    <string name="manual_address_select_country_first">Please select a country first</string>
 
     <!-- Batch Photo Capture -->
     <string name="batch_capture_active">Batch Capture Active</string>

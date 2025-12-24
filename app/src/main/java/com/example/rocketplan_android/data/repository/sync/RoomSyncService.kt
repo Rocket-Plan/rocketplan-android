@@ -543,13 +543,13 @@ class RoomSyncService(
             true
         }.getOrElse { error ->
             if (error is HttpException && error.code() == 404) {
-                Log.w(TAG, "[createRoom] Server reports missing location $serverId; marking deleted locally")
-                runCatching { localDataService.markLocationsDeleted(listOf(serverId)) }
-                    .onFailure { Log.w(TAG, "[createRoom] Failed to mark location $serverId as deleted", it) }
+                // 404 from getRoomsForLocation means "no rooms", not "location doesn't exist"
+                // The location is still valid, just empty
+                true
             } else {
                 Log.w(TAG, "[createRoom] Failed to validate location $serverId", error)
+                false
             }
-            false
         }
     }
 

@@ -79,7 +79,8 @@ class SyncQueueProcessor(
         projectId: Long,
         property: PropertyDto,
         propertyTypeValue: String?,
-        existing: OfflinePropertyEntity?
+        existing: OfflinePropertyEntity?,
+        forcePropertyIdUpdate: Boolean
     ) -> OfflinePropertyEntity,
     private val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
     private val remoteLogger: RemoteLogger? = null,
@@ -851,8 +852,70 @@ class SyncQueueProcessor(
             )
         }
         val existing = localDataService.getProperty(payload.localPropertyId)
-        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing)
+        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, existing, true)
+
+        // Root cause fix: sync local level serverIds after property creation
+        // The server creates default levels when a property is created - match them with local pending levels
+        runCatching {
+            syncLocalLevelServerIds(payload.projectId, resolved.id)
+        }.onFailure {
+            Log.w(TAG, "⚠️ [handlePendingPropertyCreation] Failed to sync level serverIds", it)
+        }
+
         return OperationOutcome.SUCCESS
+    }
+
+    /**
+     * Syncs local pending levels/locations with their server counterparts by name-matching.
+     * Called after property creation to populate serverId on local level entities.
+     */
+    private suspend fun syncLocalLevelServerIds(projectId: Long, propertyServerId: Long) {
+        val localLocations = localDataService.getLocations(projectId)
+        val pendingLocations = localLocations.filter { it.serverId == null }
+        if (AppConfig.isLoggingEnabled) {
+            Log.d(TAG, "🔍 [syncLocalLevelServerIds] projectId=$projectId propertyServerId=$propertyServerId " +
+                "localLocations=${localLocations.size} pendingLocations=${pendingLocations.size}")
+        }
+        if (pendingLocations.isEmpty()) return
+
+        val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull()
+        val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull()
+        if (remoteLevels == null && remoteLocations == null) return
+
+        var updatedCount = 0
+        for (pending in pendingLocations) {
+            val pendingName = pending.title?.takeIf { it.isNotBlank() }
+                ?: pending.type?.takeIf { it.isNotBlank() }
+                ?: continue
+
+            // Try levels first, then locations
+            val matchedServerId = remoteLevels?.firstOrNull { level ->
+                val remoteName = listOfNotNull(
+                    level.title?.takeIf { it.isNotBlank() },
+                    level.name?.takeIf { it.isNotBlank() }
+                ).firstOrNull()
+                remoteName?.equals(pendingName, ignoreCase = true) == true
+            }?.id ?: remoteLocations?.firstOrNull { location ->
+                val remoteName = listOfNotNull(
+                    location.title?.takeIf { it.isNotBlank() },
+                    location.name?.takeIf { it.isNotBlank() }
+                ).firstOrNull()
+                remoteName?.equals(pendingName, ignoreCase = true) == true
+            }?.id ?: continue
+
+            val updated = pending.copy(
+                serverId = matchedServerId,
+                syncStatus = SyncStatus.SYNCED,
+                isDirty = false,
+                lastSyncedAt = now()
+            )
+            localDataService.saveLocations(listOf(updated))
+            updatedCount++
+        }
+
+        if (AppConfig.isLoggingEnabled && updatedCount > 0) {
+            Log.d(TAG, "✅ [syncLocalLevelServerIds] Updated $updatedCount local levels with serverIds")
+        }
     }
 
     private suspend fun handlePendingPropertyUpdate(
@@ -922,7 +985,7 @@ class SyncQueueProcessor(
             )
         }
 
-        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, property)
+        persistProperty(payload.projectId, resolved, payload.propertyTypeValue, property, false)
         return OperationOutcome.SUCCESS
     }
 
@@ -965,6 +1028,13 @@ class SyncQueueProcessor(
         }
 
         var locations = localDataService.getLocations(payload.projectId)
+        Log.d(
+            TAG,
+            "🔍 [handlePendingRoomCreation] Resolving IDs for room '${payload.roomName}': " +
+                "payload.levelServerId=${payload.levelServerId}, payload.locationServerId=${payload.locationServerId}, " +
+                "payload.levelLocalId=${payload.levelLocalId}, payload.locationLocalId=${payload.locationLocalId}, " +
+                "locations=${locations.map { "id=${it.locationId}/server=${it.serverId}/title=${it.title}/parent=${it.parentLocationId}" }}"
+        )
         var levelServerId = normalizeServerId(payload.levelServerId)
             ?: normalizeServerId(locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId)
             ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == null }?.serverId)
@@ -998,6 +1068,62 @@ class SyncQueueProcessor(
                 ?: locations.firstOrNull { it.locationId == payload.locationLocalId }
             levelServerId = normalizeServerId(resolvedLocation?.parentLocationId)
                 ?: normalizeServerId(resolvedLocation?.serverId)
+        }
+
+        // Fallback: if both serverIds are null, try to resolve by name-matching with remote levels
+        if (levelServerId == null || locationServerId == null) {
+            val localLevel = payload.levelLocalId?.let { levelId ->
+                locations.firstOrNull { it.locationId == levelId }
+            }
+            val localLocation = payload.locationLocalId?.let { locationId ->
+                locations.firstOrNull { it.locationId == locationId }
+            }
+            val levelName = localLevel?.title?.takeIf { it.isNotBlank() }
+                ?: localLevel?.type?.takeIf { it.isNotBlank() }
+                ?: localLocation?.title?.takeIf { it.isNotBlank() }
+            val locationName = localLocation?.title?.takeIf { it.isNotBlank() }
+                ?: localLocation?.type?.takeIf { it.isNotBlank() }
+                ?: levelName
+            val locationType = localLocation?.type?.takeIf { it.isNotBlank() }
+
+            if (levelName != null) {
+                val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull()
+                val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull()
+
+                if (levelServerId == null) {
+                    levelServerId = remoteLevels?.firstOrNull { level ->
+                        val resolvedName = listOfNotNull(
+                            level.title?.takeIf { it.isNotBlank() },
+                            level.name?.takeIf { it.isNotBlank() }
+                        ).firstOrNull()
+                        resolvedName?.equals(levelName, ignoreCase = true) == true
+                    }?.id
+                }
+
+                if (locationServerId == null) {
+                    locationServerId = remoteLocations?.firstOrNull { location ->
+                        val resolvedName = listOfNotNull(
+                            location.title?.takeIf { it.isNotBlank() },
+                            location.name?.takeIf { it.isNotBlank() }
+                        ).firstOrNull()
+                        val resolvedType = listOfNotNull(
+                            location.type?.takeIf { it.isNotBlank() },
+                            location.locationType?.takeIf { it.isNotBlank() }
+                        ).firstOrNull()
+                        resolvedName?.equals(locationName, ignoreCase = true) == true &&
+                            (locationType == null || resolvedType?.equals(locationType, ignoreCase = true) == true)
+                    }?.id ?: levelServerId  // Fallback to level if location not found (Single Unit)
+                }
+
+                if (AppConfig.isLoggingEnabled && (levelServerId != null || locationServerId != null)) {
+                    Log.d(
+                        TAG,
+                        "✅ [handlePendingRoomCreation] Resolved IDs by name-matching: " +
+                            "levelName=$levelName → levelServerId=$levelServerId, " +
+                            "locationName=$locationName → locationServerId=$locationServerId"
+                    )
+                }
+            }
         }
 
         if (levelServerId != null && locationServerId != null && levelServerId == locationServerId) {

@@ -251,8 +251,8 @@ private class ProjectLossInfoRepository(
             propertyId = resolvedId,
             propertyType = listOfNotNull(
                 projectDetail?.propertyType,
-                propertyDto.propertyType,
-                projectDetail?.properties?.firstOrNull()?.propertyType
+                propertyDto.resolvedPropertyType(),
+                projectDetail?.properties?.firstOrNull()?.resolvedPropertyType()
             ).firstOrNull()
         )
         return resolvedId
@@ -532,8 +532,8 @@ class ProjectLossInfoViewModel(
             ?: throw IllegalStateException("Property still syncing, please try again.")
         val propertyTypeId = resolvePropertyTypeId(project)
         val propertyTypeValue = project.propertyType
-            ?: _uiState.value.property?.propertyType
-            ?: PropertyType.fromApiValue(_uiState.value.property?.propertyType)?.apiValue
+            ?: _uiState.value.property?.resolvedPropertyType()
+            ?: PropertyType.fromApiValue(_uiState.value.property?.resolvedPropertyType())?.apiValue
 
         val request = PropertyMutationRequest(
             propertyTypeId = propertyTypeId,
@@ -574,8 +574,8 @@ class ProjectLossInfoViewModel(
             val propertyTypeId = form.propertyType?.propertyTypeId ?: resolvePropertyTypeId(project)
             val propertyTypeValue = form.propertyType?.apiValue
                 ?: project.propertyType
-                ?: _uiState.value.property?.propertyType
-                ?: PropertyType.fromApiValue(_uiState.value.property?.propertyType)?.apiValue
+                ?: _uiState.value.property?.resolvedPropertyType()
+                ?: PropertyType.fromApiValue(_uiState.value.property?.resolvedPropertyType())?.apiValue
 
             val request = PropertyMutationRequest(
                 propertyTypeId = propertyTypeId,

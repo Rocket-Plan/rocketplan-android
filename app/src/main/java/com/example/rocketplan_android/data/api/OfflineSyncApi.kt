@@ -170,7 +170,8 @@ interface OfflineSyncApi {
 
     @GET("/api/properties/{propertyId}")
     suspend fun getProperty(
-        @Path("propertyId") propertyId: Long
+        @Path("propertyId") propertyId: Long,
+        @Query("include") include: String? = "propertyType,asbestosStatus,propertyDamageTypes,damageCause"
     ): PropertyResourceResponse
 
     @GET("/api/properties/{propertyId}/levels")

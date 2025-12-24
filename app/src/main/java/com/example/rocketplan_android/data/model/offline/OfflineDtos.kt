@@ -272,11 +272,22 @@ data class PropertyDto(
     @SerializedName("property_type_id")
     val propertyTypeId: Long? = null,
     @SerializedName("property_type")
-    val propertyType: String? = null,
+    val propertyTypeData: PropertyTypeDto? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String?,
+    /** Manual override for property type name; defaults to propertyTypeData.name if not set */
+    @Transient
+    val propertyType: String? = null
+) {
+    /** Resolved property type name from either explicit value or API object */
+    fun resolvedPropertyType(): String? = propertyType ?: propertyTypeData?.name
+}
+
+data class PropertyTypeDto(
+    val id: Long,
+    val name: String?
 )
 
 data class LocationDto(

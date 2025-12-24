@@ -1,6 +1,8 @@
 package com.example.rocketplan_android
 
 import android.app.Application
+import android.content.Context
+import android.net.ConnectivityManager
 import android.util.Log
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -150,7 +152,8 @@ class RocketPlanApplication : Application() {
             syncRepository = offlineSyncRepository,
             localDataService = localDataService,
             photoCacheScheduler = photoCacheScheduler,
-            remoteLogger = remoteLogger
+            remoteLogger = remoteLogger,
+            connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         )
 
         val imageProcessorService = RetrofitClient.imageProcessorService

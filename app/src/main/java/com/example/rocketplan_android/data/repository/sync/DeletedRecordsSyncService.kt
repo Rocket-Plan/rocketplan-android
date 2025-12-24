@@ -120,7 +120,7 @@ class DeletedRecordsSyncService(
             "locations",
             "equipment",
             "damage_materials",
-            "damage_material_room_logs",
+            "moisture_logs",
             "atmospheric_logs",
             "work_scope_actions"
         )

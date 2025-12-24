@@ -761,6 +761,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId LIMIT 1")
     suspend fun getProperty(propertyId: Long): OfflinePropertyEntity?
 
+    @Query("SELECT * FROM offline_properties WHERE serverId = :serverId LIMIT 1")
+    suspend fun getPropertyByServerId(serverId: Long): OfflinePropertyEntity?
+
     @Query(
         """
         SELECT address FROM (

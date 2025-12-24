@@ -1,5 +1,8 @@
 package com.example.rocketplan_android.data.sync
 
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.repository.AuthRepository
@@ -38,7 +41,8 @@ class SyncQueueManager(
     private val syncRepository: OfflineSyncRepository,
     private val localDataService: LocalDataService,
     private val photoCacheScheduler: PhotoCacheScheduler,
-    private val remoteLogger: RemoteLogger
+    private val remoteLogger: RemoteLogger,
+    private val connectivityManager: ConnectivityManager? = null
 ) {
 
     private var photoSyncRealtimeManager: PhotoSyncRealtimeManager? = null
@@ -72,6 +76,8 @@ class SyncQueueManager(
     val projectSyncingProjects: StateFlow<Set<Long>> = _projectSyncingProjects
     @Volatile
     private var pendingSyncProjectsForce = false
+    @Volatile
+    private var lastForegroundSyncAt = 0L
 
     init {
         scope.launch { processLoop() }
@@ -132,6 +138,56 @@ class SyncQueueManager(
             enqueue(SyncJob.ProcessPendingOperations)
             enqueue(SyncJob.SyncProjects(force = true))
         }
+    }
+
+    /**
+     * Called when the app comes to foreground. Pushes any pending local changes
+     * and syncs projects if data is stale (older than threshold).
+     */
+    fun syncOnForeground() {
+        scope.launch {
+            // Always push pending local changes
+            enqueue(SyncJob.ProcessPendingOperations)
+
+            // Skip pull if network unavailable
+            if (!isNetworkAvailable()) {
+                Log.d(TAG, "⏭️ Skipping foreground sync (no network)")
+                return@launch
+            }
+
+            // Check if we should pull updates (avoid hammering server on rapid foreground/background)
+            val now = System.currentTimeMillis()
+            val elapsed = now - lastForegroundSyncAt
+            val shouldSync = elapsed > AppConfig.FOREGROUND_SYNC_THRESHOLD_MS
+            if (shouldSync) {
+                Log.d(TAG, "🔄 Foreground sync triggered (last sync was ${elapsed / 1000}s ago)")
+                remoteLogger.log(
+                    LogLevel.INFO,
+                    TAG,
+                    "Foreground sync triggered",
+                    mapOf(
+                        "syncType" to "foreground",
+                        "elapsedMs" to elapsed.toString(),
+                        "didPull" to "true"
+                    )
+                )
+                lastForegroundSyncAt = now
+                enqueue(SyncJob.EnsureUserContext)
+                enqueue(SyncJob.SyncProjects(force = false))
+            } else {
+                Log.d(TAG, "⏭️ Skipping foreground sync (${elapsed / 1000}s since last)")
+            }
+        }
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val cm = connectivityManager ?: return true // Assume available if no manager provided
+        return runCatching {
+            val network = cm.activeNetwork ?: return false
+            val capabilities = cm.getNetworkCapabilities(network) ?: return false
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+        }.getOrDefault(true)
     }
 
     fun processPendingOperations() {

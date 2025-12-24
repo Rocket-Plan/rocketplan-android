@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string-array name="state_province_options">
+    <string-array name="us_state_options">
         <item>Alabama (AL)</item>
         <item>Alaska (AK)</item>
         <item>American Samoa (AS)</item>
@@ -57,6 +57,9 @@
         <item>West Virginia (WV)</item>
         <item>Wisconsin (WI)</item>
         <item>Wyoming (WY)</item>
+    </string-array>
+
+    <string-array name="canada_province_options">
         <item>Alberta (AB)</item>
         <item>British Columbia (BC)</item>
         <item>Manitoba (MB)</item>

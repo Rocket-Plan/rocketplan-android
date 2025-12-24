@@ -245,7 +245,7 @@ class PropertyInfoFragment : Fragment() {
         fromId?.let { id ->
             propertyTypes.firstOrNull { it.propertyTypeId == id }?.let { return it }
         }
-        return PropertyType.fromApiValue(property?.propertyType)
+        return PropertyType.fromApiValue(property?.resolvedPropertyType())
     }
 
     private fun friendlyPropertyTypeLabel(type: PropertyType): String = when (type) {
