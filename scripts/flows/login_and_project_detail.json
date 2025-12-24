@@ -1,0 +1,39 @@
+[
+  {
+    "action": "start_app",
+    "package": "com.example.rocketplan_android.dev",
+    "activity": "com.example.rocketplan_android.MainActivity"
+  },
+  {
+    "action": "wait",
+    "seconds": 2
+  },
+  {
+    "action": "input",
+    "id_contains": "emailInput",
+    "value": "${RP_TEST_EMAIL:-flirstaging@rocketplantech.com}"
+  },
+  {
+    "action": "input",
+    "id_contains": "passwordInput",
+    "value": "${RP_TEST_PASSWORD:-flirtest123}"
+  },
+  {
+    "action": "tap",
+    "id_contains": "signInButton"
+  },
+  {
+    "action": "wait",
+    "seconds": 5
+  },
+  {
+    "action": "tap_from_summary",
+    "summary": "ui_dumps/001_project_detail_clickables.txt",
+    "index": 5
+  },
+  {
+    "action": "tap_from_summary",
+    "summary": "ui_dumps/001_project_detail_clickables.txt",
+    "index": 10
+  }
+]
