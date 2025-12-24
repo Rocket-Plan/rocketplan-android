@@ -172,6 +172,7 @@ class OfflineSyncRepository(
                 propertySyncService.persistProperty(projectId, property, propertyTypeValue, existing)
             },
             imageProcessorQueueManagerProvider = { imageProcessorQueueManager },
+            remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher
         )
     }
@@ -651,10 +652,13 @@ class OfflineSyncRepository(
     /**
      * Runs a set of sync segments sequentially for a project.
      * Used by SyncQueueManager to compose fast vs. background sync passes without relying on the monolithic graph.
+     *
+     * @param source Optional caller identifier for telemetry (e.g., "RoomDetailFragment", "SyncQueueManager")
      */
     suspend fun syncProjectSegments(
         projectId: Long,
-        segments: List<SyncSegment>
+        segments: List<SyncSegment>,
+        source: String? = null
     ): List<SyncResult> {
         val startTime = System.currentTimeMillis()
         val results = mutableListOf<SyncResult>()
@@ -697,6 +701,7 @@ class OfflineSyncRepository(
                 }
             }
             results += result
+            logSegmentTelemetry(result, projectId, source)
             coroutineContext.ensureActive()
         }
 
@@ -708,17 +713,43 @@ class OfflineSyncRepository(
         return results
     }
 
+    private fun logSegmentTelemetry(result: SyncResult, projectId: Long, source: String?) {
+        val status = when (result) {
+            is SyncResult.Success -> "success"
+            is SyncResult.Failure -> "failure"
+            is SyncResult.Incomplete -> "incomplete"
+        }
+        remoteLogger?.log(
+            level = if (result.success) LogLevel.INFO else LogLevel.WARN,
+            tag = "SyncTelemetry",
+            message = "Segment ${result.segment.name} $status",
+            metadata = buildMap {
+                put("segment", result.segment.name)
+                put("status", status)
+                put("projectId", projectId.toString())
+                put("itemsSynced", result.itemsSynced.toString())
+                put("durationMs", result.durationMs.toString())
+                source?.let { put("source", it) }
+                result.error?.let { put("error", it.message ?: it.javaClass.simpleName) }
+                if (result is SyncResult.Incomplete) {
+                    put("incompleteReason", result.reason.name)
+                }
+            }
+        )
+    }
+
     /**
      * Background-friendly sync pass that skips essentials but fetches metadata and photos.
      */
-    suspend fun syncProjectContent(projectId: Long): List<SyncResult> =
+    suspend fun syncProjectContent(projectId: Long, source: String? = null): List<SyncResult> =
         syncProjectSegments(
             projectId,
             listOf(
                 SyncSegment.PROJECT_METADATA,
                 SyncSegment.ALL_ROOM_PHOTOS,
                 SyncSegment.PROJECT_LEVEL_PHOTOS
-            )
+            ),
+            source
         )
 
     suspend fun processPendingOperations(): PendingOperationResult =
@@ -778,7 +809,7 @@ class OfflineSyncRepository(
      * Full project sync: syncs essentials + metadata + all photos.
      * Uses modular functions to avoid duplication.
      */
-    suspend fun syncProjectGraph(projectId: Long, skipPhotos: Boolean = false): List<SyncResult> = withContext(ioDispatcher) {
+    suspend fun syncProjectGraph(projectId: Long, skipPhotos: Boolean = false, source: String? = null): List<SyncResult> = withContext(ioDispatcher) {
         val syncType = if (skipPhotos) "FAST (rooms only)" else "FULL"
         Log.d("API", "🔄 [syncProjectGraph] Starting $syncType sync for project $projectId")
         val startTime = System.currentTimeMillis()
@@ -792,7 +823,7 @@ class OfflineSyncRepository(
             }
         }
 
-        val results = syncProjectSegments(projectId, segments)
+        val results = syncProjectSegments(projectId, segments, source)
         val duration = System.currentTimeMillis() - startTime
 
         val essentialsResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_ESSENTIALS }
@@ -888,8 +919,9 @@ class OfflineSyncRepository(
     suspend fun syncRoomPhotos(
         projectId: Long,
         roomId: Long,
-        ignoreCheckpoint: Boolean = false
-    ): SyncResult = photoSyncService.syncRoomPhotos(projectId, roomId, ignoreCheckpoint)
+        ignoreCheckpoint: Boolean = false,
+        source: String? = null
+    ): SyncResult = photoSyncService.syncRoomPhotos(projectId, roomId, ignoreCheckpoint, source)
 
     /**
      * Legacy API: syncs photos for a single room without returning SyncResult.

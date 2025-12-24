@@ -44,6 +44,8 @@ import com.example.rocketplan_android.data.repository.mapper.PendingRoomCreation
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toRequest
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.util.parseTargetMoisture
 import com.google.gson.Gson
 import retrofit2.HttpException
@@ -80,6 +82,7 @@ class SyncQueueProcessor(
         existing: OfflinePropertyEntity?
     ) -> OfflinePropertyEntity,
     private val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
+    private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : SyncQueueEnqueuer {
     private val gson = Gson()
@@ -110,6 +113,17 @@ class SyncQueueProcessor(
                         OperationOutcome.SUCCESS -> localDataService.removeSyncOperation(operation.operationId)
                         OperationOutcome.DROP -> {
                             Log.w(TAG, "⚠️ [$label] Dropping sync op=${operation.operationId} type=${operation.entityType}")
+                            remoteLogger?.log(
+                                LogLevel.WARN,
+                                TAG,
+                                "Sync operation dropped",
+                                mapOf(
+                                    "operationId" to operation.operationId,
+                                    "entityType" to operation.entityType,
+                                    "entityId" to operation.entityId.toString(),
+                                    "operationType" to operation.operationType.name
+                                )
+                            )
                             localDataService.removeSyncOperation(operation.operationId)
                         }
                         OperationOutcome.SKIP,
@@ -118,10 +132,27 @@ class SyncQueueProcessor(
                 }
                 .onFailure { error ->
                     Log.w(TAG, "⚠️ [$label] Sync operation failed", error)
-                    if (error is HttpException) {
-                        val body = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
-                        Log.w(TAG, "⚠️ [$label] HTTP ${error.code()} response: $body")
+                    val httpCode = (error as? HttpException)?.code()
+                    val errorBody = if (error is HttpException) {
+                        runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                    } else null
+                    if (httpCode != null) {
+                        Log.w(TAG, "⚠️ [$label] HTTP $httpCode response: $errorBody")
                     }
+                    remoteLogger?.log(
+                        LogLevel.ERROR,
+                        TAG,
+                        "Sync operation failed: ${error.message}",
+                        buildMap {
+                            put("operationId", operation.operationId)
+                            put("entityType", operation.entityType)
+                            put("entityId", operation.entityId.toString())
+                            put("operationType", operation.operationType.name)
+                            put("retryCount", operation.retryCount.toString())
+                            httpCode?.let { put("httpCode", it.toString()) }
+                            errorBody?.take(500)?.let { put("errorBody", it) }
+                        }
+                    )
                     markSyncOperationFailure(operation, error)
                 }
         }
@@ -694,10 +725,28 @@ class SyncQueueProcessor(
             if (response.code() == 409) {
                 // Conflict - fetch fresh and retry delete with updated timestamp
                 Log.w(TAG, "⚠️ [handlePendingProjectDeletion] 409 conflict for project $serverId; fetching fresh and retrying")
+                remoteLogger?.log(
+                    LogLevel.WARN,
+                    TAG,
+                    "Project delete 409 conflict, retrying",
+                    mapOf(
+                        "projectServerId" to serverId.toString(),
+                        "projectLocalId" to project.projectId.toString()
+                    )
+                )
                 val freshProject = runCatching {
                     api.getProjectDetail(serverId).data
                 }.getOrElse { error ->
                     Log.e(TAG, "❌ [handlePendingProjectDeletion] Failed to fetch fresh project $serverId", error)
+                    remoteLogger?.log(
+                        LogLevel.ERROR,
+                        TAG,
+                        "Project delete conflict resolution failed",
+                        mapOf(
+                            "projectServerId" to serverId.toString(),
+                            "error" to (error.message ?: "unknown")
+                        )
+                    )
                     val restored = project.copy(isDeleted = false, isDirty = false, syncStatus = SyncStatus.SYNCED)
                     localDataService.saveProjects(listOf(restored))
                     return OperationOutcome.DROP
@@ -710,6 +759,12 @@ class SyncQueueProcessor(
                 }
                 if (retryResponse.code() == 409) {
                     Log.w(TAG, "⚠️ [handlePendingProjectDeletion] Retry still got 409; restoring project $serverId")
+                    remoteLogger?.log(
+                        LogLevel.WARN,
+                        TAG,
+                        "Project delete 409 conflict persisted, restoring",
+                        mapOf("projectServerId" to serverId.toString())
+                    )
                     val restored = freshProject.toEntity(existing = project)
                     localDataService.saveProjects(listOf(restored))
                     return OperationOutcome.DROP
@@ -995,6 +1050,17 @@ class SyncQueueProcessor(
 
         if (levelServerId == null || locationServerId == null) {
             Log.w(TAG, "⚠️ [handlePendingRoomCreation] Missing location/level for room ${payload.roomName}; will retry")
+            remoteLogger?.log(
+                LogLevel.WARN,
+                TAG,
+                "Room creation missing location/level IDs",
+                mapOf(
+                    "roomName" to payload.roomName,
+                    "projectId" to projectServerId.toString(),
+                    "levelServerId" to (levelServerId?.toString() ?: "null"),
+                    "locationServerId" to (locationServerId?.toString() ?: "null")
+                )
+            )
             return OperationOutcome.SKIP
         }
 
@@ -1088,6 +1154,17 @@ class SyncQueueProcessor(
                     "⚠️ [handlePendingRoomCreation] Could not resolve valid IDs from remote; " +
                         "validLevelIds=${validLevelIds.size} validLocationIds=${validLocationIds.size}; " +
                         "refreshing essentials and retrying"
+                )
+                remoteLogger?.log(
+                    LogLevel.WARN,
+                    TAG,
+                    "Room creation could not resolve valid location/level IDs",
+                    mapOf(
+                        "roomName" to payload.roomName,
+                        "projectId" to projectServerId.toString(),
+                        "validLevelCount" to validLevelIds.size.toString(),
+                        "validLocationCount" to validLocationIds.size.toString()
+                    )
                 )
                 refreshEssentialsOnce()
                 return OperationOutcome.SKIP
@@ -1506,6 +1583,22 @@ class SyncQueueProcessor(
             errorMessage = error.message
         )
         localDataService.enqueueSyncOperation(updated)
+
+        if (!willRetry) {
+            remoteLogger?.log(
+                LogLevel.ERROR,
+                TAG,
+                "Sync operation exhausted retries",
+                mapOf(
+                    "operationId" to operation.operationId,
+                    "entityType" to operation.entityType,
+                    "entityId" to operation.entityId.toString(),
+                    "operationType" to operation.operationType.name,
+                    "maxRetries" to operation.maxRetries.toString(),
+                    "lastError" to (error.message ?: "unknown")
+                )
+            )
+        }
     }
 
     private fun resolveEntityId(entityId: Long, uuid: String): Long =

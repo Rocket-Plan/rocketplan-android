@@ -818,7 +818,8 @@ class RoomDetailViewModel(
                 val result = offlineSyncRepository.syncRoomPhotos(
                     projectId,
                     remoteRoomId,
-                    ignoreCheckpoint = ignoreCheckpoint
+                    ignoreCheckpoint = ignoreCheckpoint,
+                    source = "RoomDetailFragment"
                 )
                 if (!result.success) {
                     Log.w(TAG, "⚠️ Room photo sync failed for roomId=$remoteRoomId", result.error)

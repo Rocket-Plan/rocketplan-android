@@ -155,7 +155,7 @@ class ProjectDetailViewModel(
             _isRefreshing.value = true
             try {
                 Log.d("ProjectDetailVM", "🔄 Pull-to-refresh project $projectId (rooms + thumbnails only)")
-                val results = offlineSyncRepository.syncProjectGraph(projectId, skipPhotos = true)
+                val results = offlineSyncRepository.syncProjectGraph(projectId, skipPhotos = true, source = "ProjectDetailFragment")
                 val essentials = results.firstOrNull { it.segment == SyncSegment.PROJECT_ESSENTIALS }
                 if (essentials == null || !essentials.success) {
                     Log.w("ProjectDetailVM", "⚠️ Project refresh incomplete for project $projectId; essentials=$essentials")

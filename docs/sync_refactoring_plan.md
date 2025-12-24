@@ -264,14 +264,14 @@ val results = offlineSyncRepository.syncProjectSegments(
 ---
 
 ### Phase 2: Update Callers (1 hour)
-**Status:** Partial
+**Status:** Complete ✅
 **Start using selective sync**
 
 1. [x] `RoomDetailViewModel` uses `syncRoomPhotos()`
 2. [x] `ProjectDetailViewModel` uses `syncProjectGraph(skipPhotos = true)`
 3. [x] `SyncQueueManager` uses `syncProjectSegments()` and `syncProjectContent()`
-4. [ ] Add cancellation around background photo sync in `RoomDetailFragment`
-5. [ ] Add telemetry to track which segments are called per screen
+4. [x] Add cancellation around background photo sync in `RoomDetailFragment`
+5. [x] Add telemetry to track which segments are called per screen
 
 **Testing:** Manual verification pending.
 
@@ -389,8 +389,8 @@ val results = offlineSyncRepository.syncProjectSegments(
 
 ## Next Steps
 
-1. **Add cancellation hooks** for background photo sync in `RoomDetailFragment`
-2. **Add segment telemetry** to track usage per screen
+1. ~~**Add cancellation hooks** for background photo sync in `RoomDetailFragment`~~ ✅ Done
+2. ~~**Add segment telemetry** to track usage per screen~~ ✅ Done
 3. **Run Phase 3 metrics** to validate time-to-first-photo improvements
 
 ---

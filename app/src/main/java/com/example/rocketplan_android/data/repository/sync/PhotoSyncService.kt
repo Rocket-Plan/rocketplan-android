@@ -110,11 +110,14 @@ class PhotoSyncService(
 
     /**
      * Syncs photos for a single room. Returns SyncResult for composability.
+     *
+     * @param source Optional caller identifier for telemetry (e.g., "RoomDetailFragment")
      */
     suspend fun syncRoomPhotos(
         projectId: Long,
         roomId: Long,
-        ignoreCheckpoint: Boolean = false
+        ignoreCheckpoint: Boolean = false,
+        source: String? = null
     ): SyncResult = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
         val checkpointKey = roomPhotosKey(roomId)
@@ -154,14 +157,18 @@ class PhotoSyncService(
             } else {
                 Log.e(TAG, "❌ [syncRoomPhotos] Failed to fetch photos for room $roomId", error)
                 val duration = System.currentTimeMillis() - startTime
-                return@withContext SyncResult.failure(SyncSegment.ROOM_PHOTOS, error, duration)
+                val failureResult = SyncResult.failure(SyncSegment.ROOM_PHOTOS, error, duration)
+                logSegmentTelemetry(failureResult, projectId, roomId, source)
+                return@withContext failureResult
             }
         }.getOrElse { emptyList() }
 
         if (photos.isEmpty()) {
             Log.d(TAG, "ℹ️ [syncRoomPhotos] No photos returned for room $roomId")
             val duration = System.currentTimeMillis() - startTime
-            return@withContext SyncResult.success(SyncSegment.ROOM_PHOTOS, 0, duration)
+            val emptyResult = SyncResult.success(SyncSegment.ROOM_PHOTOS, 0, duration)
+            logSegmentTelemetry(emptyResult, projectId, roomId, source)
+            return@withContext emptyResult
         }
 
         if (persistPhotos(photos, defaultRoomId = roomId, defaultProjectId = projectId)) {
@@ -172,7 +179,32 @@ class PhotoSyncService(
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
 
         val duration = System.currentTimeMillis() - startTime
-        SyncResult.success(SyncSegment.ROOM_PHOTOS, photos.size, duration)
+        val result = SyncResult.success(SyncSegment.ROOM_PHOTOS, photos.size, duration)
+        logSegmentTelemetry(result, projectId, roomId, source)
+        result
+    }
+
+    private fun logSegmentTelemetry(result: SyncResult, projectId: Long, roomId: Long?, source: String?) {
+        val status = when (result) {
+            is SyncResult.Success -> "success"
+            is SyncResult.Failure -> "failure"
+            is SyncResult.Incomplete -> "incomplete"
+        }
+        remoteLogger?.log(
+            level = if (result.success) LogLevel.INFO else LogLevel.WARN,
+            tag = "SyncTelemetry",
+            message = "Segment ${result.segment.name} $status",
+            metadata = buildMap {
+                put("segment", result.segment.name)
+                put("status", status)
+                put("projectId", projectId.toString())
+                roomId?.let { put("roomId", it.toString()) }
+                put("itemsSynced", result.itemsSynced.toString())
+                put("durationMs", result.durationMs.toString())
+                source?.let { put("source", it) }
+                result.error?.let { put("error", it.message ?: it.javaClass.simpleName) }
+            }
+        )
     }
 
     /**

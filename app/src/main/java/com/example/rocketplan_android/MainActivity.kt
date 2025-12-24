@@ -544,6 +544,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun setFullscreen(enabled: Boolean) {
         WindowCompat.setDecorFitsSystemWindows(window, !enabled)
         val controller = WindowInsetsControllerCompat(window, binding.root)

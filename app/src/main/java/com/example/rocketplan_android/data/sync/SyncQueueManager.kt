@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -31,6 +32,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.cancellation.CancellationException
 
+@OptIn(FlowPreview::class)
 class SyncQueueManager(
     private val authRepository: AuthRepository,
     private val syncRepository: OfflineSyncRepository,
@@ -511,7 +513,8 @@ class SyncQueueManager(
                             SyncJob.ProjectSyncMode.ESSENTIALS_ONLY -> {
                                 val results = syncRepository.syncProjectSegments(
                                     job.projectId,
-                                    listOf(SyncSegment.PROJECT_ESSENTIALS)
+                                    listOf(SyncSegment.PROJECT_ESSENTIALS),
+                                    source = "SyncQueueManager"
                                 )
                                 syncSucceeded = results.all { it.success }.also { success ->
                                     if (!success) {
@@ -520,7 +523,7 @@ class SyncQueueManager(
                                 }
                             }
                             SyncJob.ProjectSyncMode.CONTENT_ONLY -> {
-                                val results = syncRepository.syncProjectContent(job.projectId)
+                                val results = syncRepository.syncProjectContent(job.projectId, source = "SyncQueueManager")
                                 syncSucceeded = results.all { it.success }.also { success ->
                                     if (!success) {
                                         logSegmentFailures(job.projectId, results)
@@ -531,7 +534,8 @@ class SyncQueueManager(
                             SyncJob.ProjectSyncMode.METADATA_ONLY -> {
                                 val results = syncRepository.syncProjectSegments(
                                     job.projectId,
-                                    listOf(SyncSegment.PROJECT_METADATA)
+                                    listOf(SyncSegment.PROJECT_METADATA),
+                                    source = "SyncQueueManager"
                                 )
                                 syncSucceeded = results.all { it.success }.also { success ->
                                     if (!success) {
@@ -545,7 +549,8 @@ class SyncQueueManager(
                                     listOf(
                                         SyncSegment.ALL_ROOM_PHOTOS,
                                         SyncSegment.PROJECT_LEVEL_PHOTOS
-                                    )
+                                    ),
+                                    source = "SyncQueueManager"
                                 )
                                 syncSucceeded = results.all { it.success }.also { success ->
                                     if (!success) {
@@ -555,7 +560,7 @@ class SyncQueueManager(
                                 photoCacheScheduler.schedulePrefetch()
                             }
                             SyncJob.ProjectSyncMode.FULL -> {
-                                val results = syncRepository.syncProjectGraph(job.projectId, skipPhotos = false)
+                                val results = syncRepository.syncProjectGraph(job.projectId, skipPhotos = false, source = "SyncQueueManager")
                                 syncSucceeded = results.all { it.success }.also { success ->
                                     if (!success) {
                                         logSegmentFailures(job.projectId, results)
