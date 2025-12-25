@@ -1051,7 +1051,7 @@ class SyncQueueProcessor(
 
         var refreshedEssentials = false
         suspend fun refreshEssentialsOnce() {
-            if (!refreshedEssentials) {
+            if (!refreshedEssentials && isNetworkAvailable()) {
                 syncProjectEssentials(payload.projectId)
                 refreshedEssentials = true
             }
@@ -1119,7 +1119,8 @@ class SyncQueueProcessor(
         }
 
         // Fallback: if both serverIds are null, try to resolve by name-matching with remote levels
-        if (levelServerId == null || locationServerId == null) {
+        // Only attempt remote resolution when network is available
+        if ((levelServerId == null || locationServerId == null) && isNetworkAvailable()) {
             val localLevel = payload.levelLocalId?.let { levelId ->
                 locations.firstOrNull { it.locationId == levelId }
             }
@@ -1174,7 +1175,8 @@ class SyncQueueProcessor(
             }
         }
 
-        if (levelServerId != null && locationServerId != null && levelServerId == locationServerId) {
+        // Only attempt disambiguation when network is available
+        if (levelServerId != null && locationServerId != null && levelServerId == locationServerId && isNetworkAvailable()) {
             val localLevel = payload.levelLocalId?.let { levelId ->
                 locations.firstOrNull { it.locationId == levelId }
             }
@@ -1240,6 +1242,12 @@ class SyncQueueProcessor(
 
         // Validate that resolved server IDs actually exist on the server
         // This prevents using stale/invalid IDs that would cause API errors
+        // Skip validation when offline - we'll retry later when network is available
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "⏭️ [handlePendingRoomCreation] Skipping server ID validation (no network)")
+            return OperationOutcome.SKIP
+        }
+
         val remoteLevelsResult = runCatching { api.getPropertyLevels(propertyServerId).data }
         val remoteLocationsResult = runCatching { api.getPropertyLocations(propertyServerId).data }
         val remoteLevels = remoteLevelsResult.getOrNull().orEmpty()
@@ -1304,9 +1312,13 @@ class SyncQueueProcessor(
 
             val resolvedLevelFromRemote = when {
                 levelValid -> levelServerId
-                locationValid ->
-                    remoteLocations.firstOrNull { it.id == locationServerId }?.parentLocationId ?: matchedLevelId
-                else -> matchedLevelId
+                locationValid -> {
+                    // Try to get parent of the valid location, or fall back to name matching, or first level
+                    remoteLocations.firstOrNull { it.id == locationServerId }?.parentLocationId
+                        ?: matchedLevelId
+                        ?: remoteLevels.firstOrNull()?.id
+                }
+                else -> matchedLevelId ?: remoteLevels.firstOrNull()?.id
             }
 
             val resolvedLocationFromRemote = when {
