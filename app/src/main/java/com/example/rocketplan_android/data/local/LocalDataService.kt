@@ -486,13 +486,15 @@ class LocalDataService private constructor(
         val resolvedPropertyId = if (existingPropertyIsPending && !forceUpdate) existing.propertyId else propertyId
         Log.d("API", "[attachPropertyToProject] projectId=$projectId existingPropertyId=${existing.propertyId} newPropertyId=$propertyId forceUpdate=$forceUpdate -> resolvedPropertyId=$resolvedPropertyId")
         val timestamp = Date()
+        // Only mark as synced if forceUpdate (i.e., property actually synced from server)
+        // Otherwise preserve project's current sync status to not clear pending changes
         val updatedProject = existing.copy(
             propertyId = resolvedPropertyId,
             propertyType = propertyType ?: existing.propertyType,
-            syncStatus = SyncStatus.SYNCED,
-            isDirty = false,
+            syncStatus = if (forceUpdate) SyncStatus.SYNCED else existing.syncStatus,
+            isDirty = if (forceUpdate) false else existing.isDirty,
             updatedAt = timestamp,
-            lastSyncedAt = timestamp
+            lastSyncedAt = if (forceUpdate) timestamp else existing.lastSyncedAt
         )
         dao.upsertProject(updatedProject)
     }

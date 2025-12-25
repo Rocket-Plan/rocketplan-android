@@ -128,7 +128,7 @@ class SyncQueueManager(
         if (initialSyncStarted.compareAndSet(false, true)) {
             enqueue(SyncJob.EnsureUserContext)
             enqueue(SyncJob.ProcessPendingOperations)
-            enqueue(SyncJob.SyncProjects(force = false))
+            enqueue(SyncJob.SyncProjects(force = true))  // Full sync on first login
         }
     }
 

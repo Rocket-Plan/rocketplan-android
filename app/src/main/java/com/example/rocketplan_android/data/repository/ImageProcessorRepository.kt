@@ -228,7 +228,7 @@ class ImageProcessorRepository(
             entityId = entityId
         )
 
-        return@withContext runCatching {
+        val apiResult = runCatching {
             val response = if (roomServerId != null) {
                 api.createRoomAssembly(roomServerId, request)
             } else {
@@ -266,19 +266,43 @@ class ImageProcessorRepository(
                 )
                 throw IllegalStateException(errorMessage)
             }
-        }.onFailure { error ->
-            // Handle network exceptions (timeout, TLS failure, etc.)
-            val errorMessage = error.message ?: "Network error during assembly creation"
-            updateAssemblyStatus(assemblyId, AssemblyStatus.FAILED, errorMessage)
-            logLifecycle(
-                event = "assembly_network_error",
-                assemblyId = assemblyId,
-                metadata = mapOf(
-                    "error" to errorMessage,
-                    "error_type" to error::class.simpleName.toString()
-                )
-            )
         }
+
+        return@withContext apiResult.fold(
+            onSuccess = { Result.success(it) },
+            onFailure = { error ->
+                val errorMessage = error.message ?: "Network error during assembly creation"
+                val isNetworkError = error is java.net.UnknownHostException ||
+                    error is java.net.SocketTimeoutException ||
+                    error is java.net.ConnectException ||
+                    error is java.io.IOException && error.message?.contains("network", ignoreCase = true) == true
+
+                if (isNetworkError) {
+                    // Keep as QUEUED for retry when network returns - return success
+                    updateAssemblyStatus(assemblyId, AssemblyStatus.QUEUED)
+                    logLifecycle(
+                        event = "assembly_deferred_offline",
+                        assemblyId = assemblyId,
+                        metadata = mapOf(
+                            "error" to errorMessage,
+                            "error_type" to error::class.simpleName.toString()
+                        )
+                    )
+                    Result.success(assemblyId)
+                } else {
+                    updateAssemblyStatus(assemblyId, AssemblyStatus.FAILED, errorMessage)
+                    logLifecycle(
+                        event = "assembly_network_error",
+                        assemblyId = assemblyId,
+                        metadata = mapOf(
+                            "error" to errorMessage,
+                            "error_type" to error::class.simpleName.toString()
+                        )
+                    )
+                    Result.failure(error)
+                }
+            }
+        )
     }
 
     suspend fun updateAssemblyStatus(
