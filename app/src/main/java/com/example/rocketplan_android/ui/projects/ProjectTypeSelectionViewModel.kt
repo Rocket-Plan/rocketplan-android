@@ -217,6 +217,7 @@ class ProjectTypeSelectionViewModel(
                     is SyncResult.Incomplete -> {
                         val message = when (result.reason) {
                             IncompleteReason.MISSING_PROPERTY -> "Property not set up yet. Please choose a property type to continue."
+                            IncompleteReason.NO_COMPANY_CONTEXT -> "Please log in again to continue."
                         }
                         Log.w(
                             TAG,

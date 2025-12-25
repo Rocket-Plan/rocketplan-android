@@ -17,6 +17,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClient {
 
     private val authToken: AtomicReference<String?> = AtomicReference(null)
+    private val companyId: AtomicReference<Long?> = AtomicReference(null)
 
     /**
      * Set the authentication token for API requests
@@ -29,6 +30,19 @@ object RetrofitClient {
      * Get the authentication token
      */
     fun getAuthToken(): String? = authToken.get()
+
+    /**
+     * Set the company ID for API requests.
+     * This is sent as X-Company-Id header on all authenticated requests.
+     */
+    fun setCompanyId(id: Long?) {
+        companyId.set(id)
+    }
+
+    /**
+     * Get the current company ID
+     */
+    fun getCompanyId(): Long? = companyId.get()
 
     /**
      * Logging interceptor for debugging (only enabled in dev/staging)
@@ -45,14 +59,20 @@ object RetrofitClient {
     }
 
     /**
-     * Auth interceptor to add Bearer token and User-Agent to requests
+     * Auth interceptor to add Bearer token, Company ID, and User-Agent to requests
      */
     private val authInterceptor = Interceptor { chain ->
         val requestBuilder = chain.request().newBuilder()
 
         // Add auth token if available
-        authToken.get()?.let { token ->
+        val token = authToken.get()
+        if (!token.isNullOrBlank()) {
             requestBuilder.addHeader("Authorization", "Bearer $token")
+
+            // Only add company ID header when authenticated
+            companyId.get()?.let { id ->
+                requestBuilder.addHeader("X-Company-Id", id.toString())
+            }
         }
 
         // Add common headers

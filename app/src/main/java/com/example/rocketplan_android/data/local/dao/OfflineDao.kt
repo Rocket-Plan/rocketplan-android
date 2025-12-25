@@ -60,6 +60,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_projects WHERE projectId = :projectId LIMIT 1")
     suspend fun getProject(projectId: Long): OfflineProjectEntity?
 
+    @Query("SELECT * FROM offline_projects WHERE serverId = :serverId AND companyId = :companyId AND isDeleted = 0 LIMIT 1")
+    suspend fun getProjectByServerId(serverId: Long, companyId: Long): OfflineProjectEntity?
+
     @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
     suspend fun getProjectsOnce(): List<OfflineProjectEntity>
 
@@ -934,6 +937,24 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_sync_queue WHERE entityType = 'work_scope' AND entityId IN (SELECT workScopeId FROM offline_work_scopes WHERE projectId IN (:projectIds))")
     suspend fun deleteSyncOpsForWorkScopesByProject(projectIds: List<Long>): Int
+
+    /** Counts unsynced operations (PENDING or FAILED) for a project, its property, and children */
+    @Query("""
+        SELECT COUNT(*) FROM offline_sync_queue WHERE status IN ('PENDING', 'FAILED') AND (
+            (entityType = 'project' AND entityId = :projectId) OR
+            (entityType = 'property' AND entityId = (SELECT propertyId FROM offline_projects WHERE projectId = :projectId)) OR
+            (entityType = 'photo' AND entityId IN (SELECT photoId FROM offline_photos WHERE projectId = :projectId)) OR
+            (entityType = 'note' AND entityId IN (SELECT noteId FROM offline_notes WHERE projectId = :projectId)) OR
+            (entityType = 'room' AND entityId IN (SELECT roomId FROM offline_rooms WHERE projectId = :projectId)) OR
+            (entityType = 'location' AND entityId IN (SELECT locationId FROM offline_locations WHERE projectId = :projectId)) OR
+            (entityType = 'equipment' AND entityId IN (SELECT equipmentId FROM offline_equipment WHERE projectId = :projectId)) OR
+            (entityType = 'damage' AND entityId IN (SELECT damageId FROM offline_damages WHERE projectId = :projectId)) OR
+            (entityType = 'atmospheric_log' AND entityId IN (SELECT logId FROM offline_atmospheric_logs WHERE projectId = :projectId)) OR
+            (entityType = 'moisture_log' AND entityId IN (SELECT logId FROM offline_moisture_logs WHERE projectId = :projectId)) OR
+            (entityType = 'work_scope' AND entityId IN (SELECT workScopeId FROM offline_work_scopes WHERE projectId = :projectId))
+        )
+    """)
+    suspend fun countPendingSyncOpsForProject(projectId: Long): Int
     // endregion
 
     // region Conflicts

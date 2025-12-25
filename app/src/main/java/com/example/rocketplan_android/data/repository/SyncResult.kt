@@ -12,7 +12,8 @@ enum class SyncSegment {
 }
 
 enum class IncompleteReason {
-    MISSING_PROPERTY
+    MISSING_PROPERTY,
+    NO_COMPANY_CONTEXT
 }
 
 /**

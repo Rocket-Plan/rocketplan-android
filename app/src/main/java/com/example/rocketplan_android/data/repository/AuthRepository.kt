@@ -16,6 +16,7 @@ import com.example.rocketplan_android.data.model.AuthSession
 import com.example.rocketplan_android.data.model.CurrentUserResponse
 import com.example.rocketplan_android.data.model.Company
 import com.example.rocketplan_android.data.model.SetActiveCompanyRequest
+import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -26,8 +27,10 @@ import java.util.UUID
  */
 class AuthRepository(
     private val secureStorage: SecureStorage,
+    private val localDataServiceProvider: () -> LocalDataService = { LocalDataService.getInstance() },
     private val authService: AuthService = RetrofitClient.authService
 ) {
+    private val localDataService: LocalDataService by lazy { localDataServiceProvider() }
 
     // ==================== API Operations ====================
 
@@ -233,18 +236,25 @@ class AuthRepository(
 
             // If we have cached identity, allow offline access and let sync recover when online.
             val hasUserId = secureStorage.getUserIdSync()?.let { it > 0L } == true
-            val hasCompanyId = secureStorage.getCompanyIdSync() != null
-            return hasUserId || hasCompanyId
+            val cachedCompanyId = secureStorage.getCompanyIdSync()
+            if (cachedCompanyId != null) {
+                localDataService.setCurrentCompanyId(cachedCompanyId)
+                RetrofitClient.setCompanyId(cachedCompanyId)
+            } else {
+                RetrofitClient.setCompanyId(null)
+            }
+            return hasUserId || cachedCompanyId != null
         }
         return false
     }
 
     /**
-     * Clear authentication token
+     * Clear authentication token and company context
      */
     suspend fun clearAuthToken() {
         secureStorage.clearAuthToken()
         RetrofitClient.setAuthToken(null)
+        RetrofitClient.setCompanyId(null)
     }
 
     /**
@@ -318,9 +328,13 @@ class AuthRepository(
                         Log.w("AuthRepository", "Failed to set active company on server", e)
                     }
                     secureStorage.saveCompanyId(selectedCompanyId)
+                    localDataService.setCurrentCompanyId(selectedCompanyId)
+                    RetrofitClient.setCompanyId(selectedCompanyId)
                 } else {
                     Log.w("AuthRepository", "No company found in API response - clearing stored companyId")
                     secureStorage.clearCompanyId()
+                    localDataService.clearCurrentCompanyId()
+                    RetrofitClient.setCompanyId(null)
                 }
                 Result.success(currentUser)
             } else {
@@ -357,18 +371,24 @@ class AuthRepository(
             if (response.isSuccessful) {
                 Log.d("AuthRepository", "setActiveCompany: server acknowledged companyId=$companyId")
                 secureStorage.saveCompanyId(companyId)
+                localDataService.setCurrentCompanyId(companyId)
+                RetrofitClient.setCompanyId(companyId)
                 Result.success(Unit)
             } else {
                 val errorBody = response.errorBody()?.string()
                 Log.e("AuthRepository", "setActiveCompany: failed ${response.code()} - $errorBody")
                 // Still save locally even if server call fails, so we can retry later
                 secureStorage.saveCompanyId(companyId)
+                localDataService.setCurrentCompanyId(companyId)
+                RetrofitClient.setCompanyId(companyId)
                 Result.failure(Exception("Failed to set active company: ${response.code()}"))
             }
         } catch (e: Exception) {
             Log.e("AuthRepository", "setActiveCompany: exception", e)
             // Still save locally even if server call fails
             secureStorage.saveCompanyId(companyId)
+            localDataService.setCurrentCompanyId(companyId)
+            RetrofitClient.setCompanyId(companyId)
             Result.failure(e)
         }
     }
@@ -418,6 +438,8 @@ class AuthRepository(
      */
     suspend fun logout() {
         secureStorage.clearAll()
+        localDataService.clearCurrentCompanyId()
         RetrofitClient.setAuthToken(null)
+        RetrofitClient.setCompanyId(null)
     }
 }

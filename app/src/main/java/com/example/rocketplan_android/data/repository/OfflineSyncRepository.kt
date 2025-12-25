@@ -253,6 +253,18 @@ class OfflineSyncRepository(
      */
     suspend fun syncProjectEssentials(projectId: Long): SyncResult = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
+
+        // Guard: require company context before syncing. Capture once to avoid race if cleared mid-sync.
+        val companyId = localDataService.currentCompanyIdOrNull
+        if (companyId == null) {
+            Log.w("API", "⚠️ [syncProjectEssentials] No company context set; skipping sync for project $projectId")
+            return@withContext SyncResult.incomplete(
+                SyncSegment.PROJECT_ESSENTIALS,
+                IncompleteReason.NO_COMPANY_CONTEXT,
+                System.currentTimeMillis() - startTime
+            )
+        }
+
         val serverProjectId = resolveServerProjectId(projectId)
             ?: return@withContext SyncResult.failure(
                 SyncSegment.PROJECT_ESSENTIALS,
@@ -264,10 +276,38 @@ class OfflineSyncRepository(
         val detail = runCatching { api.getProjectDetail(serverProjectId).data }
             .onFailure { error ->
                 val duration = System.currentTimeMillis() - startTime
-                // If project returns 404, it was deleted on server - cascade delete locally immediately
+                // If project returns 404, it MAY have been deleted on server.
+                // Only cascade delete if the local project has no unsynced changes (isDirty=false).
+                // This prevents data loss from transient 404s (auth issues, eventual consistency, etc.)
                 if (error is HttpException && error.code() == 404) {
+                    // Use captured company context to scope the lookup - prevents cross-tenant issues
+                    val localProject = localDataService.getProjectByServerId(serverProjectId, companyId)
+                    if (localProject == null) {
+                        // No local project found for this company - nothing to delete
+                        Log.i("API", "🗑️ [syncProjectEssentials] Project $serverProjectId not found (404) and no local record exists for companyId=$companyId")
+                        return@withContext SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, 0, duration)
+                    }
+                    // Check for any pending changes - project-level OR child entities (photos, notes, etc.)
+                    val pendingOpsCount = localDataService.countPendingSyncOpsForProject(localProject.projectId)
+                    if (localProject.isDirty || pendingOpsCount > 0) {
+                        // Project or children have unsynced changes - don't delete, treat as sync failure
+                        Log.w(
+                            "API",
+                            "⚠️ [syncProjectEssentials] Project $serverProjectId returned 404 but has pending changes " +
+                                "(isDirty=${localProject.isDirty}, pendingOps=$pendingOpsCount). " +
+                                "Preserving local data to avoid losing unsynced changes."
+                        )
+                        return@withContext SyncResult.failure(
+                            SyncSegment.PROJECT_ESSENTIALS,
+                            IllegalStateException("Project not found on server but has unsynced local changes"),
+                            duration
+                        )
+                    }
                     Log.i("API", "🗑️ [syncProjectEssentials] Project $serverProjectId not found (404), cascade deleting locally")
-                    val cachedPhotos = localDataService.cascadeDeleteProjectsByServerIds(listOf(serverProjectId))
+                    val cachedPhotos = localDataService.cascadeDeleteProjectsByServerIds(
+                        serverIds = listOf(serverProjectId),
+                        companyId = localProject.companyId
+                    )
                     if (cachedPhotos.isNotEmpty()) {
                         photoCacheManager?.removeCachedPhotos(cachedPhotos)
                     }

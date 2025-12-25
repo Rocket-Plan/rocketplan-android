@@ -58,6 +58,41 @@ class LocalDataService private constructor(
     private val database: OfflineDatabase = OfflineDatabase.getInstance(context)
     private val dao: OfflineDao = database.offlineDao()
 
+    @Volatile
+    private var _currentCompanyId: Long? = null
+
+    /**
+     * The company ID the user is currently operating in.
+     * Set this when the user logs in or switches companies.
+     * @throws IllegalStateException if accessed before being set
+     */
+    val currentCompanyId: Long
+        get() = _currentCompanyId
+            ?: throw IllegalStateException("currentCompanyId not set. Call setCurrentCompanyId() after login.")
+
+    /**
+     * Returns the current company ID, or null if not yet set.
+     * Prefer [currentCompanyId] when you expect it to be set.
+     */
+    val currentCompanyIdOrNull: Long?
+        get() = _currentCompanyId
+
+    /**
+     * Sets the current company ID. Call this when the user logs in or switches companies.
+     */
+    fun setCurrentCompanyId(companyId: Long) {
+        Log.d("LocalDataService", "🏢 Setting currentCompanyId=$companyId")
+        _currentCompanyId = companyId
+    }
+
+    /**
+     * Clears the current company ID. Call this on logout.
+     */
+    fun clearCurrentCompanyId() {
+        Log.d("LocalDataService", "🏢 Clearing currentCompanyId")
+        _currentCompanyId = null
+    }
+
     // region Project accessors
     fun observeProjects(): Flow<List<OfflineProjectEntity>> = dao.observeProjects()
 
@@ -70,6 +105,9 @@ class LocalDataService private constructor(
 
     suspend fun getProject(projectId: Long): OfflineProjectEntity? =
         withContext(ioDispatcher) { dao.getProject(projectId) }
+
+    suspend fun getProjectByServerId(serverId: Long, companyId: Long): OfflineProjectEntity? =
+        withContext(ioDispatcher) { dao.getProjectByServerId(serverId, companyId) }
 
     fun observeLocations(projectId: Long): Flow<List<OfflineLocationEntity>> =
         dao.observeLocationsForProject(projectId)
@@ -684,16 +722,35 @@ class LocalDataService private constructor(
      * This finds all local projects matching the given server IDs and
      * deletes their child entities before marking them as deleted.
      *
+     * @param serverIds List of server-side project IDs to delete
+     * @param companyId Optional company ID to scope deletion. If provided, only projects
+     *                  belonging to this company will be deleted. This prevents cross-tenant
+     *                  data corruption if server IDs are not globally unique.
      * @return List of photos with cached files that need disk cleanup
      */
-    suspend fun cascadeDeleteProjectsByServerIds(serverIds: List<Long>): List<OfflinePhotoEntity> = withContext(ioDispatcher) {
+    suspend fun cascadeDeleteProjectsByServerIds(
+        serverIds: List<Long>,
+        companyId: Long? = null
+    ): List<OfflinePhotoEntity> = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext emptyList()
 
         val cachedPhotosToCleanup = mutableListOf<OfflinePhotoEntity>()
 
         database.withTransaction {
-            // Get all local project IDs for the given server IDs
-            val projects = dao.getProjectsOnce().filter { it.serverId in serverIds }
+            // Get all local project IDs for the given server IDs, optionally scoped by company
+            val allProjects = dao.getProjectsOnce().filter { it.serverId in serverIds }
+            val projects = if (companyId != null) {
+                allProjects.filter { it.companyId == companyId }
+            } else {
+                allProjects
+            }
+            if (allProjects.isNotEmpty() && projects.isEmpty() && companyId != null) {
+                Log.w(
+                    "LocalDataService",
+                    "⚠️ Found ${allProjects.size} projects matching serverIds=$serverIds but none for companyId=$companyId. " +
+                        "Skipping deletion to prevent cross-tenant data loss."
+                )
+            }
             if (projects.isEmpty()) {
                 Log.d("LocalDataService", "🗑️ No local projects found for serverIds=$serverIds")
                 return@withTransaction
@@ -760,8 +817,13 @@ class LocalDataService private constructor(
                 )
             }
 
-            // Force-mark all projects as deleted (ignores isDirty since project is gone from server)
-            dao.forceMarkProjectsDeletedByServerIds(serverIds)
+            // Force-mark only the filtered projects as deleted (scoped by companyId if provided)
+            // IMPORTANT: Use serverIds from filtered projects, not the original list, to prevent
+            // cross-tenant deletion when companyId is specified
+            val filteredServerIds = projects.mapNotNull { it.serverId }
+            if (filteredServerIds.isNotEmpty()) {
+                dao.forceMarkProjectsDeletedByServerIds(filteredServerIds)
+            }
         }
 
         cachedPhotosToCleanup
@@ -938,6 +1000,11 @@ class LocalDataService private constructor(
 
     suspend fun removeSyncOperationsForEntity(entityType: String, entityId: Long) = withContext(ioDispatcher) {
         dao.deleteSyncOperationsForEntity(entityType, entityId)
+    }
+
+    /** Counts all pending sync operations for a project and its children (photos, notes, rooms, etc.) */
+    suspend fun countPendingSyncOpsForProject(projectId: Long): Int = withContext(ioDispatcher) {
+        dao.countPendingSyncOpsForProject(projectId)
     }
 
     fun observeConflicts(): Flow<List<OfflineConflictResolutionEntity>> = dao.observeConflicts()
