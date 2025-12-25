@@ -65,7 +65,7 @@ class OfflineSyncRepository(
     private val photoCacheManager: PhotoCacheManager? = null,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val isNetworkAvailable: () -> Boolean = { true }
+    private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
 ) {
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
 

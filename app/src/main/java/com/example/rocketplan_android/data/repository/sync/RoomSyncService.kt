@@ -36,7 +36,7 @@ class RoomSyncService(
     private val logLocalDeletion: (String, Long, String?) -> Unit,
     private val removePhotoFiles: (OfflinePhotoEntity) -> Unit,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val isNetworkAvailable: () -> Boolean = { true }
+    private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
 ) {
     private fun now() = Date()
 
@@ -482,7 +482,8 @@ class RoomSyncService(
             localDataService.getLocations(projectId)
 
         var locations = currentLocations()
-        if (locations.isEmpty()) {
+        if (locations.isEmpty() && isNetworkAvailable()) {
+            // Only try to sync from network if online
             runCatching { syncProjectEssentials(projectId) }
                 .onFailure {
                     Log.w(TAG, "[createRoom] Failed to refresh locations for project $projectId", it)

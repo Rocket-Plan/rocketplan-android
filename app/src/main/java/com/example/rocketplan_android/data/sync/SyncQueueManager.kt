@@ -443,7 +443,10 @@ class SyncQueueManager(
                 Unit
             }
             SyncJob.ProcessPendingOperations -> {
-                authRepository.ensureUserContext()
+                // Only ensure user context if online (ensureUserContext may call network)
+                if (isNetworkAvailable()) {
+                    authRepository.ensureUserContext()
+                }
                 val pendingResult = syncRepository.processPendingOperations()
                 pendingResult.createdProjects.forEach { created ->
                     enqueue(

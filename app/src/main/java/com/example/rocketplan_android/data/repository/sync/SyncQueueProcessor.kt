@@ -86,7 +86,7 @@ class SyncQueueProcessor(
     private val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val isNetworkAvailable: () -> Boolean = { true }
+    private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
 ) : SyncQueueEnqueuer {
     private val gson = Gson()
 

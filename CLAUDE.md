@@ -12,24 +12,41 @@ Fastlane is used for build automation and deployment.
 
 ### Setup
 
+Requires Homebrew Ruby (system Ruby won't work):
+
 ```bash
-bundle install
+brew install ruby
+/usr/local/opt/ruby/bin/bundle _2.5.0_ install
+```
+
+### Running Lanes
+
+Use the Homebrew Ruby bundle with version specifier:
+
+```bash
+/usr/local/opt/ruby/bin/bundle _2.5.0_ exec fastlane <lane>
+```
+
+Or add an alias to your shell config:
+
+```bash
+alias fastlane='/usr/local/opt/ruby/bin/bundle _2.5.0_ exec fastlane'
 ```
 
 ### Available Lanes
 
-| Command | Description |
-|---------|-------------|
-| `bundle exec fastlane bump` | Increment build number in build.gradle.kts |
-| `bundle exec fastlane build_debug` | Build dev debug APK |
-| `bundle exec fastlane build_staging` | Build staging APK |
-| `bundle exec fastlane build_release` | Build production release AAB |
-| `bundle exec fastlane test` | Run unit tests |
-| `bundle exec fastlane bump_and_build` | Bump version + build debug |
-| `bundle exec fastlane clean` | Clean build directory |
-| `bundle exec fastlane deploy_internal` | Bump + build + deploy to Play Store internal track |
-| `bundle exec fastlane deploy_beta` | Bump + build + deploy to Play Store beta track |
-| `bundle exec fastlane deploy_production` | Bump + build + deploy to Play Store production |
+| Lane | Description |
+|------|-------------|
+| `bump` | Increment build number in build.gradle.kts |
+| `build_debug` | Build dev debug APK |
+| `build_staging` | Build staging APK |
+| `build_release` | Build production release AAB |
+| `test` | Run unit tests |
+| `bump_and_build` | Bump version + build debug |
+| `clean` | Clean build directory |
+| `deploy_internal` | Bump + build + deploy to Play Store internal track |
+| `deploy_beta` | Bump + build + deploy to Play Store beta track |
+| `deploy_production` | Bump + build + deploy to Play Store production |
 
 ### Play Store Deployment
 
@@ -53,7 +70,7 @@ json_key_file("path/to/your/play-store-key.json")
 Build number is in `app/build.gradle.kts`:
 
 ```kotlin
-val buildNumber = 5
+val buildNumber = 6
 versionCode = buildNumber
 versionName = "1.29 ($buildNumber)"
 ```
