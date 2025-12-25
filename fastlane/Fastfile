@@ -1,0 +1,93 @@
+default_platform(:android)
+
+platform :android do
+
+  desc "Increment build number"
+  lane :bump do
+    gradle_file = "../app/build.gradle.kts"
+
+    # Read current build number
+    content = File.read(gradle_file)
+    current_build = content.match(/val buildNumber = (\d+)/)[1].to_i
+    new_build = current_build + 1
+
+    # Update build number
+    new_content = content.gsub(/val buildNumber = \d+/, "val buildNumber = #{new_build}")
+    File.write(gradle_file, new_content)
+
+    UI.success("Build number incremented: #{current_build} -> #{new_build}")
+    new_build
+  end
+
+  desc "Build debug APK"
+  lane :build_debug do
+    gradle(
+      task: "assembleDevStandardDebug"
+    )
+  end
+
+  desc "Build release AAB for Play Store"
+  lane :build_release do
+    gradle(
+      task: "bundleProdStandardRelease"
+    )
+  end
+
+  desc "Build staging APK"
+  lane :build_staging do
+    gradle(
+      task: "assembleStagingStandardDebug"
+    )
+  end
+
+  desc "Run tests"
+  lane :test do
+    gradle(
+      task: "testDevStandardDebugUnitTest"
+    )
+  end
+
+  desc "Bump version and build debug"
+  lane :bump_and_build do
+    bump
+    build_debug
+  end
+
+  desc "Deploy to Play Store internal track"
+  lane :deploy_internal do
+    bump
+    build_release
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft"
+    )
+  end
+
+  desc "Deploy to Play Store beta track"
+  lane :deploy_beta do
+    bump
+    build_release
+    upload_to_play_store(
+      track: "beta",
+      release_status: "completed"
+    )
+  end
+
+  desc "Deploy to Play Store production"
+  lane :deploy_production do
+    bump
+    build_release
+    upload_to_play_store(
+      track: "production",
+      release_status: "completed"
+    )
+  end
+
+  desc "Clean build"
+  lane :clean do
+    gradle(
+      task: "clean"
+    )
+  end
+
+end

@@ -1,0 +1,2 @@
+json_key_file("") # Path to the json secret file - leave empty for now
+package_name("com.rocketplantech.rocketplan")
