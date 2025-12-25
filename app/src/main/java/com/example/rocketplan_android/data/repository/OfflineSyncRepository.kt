@@ -64,7 +64,8 @@ class OfflineSyncRepository(
     private val roomTypeRepository: RoomTypeRepository,
     private val photoCacheManager: PhotoCacheManager? = null,
     private val remoteLogger: RemoteLogger? = null,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val isNetworkAvailable: () -> Boolean = { true }
 ) {
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
 
@@ -108,7 +109,8 @@ class OfflineSyncRepository(
             syncProjectEssentials = ::syncProjectEssentials,
             logLocalDeletion = ::logLocalDeletion,
             removePhotoFiles = ::removePhotoFiles,
-            ioDispatcher = ioDispatcher
+            ioDispatcher = ioDispatcher,
+            isNetworkAvailable = isNetworkAvailable
         )
     }
 
@@ -177,7 +179,8 @@ class OfflineSyncRepository(
             },
             imageProcessorQueueManagerProvider = { imageProcessorQueueManager },
             remoteLogger = remoteLogger,
-            ioDispatcher = ioDispatcher
+            ioDispatcher = ioDispatcher,
+            isNetworkAvailable = isNetworkAvailable
         )
     }
 

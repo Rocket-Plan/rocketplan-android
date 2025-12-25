@@ -425,18 +425,20 @@ class SyncQueueManager(
             SyncJob.EnsureUserContext -> {
                 authRepository.ensureUserContext()
                 var userId = authRepository.getStoredUserId()
-                if (userId == null) {
+                if (userId == null && isNetworkAvailable()) {
                     authRepository.refreshUserContext().getOrElse { error -> throw error }
                     userId = authRepository.getStoredUserId()
                 }
-                // Subscribe to Pusher for photo upload notifications
-                userId?.let { id ->
-                    Log.d(TAG, "📷 Setting up Pusher subscription for user $id")
-                    photoSyncRealtimeManager?.subscribeForUser(id.toInt())
-                    val companies = authRepository.getUserCompanies().getOrElse { emptyList() }
-                        .map { it.id }
-                        .toSet()
-                    projectRealtimeManager?.updateUserContext(id, companies)
+                // Subscribe to Pusher for photo upload notifications (only if online)
+                if (isNetworkAvailable()) {
+                    userId?.let { id ->
+                        Log.d(TAG, "📷 Setting up Pusher subscription for user $id")
+                        photoSyncRealtimeManager?.subscribeForUser(id.toInt())
+                        val companies = authRepository.getUserCompanies().getOrElse { emptyList() }
+                            .map { it.id }
+                            .toSet()
+                        projectRealtimeManager?.updateUserContext(id, companies)
+                    }
                 }
                 Unit
             }
@@ -456,6 +458,12 @@ class SyncQueueManager(
             }
 
             is SyncJob.SyncProjects -> {
+                // Skip network-dependent sync operations when offline
+                if (!isNetworkAvailable()) {
+                    Log.d(TAG, "⏭️ Skipping SyncProjects (no network)")
+                    return
+                }
+
                 val hasForeground = mutex.withLock { foregroundProjectId != null }
                 if (hasForeground) {
                     Log.d(TAG, "⏸️ Foreground project sync running; deferring background project queue.")
@@ -561,6 +569,12 @@ class SyncQueueManager(
             }
 
             is SyncJob.SyncProjectGraph -> {
+                // Skip network-dependent sync operations when offline
+                if (!isNetworkAvailable()) {
+                    Log.d(TAG, "⏭️ Skipping SyncProjectGraph for project ${job.projectId} (no network)")
+                    return
+                }
+
                 val mode = job.mode
                 var syncSucceeded = false
                 val syncJob = scope.launch {

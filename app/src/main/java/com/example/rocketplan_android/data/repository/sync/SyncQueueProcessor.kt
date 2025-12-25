@@ -85,7 +85,8 @@ class SyncQueueProcessor(
     ) -> OfflinePropertyEntity,
     private val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
     private val remoteLogger: RemoteLogger? = null,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val isNetworkAvailable: () -> Boolean = { true }
 ) : SyncQueueEnqueuer {
     private val gson = Gson()
 
@@ -99,6 +100,12 @@ class SyncQueueProcessor(
     private fun now() = Date()
 
     suspend fun processPendingOperations(): PendingOperationResult = withContext(ioDispatcher) {
+        // Skip sync attempts when offline to avoid unnecessary failures and log spam
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "⏭️ Skipping pending operations sync (no network)")
+            return@withContext PendingOperationResult()
+        }
+
         val operations = localDataService.getPendingSyncOperations()
         if (operations.isEmpty()) return@withContext PendingOperationResult()
 

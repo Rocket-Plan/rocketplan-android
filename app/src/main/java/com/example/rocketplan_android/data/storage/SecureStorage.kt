@@ -34,6 +34,8 @@ class SecureStorage(private val context: Context) {
         private val REMEMBER_ME_KEY = booleanPreferencesKey("remember_me")
         private val USER_ID_KEY = longPreferencesKey("user_id")
         private val COMPANY_ID_KEY = longPreferencesKey("company_id")
+        private val USER_NAME_KEY = stringPreferencesKey("user_name")
+        private val COMPANY_NAME_KEY = stringPreferencesKey("company_name")
         private const val OAUTH_STATE_KEY = "oauth_state"
         private const val AUTH_TOKEN_PREF_KEY = "auth_token"
 
@@ -261,6 +263,28 @@ class SecureStorage(private val context: Context) {
         }
     }
 
+    // ==================== User/Company Names (for offline display) ====================
+
+    suspend fun saveUserName(name: String) {
+        context.dataStore.edit { preferences ->
+            preferences[USER_NAME_KEY] = name
+        }
+    }
+
+    suspend fun getUserNameSync(): String? {
+        return context.dataStore.data.map { it[USER_NAME_KEY] }.first()
+    }
+
+    suspend fun saveCompanyName(name: String) {
+        context.dataStore.edit { preferences ->
+            preferences[COMPANY_NAME_KEY] = name
+        }
+    }
+
+    suspend fun getCompanyNameSync(): String? {
+        return context.dataStore.data.map { it[COMPANY_NAME_KEY] }.first()
+    }
+
     // ==================== Clear All Data ====================
 
     /**
@@ -274,6 +298,8 @@ class SecureStorage(private val context: Context) {
             preferences.remove(REMEMBER_ME_KEY)
             preferences.remove(USER_ID_KEY)
             preferences.remove(COMPANY_ID_KEY)
+            preferences.remove(USER_NAME_KEY)
+            preferences.remove(COMPANY_NAME_KEY)
         }
 
         // Clear EncryptedSharedPreferences

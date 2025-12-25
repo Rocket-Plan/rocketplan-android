@@ -7,6 +7,7 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
+import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.repository.RoomDeletionResult
@@ -34,7 +35,8 @@ class RoomSyncService(
     private val syncProjectEssentials: suspend (Long) -> SyncResult,
     private val logLocalDeletion: (String, Long, String?) -> Unit,
     private val removePhotoFiles: (OfflinePhotoEntity) -> Unit,
-    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val isNetworkAvailable: () -> Boolean = { true }
 ) {
     private fun now() = Date()
 
@@ -96,7 +98,13 @@ class RoomSyncService(
             isExterior = isExterior,
             idempotencyKey = resolvedIdempotencyKey,
             forcedUuid = roomUuid
-        ) ?: throw IllegalStateException("Unable to create pending room for project $projectId")
+        )
+        if (localRoom == null) {
+            Log.e(TAG, "[createRoom] Unable to create pending room for project $projectId - no valid location available (offline?)")
+            return@withContext Result.failure(
+                IllegalStateException("Unable to create room. Please sync the project first or check your network connection.")
+            )
+        }
         Result.success(localRoom)
     }
 
@@ -320,7 +328,10 @@ class RoomSyncService(
         forcedUuid: String? = null
     ): OfflineRoomEntity? {
         val project = localDataService.getProject(projectId)
-            ?: throw IllegalStateException("Project not found locally")
+        if (project == null) {
+            Log.w(TAG, "[createPendingRoom] Project $projectId not found locally")
+            return null
+        }
         val resolvedLocationPair = resolveLocationForRoom(projectId, isExterior)
         val (level, location) = resolvedLocationPair
             ?: run {
@@ -412,11 +423,21 @@ class RoomSyncService(
         locationName: String,
         config: LocationDefaults,
         idempotencyKey: String
-    ): OfflineLocationEntity {
-        val project = localDataService.getProject(projectId)
-            ?: throw IllegalStateException("Project not found locally")
-        val propertyLocalId = project.propertyId
-            ?: throw IllegalStateException("Project has no property")
+    ): OfflineLocationEntity? {
+        var project = localDataService.getProject(projectId)
+        if (project == null) {
+            Log.w(TAG, "[createPendingLocation] Project $projectId not found locally")
+            return null
+        }
+        var propertyLocalId = project.propertyId
+        if (propertyLocalId == null) {
+            // Create a pending property on-the-fly for offline support
+            Log.d(TAG, "[createPendingLocation] Creating pending property for project $projectId (offline mode)")
+            val pendingProperty = createPendingPropertyForProject(project)
+            propertyLocalId = pendingProperty.propertyId
+            // Refresh project to get updated propertyId
+            project = localDataService.getProject(projectId) ?: project
+        }
 
         val timestamp = now()
         val localId = -System.currentTimeMillis()
@@ -486,7 +507,13 @@ class RoomSyncService(
             locations = currentLocations()
         }
 
-        val validated = locations.filter { it.serverId == null || validateLocationOnServer(it) }
+        // When offline, skip server validation and trust all locations
+        val validated = if (isNetworkAvailable()) {
+            locations.filter { it.serverId == null || validateLocationOnServer(it) }
+        } else {
+            Log.d(TAG, "[resolveLocationForRoom] Offline mode - skipping server validation for ${locations.size} locations")
+            locations
+        }
         if (validated.isEmpty()) return null
 
         val preferredTitlesRaw = if (isExterior) {
@@ -518,7 +545,11 @@ class RoomSyncService(
                 Log.w(TAG, "[createRoom] Failed to seed default level '$defaultName' for project $projectId", it)
             }
             val refreshed = localDataService.getLocations(projectId)
-            val refreshedValidated = refreshed.filter { it.serverId == null || validateLocationOnServer(it) }
+            val refreshedValidated = if (isNetworkAvailable()) {
+                refreshed.filter { it.serverId == null || validateLocationOnServer(it) }
+            } else {
+                refreshed
+            }
             location = pickPreferred(refreshedValidated) ?: refreshedValidated.firstOrNull()
         }
 
@@ -551,6 +582,63 @@ class RoomSyncService(
                 false
             }
         }
+    }
+
+    /**
+     * Creates a pending property for a project that doesn't have one yet.
+     * This enables fully offline room creation even when the property hasn't been synced.
+     */
+    private suspend fun createPendingPropertyForProject(
+        project: com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+    ): OfflinePropertyEntity {
+        val timestamp = now()
+        val localId = -System.currentTimeMillis()
+        val resolvedAddress = listOfNotNull(
+            project.addressLine1?.takeIf { it.isNotBlank() },
+            project.title.takeIf { it.isNotBlank() },
+            "Pending property"
+        ).first()
+
+        val pending = OfflinePropertyEntity(
+            propertyId = localId,
+            serverId = null,
+            uuid = UUID.randomUUID().toString(),
+            address = resolvedAddress,
+            city = null,
+            state = null,
+            zipCode = null,
+            latitude = null,
+            longitude = null,
+            syncStatus = SyncStatus.PENDING,
+            syncVersion = 0,
+            createdAt = timestamp,
+            updatedAt = timestamp,
+            lastSyncedAt = null
+        )
+        localDataService.saveProperty(pending)
+        localDataService.attachPropertyToProject(
+            projectId = project.projectId,
+            propertyId = pending.propertyId,
+            propertyType = project.propertyType
+        )
+
+        // Enqueue for sync when back online
+        // Resolve the correct property type ID from catalog, or use fallback
+        val propertyTypeId = (roomTypeRepository.resolveCatalogPropertyTypeId(project.propertyType)
+            ?: RoomTypeRepository.fallbackPropertyTypeId(
+                RoomTypeRepository.normalizePropertyType(project.propertyType) ?: "single_unit"
+            )
+            ?: 1L).toInt() // Convert to Int for enqueue API
+        syncQueueEnqueuer().enqueuePropertyCreation(
+            property = pending,
+            projectId = project.projectId,
+            propertyTypeId = propertyTypeId,
+            propertyTypeValue = project.propertyType,
+            idempotencyKey = pending.uuid
+        )
+
+        Log.d(TAG, "[createPendingPropertyForProject] Created pending property ${pending.propertyId} for project ${project.projectId}")
+        return pending
     }
 
     companion object {

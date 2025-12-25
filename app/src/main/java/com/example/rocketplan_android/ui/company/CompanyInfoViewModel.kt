@@ -57,12 +57,24 @@ class CompanyInfoViewModel(application: Application) : AndroidViewModel(applicat
 
     private suspend fun loadFromCache(): CompanyInfoUiState.Content? {
         return try {
-            val userId = authRepository.getStoredUserId()
             val companyId = authRepository.getStoredCompanyId()
+            val companyName = authRepository.getStoredCompanyName()?.takeIf { it.isNotBlank() }
+            val userName = authRepository.getStoredUserName()?.takeIf { it.isNotBlank() }
+            val userEmail = authRepository.getSavedEmail()
 
-            // TODO: In the future, cache full user/company details
-            // For now, we don't have cached company name/logo, so return null
-            null
+            // Return cached content if we have the essentials
+            if (companyName != null && userName != null) {
+                CompanyInfoUiState.Content(
+                    companyName = companyName,
+                    companyId = companyId,
+                    logoUrl = null, // Logo URL not cached
+                    userName = userName,
+                    userEmail = userEmail ?: "",
+                    isRefreshing = false
+                )
+            } else {
+                null
+            }
         } catch (e: Exception) {
             Log.e("CompanyInfoVM", "Failed to load from cache", e)
             null

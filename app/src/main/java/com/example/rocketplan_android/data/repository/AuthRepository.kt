@@ -321,8 +321,29 @@ class AuthRepository(
                 } else {
                     secureStorage.clearUserId()
                 }
+                // Cache user name for offline display
+                val userName = listOfNotNull(currentUser.firstName, currentUser.lastName)
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .joinToString(" ")
+                    .ifBlank { currentUser.email }
+                // Always save (even empty) to clear stale data when user context changes
+                secureStorage.saveUserName(userName)
                 if (selectedCompanyId != null) {
                     Log.d("AuthRepository", "Saving companyId=$selectedCompanyId")
+                    // Cache company name for offline display
+                    // Try to find by ID first, then fall back to any available company name
+                    val selectedCompany = currentUser.companies?.firstOrNull { it.id == selectedCompanyId }
+                        ?: currentUser.company?.takeIf { it.id == selectedCompanyId }
+                        ?: currentUser.company // Fallback: use primary company if ID lookup fails
+                    val companyName = selectedCompany?.name?.takeIf { it.isNotBlank() }
+                    if (companyName != null) {
+                        secureStorage.saveCompanyName(companyName)
+                    } else {
+                        // Clear stale company name if we can't find the current one
+                        Log.w("AuthRepository", "Could not find company name for companyId=$selectedCompanyId, clearing cached name")
+                        secureStorage.saveCompanyName("")
+                    }
                     // Notify the backend which company is active for this session
                     runCatching {
                         val activeCompanyResponse = authService.setActiveCompany(SetActiveCompanyRequest(selectedCompanyId))
@@ -348,8 +369,9 @@ class AuthRepository(
                         )
                     )
                 } else {
-                    Log.w("AuthRepository", "No company found in API response - clearing stored companyId")
+                    Log.w("AuthRepository", "No company found in API response - clearing stored companyId and name")
                     secureStorage.clearCompanyId()
+                    secureStorage.saveCompanyName("") // Clear stale company name
                     localDataService.clearCurrentCompanyId()
                     RetrofitClient.setCompanyId(null)
                     remoteLogger?.log(
@@ -380,6 +402,10 @@ class AuthRepository(
     suspend fun getStoredUserId(): Long? = secureStorage.getUserIdSync()?.takeIf { it > 0L }
 
     suspend fun getStoredCompanyId(): Long? = secureStorage.getCompanyIdSync()
+
+    suspend fun getStoredUserName(): String? = secureStorage.getUserNameSync()
+
+    suspend fun getStoredCompanyName(): String? = secureStorage.getCompanyNameSync()
 
     fun observeCompanyId(): Flow<Long?> = secureStorage.getCompanyId()
 

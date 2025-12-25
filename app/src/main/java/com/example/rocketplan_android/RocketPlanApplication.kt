@@ -3,6 +3,7 @@ package com.example.rocketplan_android
 import android.app.Application
 import android.content.Context
 import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.util.Log
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -136,6 +137,16 @@ class RocketPlanApplication : Application() {
             localDataService = localDataService,
             offlineRoomTypeCatalogStore = offlineRoomTypeCatalogStore
         )
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        val isNetworkAvailable: () -> Boolean = {
+            runCatching {
+                val network = connectivityManager?.activeNetwork
+                val capabilities = connectivityManager?.getNetworkCapabilities(network)
+                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            }.getOrDefault(false) // Default to false (offline) on exceptions for safety
+        }
+
         offlineSyncRepository = OfflineSyncRepository(
             api = offlineSyncApi,
             localDataService = localDataService,
@@ -143,7 +154,8 @@ class RocketPlanApplication : Application() {
             syncCheckpointStore = syncCheckpointStore,
             roomTypeRepository = roomTypeRepository,
             photoCacheManager = photoCacheManager,
-            remoteLogger = remoteLogger
+            remoteLogger = remoteLogger,
+            isNetworkAvailable = isNetworkAvailable
         )
 
         // Note: syncQueueManager is initialized here but photoSyncRealtimeManager
@@ -154,7 +166,7 @@ class RocketPlanApplication : Application() {
             localDataService = localDataService,
             photoCacheScheduler = photoCacheScheduler,
             remoteLogger = remoteLogger,
-            connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            connectivityManager = connectivityManager
         )
 
         val imageProcessorService = RetrofitClient.imageProcessorService
