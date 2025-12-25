@@ -93,7 +93,7 @@ class PendingRemoteLogStore(context: Context) {
 
     companion object {
         private const val FILE_NAME = "pending_remote_logs.json"
-        private const val MAX_BUFFER_SIZE = 500
+        private const val MAX_BUFFER_SIZE = 2000
         private const val TAG = "PendingRemoteLogStore"
     }
 }

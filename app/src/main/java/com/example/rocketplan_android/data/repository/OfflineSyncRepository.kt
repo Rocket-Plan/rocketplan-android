@@ -258,6 +258,12 @@ class OfflineSyncRepository(
         val companyId = localDataService.currentCompanyIdOrNull
         if (companyId == null) {
             Log.w("API", "⚠️ [syncProjectEssentials] No company context set; skipping sync for project $projectId")
+            remoteLogger?.log(
+                LogLevel.WARN,
+                "OfflineSyncRepository",
+                "Sync skipped - no company context",
+                mapOf("projectId" to projectId.toString(), "function" to "syncProjectEssentials")
+            )
             return@withContext SyncResult.incomplete(
                 SyncSegment.PROJECT_ESSENTIALS,
                 IncompleteReason.NO_COMPANY_CONTEXT,
@@ -297,6 +303,18 @@ class OfflineSyncRepository(
                                 "(isDirty=${localProject.isDirty}, pendingOps=$pendingOpsCount). " +
                                 "Preserving local data to avoid losing unsynced changes."
                         )
+                        remoteLogger?.log(
+                            LogLevel.WARN,
+                            "OfflineSyncRepository",
+                            "404 received but project has pending changes - preserving",
+                            mapOf(
+                                "serverProjectId" to serverProjectId.toString(),
+                                "localProjectId" to localProject.projectId.toString(),
+                                "isDirty" to localProject.isDirty.toString(),
+                                "pendingOps" to pendingOpsCount.toString(),
+                                "companyId" to companyId.toString()
+                            )
+                        )
                         return@withContext SyncResult.failure(
                             SyncSegment.PROJECT_ESSENTIALS,
                             IllegalStateException("Project not found on server but has unsynced local changes"),
@@ -304,6 +322,16 @@ class OfflineSyncRepository(
                         )
                     }
                     Log.i("API", "🗑️ [syncProjectEssentials] Project $serverProjectId not found (404), cascade deleting locally")
+                    remoteLogger?.log(
+                        LogLevel.INFO,
+                        "OfflineSyncRepository",
+                        "404 cascade delete",
+                        mapOf(
+                            "serverProjectId" to serverProjectId.toString(),
+                            "localProjectId" to localProject.projectId.toString(),
+                            "companyId" to companyId.toString()
+                        )
+                    )
                     val cachedPhotos = localDataService.cascadeDeleteProjectsByServerIds(
                         serverIds = listOf(serverProjectId),
                         companyId = localProject.companyId

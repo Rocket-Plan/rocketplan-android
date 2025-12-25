@@ -18,6 +18,8 @@ import com.example.rocketplan_android.data.model.Company
 import com.example.rocketplan_android.data.model.SetActiveCompanyRequest
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.storage.SecureStorage
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
@@ -27,10 +29,15 @@ import java.util.UUID
  */
 class AuthRepository(
     private val secureStorage: SecureStorage,
+    private val remoteLogger: RemoteLogger? = null,
     private val localDataServiceProvider: () -> LocalDataService = { LocalDataService.getInstance() },
     private val authService: AuthService = RetrofitClient.authService
 ) {
     private val localDataService: LocalDataService by lazy { localDataServiceProvider() }
+
+    companion object {
+        private const val TAG = "AuthRepository"
+    }
 
     // ==================== API Operations ====================
 
@@ -330,11 +337,27 @@ class AuthRepository(
                     secureStorage.saveCompanyId(selectedCompanyId)
                     localDataService.setCurrentCompanyId(selectedCompanyId)
                     RetrofitClient.setCompanyId(selectedCompanyId)
+                    remoteLogger?.log(
+                        LogLevel.INFO,
+                        TAG,
+                        "Company context set",
+                        mapOf(
+                            "companyId" to selectedCompanyId.toString(),
+                            "userId" to currentUser.id.toString(),
+                            "source" to "refreshUserContext"
+                        )
+                    )
                 } else {
                     Log.w("AuthRepository", "No company found in API response - clearing stored companyId")
                     secureStorage.clearCompanyId()
                     localDataService.clearCurrentCompanyId()
                     RetrofitClient.setCompanyId(null)
+                    remoteLogger?.log(
+                        LogLevel.WARN,
+                        TAG,
+                        "Company context cleared - no company in API response",
+                        mapOf("source" to "refreshUserContext")
+                    )
                 }
                 Result.success(currentUser)
             } else {
@@ -373,6 +396,12 @@ class AuthRepository(
                 secureStorage.saveCompanyId(companyId)
                 localDataService.setCurrentCompanyId(companyId)
                 RetrofitClient.setCompanyId(companyId)
+                remoteLogger?.log(
+                    LogLevel.INFO,
+                    TAG,
+                    "Company switched",
+                    mapOf("companyId" to companyId.toString(), "source" to "setActiveCompany")
+                )
                 Result.success(Unit)
             } else {
                 val errorBody = response.errorBody()?.string()
@@ -381,6 +410,12 @@ class AuthRepository(
                 secureStorage.saveCompanyId(companyId)
                 localDataService.setCurrentCompanyId(companyId)
                 RetrofitClient.setCompanyId(companyId)
+                remoteLogger?.log(
+                    LogLevel.WARN,
+                    TAG,
+                    "Company switch failed on server but saved locally",
+                    mapOf("companyId" to companyId.toString(), "httpCode" to response.code().toString())
+                )
                 Result.failure(Exception("Failed to set active company: ${response.code()}"))
             }
         } catch (e: Exception) {
@@ -389,6 +424,12 @@ class AuthRepository(
             secureStorage.saveCompanyId(companyId)
             localDataService.setCurrentCompanyId(companyId)
             RetrofitClient.setCompanyId(companyId)
+            remoteLogger?.log(
+                LogLevel.WARN,
+                TAG,
+                "Company switch exception but saved locally",
+                mapOf("companyId" to companyId.toString(), "error" to (e.message ?: "unknown"))
+            )
             Result.failure(e)
         }
     }
@@ -437,6 +478,7 @@ class AuthRepository(
      * Logout user and clear all data
      */
     suspend fun logout() {
+        remoteLogger?.log(LogLevel.INFO, TAG, "User logged out")
         secureStorage.clearAll()
         localDataService.clearCurrentCompanyId()
         RetrofitClient.setAuthToken(null)

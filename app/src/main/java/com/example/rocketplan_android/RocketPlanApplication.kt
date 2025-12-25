@@ -128,7 +128,7 @@ class RocketPlanApplication : Application() {
         imageProcessingConfigStore = ImageProcessingConfigStore.getInstance(this)
         val offlineRoomTypeCatalogStore = OfflineRoomTypeCatalogStore.getInstance(this)
 
-        authRepository = AuthRepository(secureStorage)
+        authRepository = AuthRepository(secureStorage, remoteLogger)
 
         val offlineSyncApi = RetrofitClient.createService<OfflineSyncApi>()
         roomTypeRepository = RoomTypeRepository(
@@ -241,7 +241,8 @@ class RocketPlanApplication : Application() {
         )
         syncNetworkMonitor = SyncNetworkMonitor(
             context = this,
-            syncQueueManager = syncQueueManager
+            syncQueueManager = syncQueueManager,
+            remoteLogger = remoteLogger
         )
 
         // Cold-start recovery: Resume any existing assemblies that were interrupted

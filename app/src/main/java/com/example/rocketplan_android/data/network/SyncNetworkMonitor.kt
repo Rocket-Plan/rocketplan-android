@@ -7,6 +7,7 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
 import com.example.rocketplan_android.data.sync.SyncQueueManager
+import com.example.rocketplan_android.logging.RemoteLogger
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,7 +23,8 @@ import kotlinx.coroutines.sync.withLock
  */
 class SyncNetworkMonitor(
     context: Context,
-    private val syncQueueManager: SyncQueueManager
+    private val syncQueueManager: SyncQueueManager,
+    private val remoteLogger: RemoteLogger? = null
 ) {
     companion object {
         private const val TAG = "SyncNetworkMonitor"
@@ -105,6 +107,7 @@ class SyncNetworkMonitor(
                 restoreJob?.cancel()
                 restoreJob = scope.launch {
                     delay(RESTORE_DEBOUNCE_MS)
+                    remoteLogger?.flush()
                     syncQueueManager.processPendingOperations()
                     syncQueueManager.refreshProjects()
                 }
