@@ -295,6 +295,116 @@ class ImageProcessorQueueManager(
     }
 
     /**
+     * Retry creating a QUEUED assembly on the server.
+     * Called when an assembly's initial creation failed due to network issues.
+     * Returns true if creation succeeded, false if it failed (assembly stays QUEUED).
+     */
+    private suspend fun retryAssemblyCreation(
+        assembly: ImageProcessorAssemblyEntity,
+        uploadData: StoredUploadData,
+        photos: List<ImageProcessorPhotoEntity>
+    ): Boolean {
+        Log.d(TAG, "🔄 Retrying assembly creation for ${assembly.assemblyId}")
+
+        val projectServerId = offlineDao.getProject(assembly.projectId)?.serverId
+        if (projectServerId == null) {
+            Log.w(TAG, "⏳ Project not synced for assembly ${assembly.assemblyId}")
+            return false
+        }
+
+        val roomServerId = assembly.roomId?.let { resolveServerRoomId(it) }
+        if (assembly.roomId != null && roomServerId == null) {
+            Log.w(TAG, "⏳ Room not synced for assembly ${assembly.assemblyId}")
+            return false
+        }
+
+        val request = ImageProcessorAssemblyRequest(
+            assemblyId = assembly.assemblyId,
+            totalFiles = assembly.totalFiles,
+            roomId = roomServerId,
+            projectId = projectServerId,
+            groupUuid = assembly.groupUuid,
+            bytesReceived = assembly.bytesReceived,
+            photoNames = photos.map { it.fileName },
+            albums = uploadData.albums,
+            irPhotos = uploadData.irPhotos ?: emptyList(),
+            order = uploadData.order,
+            notes = uploadData.notes,
+            entityType = uploadData.entityType,
+            entityId = uploadData.entityId
+        )
+
+        updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATING, null)
+
+        val response = runCatching {
+            if (roomServerId != null) {
+                api.createRoomAssembly(roomServerId, request)
+            } else {
+                api.createEntityAssembly(request)
+            }
+        }.getOrElse { error ->
+            val isNetworkError = error is java.net.UnknownHostException ||
+                error is java.net.SocketTimeoutException ||
+                error is java.net.ConnectException ||
+                (error is java.io.IOException && error.message?.contains("network", ignoreCase = true) == true)
+
+            if (isNetworkError) {
+                // Keep as QUEUED for retry when network returns
+                Log.d(TAG, "⏸️ Assembly ${assembly.assemblyId} creation failed (no network), keeping QUEUED")
+                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.QUEUED, "Network unavailable")
+            } else {
+                Log.e(TAG, "❌ Assembly ${assembly.assemblyId} creation failed", error)
+                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.FAILED, error.message)
+            }
+            remoteLogger?.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "Assembly creation retry failed",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "is_network_error" to isNetworkError.toString(),
+                    "error" to (error.message ?: "unknown")
+                )
+            )
+            return false
+        }
+
+        val body = response.body()
+        if (response.isSuccessful && body?.success == true) {
+            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATED, null)
+            realtimeManager?.trackAssembly(assembly.assemblyId)
+            Log.d(TAG, "✅ Assembly ${assembly.assemblyId} creation retry succeeded")
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Assembly creation retry succeeded",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "project_id_server" to projectServerId.toString(),
+                    "room_id_server" to (roomServerId?.toString() ?: "null")
+                )
+            )
+            return true
+        } else {
+            val errorMessage = body?.message ?: response.errorBody()?.string() ?: "Unknown error"
+            // Non-network error - mark as FAILED
+            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.FAILED, errorMessage)
+            Log.w(TAG, "❌ Assembly ${assembly.assemblyId} creation retry failed: $errorMessage")
+            remoteLogger?.log(
+                level = LogLevel.ERROR,
+                tag = TAG,
+                message = "Assembly creation retry failed with server error",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "error" to errorMessage,
+                    "code" to response.code().toString()
+                )
+            )
+            return false
+        }
+    }
+
+    /**
      * Process the next queued assembly.
      * Called when:
      * - New assembly is created
@@ -318,8 +428,13 @@ class ImageProcessorQueueManager(
                         Log.d(TAG, "🚚 Promoted waiting assemblies after room sync")
                     }
 
-                    // Get next created assembly (status is CREATED after backend POST in ImageProcessorRepository)
-                    val createdAssemblies = dao.getAssembliesByStatus(listOf(AssemblyStatus.CREATED.value))
+                    // Get next assembly ready for upload:
+                    // - CREATED: backend POST succeeded, ready for photo upload
+                    // - QUEUED: backend POST failed due to network, needs retry
+                    val createdAssemblies = dao.getAssembliesByStatus(listOf(
+                        AssemblyStatus.CREATED.value,
+                        AssemblyStatus.QUEUED.value
+                    ))
                     val nextAssembly = createdAssemblies.firstOrNull()
 
                     if (nextAssembly == null) {
@@ -410,7 +525,8 @@ class ImageProcessorQueueManager(
                 val retryableAssemblies = dao.getRetryableAssemblies(
                     retryableStatuses = listOf(
                         AssemblyStatus.FAILED.value,
-                        AssemblyStatus.WAITING_FOR_CONNECTIVITY.value
+                        AssemblyStatus.WAITING_FOR_CONNECTIVITY.value,
+                        AssemblyStatus.QUEUED.value  // QUEUED = network failed during creation
                     ),
                     currentTimeMillis = if (bypassTimeout) Long.MAX_VALUE else currentTime
                 ).filter { it.failsCount < MAX_RETRY_ATTEMPTS }
@@ -710,13 +826,23 @@ class ImageProcessorQueueManager(
                 )
             }
 
+            // If assembly is QUEUED, the backend POST failed - retry it now
+            if (assembly.status == AssemblyStatus.QUEUED.value) {
+                val retryResult = retryAssemblyCreation(assembly, resolvedUploadData, photos)
+                if (!retryResult) {
+                    // Retry failed, keep as QUEUED for next attempt
+                    Log.d(TAG, "⏸️ Assembly ${assembly.assemblyId} creation retry failed, will retry later")
+                    onAssemblyCompleted(assembly.assemblyId, success = false, errorMessage = "Assembly creation failed")
+                    return
+                }
+            }
+
             // If the backend already marks this assembly complete, skip re-uploads
             if (reconcileWithBackendStatus(assembly, photos)) {
                 return
             }
 
-            // Assembly is already CREATED (backend POST done in ImageProcessorRepository.createAssembly)
-            // Update status to UPLOADING to indicate photo uploads are starting
+            // Assembly is now CREATED (backend POST done) - proceed with photo uploads
             updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.UPLOADING, null)
 
             val pendingPhotos = photos.filter { it.status == PhotoStatus.PENDING.value }

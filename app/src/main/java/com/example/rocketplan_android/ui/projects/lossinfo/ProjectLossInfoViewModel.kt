@@ -253,7 +253,8 @@ private class ProjectLossInfoRepository(
                 projectDetail?.propertyType,
                 propertyDto.resolvedPropertyType(),
                 projectDetail?.properties?.firstOrNull()?.resolvedPropertyType()
-            ).firstOrNull()
+            ).firstOrNull(),
+            forceUpdate = true  // Property was just fetched from server
         )
         return resolvedId
     }

@@ -439,13 +439,8 @@ class RoomSyncService(
             project = localDataService.getProject(projectId) ?: project
         }
 
-        // Find an existing synced level to use as parent, so we create a proper hierarchy
-        val existingLocations = localDataService.getLocations(projectId)
-        val syncedLevel = existingLocations.firstOrNull {
-            it.serverId != null && it.parentLocationId == null
-        }
-        val parentLocationId = syncedLevel?.locationId
-
+        // Locations created here are top-level (levels/floors), not children
+        // The level vs location distinction is handled by resolveLocationForRoom
         val timestamp = now()
         val localId = -System.currentTimeMillis()
         val pending = OfflineLocationEntity(
@@ -455,7 +450,7 @@ class RoomSyncService(
             projectId = projectId,
             title = locationName,
             type = config.type,
-            parentLocationId = parentLocationId,
+            parentLocationId = null,  // Top-level location (level/floor)
             isAccessible = config.isAccessible,
             syncStatus = SyncStatus.PENDING,
             syncVersion = 0,
