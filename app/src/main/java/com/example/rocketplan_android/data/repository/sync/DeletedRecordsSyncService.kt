@@ -3,6 +3,7 @@ package com.example.rocketplan_android.data.repository.sync
 import android.util.Log
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.util.DateUtils
@@ -19,6 +20,7 @@ class DeletedRecordsSyncService(
     private val api: OfflineSyncApi,
     private val localDataService: LocalDataService,
     private val syncCheckpointStore: SyncCheckpointStore,
+    private val photoCacheManager: PhotoCacheManager? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     suspend fun syncDeletedRecords(types: List<String> = DEFAULT_TYPES): Result<Unit> = withContext(ioDispatcher) {
@@ -99,7 +101,17 @@ class DeletedRecordsSyncService(
     }
 
     private suspend fun applyDeletedRecords(response: DeletedRecordsResponse) {
-        localDataService.markProjectsDeleted(response.projects)
+        // Cascade delete projects first - this will also delete all child entities
+        // (rooms, photos, notes, etc.) even if the server didn't explicitly list them
+        val cachedPhotos = localDataService.cascadeDeleteProjectsByServerIds(response.projects)
+
+        // Clean up cached photo files from disk
+        if (cachedPhotos.isNotEmpty()) {
+            photoCacheManager?.removeCachedPhotos(cachedPhotos)
+        }
+
+        // Apply remaining deletions for entities the server explicitly listed
+        // (these may be redundant for project children but are idempotent)
         localDataService.markRoomsDeleted(response.rooms)
         localDataService.markLocationsDeleted(response.locations)
         localDataService.markPhotosDeleted(response.photos)

@@ -945,18 +945,7 @@ class RoomDetailFragment : Fragment() {
                         updatePhotoVisibility()
                     }
                 }
-                launch {
-                    viewModel.inFlightAssembly.collect { state ->
-                        if (state != null) {
-                            inFlightSpinner.isIndeterminate = true
-                            inFlightStatus.text = getString(R.string.processing_photos)
-                            inFlightCount.text = "${state.processedCount}/${state.totalCount}"
-                            inFlightBanner.isVisible = true
-                        } else {
-                            inFlightBanner.isVisible = false
-                        }
-                    }
-                }
+                // In-flight assembly banner removed - processing happens silently in background
                 launch {
                     viewModel.isPhotoRefreshInProgress.collect { refreshing ->
                         swipeRefreshLayout.isRefreshing =

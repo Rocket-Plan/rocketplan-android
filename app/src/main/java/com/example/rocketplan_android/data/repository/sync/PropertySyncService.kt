@@ -204,7 +204,16 @@ class PropertySyncService(
             }
         } else null
         val entity = property.toEntity(existing = existing, projectAddress = fallbackAddress)
+        Log.d(TAG, "🔍 [persistProperty] Saving property: propertyId=${entity.propertyId} serverId=${entity.serverId} (existing.propertyId=${existing?.propertyId})")
+        // Delete pending property first to avoid uuid unique constraint violation
+        if (existing != null && existing.propertyId < 0 && entity.propertyId > 0) {
+            Log.d(TAG, "🔍 [persistProperty] Deleting pending property ${existing.propertyId} before saving synced ${entity.propertyId}")
+            localDataService.deleteProperty(existing.propertyId)
+        }
         localDataService.saveProperty(entity)
+        // Verify save
+        val verify = localDataService.getProperty(entity.propertyId)
+        Log.d(TAG, "🔍 [persistProperty] Verify after save: getProperty(${entity.propertyId}) = ${verify?.propertyId}")
         // Force update if we're upgrading from a pending property (negative ID) to a server property (positive ID)
         val isPendingToServerUpgrade = existing?.propertyId != null && existing.propertyId < 0 && property.id > 0
         localDataService.attachPropertyToProject(

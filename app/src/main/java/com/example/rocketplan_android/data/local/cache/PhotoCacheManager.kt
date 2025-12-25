@@ -98,6 +98,24 @@ class PhotoCacheManager(
     }
 
     /**
+     * Removes all cached photos for the given list of photos.
+     * Used when cascade deleting a project.
+     */
+    suspend fun removeCachedPhotos(photos: List<OfflinePhotoEntity>) = withContext(ioDispatcher) {
+        var deleted = 0
+        photos.forEach { photo ->
+            runCatching {
+                photo.cachedOriginalPath?.let { File(it).delete() }
+                photo.cachedThumbnailPath?.let { File(it).delete() }
+                deleted++
+            }
+        }
+        if (deleted > 0) {
+            Log.d(TAG, "🧹 Removed $deleted cached photo files")
+        }
+    }
+
+    /**
      * Generates a downscaled JPEG thumbnail alongside the cached original bytes.
      */
     private fun generateThumbnail(originalFile: File, mimeType: String): File? {

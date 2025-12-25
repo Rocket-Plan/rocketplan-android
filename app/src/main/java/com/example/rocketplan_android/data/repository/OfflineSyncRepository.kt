@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -44,6 +45,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
 import java.io.File
 import java.util.Date
 import java.util.UUID
@@ -60,6 +62,7 @@ class OfflineSyncRepository(
     private val photoCacheScheduler: PhotoCacheScheduler,
     private val syncCheckpointStore: SyncCheckpointStore,
     private val roomTypeRepository: RoomTypeRepository,
+    private val photoCacheManager: PhotoCacheManager? = null,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
@@ -159,6 +162,7 @@ class OfflineSyncRepository(
             api = api,
             localDataService = localDataService,
             syncCheckpointStore = syncCheckpointStore,
+            photoCacheManager = photoCacheManager,
             ioDispatcher = ioDispatcher
         )
     }
@@ -258,10 +262,19 @@ class OfflineSyncRepository(
         Log.d("API", "🔄 [syncProjectEssentials] Starting navigation chain for project $projectId (server=$serverProjectId)")
 
         val detail = runCatching { api.getProjectDetail(serverProjectId).data }
-            .onFailure {
-                Log.e("API", "❌ [syncProjectEssentials] Failed", it)
+            .onFailure { error ->
                 val duration = System.currentTimeMillis() - startTime
-                return@withContext SyncResult.failure(SyncSegment.PROJECT_ESSENTIALS, it, duration)
+                // If project returns 404, it was deleted on server - cascade delete locally immediately
+                if (error is HttpException && error.code() == 404) {
+                    Log.i("API", "🗑️ [syncProjectEssentials] Project $serverProjectId not found (404), cascade deleting locally")
+                    val cachedPhotos = localDataService.cascadeDeleteProjectsByServerIds(listOf(serverProjectId))
+                    if (cachedPhotos.isNotEmpty()) {
+                        photoCacheManager?.removeCachedPhotos(cachedPhotos)
+                    }
+                    return@withContext SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, 0, duration)
+                }
+                Log.e("API", "❌ [syncProjectEssentials] Failed", error)
+                return@withContext SyncResult.failure(SyncSegment.PROJECT_ESSENTIALS, error, duration)
             }
             .getOrNull() ?: run {
                 val duration = System.currentTimeMillis() - startTime

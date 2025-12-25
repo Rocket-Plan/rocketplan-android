@@ -105,6 +105,9 @@ internal fun buildProjectEntity(
     val resolvedPropertyId = existing?.propertyId
         ?: propertyId
         ?: embeddedPropertyId
+    if (existing?.propertyId != resolvedPropertyId) {
+        Log.d("SyncEntityMappers", "⚠️ [buildProjectEntity] id=$id existing.propertyId=${existing?.propertyId} dto.propertyId=$propertyId -> resolved=$resolvedPropertyId")
+    }
 
     val normalizedAlias = alias?.takeIf { it.isNotBlank() }
     val normalizedUid = uid?.takeIf { it.isNotBlank() }

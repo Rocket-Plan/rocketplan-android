@@ -35,6 +35,7 @@ import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.data.repository.SyncResult
+import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingProjectCreationPayload
@@ -653,19 +654,47 @@ class SyncQueueProcessor(
         )
 
         val dto = api.createCompanyProject(payload.companyId, projectRequest).data
-        val entity = dto.toEntity(existing = existing).withAddressFallback(
+
+        // Enhanced logging for debugging server response issues
+        Log.d(
+            TAG,
+            "📥 [handlePendingProjectCreation] Server response: " +
+                "id=${dto.id} companyId=${dto.companyId} uid=${dto.uid} uuid=${dto.uuid} " +
+                "propertyId=${dto.propertyId} createdAt=${dto.createdAt} updatedAt=${dto.updatedAt}"
+        )
+
+        // CRITICAL: Validate the server returned a project for the correct company
+        // This detects server-side bugs where wrong company's project is returned
+        if (dto.companyId != null && dto.companyId != payload.companyId) {
+            Log.e(
+                TAG,
+                "🚨 [handlePendingProjectCreation] COMPANY MISMATCH! " +
+                    "Requested companyId=${payload.companyId} but server returned companyId=${dto.companyId} " +
+                    "for project id=${dto.id}. This indicates a server-side bug. " +
+                    "Rejecting response to prevent data corruption."
+            )
+            throw IllegalStateException(
+                "Server returned project from wrong company: expected=${payload.companyId}, got=${dto.companyId}"
+            )
+        }
+
+        // Re-read project to get latest propertyId (may have been attached during API call)
+        val freshExisting = localDataService.getProject(payload.localProjectId) ?: existing
+        Log.d(TAG, "🔍 [handlePendingProjectCreation] dto.id=${dto.id} dto.propertyId=${dto.propertyId} freshExisting.propertyId=${freshExisting.propertyId}")
+        val entity = dto.toEntity(existing = freshExisting).withAddressFallback(
             projectAddress = addressDto,
             addressRequest = payload.addressRequest
         ).copy(
-            projectId = existing.projectId,
-            uuid = existing.uuid,
+            projectId = freshExisting.projectId,
+            uuid = freshExisting.uuid,
             syncStatus = SyncStatus.SYNCED,
             isDirty = false,
             lastSyncedAt = now()
         )
+        Log.d(TAG, "🔍 [handlePendingProjectCreation] entity.propertyId=${entity.propertyId} (should be ${freshExisting.propertyId})")
 
         localDataService.saveProjects(listOf(entity))
-        val pendingAlias = existing.alias?.takeIf { it.isNotBlank() }
+        val pendingAlias = freshExisting.alias?.takeIf { it.isNotBlank() }
         if (!pendingAlias.isNullOrBlank() && pendingAlias != entity.alias) {
             val updatedDto = api.updateProject(
                 projectId = dto.id,
@@ -799,36 +828,48 @@ class SyncQueueProcessor(
             idempotencyKey = payload.idempotencyKey
         )
 
-        if (AppConfig.isLoggingEnabled) {
-            Log.d(
-                TAG,
-                "📤 [handlePendingPropertyCreation] createProperty payload: " +
-                    "projectId=${payload.projectId} propertyTypeId=${payload.propertyTypeId} " +
-                    "propertyTypeValue=${payload.propertyTypeValue ?: "null"} " +
-                    "idempotencyKey=${payload.idempotencyKey ?: "null"} localPropertyId=${payload.localPropertyId}"
-            )
-        }
+        // Enhanced logging - always log for property creation to debug server issues
+        Log.d(
+            TAG,
+            "📤 [handlePendingPropertyCreation] createProperty request: " +
+                "projectServerId=$projectServerId localProjectId=${payload.projectId} " +
+                "propertyTypeId=${payload.propertyTypeId} propertyTypeValue=${payload.propertyTypeValue ?: "null"} " +
+                "idempotencyKey=${payload.idempotencyKey ?: "null"} localPropertyId=${payload.localPropertyId}"
+        )
 
         val created = try {
             api.createProjectProperty(projectServerId, request).data
         } catch (error: HttpException) {
-            if (AppConfig.isLoggingEnabled) {
-                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
-                Log.w(
-                    TAG,
-                    "❌ [handlePendingPropertyCreation] createProperty failed: code=${error.code()} " +
-                        "body=${errorBody ?: "null"}"
-                )
-            }
+            val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+            Log.w(
+                TAG,
+                "❌ [handlePendingPropertyCreation] createProperty failed: code=${error.code()} " +
+                    "body=${errorBody ?: "null"}"
+            )
             throw error
         }
 
-        if (AppConfig.isLoggingEnabled) {
-            Log.d(
+        // Enhanced logging with full response details
+        Log.d(
+            TAG,
+            "📥 [handlePendingPropertyCreation] createProperty response: id=${created.id} " +
+                "uuid=${created.uuid} address=${created.address} city=${created.city} " +
+                "state=${created.state} zip=${created.postalCode} " +
+                "propertyTypeId=${created.propertyTypeId} propertyType=${created.propertyType} " +
+                "createdAt=${created.createdAt} updatedAt=${created.updatedAt}"
+        )
+
+        // Validate the property was actually created recently (within last 5 minutes)
+        // This detects server returning stale/cached property data
+        val createdAtDate = created.createdAt?.let { DateUtils.parseApiDate(it) }
+        val nowMillis = System.currentTimeMillis()
+        val ageMinutes = createdAtDate?.let { (nowMillis - it.time) / 60_000 }
+        if (ageMinutes != null && ageMinutes > 5) {
+            Log.w(
                 TAG,
-                "📥 [handlePendingPropertyCreation] createProperty response: id=${created.id} " +
-                    "address=${created.address} city=${created.city} state=${created.state} zip=${created.postalCode} " +
-                    "propertyTypeId=${created.propertyTypeId} propertyType=${created.propertyType}"
+                "⚠️ [handlePendingPropertyCreation] STALE PROPERTY WARNING: " +
+                    "Property ${created.id} was created ${ageMinutes}min ago (createdAt=${created.createdAt}). " +
+                    "This may indicate server returned cached/wrong property data."
             )
         }
 
@@ -1192,12 +1233,20 @@ class SyncQueueProcessor(
 
         // Validate that resolved server IDs actually exist on the server
         // This prevents using stale/invalid IDs that would cause API errors
-        val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull().orEmpty()
-        val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull().orEmpty()
+        val remoteLevelsResult = runCatching { api.getPropertyLevels(propertyServerId).data }
+        val remoteLocationsResult = runCatching { api.getPropertyLocations(propertyServerId).data }
+        val remoteLevels = remoteLevelsResult.getOrNull().orEmpty()
+        val remoteLocations = remoteLocationsResult.getOrNull().orEmpty()
+        val levelsFetchSucceeded = remoteLevelsResult.isSuccess
+        val locationsFetchSucceeded = remoteLocationsResult.isSuccess
         val validLevelIds = remoteLevels.map { it.id }.toSet()
         val validLocationIds = remoteLocations.map { it.id }.toSet()
         val levelValid = levelServerId in validLevelIds
-        val locationValid = locationServerId in validLocationIds
+        // For Single Unit properties, there are no separate locations - the level IS the location
+        // Only apply this when fetch succeeded (empty due to Single Unit, not API failure)
+        val isSingleUnitProperty = locationsFetchSucceeded && validLocationIds.isEmpty() && levelValid
+        val locationValid = locationServerId in validLocationIds ||
+            (isSingleUnitProperty && locationServerId == levelServerId)
 
         if (!levelValid || !locationValid) {
             Log.w(
@@ -1255,25 +1304,39 @@ class SyncQueueProcessor(
 
             val resolvedLocationFromRemote = when {
                 locationValid -> locationServerId
-                resolvedLevelFromRemote != null ->
+                resolvedLevelFromRemote != null -> {
+                    // First try name-matched candidates
                     locationCandidates.firstOrNull { it.parentLocationId == resolvedLevelFromRemote }?.id
                         ?: locationCandidates.firstOrNull()?.id
+                        // If no name match, fall back to ANY location under this level
+                        ?: remoteLocations.firstOrNull { it.parentLocationId == resolvedLevelFromRemote }?.id
+                        // Last resort: any location at all
+                        ?: remoteLocations.firstOrNull()?.id
+                }
                 else -> locationCandidates.firstOrNull()?.id
+                    ?: remoteLocations.firstOrNull()?.id
             }
 
             val resolvedLevelValid = resolvedLevelFromRemote in validLevelIds
-            val resolvedLocationValid = resolvedLocationFromRemote in validLocationIds
+
+            // For Single Unit: if no locations exist and level is valid, use level as location
+            val isSingleUnitFallback = locationsFetchSucceeded && validLocationIds.isEmpty() && resolvedLevelValid
+            val effectiveLocationFromRemote = resolvedLocationFromRemote
+                ?: if (isSingleUnitFallback) resolvedLevelFromRemote else null
+
+            // Location is valid if it's in the valid set, OR if we're using the Single Unit fallback
+            val resolvedLocationValid = effectiveLocationFromRemote in validLocationIds || isSingleUnitFallback
 
             if (resolvedLevelValid && resolvedLocationValid &&
-                resolvedLevelFromRemote != null && resolvedLocationFromRemote != null
+                resolvedLevelFromRemote != null && effectiveLocationFromRemote != null
             ) {
                 Log.d(
                     TAG,
                     "✅ [handlePendingRoomCreation] Resolved from remote: " +
-                        "levelServerId=$resolvedLevelFromRemote, locationServerId=$resolvedLocationFromRemote"
+                        "levelServerId=$resolvedLevelFromRemote, locationServerId=$effectiveLocationFromRemote"
                 )
                 levelServerId = resolvedLevelFromRemote
-                locationServerId = resolvedLocationFromRemote
+                locationServerId = effectiveLocationFromRemote
             } else {
                 Log.w(
                     TAG,
@@ -1581,8 +1644,30 @@ class SyncQueueProcessor(
             gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingLocationCreationPayload::class.java)
         }.getOrNull() ?: return OperationOutcome.DROP
 
-        val property = localDataService.getProperty(payload.propertyLocalId)
-            ?: return OperationOutcome.SKIP
+        // Try to find property by the stored local ID first
+        var property = localDataService.getProperty(payload.propertyLocalId)
+
+        // If property not found, the pending property may have been replaced with a synced one.
+        // Look up the project's current property instead of returning SKIP forever.
+        if (property == null) {
+            val project = localDataService.getProject(payload.projectId)
+            if (project == null || project.isDeleted) {
+                Log.d(TAG, "🗑️ [handlePendingLocationCreation] Project ${payload.projectId} not found or deleted; dropping operation")
+                return OperationOutcome.DROP
+            }
+            val currentPropertyId = project.propertyId
+            if (currentPropertyId == null) {
+                // Project exists but has no property yet - wait for property creation
+                return OperationOutcome.SKIP
+            }
+            property = localDataService.getProperty(currentPropertyId)
+            if (property == null) {
+                Log.w(TAG, "⚠️ [handlePendingLocationCreation] Project ${payload.projectId} has propertyId=$currentPropertyId but property not found")
+                return OperationOutcome.SKIP
+            }
+            Log.d(TAG, "🔄 [handlePendingLocationCreation] Property ${payload.propertyLocalId} not found; using project's current property ${property.propertyId}")
+        }
+
         val propertyServerId = property.serverId
             ?: return OperationOutcome.SKIP
 

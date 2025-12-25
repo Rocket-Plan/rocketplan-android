@@ -981,7 +981,7 @@ class OfflineSyncRepositoryTest {
 
         repository.syncDeletedRecords()
 
-        coVerify { localDataService.markProjectsDeleted(body.projects) }
+        coVerify { localDataService.cascadeDeleteProjectsByServerIds(body.projects) }
         coVerify { localDataService.markRoomsDeleted(body.rooms) }
         coVerify { localDataService.markLocationsDeleted(body.locations) }
         coVerify { localDataService.markPhotosDeleted(body.photos) }

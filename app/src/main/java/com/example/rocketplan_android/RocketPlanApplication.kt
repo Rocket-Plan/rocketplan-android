@@ -142,6 +142,7 @@ class RocketPlanApplication : Application() {
             photoCacheScheduler = photoCacheScheduler,
             syncCheckpointStore = syncCheckpointStore,
             roomTypeRepository = roomTypeRepository,
+            photoCacheManager = photoCacheManager,
             remoteLogger = remoteLogger
         )
 

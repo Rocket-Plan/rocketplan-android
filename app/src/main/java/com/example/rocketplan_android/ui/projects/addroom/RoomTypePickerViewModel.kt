@@ -65,7 +65,7 @@ class RoomTypePickerViewModel(
     private var pendingRoomSignature: Pair<String, Long>? = null
 
     init {
-        if (projectId <= 0L) {
+        if (projectId == 0L) {
             _uiState.value = RoomTypePickerUiState(
                 isLoading = false,
                 items = emptyList(),
@@ -77,7 +77,7 @@ class RoomTypePickerViewModel(
     }
 
     fun refresh(force: Boolean = false) {
-        if (projectId <= 0L || _uiState.value.isCreating) return
+        if (projectId == 0L || _uiState.value.isCreating) return
         viewModelScope.launch {
             val cachedResult = repository.getCachedRoomTypes(projectId, requestType)
             val cachedItems = cachedResult.getOrElse { emptyList() }
@@ -140,7 +140,7 @@ class RoomTypePickerViewModel(
     }
 
     fun createRoom(roomType: RoomTypeUiModel) {
-        if (projectId <= 0L || _uiState.value.isCreating) return
+        if (projectId == 0L || _uiState.value.isCreating) return
         val roomName = roomType.displayName.ifBlank { "Room ${roomType.id}" }
         val idempotencyKey = resolveRoomIdempotencyKey(roomName, roomType.id)
         android.util.Log.d("RoomTypePicker", "🆕 createRoom: id=${roomType.id}, displayName='${roomType.displayName}', roomName='$roomName'")

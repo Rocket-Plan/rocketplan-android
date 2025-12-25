@@ -48,3 +48,7 @@ typealias ProjectDetailResourceResponse = SingleResourceResponse<ProjectDetailDt
 typealias NoteResourceResponse = SingleResourceResponse<NoteDto>
 typealias PropertyResourceResponse = SingleResourceResponse<PropertyDto>
 typealias RoomResourceResponse = SingleResourceResponse<com.example.rocketplan_android.data.model.offline.RoomDto>
+
+data class SetActiveCompanyRequest(
+    @SerializedName("company_id") val companyId: Long
+)

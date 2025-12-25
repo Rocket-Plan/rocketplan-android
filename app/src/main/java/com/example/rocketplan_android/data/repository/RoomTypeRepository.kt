@@ -182,8 +182,23 @@ class RoomTypeRepository(
             ?: throw MissingPropertyException()
         val propertyLocalId = project.propertyId
             ?: throw MissingPropertyException()
-        localDataService.getProperty(propertyLocalId)
-            ?: throw MissingPropertyException()
+        // Look up property by local ID first
+        var property = localDataService.getProperty(propertyLocalId)
+        if (property == null && propertyLocalId > 0) {
+            // If not found and ID is positive, it might be a server ID stored incorrectly
+            // (this can happen due to sync issues - log for debugging)
+            property = localDataService.getPropertyByServerId(propertyLocalId)
+            if (property != null) {
+                android.util.Log.w(
+                    "RoomTypeRepository",
+                    "⚠️ [resolveProjectContext] Property $propertyLocalId not found by localId but found by serverId. " +
+                        "Project $projectId may have incorrect propertyId."
+                )
+            }
+        }
+        if (property == null) {
+            throw MissingPropertyException()
+        }
         val propertyTypeId = resolveCatalogPropertyTypeId(project.propertyType)
         return ProjectContext(propertyTypeId)
     }

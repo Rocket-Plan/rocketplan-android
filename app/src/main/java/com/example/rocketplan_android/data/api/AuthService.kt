@@ -8,6 +8,7 @@ import com.example.rocketplan_android.data.model.ResetPasswordResponse
 import com.example.rocketplan_android.data.model.LoginRequest
 import com.example.rocketplan_android.data.model.LoginResponse
 import com.example.rocketplan_android.data.model.RegisterRequest
+import com.example.rocketplan_android.data.model.SetActiveCompanyRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -52,4 +53,11 @@ interface AuthService {
      */
     @GET("api/auth/user")
     suspend fun getCurrentUser(): Response<CurrentUserEnvelope>
+
+    /**
+     * Set the active company for the current session.
+     * This tells the backend which company context to use for API requests.
+     */
+    @POST("api/active-company")
+    suspend fun setActiveCompany(@Body request: SetActiveCompanyRequest): Response<Unit>
 }

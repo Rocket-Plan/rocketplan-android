@@ -15,6 +15,7 @@ import com.example.rocketplan_android.data.model.RegisterRequest
 import com.example.rocketplan_android.data.model.AuthSession
 import com.example.rocketplan_android.data.model.CurrentUserResponse
 import com.example.rocketplan_android.data.model.Company
+import com.example.rocketplan_android.data.model.SetActiveCompanyRequest
 import com.example.rocketplan_android.data.storage.SecureStorage
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -305,6 +306,17 @@ class AuthRepository(
                 }
                 if (selectedCompanyId != null) {
                     Log.d("AuthRepository", "Saving companyId=$selectedCompanyId")
+                    // Notify the backend which company is active for this session
+                    runCatching {
+                        val activeCompanyResponse = authService.setActiveCompany(SetActiveCompanyRequest(selectedCompanyId))
+                        if (activeCompanyResponse.isSuccessful) {
+                            Log.d("AuthRepository", "Active company set on server: $selectedCompanyId")
+                        } else {
+                            Log.w("AuthRepository", "Failed to set active company on server: ${activeCompanyResponse.code()}")
+                        }
+                    }.onFailure { e ->
+                        Log.w("AuthRepository", "Failed to set active company on server", e)
+                    }
                     secureStorage.saveCompanyId(selectedCompanyId)
                 } else {
                     Log.w("AuthRepository", "No company found in API response - clearing stored companyId")
@@ -334,8 +346,31 @@ class AuthRepository(
 
     fun observeCompanyId(): Flow<Long?> = secureStorage.getCompanyId()
 
-    suspend fun setActiveCompany(companyId: Long) {
-        secureStorage.saveCompanyId(companyId)
+    /**
+     * Set the active company for API requests.
+     * This notifies the backend which company context to use.
+     */
+    suspend fun setActiveCompany(companyId: Long): Result<Unit> {
+        return try {
+            Log.d("AuthRepository", "setActiveCompany: notifying server of companyId=$companyId")
+            val response = authService.setActiveCompany(SetActiveCompanyRequest(companyId))
+            if (response.isSuccessful) {
+                Log.d("AuthRepository", "setActiveCompany: server acknowledged companyId=$companyId")
+                secureStorage.saveCompanyId(companyId)
+                Result.success(Unit)
+            } else {
+                val errorBody = response.errorBody()?.string()
+                Log.e("AuthRepository", "setActiveCompany: failed ${response.code()} - $errorBody")
+                // Still save locally even if server call fails, so we can retry later
+                secureStorage.saveCompanyId(companyId)
+                Result.failure(Exception("Failed to set active company: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Log.e("AuthRepository", "setActiveCompany: exception", e)
+            // Still save locally even if server call fails
+            secureStorage.saveCompanyId(companyId)
+            Result.failure(e)
+        }
     }
 
     /**

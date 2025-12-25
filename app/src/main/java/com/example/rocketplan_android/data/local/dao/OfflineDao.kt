@@ -69,6 +69,10 @@ interface OfflineDao {
     @Query("UPDATE offline_projects SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markProjectsDeleted(serverIds: List<Long>)
 
+    /** Force-marks projects as deleted regardless of isDirty state. Used for server-side cascade deletes. */
+    @Query("UPDATE offline_projects SET isDeleted = 1, isDirty = 0 WHERE serverId IN (:serverIds)")
+    suspend fun forceMarkProjectsDeletedByServerIds(serverIds: List<Long>)
+
     @Query("UPDATE offline_projects SET isDeleted = 1 WHERE projectId = :projectId")
     suspend fun markProjectDeletedByLocalId(projectId: Long)
     // endregion
@@ -88,6 +92,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_locations SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markLocationsDeleted(serverIds: List<Long>)
+
+    @Query("UPDATE offline_locations SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markLocationsDeletedByProject(projectId: Long)
     // endregion
 
     // region Rooms
@@ -299,6 +306,9 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_atmospheric_logs WHERE roomId = :roomId")
     suspend fun deleteAtmosphericLogsByRoomId(roomId: Long): Int
+
+    @Query("UPDATE offline_atmospheric_logs SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markAtmosphericLogsDeletedByProject(projectId: Long)
     // endregion
 
     // region Photos
@@ -494,6 +504,19 @@ interface OfflineDao {
     @Query("UPDATE offline_photos SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markPhotosDeleted(serverIds: List<Long>)
 
+    @Query("UPDATE offline_photos SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markPhotosDeletedByProject(projectId: Long)
+
+    /** Returns photos with cached files for cleanup when deleting a project */
+    @Query(
+        """
+        SELECT * FROM offline_photos
+        WHERE projectId = :projectId
+          AND (cachedOriginalPath IS NOT NULL OR cachedThumbnailPath IS NOT NULL)
+        """
+    )
+    suspend fun getCachedPhotosForProject(projectId: Long): List<OfflinePhotoEntity>
+
     // region Room photo snapshots
     @Query("DELETE FROM offline_room_photo_snapshots WHERE roomId = :roomId")
     suspend fun clearRoomPhotoSnapshots(roomId: Long): Int
@@ -596,6 +619,12 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_albums WHERE roomId = :roomId")
     suspend fun deleteAlbumsByRoomId(roomId: Long): Int
+
+    @Query("DELETE FROM offline_album_photos WHERE albumId IN (SELECT albumId FROM offline_albums WHERE projectId = :projectId)")
+    suspend fun deleteAlbumPhotosByProject(projectId: Long): Int
+
+    @Query("DELETE FROM offline_albums WHERE projectId = :projectId")
+    suspend fun deleteAlbumsByProject(projectId: Long): Int
     // endregion
 
     // region Equipment
@@ -613,6 +642,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_equipment SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markEquipmentDeleted(serverIds: List<Long>)
+
+    @Query("UPDATE offline_equipment SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markEquipmentDeletedByProject(projectId: Long)
     // endregion
 
     @Query("SELECT * FROM offline_equipment WHERE equipmentId = :equipmentId LIMIT 1")
@@ -670,6 +702,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_moisture_logs SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markMoistureLogsDeleted(serverIds: List<Long>)
+
+    @Query("UPDATE offline_moisture_logs SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markMoistureLogsDeletedByProject(projectId: Long)
     // endregion
 
     // region Notes & Damages & Work Scopes
@@ -694,6 +729,9 @@ interface OfflineDao {
     @Query("UPDATE offline_notes SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markNotesDeleted(serverIds: List<Long>)
 
+    @Query("UPDATE offline_notes SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markNotesDeletedByProject(projectId: Long)
+
     @Query("DELETE FROM offline_notes WHERE roomId = :roomId")
     suspend fun deleteNotesByRoomId(roomId: Long): Int
 
@@ -709,6 +747,9 @@ interface OfflineDao {
     @Query("UPDATE offline_damages SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markDamagesDeleted(serverIds: List<Long>)
 
+    @Query("UPDATE offline_damages SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markDamagesDeletedByProject(projectId: Long)
+
     @Query("DELETE FROM offline_damages WHERE roomId = :roomId")
     suspend fun deleteDamagesByRoomId(roomId: Long): Int
 
@@ -723,6 +764,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_work_scopes SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markWorkScopesDeleted(serverIds: List<Long>)
+
+    @Query("UPDATE offline_work_scopes SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markWorkScopesDeletedByProject(projectId: Long)
 
     @Query("UPDATE offline_work_scopes SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateWorkScopeRoomIds(oldRoomId: Long, newRoomId: Long): Int
@@ -754,6 +798,9 @@ interface OfflineDao {
 
     @Upsert
     suspend fun upsertProperty(property: OfflinePropertyEntity)
+
+    @Query("DELETE FROM offline_properties WHERE propertyId = :propertyId")
+    suspend fun deleteProperty(propertyId: Long)
 
     @Query("SELECT * FROM offline_users WHERE companyId = :companyId")
     fun observeUsersForCompany(companyId: Long): Flow<List<OfflineUserEntity>>
@@ -851,6 +898,42 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_sync_queue WHERE entityType = :entityType AND entityId = :entityId")
     suspend fun deleteSyncOperationsForEntity(entityType: String, entityId: Long)
+
+    // Typed sync queue deletion methods - must filter by BOTH entityType AND entityId
+    // to avoid collisions across tables (e.g., projectId=5 vs photoId=5 are different entities)
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'project' AND entityId IN (:projectIds)")
+    suspend fun deleteSyncOpsForProjects(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'property' AND entityId IN (SELECT propertyId FROM offline_properties WHERE propertyId IN (:propertyIds))")
+    suspend fun deleteSyncOpsForProperties(propertyIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'location' AND entityId IN (SELECT locationId FROM offline_locations WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForLocationsByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'room' AND entityId IN (SELECT roomId FROM offline_rooms WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForRoomsByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'photo' AND entityId IN (SELECT photoId FROM offline_photos WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForPhotosByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'note' AND entityId IN (SELECT noteId FROM offline_notes WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForNotesByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'equipment' AND entityId IN (SELECT equipmentId FROM offline_equipment WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForEquipmentByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'atmospheric_log' AND entityId IN (SELECT logId FROM offline_atmospheric_logs WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForAtmosphericLogsByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'moisture_log' AND entityId IN (SELECT logId FROM offline_moisture_logs WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForMoistureLogsByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'damage' AND entityId IN (SELECT damageId FROM offline_damages WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForDamagesByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'work_scope' AND entityId IN (SELECT workScopeId FROM offline_work_scopes WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForWorkScopesByProject(projectIds: List<Long>): Int
     // endregion
 
     // region Conflicts

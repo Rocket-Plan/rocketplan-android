@@ -181,6 +181,9 @@ class LocalDataService private constructor(
     suspend fun getPropertyByServerId(serverId: Long): OfflinePropertyEntity? =
         withContext(ioDispatcher) { dao.getPropertyByServerId(serverId) }
 
+    suspend fun deleteProperty(propertyId: Long) =
+        withContext(ioDispatcher) { dao.deleteProperty(propertyId) }
+
     suspend fun getRoomByServerId(serverId: Long): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoomByServerId(serverId) }
 
@@ -676,14 +679,138 @@ class LocalDataService private constructor(
         dao.markProjectsDeleted(serverIds)
     }
 
+    /**
+     * Cascades deletion for projects deleted on the server.
+     * This finds all local projects matching the given server IDs and
+     * deletes their child entities before marking them as deleted.
+     *
+     * @return List of photos with cached files that need disk cleanup
+     */
+    suspend fun cascadeDeleteProjectsByServerIds(serverIds: List<Long>): List<OfflinePhotoEntity> = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext emptyList()
+
+        val cachedPhotosToCleanup = mutableListOf<OfflinePhotoEntity>()
+
+        database.withTransaction {
+            // Get all local project IDs for the given server IDs
+            val projects = dao.getProjectsOnce().filter { it.serverId in serverIds }
+            if (projects.isEmpty()) {
+                Log.d("LocalDataService", "🗑️ No local projects found for serverIds=$serverIds")
+                return@withTransaction
+            }
+
+            val projectIds = projects.map { it.projectId }
+            val propertyIds = projects.mapNotNull { it.propertyId }
+
+            // Clear sync queue operations for all affected entities FIRST
+            // Must use typed deletions to avoid ID collisions across tables
+            var clearedOps = 0
+            clearedOps += dao.deleteSyncOpsForProjects(projectIds)
+            if (propertyIds.isNotEmpty()) {
+                clearedOps += dao.deleteSyncOpsForProperties(propertyIds)
+            }
+            clearedOps += dao.deleteSyncOpsForLocationsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForRoomsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForPhotosByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForNotesByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForEquipmentByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForAtmosphericLogsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForMoistureLogsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForDamagesByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForWorkScopesByProject(projectIds)
+            if (clearedOps > 0) {
+                Log.d("LocalDataService", "🧹 Cleared $clearedOps sync queue operations")
+            }
+
+            projects.forEach { project ->
+                val roomIds = dao.getRoomIdsForProject(project.projectId)
+
+                // Collect cached photos for disk cleanup
+                cachedPhotosToCleanup.addAll(dao.getCachedPhotosForProject(project.projectId))
+
+                // Mark all child entities as deleted
+                dao.markLocationsDeletedByProject(project.projectId)
+                dao.markRoomsDeletedByProject(project.projectId)
+                dao.markPhotosDeletedByProject(project.projectId)
+                dao.markAtmosphericLogsDeletedByProject(project.projectId)
+                dao.markMoistureLogsDeletedByProject(project.projectId)
+                dao.markNotesDeletedByProject(project.projectId)
+                dao.markDamagesDeletedByProject(project.projectId)
+                dao.markEquipmentDeletedByProject(project.projectId)
+                dao.markWorkScopesDeletedByProject(project.projectId)
+
+                // Hard-delete albums (they don't have soft-delete)
+                dao.deleteAlbumPhotosByProject(project.projectId)
+                dao.deleteAlbumsByProject(project.projectId)
+
+                // Clear room photo snapshots
+                if (roomIds.isNotEmpty()) {
+                    dao.clearRoomPhotoSnapshots(roomIds)
+                }
+
+                // Clear project-specific catalogs
+                project.serverId?.let { serverId ->
+                    dao.clearDamageTypes(serverId)
+                    dao.clearDamageCauses(serverId)
+                }
+
+                Log.d(
+                    "LocalDataService",
+                    "🗑️ Cascade deleted project ${project.projectId} (serverId=${project.serverId})"
+                )
+            }
+
+            // Force-mark all projects as deleted (ignores isDirty since project is gone from server)
+            dao.forceMarkProjectsDeletedByServerIds(serverIds)
+        }
+
+        cachedPhotosToCleanup
+    }
+
+    /**
+     * Marks a project and all its child entities as deleted.
+     * This cascades the deletion to locations, rooms, photos, notes, damages,
+     * equipment, atmospheric logs, moisture logs, work scopes, and albums.
+     */
     suspend fun deleteProject(projectId: Long) = withContext(ioDispatcher) {
         database.withTransaction {
-            dao.markProjectDeletedByLocalId(projectId)
+            val project = dao.getProject(projectId)
             val roomIds = dao.getRoomIdsForProject(projectId)
+
+            // Mark all child entities as deleted
+            dao.markLocationsDeletedByProject(projectId)
+            dao.markRoomsDeletedByProject(projectId)
+            dao.markPhotosDeletedByProject(projectId)
+            dao.markAtmosphericLogsDeletedByProject(projectId)
+            dao.markMoistureLogsDeletedByProject(projectId)
+            dao.markNotesDeletedByProject(projectId)
+            dao.markDamagesDeletedByProject(projectId)
+            dao.markEquipmentDeletedByProject(projectId)
+            dao.markWorkScopesDeletedByProject(projectId)
+
+            // Hard-delete albums (they don't have soft-delete)
+            dao.deleteAlbumPhotosByProject(projectId)
+            dao.deleteAlbumsByProject(projectId)
+
+            // Clear room photo snapshots
             if (roomIds.isNotEmpty()) {
-                dao.markRoomsDeletedByProject(projectId)
                 dao.clearRoomPhotoSnapshots(roomIds)
             }
+
+            // Clear project-specific catalogs if we have a serverId
+            project?.serverId?.let { serverId ->
+                dao.clearDamageTypes(serverId)
+                dao.clearDamageCauses(serverId)
+            }
+
+            // Mark the project itself as deleted
+            dao.markProjectDeletedByLocalId(projectId)
+
+            Log.d(
+                "LocalDataService",
+                "🗑️ Cascade deleted project $projectId (serverId=${project?.serverId}): " +
+                    "${roomIds.size} rooms"
+            )
         }
     }
 

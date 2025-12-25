@@ -109,7 +109,9 @@ class ProjectTypeSelectionViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isSelectionInProgress = true, errorMessage = null) }
 
-            if (project.propertyId == null && syncQueueManager.isProjectSyncInFlight(projectId)) {
+            // Only block if the project exists on server (serverId != null) and sync might bring down a property.
+            // For brand new local projects (serverId == null), allow immediate property selection.
+            if (project.propertyId == null && project.serverId != null && syncQueueManager.isProjectSyncInFlight(projectId)) {
                 _uiState.update {
                     it.copy(
                         isSelectionInProgress = false,

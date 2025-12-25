@@ -46,7 +46,9 @@ class ProjectSyncService(
     ): Set<Long> = withContext(ioDispatcher) {
         val checkpointKey = companyProjectsKey(companyId, assignedToMe)
         val updatedSince = if (forceFullSync) null else syncCheckpointStore.updatedSinceParam(checkpointKey)
-        val existingProjects = localDataService.getAllProjects().associateBy { it.serverId ?: it.projectId }
+        val allProjects = localDataService.getAllProjects()
+        val existingByServerId = allProjects.filter { it.serverId != null }.associateBy { it.serverId }
+        val existingByUuid = allProjects.associateBy { it.uuid }
         val projects = fetchAllPages { page ->
             api.getCompanyProjects(
                 companyId = companyId,
@@ -56,7 +58,10 @@ class ProjectSyncService(
             )
         }
         localDataService.saveProjects(
-            projects.map { it.toEntity(existing = existingProjects[it.id], fallbackCompanyId = companyId) }
+            projects.map { dto ->
+                val existing = existingByServerId[dto.id] ?: existingByUuid[dto.uuid ?: dto.uid]
+                dto.toEntity(existing = existing, fallbackCompanyId = companyId)
+            }
         )
 
         // Reconcile full company sync against local data to remove stale entries.
@@ -110,12 +115,17 @@ class ProjectSyncService(
     suspend fun syncUserProjects(userId: Long) = withContext(ioDispatcher) {
         val checkpointKey = userProjectsKey(userId)
         val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
-        val existingProjects = localDataService.getAllProjects().associateBy { it.serverId ?: it.projectId }
+        val allProjects = localDataService.getAllProjects()
+        val existingByServerId = allProjects.filter { it.serverId != null }.associateBy { it.serverId }
+        val existingByUuid = allProjects.associateBy { it.uuid }
         val projects = fetchAllPages { page ->
             api.getUserProjects(userId = userId, page = page, updatedSince = updatedSince)
         }
         localDataService.saveProjects(
-            projects.map { it.toEntity(existing = existingProjects[it.id]) }
+            projects.map { dto ->
+                val existing = existingByServerId[dto.id] ?: existingByUuid[dto.uuid ?: dto.uid]
+                dto.toEntity(existing = existing)
+            }
         )
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
