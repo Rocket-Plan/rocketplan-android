@@ -96,7 +96,10 @@ internal fun buildProjectEntity(
         add(projectNumber?.takeIf { it.isNotBlank() })
         add(uid?.takeIf { it.isNotBlank() })
     }
-    val resolvedTitle = titleCandidates.firstOrNull { it != null } ?: "Project $id"
+    // Filter out purely numeric/dash strings to prevent IDs from becoming display titles
+    val resolvedTitle = titleCandidates.firstOrNull {
+        it != null && !it.all { c -> c.isDigit() || c == '-' }
+    } ?: "Project $id"
     val resolvedUuid = uuid ?: uid ?: existing?.uuid ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
 
@@ -245,10 +248,11 @@ internal fun PropertyDto.toEntity(
 
 internal fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocationEntity {
     val timestamp = now()
+    // Filter out purely numeric/dash strings to prevent IDs from becoming display titles
     val resolvedTitle = listOfNotNull(
-        title?.takeIf { it.isNotBlank() },
-        name?.takeIf { it.isNotBlank() }
-    ).firstOrNull() ?: "Location $id"
+        title?.takeIf { it.isNotBlank() && !it.all { c -> c.isDigit() || c == '-' } },
+        name?.takeIf { it.isNotBlank() && !it.all { c -> c.isDigit() || c == '-' } }
+    ).firstOrNull() ?: "Level"
     val resolvedType = listOfNotNull(
         type?.takeIf { it.isNotBlank() },
         locationType?.takeIf { it.isNotBlank() }
@@ -325,7 +329,10 @@ internal fun RoomDto.toEntity(
         title = resolvedTitle,
         roomType = roomType?.name,
         roomTypeId = roomType?.id ?: existing?.roomTypeId,
-        level = level?.name ?: level?.title ?: existing?.level,
+        // Filter out purely numeric/dash strings to prevent IDs from becoming level names
+        level = level?.name?.takeIf { !it.all { c -> c.isDigit() || c == '-' } }
+            ?: level?.title?.takeIf { !it.all { c -> c.isDigit() || c == '-' } }
+            ?: existing?.level?.takeIf { !it.all { c -> c.isDigit() || c == '-' } },
         squareFootage = squareFootage,
         isAccessible = isAccessible ?: true,
         photoCount = photosCount ?: existing?.photoCount,

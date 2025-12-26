@@ -349,7 +349,10 @@ class RoomSyncService(
             title = roomName,
             roomType = roomTypeName,
             roomTypeId = roomTypeId,
-            level = level.title ?: level.type,
+            // Filter out purely numeric/dash strings to prevent IDs from becoming level names
+            level = (level.title ?: level.type)?.takeIf {
+                !it.all { c -> c.isDigit() || c == '-' }
+            } ?: "Level",
             syncStatus = SyncStatus.PENDING,
             syncVersion = 0,
             isDirty = true,
@@ -495,7 +498,10 @@ class RoomSyncService(
 
         if (locations.isEmpty()) {
             val project = localDataService.getProject(projectId)
-            val defaultName = project?.title?.takeIf { it.isNotBlank() } ?: "Unit"
+            // Filter out purely numeric/dash strings to prevent IDs from becoming location names
+            val defaultName = project?.title?.takeIf {
+                it.isNotBlank() && !it.all { c -> c.isDigit() || c == '-' }
+            } ?: "Unit"
             val propertyTypeValue = project?.propertyType
             runCatching {
                 createDefaultLocationAndRoom(
