@@ -570,12 +570,14 @@ interface OfflineDao {
             a.thumbnailUrl,
             a.syncStatus,
             a.syncVersion,
+            a.isDirty,
+            a.isDeleted,
             a.createdAt,
             a.updatedAt,
             a.lastSyncedAt
         FROM offline_albums a
         LEFT JOIN offline_album_photos ap ON a.albumId = ap.albumId
-        WHERE a.projectId = :projectId
+        WHERE a.projectId = :projectId AND a.isDeleted = 0
         GROUP BY a.albumId
         ORDER BY a.name
         """
@@ -595,12 +597,14 @@ interface OfflineDao {
             a.thumbnailUrl,
             a.syncStatus,
             a.syncVersion,
+            a.isDirty,
+            a.isDeleted,
             a.createdAt,
             a.updatedAt,
             a.lastSyncedAt
         FROM offline_albums a
         LEFT JOIN offline_album_photos ap ON a.albumId = ap.albumId
-        WHERE a.roomId = :roomId
+        WHERE a.roomId = :roomId AND a.isDeleted = 0
         GROUP BY a.albumId
         ORDER BY a.name
         """
@@ -623,14 +627,14 @@ interface OfflineDao {
     @Query("DELETE FROM offline_album_photos WHERE albumId IN (SELECT albumId FROM offline_albums WHERE roomId = :roomId)")
     suspend fun deleteAlbumPhotosByRoomId(roomId: Long): Int
 
-    @Query("DELETE FROM offline_albums WHERE roomId = :roomId")
-    suspend fun deleteAlbumsByRoomId(roomId: Long): Int
+    @Query("UPDATE offline_albums SET isDeleted = 1 WHERE roomId = :roomId")
+    suspend fun markAlbumsDeletedByRoomId(roomId: Long): Int
 
     @Query("DELETE FROM offline_album_photos WHERE albumId IN (SELECT albumId FROM offline_albums WHERE projectId = :projectId)")
     suspend fun deleteAlbumPhotosByProject(projectId: Long): Int
 
-    @Query("DELETE FROM offline_albums WHERE projectId = :projectId")
-    suspend fun deleteAlbumsByProject(projectId: Long): Int
+    @Query("UPDATE offline_albums SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markAlbumsDeletedByProject(projectId: Long): Int
     // endregion
 
     // region Equipment

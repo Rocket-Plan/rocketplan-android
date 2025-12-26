@@ -609,7 +609,7 @@ class LocalDataService private constructor(
         val phantomRoomId = 0L
         database.withTransaction {
             val albumPhotos = dao.deleteAlbumPhotosByRoomId(phantomRoomId)
-            val albums = dao.deleteAlbumsByRoomId(phantomRoomId)
+            val albums = dao.markAlbumsDeletedByRoomId(phantomRoomId)
             val snapshots = dao.clearRoomPhotoSnapshots(phantomRoomId)
             val photos = dao.deletePhotosByRoomId(phantomRoomId)
             val notes = dao.deleteNotesByRoomId(phantomRoomId)
@@ -647,7 +647,7 @@ class LocalDataService private constructor(
         database.withTransaction {
             roomIds.forEach { id ->
                 dao.deleteAlbumPhotosByRoomId(id)
-                dao.deleteAlbumsByRoomId(id)
+                dao.markAlbumsDeletedByRoomId(id)
                 dao.clearRoomPhotoSnapshots(id)
                 dao.deletePhotosByRoomId(id)
                 dao.deleteNotesByRoomId(id)
@@ -798,9 +798,9 @@ class LocalDataService private constructor(
                 dao.markEquipmentDeletedByProject(project.projectId)
                 dao.markWorkScopesDeletedByProject(project.projectId)
 
-                // Hard-delete albums (they don't have soft-delete)
+                // Soft-delete albums and clear album-photo mappings
                 dao.deleteAlbumPhotosByProject(project.projectId)
-                dao.deleteAlbumsByProject(project.projectId)
+                dao.markAlbumsDeletedByProject(project.projectId)
 
                 // Clear room photo snapshots
                 if (roomIds.isNotEmpty()) {
@@ -873,9 +873,9 @@ class LocalDataService private constructor(
             dao.markEquipmentDeletedByProject(projectId)
             dao.markWorkScopesDeletedByProject(projectId)
 
-            // Hard-delete albums (they don't have soft-delete)
+            // Soft-delete albums and clear album-photo mappings
             dao.deleteAlbumPhotosByProject(projectId)
-            dao.deleteAlbumsByProject(projectId)
+            dao.markAlbumsDeletedByProject(projectId)
 
             // Clear room photo snapshots
             if (roomIds.isNotEmpty()) {

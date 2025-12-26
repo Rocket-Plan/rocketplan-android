@@ -27,6 +27,7 @@ import com.example.rocketplan_android.data.storage.OfflineRoomTypeCatalogStore
 import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.data.sync.SyncQueueManager
+import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
 import com.example.rocketplan_android.realtime.NotesRealtimeManager
@@ -270,7 +271,15 @@ class RocketPlanApplication : Application() {
 
         // One-time data repair: Fix photos with mismatched roomIds from previous sync bugs
         CoroutineScope(Dispatchers.IO).launch {
-            localDataService.repairMismatchedPhotoRoomIds()
+            val reassignedCount = localDataService.repairMismatchedPhotoRoomIds()
+            if (reassignedCount > 0) {
+                remoteLogger.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Data repair: reassigned photos with mismatched roomIds to project level",
+                    metadata = mapOf("reassigned_count" to reassignedCount.toString())
+                )
+            }
         }
     }
 

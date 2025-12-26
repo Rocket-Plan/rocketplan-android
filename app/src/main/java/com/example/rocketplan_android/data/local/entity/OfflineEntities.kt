@@ -367,7 +367,8 @@ data class OfflineAtmosphericLogEntity(
     indices = [
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
-        Index(value = ["syncStatus"])
+        Index(value = ["syncStatus"]),
+        Index(value = ["isDeleted"])
     ]
 )
 data class OfflineAlbumEntity(
@@ -382,6 +383,8 @@ data class OfflineAlbumEntity(
     val thumbnailUrl: String? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
+    val isDirty: Boolean = false,
+    val isDeleted: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
     val lastSyncedAt: Date? = null
