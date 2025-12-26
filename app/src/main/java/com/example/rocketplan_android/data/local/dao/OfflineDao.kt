@@ -407,12 +407,15 @@ interface OfflineDao {
     suspend fun getPhotosWithMismatchedRoomIds(): List<OfflinePhotoEntity>
 
     /**
-     * Delete photos where the roomId references a room in a different project.
-     * Returns the count of deleted photos.
+     * Reassign orphaned photos to project level by clearing their roomId.
+     * This is safer than deleting - photos remain accessible at the project level
+     * and users can manually reassign them to the correct room.
+     * Returns the count of photos reassigned.
      */
     @Query(
         """
-        DELETE FROM offline_photos
+        UPDATE offline_photos
+        SET roomId = NULL
         WHERE isDeleted = 0
           AND isDirty = 0
           AND roomId IS NOT NULL
@@ -424,7 +427,7 @@ interface OfflineDao {
           )
         """
     )
-    suspend fun deleteMismatchedPhotos(): Int
+    suspend fun reassignMismatchedPhotosToProject(): Int
 
     @Query(
         """

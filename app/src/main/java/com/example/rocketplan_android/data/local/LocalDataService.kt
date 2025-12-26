@@ -840,6 +840,27 @@ class LocalDataService private constructor(
         database.withTransaction {
             val project = dao.getProject(projectId)
             val roomIds = dao.getRoomIdsForProject(projectId)
+            val propertyId = project?.propertyId
+
+            // Clear sync queue operations FIRST to prevent race with sync processor
+            val projectIds = listOf(projectId)
+            var clearedOps = 0
+            clearedOps += dao.deleteSyncOpsForProjects(projectIds)
+            if (propertyId != null) {
+                clearedOps += dao.deleteSyncOpsForProperties(listOf(propertyId))
+            }
+            clearedOps += dao.deleteSyncOpsForLocationsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForRoomsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForPhotosByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForNotesByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForEquipmentByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForAtmosphericLogsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForMoistureLogsByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForDamagesByProject(projectIds)
+            clearedOps += dao.deleteSyncOpsForWorkScopesByProject(projectIds)
+            if (clearedOps > 0) {
+                Log.d("LocalDataService", "🧹 [deleteProject] Cleared $clearedOps sync queue operations")
+            }
 
             // Mark all child entities as deleted
             dao.markLocationsDeletedByProject(projectId)
@@ -897,9 +918,10 @@ class LocalDataService private constructor(
     }
 
     /**
-     * Removes photos where the roomId references a room that doesn't exist in the photo's project.
-     * This repairs data integrity issues where photos were synced with incorrect roomId values.
-     * @return The count of photos cleaned up
+     * Repairs photos where the roomId references a room that doesn't exist in the photo's project.
+     * Instead of deleting these photos, we reassign them to the project level (roomId = null).
+     * This preserves the photos and allows users to manually reassign them to the correct room.
+     * @return The count of photos reassigned to project level
      */
     suspend fun repairMismatchedPhotoRoomIds(): Int = withContext(ioDispatcher) {
         val mismatched = dao.getPhotosWithMismatchedRoomIds()
@@ -908,7 +930,7 @@ class LocalDataService private constructor(
             return@withContext 0
         }
 
-        Log.w("LocalDataService", "🔧 Found ${mismatched.size} photos with mismatched roomIds:")
+        Log.w("LocalDataService", "🔧 Found ${mismatched.size} photos with mismatched roomIds (will reassign to project level):")
         mismatched.take(10).forEach { photo ->
             Log.w("LocalDataService", "  Photo ${photo.photoId}: projectId=${photo.projectId}, roomId=${photo.roomId}")
         }
@@ -916,9 +938,9 @@ class LocalDataService private constructor(
             Log.w("LocalDataService", "  ... and ${mismatched.size - 10} more")
         }
 
-        val deleted = dao.deleteMismatchedPhotos()
-        Log.w("LocalDataService", "🗑️ Cleaned up $deleted mismatched photos")
-        return@withContext deleted
+        val reassigned = dao.reassignMismatchedPhotosToProject()
+        Log.w("LocalDataService", "📎 Reassigned $reassigned photos to project level (roomId cleared)")
+        return@withContext reassigned
     }
 
     suspend fun markNotesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
