@@ -93,8 +93,8 @@ interface SyncQueueEnqueuer {
         isExterior: Boolean,
         levelServerId: Long?,
         locationServerId: Long?,
-        levelLocalId: Long?,
-        locationLocalId: Long?,
+        levelUuid: String,
+        locationUuid: String,
         idempotencyKey: String?
     )
 

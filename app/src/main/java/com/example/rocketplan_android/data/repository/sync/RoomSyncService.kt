@@ -370,8 +370,8 @@ class RoomSyncService(
             isExterior = isExterior,
             levelServerId = level.serverId,
             locationServerId = location.serverId,
-            levelLocalId = level.locationId,
-            locationLocalId = location.locationId,
+            levelUuid = level.uuid,
+            locationUuid = location.uuid,
             idempotencyKey = idempotencyKey
         )
         return pending

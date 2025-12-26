@@ -341,8 +341,8 @@ class SyncQueueProcessor(
         isExterior: Boolean,
         levelServerId: Long?,
         locationServerId: Long?,
-        levelLocalId: Long?,
-        locationLocalId: Long?,
+        levelUuid: String,
+        locationUuid: String,
         idempotencyKey: String?
     ) {
         val payload = PendingRoomCreationPayload(
@@ -356,8 +356,8 @@ class SyncQueueProcessor(
             isExterior = isExterior,
             levelServerId = levelServerId,
             locationServerId = locationServerId,
-            levelLocalId = levelLocalId,
-            locationLocalId = locationLocalId,
+            levelUuid = levelUuid,
+            locationUuid = locationUuid,
             idempotencyKey = idempotencyKey
         )
         val operation = OfflineSyncQueueEntity(
@@ -1057,6 +1057,7 @@ class SyncQueueProcessor(
             }
         }
 
+        // Resolve property server ID (required for API calls)
         suspend fun resolvePropertyServerId(): Long? {
             val propertyId = project.propertyId ?: return null
             return normalizeServerId(localDataService.getProperty(propertyId)?.serverId)
@@ -1070,158 +1071,40 @@ class SyncQueueProcessor(
         if (propertyServerId == null) {
             Log.w(
                 TAG,
-                "⚠️ [handlePendingRoomCreation] Property not synced for project ${payload.projectId} (propertyId=${project.propertyId}); will retry"
+                "⚠️ [handlePendingRoomCreation] Property not synced for project ${payload.projectId}; will retry"
             )
             return OperationOutcome.SKIP
         }
 
-        var locations = localDataService.getLocations(payload.projectId)
+        // Resolve level and location by UUID (simple lookup)
+        var level = localDataService.getLocationByUuid(payload.levelUuid)
+        var location = localDataService.getLocationByUuid(payload.locationUuid)
+        var levelServerId = normalizeServerId(payload.levelServerId) ?: normalizeServerId(level?.serverId)
+        var locationServerId = normalizeServerId(payload.locationServerId) ?: normalizeServerId(location?.serverId)
+
         Log.d(
             TAG,
             "🔍 [handlePendingRoomCreation] Resolving IDs for room '${payload.roomName}': " +
-                "payload.levelServerId=${payload.levelServerId}, payload.locationServerId=${payload.locationServerId}, " +
-                "payload.levelLocalId=${payload.levelLocalId}, payload.locationLocalId=${payload.locationLocalId}, " +
-                "locations=${locations.map { "id=${it.locationId}/server=${it.serverId}/title=${it.title}/parent=${it.parentLocationId}" }}"
+                "levelUuid=${payload.levelUuid} → serverId=$levelServerId, " +
+                "locationUuid=${payload.locationUuid} → serverId=$locationServerId"
         )
-        var levelServerId = normalizeServerId(payload.levelServerId)
-            ?: normalizeServerId(locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId)
-            ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == null }?.serverId)
 
-        var locationServerId = normalizeServerId(payload.locationServerId)
-            ?: normalizeServerId(locations.firstOrNull { it.locationId == payload.locationLocalId }?.serverId)
-            ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId)
-            ?: normalizeServerId(locations.firstOrNull { it.serverId == levelServerId }?.serverId)
-
+        // If IDs are missing, refresh essentials and try again
         if (levelServerId == null || locationServerId == null) {
-            // Try to refresh essentials to populate locations/levels
             refreshEssentialsOnce()
-            locations = localDataService.getLocations(payload.projectId)
+            level = localDataService.getLocationByUuid(payload.levelUuid)
+            location = localDataService.getLocationByUuid(payload.locationUuid)
             if (levelServerId == null) {
-                levelServerId = normalizeServerId(
-                    locations.firstOrNull { it.locationId == payload.levelLocalId }?.serverId
-                ) ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == null }?.serverId)
+                levelServerId = normalizeServerId(level?.serverId)
             }
             if (locationServerId == null) {
-                locationServerId = normalizeServerId(
-                    locations.firstOrNull { it.locationId == payload.locationLocalId }?.serverId
-                )
-                    ?: normalizeServerId(locations.firstOrNull { it.parentLocationId == levelServerId }?.serverId)
-                    ?: normalizeServerId(locations.firstOrNull { it.serverId == levelServerId }?.serverId)
-                    ?: normalizeServerId(locations.firstOrNull()?.serverId)
+                locationServerId = normalizeServerId(location?.serverId)
             }
         }
 
-        if (levelServerId == null && locationServerId != null) {
-            val resolvedLocation = locations.firstOrNull { it.serverId == locationServerId }
-                ?: locations.firstOrNull { it.locationId == payload.locationLocalId }
-            levelServerId = normalizeServerId(resolvedLocation?.parentLocationId)
-                ?: normalizeServerId(resolvedLocation?.serverId)
-        }
-
-        // Fallback: if both serverIds are null, try to resolve by name-matching with remote levels
-        // Only attempt remote resolution when network is available
-        if ((levelServerId == null || locationServerId == null) && isNetworkAvailable()) {
-            val localLevel = payload.levelLocalId?.let { levelId ->
-                locations.firstOrNull { it.locationId == levelId }
-            }
-            val localLocation = payload.locationLocalId?.let { locationId ->
-                locations.firstOrNull { it.locationId == locationId }
-            }
-            val levelName = localLevel?.title?.takeIf { it.isNotBlank() }
-                ?: localLevel?.type?.takeIf { it.isNotBlank() }
-                ?: localLocation?.title?.takeIf { it.isNotBlank() }
-            val locationName = localLocation?.title?.takeIf { it.isNotBlank() }
-                ?: localLocation?.type?.takeIf { it.isNotBlank() }
-                ?: levelName
-            val locationType = localLocation?.type?.takeIf { it.isNotBlank() }
-
-            if (levelName != null) {
-                val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull()
-                val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull()
-
-                if (levelServerId == null) {
-                    levelServerId = remoteLevels?.firstOrNull { level ->
-                        val resolvedName = listOfNotNull(
-                            level.title?.takeIf { it.isNotBlank() },
-                            level.name?.takeIf { it.isNotBlank() }
-                        ).firstOrNull()
-                        resolvedName?.equals(levelName, ignoreCase = true) == true
-                    }?.id
-                }
-
-                if (locationServerId == null) {
-                    locationServerId = remoteLocations?.firstOrNull { location ->
-                        val resolvedName = listOfNotNull(
-                            location.title?.takeIf { it.isNotBlank() },
-                            location.name?.takeIf { it.isNotBlank() }
-                        ).firstOrNull()
-                        val resolvedType = listOfNotNull(
-                            location.type?.takeIf { it.isNotBlank() },
-                            location.locationType?.takeIf { it.isNotBlank() }
-                        ).firstOrNull()
-                        resolvedName?.equals(locationName, ignoreCase = true) == true &&
-                            (locationType == null || resolvedType?.equals(locationType, ignoreCase = true) == true)
-                    }?.id ?: levelServerId  // Fallback to level if location not found (Single Unit)
-                }
-
-                if (AppConfig.isLoggingEnabled && (levelServerId != null || locationServerId != null)) {
-                    Log.d(
-                        TAG,
-                        "✅ [handlePendingRoomCreation] Resolved IDs by name-matching: " +
-                            "levelName=$levelName → levelServerId=$levelServerId, " +
-                            "locationName=$locationName → locationServerId=$locationServerId"
-                    )
-                }
-            }
-        }
-
-        // Only attempt disambiguation when network is available
-        if (levelServerId != null && locationServerId != null && levelServerId == locationServerId && isNetworkAvailable()) {
-            val localLevel = payload.levelLocalId?.let { levelId ->
-                locations.firstOrNull { it.locationId == levelId }
-            }
-            val localLocation = payload.locationLocalId?.let { locationId ->
-                locations.firstOrNull { it.locationId == locationId }
-            }
-            val levelName = localLevel?.title?.takeIf { it.isNotBlank() }
-                ?: localLevel?.type?.takeIf { it.isNotBlank() }
-                ?: localLocation?.title?.takeIf { it.isNotBlank() }
-            val locationName = localLocation?.title?.takeIf { it.isNotBlank() }
-                ?: localLocation?.type?.takeIf { it.isNotBlank() }
-                ?: levelName
-            val locationType = localLocation?.type?.takeIf { it.isNotBlank() }
-
-            val remoteLevels = runCatching { api.getPropertyLevels(propertyServerId).data }.getOrNull()
-            val remoteLocations = runCatching { api.getPropertyLocations(propertyServerId).data }.getOrNull()
-
-            val resolvedLevelId = remoteLevels
-                ?.firstOrNull { level ->
-                    val resolvedName = listOfNotNull(
-                        level.title?.takeIf { it.isNotBlank() },
-                        level.name?.takeIf { it.isNotBlank() }
-                    ).firstOrNull()
-                    resolvedName?.equals(levelName, ignoreCase = true) == true
-                }
-                ?.id
-            val resolvedLocationId = remoteLocations
-                ?.firstOrNull { location ->
-                    val resolvedName = listOfNotNull(
-                        location.title?.takeIf { it.isNotBlank() },
-                        location.name?.takeIf { it.isNotBlank() }
-                    ).firstOrNull()
-                    val resolvedType = listOfNotNull(
-                        location.type?.takeIf { it.isNotBlank() },
-                        location.locationType?.takeIf { it.isNotBlank() }
-                    ).firstOrNull()
-                    resolvedName?.equals(locationName, ignoreCase = true) == true &&
-                        (locationType == null || resolvedType?.equals(locationType, ignoreCase = true) == true)
-                }
-                ?.id
-
-            if (resolvedLevelId != null && resolvedLocationId != null && resolvedLevelId != resolvedLocationId) {
-                levelServerId = resolvedLevelId
-                locationServerId = resolvedLocationId
-            }
+        // Handle Single Unit properties where level == location
+        if (levelServerId != null && locationServerId == null && payload.levelUuid == payload.locationUuid) {
+            locationServerId = levelServerId
         }
 
         if (levelServerId == null || locationServerId == null) {
@@ -1233,6 +1116,8 @@ class SyncQueueProcessor(
                 mapOf(
                     "roomName" to payload.roomName,
                     "projectId" to projectServerId.toString(),
+                    "levelUuid" to payload.levelUuid,
+                    "locationUuid" to payload.locationUuid,
                     "levelServerId" to (levelServerId?.toString() ?: "null"),
                     "locationServerId" to (locationServerId?.toString() ?: "null")
                 )
@@ -1240,149 +1125,14 @@ class SyncQueueProcessor(
             return OperationOutcome.SKIP
         }
 
-        // Validate that resolved server IDs actually exist on the server
-        // This prevents using stale/invalid IDs that would cause API errors
-        // Skip validation when offline - we'll retry later when network is available
+        // Skip when offline - we need network to create the room
         if (!isNetworkAvailable()) {
-            Log.d(TAG, "⏭️ [handlePendingRoomCreation] Skipping server ID validation (no network)")
+            Log.d(TAG, "⏭️ [handlePendingRoomCreation] No network available; will retry later")
             return OperationOutcome.SKIP
         }
 
-        val remoteLevelsResult = runCatching { api.getPropertyLevels(propertyServerId).data }
-        val remoteLocationsResult = runCatching { api.getPropertyLocations(propertyServerId).data }
-        val remoteLevels = remoteLevelsResult.getOrNull().orEmpty()
-        val remoteLocations = remoteLocationsResult.getOrNull().orEmpty()
-        val levelsFetchSucceeded = remoteLevelsResult.isSuccess
-        val locationsFetchSucceeded = remoteLocationsResult.isSuccess
-        val validLevelIds = remoteLevels.map { it.id }.toSet()
-        val validLocationIds = remoteLocations.map { it.id }.toSet()
-        val levelValid = levelServerId in validLevelIds
-        // For Single Unit properties, there are no separate locations - the level IS the location
-        // Only apply this when fetch succeeded (empty due to Single Unit, not API failure)
-        val isSingleUnitProperty = locationsFetchSucceeded && validLocationIds.isEmpty() && levelValid
-        val locationValid = locationServerId in validLocationIds ||
-            (isSingleUnitProperty && locationServerId == levelServerId)
-
-        if (!levelValid || !locationValid) {
-            Log.w(
-                TAG,
-                "⚠️ [handlePendingRoomCreation] Resolved IDs not found on server: " +
-                    "levelServerId=$levelServerId (valid=$levelValid), " +
-                    "locationServerId=$locationServerId (valid=$locationValid); " +
-                    "attempting to resolve from remote data"
-            )
-
-            // Try to resolve correct IDs from remote data using name matching
-            val localLevel = payload.levelLocalId?.let { levelId ->
-                locations.firstOrNull { it.locationId == levelId }
-            }
-            val localLocation = payload.locationLocalId?.let { locationId ->
-                locations.firstOrNull { it.locationId == locationId }
-            }
-            val levelName = localLevel?.title?.takeIf { it.isNotBlank() }
-                ?: localLevel?.type?.takeIf { it.isNotBlank() }
-                ?: localLocation?.title?.takeIf { it.isNotBlank() }
-            val locationName = localLocation?.title?.takeIf { it.isNotBlank() }
-                ?: localLocation?.type?.takeIf { it.isNotBlank() }
-                ?: levelName
-            val locationType = localLocation?.type?.takeIf { it.isNotBlank() }
-
-            val matchedLevelId = remoteLevels
-                .firstOrNull { level ->
-                    val resolvedName = listOfNotNull(
-                        level.title?.takeIf { it.isNotBlank() },
-                        level.name?.takeIf { it.isNotBlank() }
-                    ).firstOrNull()
-                    resolvedName?.equals(levelName, ignoreCase = true) == true
-                }
-                ?.id
-
-            val locationCandidates = remoteLocations.filter { location ->
-                val resolvedName = listOfNotNull(
-                    location.title?.takeIf { it.isNotBlank() },
-                    location.name?.takeIf { it.isNotBlank() }
-                ).firstOrNull()
-                val resolvedType = listOfNotNull(
-                    location.type?.takeIf { it.isNotBlank() },
-                    location.locationType?.takeIf { it.isNotBlank() }
-                ).firstOrNull()
-                resolvedName?.equals(locationName, ignoreCase = true) == true &&
-                    (locationType == null || resolvedType?.equals(locationType, ignoreCase = true) == true)
-            }
-
-            val resolvedLevelFromRemote = when {
-                levelValid -> levelServerId
-                locationValid -> {
-                    // Try to get parent of the valid location, or fall back to name matching, or first level
-                    remoteLocations.firstOrNull { it.id == locationServerId }?.parentLocationId
-                        ?: matchedLevelId
-                        ?: remoteLevels.firstOrNull()?.id
-                }
-                else -> matchedLevelId ?: remoteLevels.firstOrNull()?.id
-            }
-
-            val resolvedLocationFromRemote = when {
-                locationValid -> locationServerId
-                resolvedLevelFromRemote != null -> {
-                    // First try name-matched candidates
-                    locationCandidates.firstOrNull { it.parentLocationId == resolvedLevelFromRemote }?.id
-                        ?: locationCandidates.firstOrNull()?.id
-                        // If no name match, fall back to ANY location under this level
-                        ?: remoteLocations.firstOrNull { it.parentLocationId == resolvedLevelFromRemote }?.id
-                        // Last resort: any location at all
-                        ?: remoteLocations.firstOrNull()?.id
-                }
-                else -> locationCandidates.firstOrNull()?.id
-                    ?: remoteLocations.firstOrNull()?.id
-            }
-
-            val resolvedLevelValid = resolvedLevelFromRemote in validLevelIds
-
-            // For Single Unit: if no locations exist and level is valid, use level as location
-            val isSingleUnitFallback = locationsFetchSucceeded && validLocationIds.isEmpty() && resolvedLevelValid
-            val effectiveLocationFromRemote = resolvedLocationFromRemote
-                ?: if (isSingleUnitFallback) resolvedLevelFromRemote else null
-
-            // Location is valid if it's in the valid set, OR if we're using the Single Unit fallback
-            val resolvedLocationValid = effectiveLocationFromRemote in validLocationIds || isSingleUnitFallback
-
-            if (resolvedLevelValid && resolvedLocationValid &&
-                resolvedLevelFromRemote != null && effectiveLocationFromRemote != null
-            ) {
-                Log.d(
-                    TAG,
-                    "✅ [handlePendingRoomCreation] Resolved from remote: " +
-                        "levelServerId=$resolvedLevelFromRemote, locationServerId=$effectiveLocationFromRemote"
-                )
-                levelServerId = resolvedLevelFromRemote
-                locationServerId = effectiveLocationFromRemote
-            } else {
-                Log.w(
-                    TAG,
-                    "⚠️ [handlePendingRoomCreation] Could not resolve valid IDs from remote; " +
-                        "validLevelIds=${validLevelIds.size} validLocationIds=${validLocationIds.size}; " +
-                        "refreshing essentials and retrying"
-                )
-                remoteLogger?.log(
-                    LogLevel.WARN,
-                    TAG,
-                    "Room creation could not resolve valid location/level IDs",
-                    mapOf(
-                        "roomName" to payload.roomName,
-                        "projectId" to projectServerId.toString(),
-                        "validLevelCount" to validLevelIds.size.toString(),
-                        "validLocationCount" to validLocationIds.size.toString()
-                    )
-                )
-                refreshEssentialsOnce()
-                return OperationOutcome.SKIP
-            }
-        }
-
-        // At this point levelServerId and locationServerId are guaranteed non-null
-        // (we returned SKIP above if they couldn't be resolved)
-        val finalLevelId = levelServerId!!
-        val finalLocationId = locationServerId!!
+        val finalLevelId = levelServerId
+        val finalLocationId = locationServerId
 
         restoreDeletedParents(
             mapOf(

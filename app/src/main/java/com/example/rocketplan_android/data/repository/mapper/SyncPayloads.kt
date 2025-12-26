@@ -64,7 +64,7 @@ internal data class PendingRoomCreationPayload(
     val isExterior: Boolean,
     val levelServerId: Long?,
     val locationServerId: Long?,
-    val levelLocalId: Long?,
-    val locationLocalId: Long?,
+    val levelUuid: String,      // UUID-based resolution (simpler than local IDs)
+    val locationUuid: String,   // UUID-based resolution (simpler than local IDs)
     val idempotencyKey: String?
 )

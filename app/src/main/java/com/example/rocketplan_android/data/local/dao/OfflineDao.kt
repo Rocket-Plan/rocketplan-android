@@ -93,6 +93,9 @@ interface OfflineDao {
     @Query("SELECT MAX(updatedAt) FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0")
     suspend fun getLatestLocationUpdatedAt(projectId: Long): Date?
 
+    @Query("SELECT * FROM offline_locations WHERE uuid = :uuid LIMIT 1")
+    suspend fun getLocationByUuid(uuid: String): OfflineLocationEntity?
+
     @Query("UPDATE offline_locations SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markLocationsDeleted(serverIds: List<Long>)
 
