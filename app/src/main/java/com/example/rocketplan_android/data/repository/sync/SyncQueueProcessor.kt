@@ -1446,89 +1446,16 @@ class SyncQueueProcessor(
         val propertyServerId = property.serverId
             ?: return OperationOutcome.SKIP
 
-        val currentLocations = localDataService.getLocations(payload.projectId)
-        val pendingLocation = currentLocations.firstOrNull {
-            it.uuid == payload.locationUuid || it.locationId == payload.localLocationId
-        }
+        // Check if location already synced (by UUID or local ID)
+        val pendingLocation = localDataService.getLocationByUuid(payload.locationUuid)
+            ?: localDataService.getLocations(payload.projectId)
+                .firstOrNull { it.locationId == payload.localLocationId }
         if (pendingLocation?.serverId != null) {
+            Log.d(TAG, "✅ [handlePendingLocationCreation] Location ${payload.locationUuid} already synced")
             return OperationOutcome.SUCCESS
         }
 
-        fun matchesServerLocation(
-            title: String?,
-            type: String?,
-            payloadName: String,
-            payloadType: String
-        ): Boolean {
-            val nameMatches = title?.equals(payloadName, ignoreCase = true) ?: false
-            val typeMatches = type?.equals(payloadType, ignoreCase = true) ?: true
-            return nameMatches && typeMatches
-        }
-
-        val existingServerLocation = currentLocations.firstOrNull {
-            it.serverId != null &&
-                matchesServerLocation(it.title, it.type, payload.locationName, payload.type)
-        }
-        if (pendingLocation != null && existingServerLocation != null) {
-            val timestamp = now()
-            val merged = pendingLocation.copy(
-                serverId = existingServerLocation.serverId,
-                title = existingServerLocation.title,
-                type = existingServerLocation.type,
-                parentLocationId = existingServerLocation.parentLocationId,
-                isAccessible = existingServerLocation.isAccessible,
-                syncStatus = SyncStatus.SYNCED,
-                syncVersion = maxOf(pendingLocation.syncVersion, 1),
-                isDirty = false,
-                updatedAt = timestamp,
-                lastSyncedAt = timestamp
-            )
-            localDataService.saveLocations(listOf(merged))
-            return OperationOutcome.SUCCESS
-        }
-
-        if (pendingLocation != null) {
-            val remoteMatch = runCatching {
-                api.getPropertyLevels(propertyServerId).data
-            }.getOrNull()?.firstOrNull { level ->
-                val resolvedTitle = listOfNotNull(
-                    level.title?.takeIf { it.isNotBlank() },
-                    level.name?.takeIf { it.isNotBlank() }
-                ).firstOrNull()
-                val resolvedType = listOfNotNull(
-                    level.type?.takeIf { it.isNotBlank() },
-                    level.locationType?.takeIf { it.isNotBlank() }
-                ).firstOrNull()
-                matchesServerLocation(resolvedTitle, resolvedType, payload.locationName, payload.type)
-            }
-
-            if (remoteMatch != null) {
-                val timestamp = now()
-                val merged = pendingLocation.copy(
-                    serverId = remoteMatch.id,
-                    title = listOfNotNull(
-                        remoteMatch.title?.takeIf { it.isNotBlank() },
-                        remoteMatch.name?.takeIf { it.isNotBlank() },
-                        pendingLocation.title
-                    ).first(),
-                    type = listOfNotNull(
-                        remoteMatch.type?.takeIf { it.isNotBlank() },
-                        remoteMatch.locationType?.takeIf { it.isNotBlank() },
-                        pendingLocation.type
-                    ).first(),
-                    parentLocationId = remoteMatch.parentLocationId,
-                    isAccessible = remoteMatch.isAccessible ?: pendingLocation.isAccessible,
-                    syncStatus = SyncStatus.SYNCED,
-                    syncVersion = maxOf(pendingLocation.syncVersion, 1),
-                    isDirty = false,
-                    updatedAt = timestamp,
-                    lastSyncedAt = timestamp
-                )
-                localDataService.saveLocations(listOf(merged))
-                return OperationOutcome.SUCCESS
-            }
-        }
-
+        // Server handles idempotency by UUID - just send the request
         val request = CreateLocationRequest(
             name = payload.locationName,
             uuid = payload.locationUuid,
