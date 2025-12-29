@@ -55,6 +55,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 import kotlin.math.min
 import kotlin.text.Charsets
 
@@ -831,7 +832,9 @@ class SyncQueueProcessor(
         val projectServerId = project.serverId ?: return OperationOutcome.SKIP
 
         val request = PropertyMutationRequest(
+            uuid = payload.propertyUuid,
             propertyTypeId = payload.propertyTypeId,
+            projectUuid = project.uuid,
             idempotencyKey = payload.idempotencyKey
         )
 
@@ -1157,8 +1160,11 @@ class SyncQueueProcessor(
 
         val request = CreateRoomRequest(
             name = payload.roomName,
+            uuid = payloadRoomUuid,
             roomTypeId = resolvedRoomTypeId,
             levelId = finalLevelId,
+            levelUuid = payload.levelUuid,
+            locationUuid = payload.locationUuid,
             isSource = payload.isSource,
             idempotencyKey = idempotencyKey
         )
@@ -1215,7 +1221,7 @@ class SyncQueueProcessor(
         val resolvedUuid = existing?.uuid
             ?: payloadRoomUuid
             ?: dto.uuid
-            ?: UUID.randomUUID().toString()
+            ?: UuidUtils.generateUuidV7()
         val entity = dto.toEntity(
             existing = existing,
             projectId = payload.projectId,
@@ -1525,6 +1531,7 @@ class SyncQueueProcessor(
 
         val request = CreateLocationRequest(
             name = payload.locationName,
+            uuid = payload.locationUuid,
             floorNumber = payload.floorNumber,
             locationTypeId = payload.locationTypeId,
             isCommon = payload.isCommon,
@@ -1538,7 +1545,7 @@ class SyncQueueProcessor(
             .firstOrNull { it.uuid == payload.locationUuid || it.locationId == payload.localLocationId }
         val entity = dto.toEntity(defaultProjectId = payload.projectId).copy(
             locationId = existing?.locationId ?: dto.id,
-            uuid = existing?.uuid ?: dto.uuid ?: UUID.randomUUID().toString(),
+            uuid = existing?.uuid ?: dto.uuid ?: UuidUtils.generateUuidV7(),
             syncStatus = SyncStatus.SYNCED,
             isDirty = false,
             lastSyncedAt = now()

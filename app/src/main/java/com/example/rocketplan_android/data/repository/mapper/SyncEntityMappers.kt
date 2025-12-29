@@ -41,6 +41,7 @@ import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.example.rocketplan_android.util.DateUtils
 import java.util.Date
 import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 
 /**
  * Extension functions and mappers for converting DTOs to offline entities.
@@ -193,7 +194,7 @@ internal fun UserDto.toEntity(): OfflineUserEntity {
     return OfflineUserEntity(
         userId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         email = email,
         firstName = firstName,
         lastName = lastName,
@@ -219,7 +220,7 @@ internal fun PropertyDto.toEntity(
     val resolvedZip = postalCode?.takeIf { it.isNotBlank() } ?: projectAddress?.zip
     val resolvedLat = latitude ?: projectAddress?.latitude?.toDoubleOrNull()
     val resolvedLng = longitude ?: projectAddress?.longitude?.toDoubleOrNull()
-    val resolvedUuid = existing?.uuid ?: uuid ?: UUID.randomUUID().toString()
+    val resolvedUuid = existing?.uuid ?: uuid ?: UuidUtils.generateUuidV7()
     // When existing is a pending property (negative ID) but server returned a positive ID,
     // use the server ID to complete the ID resolution
     val resolvedId = if (existing?.propertyId != null && existing.propertyId < 0 && id > 0) {
@@ -262,7 +263,7 @@ internal fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocati
     return OfflineLocationEntity(
         locationId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         title = resolvedTitle,
         type = resolvedType,
@@ -285,7 +286,7 @@ internal fun RoomDto.toEntity(
 ): OfflineRoomEntity {
     val timestamp = now()
     val serverId = id.takeIf { it > 0 }
-    val resolvedUuid = uuid ?: existing?.uuid ?: UUID.randomUUID().toString()
+    val resolvedUuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7()
     val createdAtValue = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp
     val updatedAtValue = DateUtils.parseApiDate(updatedAt) ?: timestamp
 
@@ -412,7 +413,7 @@ internal fun PhotoDto.toEntity(
     return OfflinePhotoEntity(
         photoId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         roomId = defaultRoomId,
         logId = logId,
@@ -487,7 +488,7 @@ internal fun AtmosphericLogDto.toEntity(defaultRoomId: Long? = roomId): OfflineA
     return OfflineAtmosphericLogEntity(
         logId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = defaultRoomId,
         date = DateUtils.parseApiDate(date) ?: timestamp,
@@ -522,7 +523,7 @@ internal fun MoistureLogDto.toEntity(): OfflineMoistureLogEntity? {
     return OfflineMoistureLogEntity(
         logId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = roomId,
         materialId = material,
@@ -574,7 +575,7 @@ internal fun EquipmentDto.toEntity(): OfflineEquipmentEntity {
     return OfflineEquipmentEntity(
         equipmentId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = roomId,
         type = type ?: "equipment",
@@ -620,7 +621,7 @@ internal fun NoteDto.toEntity(): OfflineNoteEntity? {
     return OfflineNoteEntity(
         noteId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = roomId,
         userId = userId,
@@ -644,7 +645,7 @@ internal fun DamageMaterialDto.toEntity(defaultProjectId: Long? = projectId, def
     return OfflineDamageEntity(
         damageId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = project,
         roomId = resolvedRoomId,
         title = title ?: "Damage $id",
@@ -681,7 +682,7 @@ internal fun WorkScopeDto.toEntity(defaultProjectId: Long? = null, defaultRoomId
     return OfflineWorkScopeEntity(
         workScopeId = id,
         serverId = id,
-        uuid = uuid ?: UUID.randomUUID().toString(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         roomId = resolvedRoomId,
         name = resolvedName,

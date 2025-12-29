@@ -8,7 +8,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Date
-import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 
 /**
  * Handles equipment CRUD operations and queues sync work via SyncQueueProcessor.
@@ -41,7 +41,7 @@ class EquipmentSyncService(
         val lockUpdatedAt = existing?.serverId?.let { existing.updatedAt.toApiTimestamp() }
 
         val resolvedId = existing?.equipmentId ?: equipmentId ?: -System.currentTimeMillis()
-        val resolvedUuid = existing?.uuid ?: uuid ?: UUID.randomUUID().toString()
+        val resolvedUuid = existing?.uuid ?: uuid ?: UuidUtils.generateUuidV7()
 
         val entity = OfflineEquipmentEntity(
             equipmentId = resolvedId,

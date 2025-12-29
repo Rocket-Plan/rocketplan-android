@@ -8,7 +8,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Date
-import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 
 /**
  * Handles note CRUD operations and queues sync work via SyncQueueProcessor.
@@ -30,7 +30,7 @@ class NoteSyncService(
     ): OfflineNoteEntity = withContext(ioDispatcher) {
         val timestamp = now()
         val pending = OfflineNoteEntity(
-            uuid = UUID.randomUUID().toString(),
+            uuid = UuidUtils.generateUuidV7(),
             projectId = projectId,
             roomId = roomId,
             photoId = photoId,

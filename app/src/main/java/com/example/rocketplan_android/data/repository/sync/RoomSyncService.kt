@@ -21,7 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.util.Date
-import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 
 /**
  * Service responsible for room, location, and default catalog handling.
@@ -83,7 +83,7 @@ class RoomSyncService(
         idempotencyKey: String? = null
     ): Result<OfflineRoomEntity> = withContext(ioDispatcher) {
         val pendingRoom = localDataService.getPendingRoomForProject(projectId, roomName)
-        val roomUuid = pendingRoom?.uuid ?: UUID.randomUUID().toString()
+        val roomUuid = pendingRoom?.uuid ?: UuidUtils.generateUuidV7()
         Log.d(
             TAG,
             "[createRoom] Using roomUuid=$roomUuid (pending=${pendingRoom != null}) projectId=$projectId"
@@ -131,7 +131,7 @@ class RoomSyncService(
                             projectId = projectId,
                             locationName = levelName,
                             config = config,
-                            idempotencyKey = UUID.randomUUID().toString()
+                            idempotencyKey = UuidUtils.generateUuidV7()
                         )
                     }
                 }
@@ -142,7 +142,7 @@ class RoomSyncService(
                         projectId = projectId,
                         locationName = fallbackName,
                         config = config,
-                        idempotencyKey = UUID.randomUUID().toString()
+                        idempotencyKey = UuidUtils.generateUuidV7()
                     )
                 }
             }
@@ -343,7 +343,7 @@ class RoomSyncService(
         val pending = OfflineRoomEntity(
             roomId = localId,
             serverId = null,
-            uuid = forcedUuid ?: UUID.randomUUID().toString(),
+            uuid = forcedUuid ?: UuidUtils.generateUuidV7(),
             projectId = project.projectId,
             locationId = location.locationId,
             title = roomName,
@@ -449,7 +449,7 @@ class RoomSyncService(
         val pending = OfflineLocationEntity(
             locationId = localId,
             serverId = null,
-            uuid = UUID.randomUUID().toString(),
+            uuid = UuidUtils.generateUuidV7(),
             projectId = projectId,
             title = locationName,
             type = config.type,
@@ -616,7 +616,7 @@ class RoomSyncService(
         val pending = OfflinePropertyEntity(
             propertyId = localId,
             serverId = null,
-            uuid = UUID.randomUUID().toString(),
+            uuid = UuidUtils.generateUuidV7(),
             address = resolvedAddress,
             city = null,
             state = null,

@@ -48,7 +48,7 @@ import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.io.File
 import java.util.Date
-import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 
 // Status value for locally-created projects not yet synced to server
 private const val OFFLINE_PENDING_STATUS = "pending_offline"
@@ -557,7 +557,7 @@ class OfflineSyncRepository(
     ): Result<OfflineProjectEntity> = withContext(ioDispatcher) {
         val addressReq = addressRequest
             ?: throw IllegalStateException("Address request is required for offline project creation")
-        val idempotencyKey = request.idempotencyKey ?: UUID.randomUUID().toString()
+        val idempotencyKey = request.idempotencyKey ?: UuidUtils.generateUuidV7()
         val pending = createPendingProject(
             companyId = companyId,
             statusValue = request.projectStatusId.toString(),
@@ -1077,7 +1077,7 @@ class OfflineSyncRepository(
         val entity = OfflineProjectEntity(
             projectId = localId,
             serverId = null,
-            uuid = UUID.randomUUID().toString(),
+            uuid = UuidUtils.generateUuidV7(),
             title = resolvedTitle,
             projectNumber = null,
             uid = null,

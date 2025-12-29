@@ -20,7 +20,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.util.Date
-import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 
 /**
  * Service responsible for property CRUD and persistence logic for projects.
@@ -44,7 +44,7 @@ class PropertySyncService(
         idempotencyKey: String? = null
     ): Result<OfflinePropertyEntity> = withContext(ioDispatcher) {
         runCatching {
-            val resolvedIdempotencyKey = idempotencyKey ?: request.idempotencyKey ?: UUID.randomUUID().toString()
+            val resolvedIdempotencyKey = idempotencyKey ?: request.idempotencyKey ?: UuidUtils.generateUuidV7()
             val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
                 ?: throw Exception("Project not found locally")
             val projectServerId = project.serverId
@@ -306,7 +306,7 @@ class PropertySyncService(
         val pending = OfflinePropertyEntity(
             propertyId = localId,
             serverId = null,
-            uuid = UUID.randomUUID().toString(),
+            uuid = UuidUtils.generateUuidV7(),
             address = resolvedAddress,
             city = null,
             state = null,

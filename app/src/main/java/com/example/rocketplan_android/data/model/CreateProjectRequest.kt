@@ -19,8 +19,10 @@ data class CreateAddressRequest(
 )
 
 data class CreateCompanyProjectRequest(
+    val uuid: String? = null,
     @SerializedName("project_status_id") val projectStatusId: Int,
-    @SerializedName("address_id") val addressId: Long,
+    @SerializedName("address_id") val addressId: Long? = null,
+    @SerializedName("address_uuid") val addressUuid: String? = null,
     val alias: String? = null,
     @SerializedName("opportunity_id") val opportunityId: String? = null,
     @SerializedName("project_type_id") val projectTypeId: Int? = null,

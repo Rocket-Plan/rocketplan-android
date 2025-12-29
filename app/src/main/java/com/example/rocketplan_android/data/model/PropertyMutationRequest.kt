@@ -8,8 +8,11 @@ import com.google.gson.annotations.SerializedName
  * the data we actually know on Android today.
  */
 data class PropertyMutationRequest(
+    val uuid: String? = null,
     @SerializedName("property_type_id")
     val propertyTypeId: Int,
+    @SerializedName("project_uuid")
+    val projectUuid: String? = null,
     @SerializedName("is_commercial")
     val isCommercial: Boolean? = null,
     @SerializedName("is_residential")
