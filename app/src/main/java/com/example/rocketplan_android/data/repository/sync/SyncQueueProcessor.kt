@@ -1688,8 +1688,9 @@ class SyncQueueProcessor(
         roomServerIdOverride: Long? = null,
         lockUpdatedAt: String? = null
     ): OfflineEquipmentEntity? {
+        // Don't fall back to roomId - it's a local Room ID, not server ID
         val roomServerId = roomServerIdOverride ?: equipment.roomId?.let { roomId ->
-            localDataService.getRoom(roomId)?.serverId ?: roomId
+            localDataService.getRoom(roomId)?.serverId
         }
         val request = equipment.toRequest(projectServerId, roomServerId, lockUpdatedAt)
         val synced = runCatching {
