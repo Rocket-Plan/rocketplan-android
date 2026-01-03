@@ -1331,18 +1331,20 @@ class SyncQueueProcessor(
         val note = localDataService.getNoteByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
         if (note.isDeleted) return OperationOutcome.DROP
         val projectServerId = resolveServerProjectId(note.projectId) ?: return OperationOutcome.SKIP
+        // Don't fall back to roomId - it's a local Room ID, not server ID
         val roomServerId = note.roomId?.let { roomId ->
-            localDataService.getRoom(roomId)?.serverId ?: roomId.takeIf { it > 0 }
+            localDataService.getRoom(roomId)?.serverId
         }
         if (note.roomId != null && roomServerId == null) {
             return OperationOutcome.SKIP
         }
 
         // Resolve photoId to serverId - notes on unuploaded photos must wait
+        // IMPORTANT: Don't fall back to photoId if photo is missing locally - that's a local Room ID,
+        // not a server ID. If photo row is gone, skip until situation resolves.
         val photoServerId = note.photoId?.let { photoId ->
             val photo = localDataService.getPhoto(photoId)
-            photo?.serverId ?: photoId.takeIf { it > 0 && photo == null }
-            // If photo exists locally but has no serverId, it hasn't uploaded yet - skip
+            photo?.serverId // Only use serverId from a real local photo row
         }
         if (note.photoId != null && photoServerId == null) {
             Log.d(TAG, "⏳ [handlePendingNoteUpsert] Note ${note.uuid} attached to photo ${note.photoId} which hasn't uploaded yet; will retry")
@@ -1747,7 +1749,8 @@ class SyncQueueProcessor(
         lockUpdatedAt: String? = null
     ): OfflineMoistureLogEntity? {
         val room = localDataService.getRoom(log.roomId)
-        val roomServerId = room?.serverId ?: log.roomId.takeIf { it > 0 }
+        // Don't fall back to log.roomId - it's a local Room ID, not server ID
+        val roomServerId = room?.serverId
         var material = localDataService.getMaterial(log.materialId)
         val projectServerId = resolveServerProjectId(log.projectId)
         if (projectServerId == null || roomServerId == null) {
@@ -1761,7 +1764,8 @@ class SyncQueueProcessor(
         if (material?.serverId == null) {
             material = material?.let { ensureMaterialSynced(it, projectServerId, roomServerId, log) }
         }
-        val materialServerId = material?.serverId ?: log.materialId.takeIf { it > 0 }
+        // Don't fall back to log.materialId - it's a local Room ID, not server ID
+        val materialServerId = material?.serverId
         if (materialServerId == null) {
             Log.w(
                 TAG,
