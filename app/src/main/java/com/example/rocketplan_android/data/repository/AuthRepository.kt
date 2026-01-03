@@ -224,35 +224,40 @@ class AuthRepository(
     }
 
     /**
-     * Check if user is logged in
+     * Check if user is logged in.
+     * Uses cached identity first to allow immediate offline access, then refreshes
+     * context in background if online.
      */
     suspend fun isLoggedIn(): Boolean {
         val token = getAuthTokenSync()
-        if (token != null) {
-            RetrofitClient.setAuthToken(token)
-            val result = refreshUserContext()
-            if (result.isSuccess) {
-                return true
-            }
-
-            val error = result.exceptionOrNull()
-            val isAuthError = (error as? ApiErrorException)?.apiError is ApiError.AuthenticationError
-            if (isAuthError) {
-                return false
-            }
-
-            // If we have cached identity, allow offline access and let sync recover when online.
-            val hasUserId = secureStorage.getUserIdSync()?.let { it > 0L } == true
-            val cachedCompanyId = secureStorage.getCompanyIdSync()
-            if (cachedCompanyId != null) {
-                localDataService.setCurrentCompanyId(cachedCompanyId)
-                RetrofitClient.setCompanyId(cachedCompanyId)
-            } else {
-                RetrofitClient.setCompanyId(null)
-            }
-            return hasUserId || cachedCompanyId != null
+        if (token == null) {
+            return false
         }
-        return false
+
+        RetrofitClient.setAuthToken(token)
+
+        // Check cached identity first to allow immediate offline access
+        val hasUserId = secureStorage.getUserIdSync()?.let { it > 0L } == true
+        val cachedCompanyId = secureStorage.getCompanyIdSync()
+
+        // Set up company context from cache immediately (don't wait for network)
+        if (cachedCompanyId != null) {
+            localDataService.setCurrentCompanyId(cachedCompanyId)
+            RetrofitClient.setCompanyId(cachedCompanyId)
+        } else {
+            RetrofitClient.setCompanyId(null)
+        }
+
+        // If we have cached identity, allow access immediately without blocking on network
+        if (hasUserId || cachedCompanyId != null) {
+            Log.d(TAG, "Using cached identity for immediate access")
+            // Sync will refresh context when online - don't block here
+            return true
+        }
+
+        // No cached identity - must refresh from network (first login)
+        val result = refreshUserContext()
+        return result.isSuccess
     }
 
     /**

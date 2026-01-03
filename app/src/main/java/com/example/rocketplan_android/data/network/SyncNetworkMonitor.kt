@@ -110,6 +110,8 @@ class SyncNetworkMonitor(
             delay(RESTORE_DEBOUNCE_MS)
             try {
                 remoteLogger?.flush()
+                // Reset any FAILED operations so they get retried now that network is back
+                syncQueueManager.resetFailedOperations()
                 syncQueueManager.processPendingOperations()
                 syncQueueManager.refreshProjects()
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {

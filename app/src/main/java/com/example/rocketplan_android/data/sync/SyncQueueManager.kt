@@ -147,11 +147,7 @@ class SyncQueueManager(
         scope.launch {
             // Reset any FAILED operations to give them another chance now that
             // dependencies may have resolved (e.g., server IDs populated)
-            try {
-                localDataService.resetFailedOperationsForRetry()
-            } catch (e: Exception) {
-                Log.w(TAG, "⚠️ Failed to reset failed operations", e)
-            }
+            resetFailedOperations()
 
             // Always push pending local changes
             enqueue(SyncJob.ProcessPendingOperations)
@@ -200,6 +196,18 @@ class SyncQueueManager(
     fun processPendingOperations() {
         scope.launch {
             enqueue(SyncJob.ProcessPendingOperations)
+        }
+    }
+
+    /**
+     * Resets FAILED operations to PENDING for retry.
+     * Called when network is restored or app comes to foreground.
+     */
+    suspend fun resetFailedOperations() {
+        try {
+            localDataService.resetFailedOperationsForRetry()
+        } catch (e: Exception) {
+            Log.w(TAG, "⚠️ Failed to reset failed operations", e)
         }
     }
 
@@ -357,10 +365,19 @@ class SyncQueueManager(
     fun clear() {
         scope.launch {
             mutex.withLock {
+                // Cancel all active sync jobs to prevent them from continuing
+                // with stale auth or wrong company context after logout/switch
+                activeProjectSyncJobs.values.forEach { job ->
+                    Log.d(TAG, "🛑 Cancelling active sync job during clear()")
+                    job.cancel()
+                }
+                activeProjectSyncJobs.clear()
+                activeProjectModes.clear()
+                foregroundProjectId = null
+
                 queue.clear()
                 taskIndex.clear()
                 pendingPhotoSyncs.clear()
-                activeProjectModes.clear()
                 updatePhotoSyncingProjectsLocked()
                 initialSyncStarted.set(false)
             }
