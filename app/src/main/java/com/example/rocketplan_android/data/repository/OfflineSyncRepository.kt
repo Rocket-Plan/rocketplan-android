@@ -190,7 +190,9 @@ class OfflineSyncRepository(
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
         val project = localDataService.getProject(projectId)
-        return project?.serverId ?: projectId.takeIf { it > 0 }
+        // Only return serverId from a real local project - never fall back to projectId
+        // as that could hit the wrong server project if local data was deleted
+        return project?.serverId
     }
 
     // ============================================================================
