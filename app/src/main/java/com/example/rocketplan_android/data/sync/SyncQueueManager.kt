@@ -145,6 +145,14 @@ class SyncQueueManager(
      */
     fun syncOnForeground() {
         scope.launch {
+            // Reset any FAILED operations to give them another chance now that
+            // dependencies may have resolved (e.g., server IDs populated)
+            try {
+                localDataService.resetFailedOperationsForRetry()
+            } catch (e: Exception) {
+                Log.w(TAG, "⚠️ Failed to reset failed operations", e)
+            }
+
             // Always push pending local changes
             enqueue(SyncJob.ProcessPendingOperations)
 

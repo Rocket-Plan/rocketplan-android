@@ -1037,6 +1037,36 @@ class LocalDataService private constructor(
         dao.deleteSyncOperationsForEntity(entityType, entityId)
     }
 
+    /**
+     * Gets all FAILED sync operations that can be retried.
+     * These are operations that exhausted their skip count but may succeed now
+     * that dependencies have been resolved.
+     */
+    suspend fun getFailedSyncOperations(): List<OfflineSyncQueueEntity> = withContext(ioDispatcher) {
+        dao.getSyncOperationsByStatus(SyncStatus.FAILED)
+    }
+
+    /**
+     * Resets FAILED operations back to PENDING for retry.
+     * Clears skipCount and scheduledAt to give them a fresh start.
+     * Call this when dependencies may have resolved (e.g., parent entity synced).
+     */
+    suspend fun resetFailedOperationsForRetry() = withContext(ioDispatcher) {
+        val failed = dao.getSyncOperationsByStatus(SyncStatus.FAILED)
+        if (failed.isEmpty()) return@withContext
+
+        Log.d("LocalDataService", "♻️ Resetting ${failed.size} failed operations for retry")
+        failed.forEach { op ->
+            val reset = op.copy(
+                status = SyncStatus.PENDING,
+                skipCount = 0,
+                scheduledAt = null,
+                errorMessage = null
+            )
+            dao.upsertSyncOperation(reset)
+        }
+    }
+
     /** Counts all pending sync operations for a project and its children (photos, notes, rooms, etc.) */
     suspend fun countPendingSyncOpsForProject(projectId: Long): Int = withContext(ioDispatcher) {
         dao.countPendingSyncOpsForProject(projectId)

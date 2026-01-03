@@ -881,6 +881,9 @@ interface OfflineDao {
     )
     suspend fun getSyncOperationsByStatus(status: SyncStatus, now: Long): List<OfflineSyncQueueEntity>
 
+    @Query("SELECT * FROM offline_sync_queue WHERE status = :status ORDER BY priority ASC, createdAt ASC")
+    suspend fun getSyncOperationsByStatus(status: SyncStatus): List<OfflineSyncQueueEntity>
+
     @Query(
         """
         SELECT COUNT(*) FROM offline_sync_queue
