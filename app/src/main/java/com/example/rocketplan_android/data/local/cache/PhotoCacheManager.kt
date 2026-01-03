@@ -7,6 +7,8 @@ import android.util.Log
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,6 +22,7 @@ import java.util.Date
 class PhotoCacheManager(
     context: Context,
     private val localDataService: LocalDataService,
+    private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val httpClient: OkHttpClient = OkHttpClient()
 ) {
@@ -35,8 +38,18 @@ class PhotoCacheManager(
 
     suspend fun cachePhotos(photos: List<OfflinePhotoEntity>) {
         photos.forEach { photo ->
-            runCatching { cachePhoto(photo) }.onFailure {
-                Log.w(TAG, "Failed to cache photo ${photo.photoId}", it)
+            runCatching { cachePhoto(photo) }.onFailure { error ->
+                Log.w(TAG, "Failed to cache photo ${photo.photoId}", error)
+                remoteLogger?.log(
+                    LogLevel.WARN,
+                    TAG,
+                    "Photo cache failed",
+                    mapOf(
+                        "photoId" to photo.photoId.toString(),
+                        "remoteUrl" to (photo.remoteUrl?.take(100) ?: "null"),
+                        "error" to (error.message ?: error.javaClass.simpleName)
+                    )
+                )
             }
         }
     }

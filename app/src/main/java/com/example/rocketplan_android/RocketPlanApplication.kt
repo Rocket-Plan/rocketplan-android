@@ -118,7 +118,6 @@ class RocketPlanApplication : Application() {
 
         // Removed debug-time database purge to preserve cached data across launches
         localDataService = LocalDataService.initialize(this)
-        photoCacheManager = PhotoCacheManager(this, localDataService)
         photoCacheScheduler = PhotoCacheScheduler(this)
         secureStorage = SecureStorage.getInstance(this)
         remoteLogger = RemoteLogger(
@@ -126,6 +125,7 @@ class RocketPlanApplication : Application() {
             context = this,
             secureStorage = secureStorage
         )
+        photoCacheManager = PhotoCacheManager(this, localDataService, remoteLogger)
         syncCheckpointStore = SyncCheckpointStore(this)
         imageProcessingConfigStore = ImageProcessingConfigStore.getInstance(this)
         val offlineRoomTypeCatalogStore = OfflineRoomTypeCatalogStore.getInstance(this)

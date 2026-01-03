@@ -251,6 +251,15 @@ class AuthRepository(
         // If we have cached identity, allow access immediately without blocking on network
         if (hasUserId || cachedCompanyId != null) {
             Log.d(TAG, "Using cached identity for immediate access")
+            remoteLogger?.log(
+                LogLevel.INFO,
+                TAG,
+                "Offline login - using cached identity",
+                mapOf(
+                    "hasUserId" to hasUserId.toString(),
+                    "hasCompanyId" to (cachedCompanyId != null).toString()
+                )
+            )
             // Sync will refresh context when online - don't block here
             return true
         }

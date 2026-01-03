@@ -1336,6 +1336,18 @@ class SyncQueueProcessor(
             localDataService.getRoom(roomId)?.serverId
         }
         if (note.roomId != null && roomServerId == null) {
+            Log.d(TAG, "⏳ [handlePendingNoteUpsert] Note ${note.uuid} waiting for room ${note.roomId} to sync")
+            remoteLogger?.log(
+                LogLevel.DEBUG,
+                TAG,
+                "Sync skip - dependency not ready",
+                mapOf(
+                    "entityType" to "note",
+                    "entityUuid" to note.uuid,
+                    "waitingFor" to "room",
+                    "dependencyId" to note.roomId.toString()
+                )
+            )
             return OperationOutcome.SKIP
         }
 
@@ -1348,6 +1360,17 @@ class SyncQueueProcessor(
         }
         if (note.photoId != null && photoServerId == null) {
             Log.d(TAG, "⏳ [handlePendingNoteUpsert] Note ${note.uuid} attached to photo ${note.photoId} which hasn't uploaded yet; will retry")
+            remoteLogger?.log(
+                LogLevel.DEBUG,
+                TAG,
+                "Sync skip - dependency not ready",
+                mapOf(
+                    "entityType" to "note",
+                    "entityUuid" to note.uuid,
+                    "waitingFor" to "photo",
+                    "dependencyId" to note.photoId.toString()
+                )
+            )
             return OperationOutcome.SKIP
         }
 

@@ -488,6 +488,12 @@ class SyncQueueManager(
                 // Skip network-dependent sync operations when offline
                 if (!isNetworkAvailable()) {
                     Log.d(TAG, "⏭️ Skipping SyncProjects (no network)")
+                    remoteLogger.log(
+                        LogLevel.DEBUG,
+                        TAG,
+                        "Sync skipped - offline",
+                        mapOf("jobType" to "SyncProjects", "force" to job.force.toString())
+                    )
                     return
                 }
 
@@ -599,6 +605,16 @@ class SyncQueueManager(
                 // Skip network-dependent sync operations when offline
                 if (!isNetworkAvailable()) {
                     Log.d(TAG, "⏭️ Skipping SyncProjectGraph for project ${job.projectId} (no network)")
+                    remoteLogger.log(
+                        LogLevel.DEBUG,
+                        TAG,
+                        "Sync skipped - offline",
+                        mapOf(
+                            "jobType" to "SyncProjectGraph",
+                            "projectId" to job.projectId.toString(),
+                            "mode" to job.mode.name
+                        )
+                    )
                     return
                 }
 
