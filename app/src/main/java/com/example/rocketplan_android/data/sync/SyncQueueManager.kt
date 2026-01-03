@@ -74,8 +74,7 @@ class SyncQueueManager(
     val photoSyncingProjects: StateFlow<Set<Long>> = _photoSyncingProjects
     private val _projectSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
     val projectSyncingProjects: StateFlow<Set<Long>> = _projectSyncingProjects
-    @Volatile
-    private var pendingSyncProjectsForce = false
+    private val pendingSyncProjectsForce = AtomicBoolean(false)
     @Volatile
     private var lastForegroundSyncAt = 0L
 
@@ -471,7 +470,7 @@ class SyncQueueManager(
                 if (hasForeground) {
                     Log.d(TAG, "⏸️ Foreground project sync running; deferring background project queue.")
                     if (job.force) {
-                        pendingSyncProjectsForce = true
+                        pendingSyncProjectsForce.set(true)
                     }
                     return
                 }
@@ -709,8 +708,7 @@ class SyncQueueManager(
 
                 if (shouldResumeBackground) {
                     Log.d(TAG, "✅ Foreground project ${job.projectId} completed (including photos), resuming background sync")
-                    val forcePending = pendingSyncProjectsForce
-                    pendingSyncProjectsForce = false
+                    val forcePending = pendingSyncProjectsForce.getAndSet(false)
                     enqueue(SyncJob.SyncProjects(force = forcePending))
                 }
             }
@@ -789,7 +787,6 @@ class SyncQueueManager(
         } catch (t: Throwable) {
             Log.w(TAG, "⚠️ Failed to sync deleted records before focusing project $projectId", t)
         }
-        val jobsToCancel = mutableListOf<Job>()
         val shouldEnqueueFast = mutex.withLock {
             if (pendingPhotoSyncs.contains(projectId)) {
                 Log.d(TAG, "📷 Photo sync already queued for project $projectId; skipping extra FAST request")
@@ -798,9 +795,13 @@ class SyncQueueManager(
             if (foregroundProjectId != projectId) {
                 foregroundProjectId = projectId
             }
+            // Cancel jobs for other projects - the finally block in execute() will handle cleanup
+            // We don't remove from activeProjectSyncJobs here because cancellation is cooperative
+            // and the job may still be running; the finally block will clean up when it actually stops
             activeProjectSyncJobs.forEach { (id, job) ->
                 if (id != projectId) {
-                    jobsToCancel += job
+                    Log.d(TAG, "🛑 Cancelling active sync for project $id (focusing on $projectId)")
+                    job.cancel()
                 }
             }
             val iterator = queue.iterator()
@@ -818,7 +819,6 @@ class SyncQueueManager(
         if (!shouldEnqueueFast) {
             return
         }
-        jobsToCancel.forEach { it.cancel() }
         Log.d(TAG, "🚀 Foreground sync for project $projectId (FAST mode - rooms only)")
         enqueue(SyncJob.SyncProjectGraph(projectId = projectId, prio = FOREGROUND_PRIORITY, skipPhotos = true))
     }

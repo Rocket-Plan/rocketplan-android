@@ -136,7 +136,42 @@ class SyncQueueProcessor(
                             )
                             localDataService.removeSyncOperation(operation.operationId)
                         }
-                        OperationOutcome.SKIP,
+                        OperationOutcome.SKIP -> {
+                            // Track skip count to prevent infinite retry loops
+                            val nextSkip = operation.skipCount + 1
+                            if (nextSkip >= operation.maxSkips) {
+                                Log.w(TAG, "⚠️ [$label] Max skips reached for op=${operation.operationId}, marking as failed")
+                                remoteLogger?.log(
+                                    LogLevel.ERROR,
+                                    TAG,
+                                    "Sync operation exhausted max skips",
+                                    mapOf(
+                                        "operationId" to operation.operationId,
+                                        "entityType" to operation.entityType,
+                                        "entityId" to operation.entityId.toString(),
+                                        "operationType" to operation.operationType.name,
+                                        "skipCount" to nextSkip.toString(),
+                                        "maxSkips" to operation.maxSkips.toString()
+                                    )
+                                )
+                                val failed = operation.copy(
+                                    skipCount = nextSkip,
+                                    status = SyncStatus.FAILED,
+                                    lastAttemptAt = Date(),
+                                    errorMessage = "Max skip count reached - dependencies never resolved"
+                                )
+                                localDataService.enqueueSyncOperation(failed)
+                            } else {
+                                // Increment skip count with exponential backoff
+                                val backoffSeconds = kotlin.math.min(30 * 60, 30 * (1 shl kotlin.math.min(nextSkip, 6)))
+                                val updated = operation.copy(
+                                    skipCount = nextSkip,
+                                    lastAttemptAt = Date(),
+                                    scheduledAt = Date(System.currentTimeMillis() + backoffSeconds * 1000L)
+                                )
+                                localDataService.enqueueSyncOperation(updated)
+                            }
+                        }
                         OperationOutcome.RETRY -> Unit
                     }
                 }
@@ -701,9 +736,12 @@ class SyncQueueProcessor(
         )
         Log.d(TAG, "🔍 [handlePendingProjectCreation] entity.propertyId=${entity.propertyId} (should be ${freshExisting.propertyId})")
 
+        // Save the initial entity
         localDataService.saveProjects(listOf(entity))
+
+        // Update alias if needed (separate API call, then persist)
         val pendingAlias = freshExisting.alias?.takeIf { it.isNotBlank() }
-        if (!pendingAlias.isNullOrBlank() && pendingAlias != entity.alias) {
+        val finalEntity = if (!pendingAlias.isNullOrBlank() && pendingAlias != entity.alias) {
             val updatedDto = api.updateProject(
                 projectId = dto.id,
                 body = UpdateProjectRequest(
@@ -720,8 +758,11 @@ class SyncQueueProcessor(
                 lastSyncedAt = now()
             )
             localDataService.saveProjects(listOf(updated))
+            updated
+        } else {
+            entity
         }
-        return PendingProjectSyncResult(localProjectId = entity.projectId, serverProjectId = dto.id)
+        return PendingProjectSyncResult(localProjectId = finalEntity.projectId, serverProjectId = dto.id)
     }
 
     private suspend fun handlePendingProjectUpdate(
@@ -875,14 +916,26 @@ class SyncQueueProcessor(
         val nowMillis = System.currentTimeMillis()
         val ageMinutes = createdAtDate?.let { (nowMillis - it.time) / 60_000 }
         if (ageMinutes != null && ageMinutes > 5) {
-            Log.w(
+            Log.e(
                 TAG,
-                "⚠️ [handlePendingPropertyCreation] STALE PROPERTY WARNING: " +
+                "🚨 [handlePendingPropertyCreation] STALE PROPERTY DETECTED: " +
                     "Property ${created.id} was created ${ageMinutes}min ago (createdAt=${created.createdAt}). " +
-                    "This may indicate server returned cached/wrong property data."
+                    "Server may have returned cached/wrong property data. Fetching fresh data."
+            )
+            remoteLogger?.log(
+                LogLevel.ERROR,
+                TAG,
+                "Stale property detected during creation",
+                mapOf(
+                    "propertyId" to created.id.toString(),
+                    "createdAt" to (created.createdAt ?: "null"),
+                    "ageMinutes" to ageMinutes.toString(),
+                    "projectServerId" to projectServerId.toString()
+                )
             )
         }
 
+        // Always fetch fresh property data to ensure we have the latest state
         val refreshed = runCatching { api.getProperty(created.id).data }
             .onFailure {
                 Log.w(
@@ -1517,7 +1570,9 @@ class SyncQueueProcessor(
 
     private fun resolveEntityId(entityId: Long, uuid: String): Long =
         if (entityId != 0L) entityId else runCatching {
-            UUID.fromString(uuid).mostSignificantBits
+            // Use a combination of both UUID halves to avoid collision from using only mostSignificantBits
+            val parsed = UUID.fromString(uuid)
+            parsed.mostSignificantBits xor parsed.leastSignificantBits
         }.getOrElse { uuid.hashCode().toLong() }
 
     private fun extractLockUpdatedAt(payload: ByteArray): String? =

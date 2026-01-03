@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -91,31 +92,43 @@ class SyncNetworkMonitor(
 
     private fun handleNetworkRestored() {
         scope.launch {
-            val shouldSchedule = stateMutex.withLock {
-                isNetworkAvailable.compareAndSet(false, true)
-            }
-            if (shouldSchedule) {
-                Log.d(TAG, "Network restored - triggering sync queue refresh")
-                scheduleRefresh()
-            }
-        }
-    }
-
-    private fun scheduleRefresh() {
-        scope.launch {
             stateMutex.withLock {
-                restoreJob?.cancel()
-                restoreJob = scope.launch {
-                    delay(RESTORE_DEBOUNCE_MS)
-                    remoteLogger?.flush()
-                    syncQueueManager.processPendingOperations()
-                    syncQueueManager.refreshProjects()
+                if (isNetworkAvailable.compareAndSet(false, true)) {
+                    Log.d(TAG, "Network restored - triggering sync queue refresh")
+                    scheduleRefreshLocked()
                 }
             }
         }
     }
 
+    /**
+     * Must be called while holding stateMutex
+     */
+    private fun scheduleRefreshLocked() {
+        restoreJob?.cancel()
+        restoreJob = scope.launch {
+            delay(RESTORE_DEBOUNCE_MS)
+            try {
+                remoteLogger?.flush()
+                syncQueueManager.processPendingOperations()
+                syncQueueManager.refreshProjects()
+            } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during network restore sync", e)
+                remoteLogger?.log(
+                    com.example.rocketplan_android.logging.LogLevel.ERROR,
+                    TAG,
+                    "Network restore sync failed: ${e.message}",
+                    mapOf("error" to (e.message ?: "unknown"))
+                )
+            }
+        }
+    }
+
     fun unregister() {
+        // Cancel all coroutines and clean up
+        scope.cancel()
         connectivityManager.unregisterNetworkCallback(networkCallback)
         Log.d(TAG, "Network monitor unregistered")
     }

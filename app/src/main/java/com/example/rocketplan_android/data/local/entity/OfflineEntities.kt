@@ -660,6 +660,8 @@ data class OfflineSyncQueueEntity(
     val priority: SyncPriority = SyncPriority.MEDIUM,
     val retryCount: Int = 0,
     val maxRetries: Int = 3,
+    val skipCount: Int = 0,
+    val maxSkips: Int = 20,
     val createdAt: Date = Date(),
     val scheduledAt: Date? = null,
     val lastAttemptAt: Date? = null,

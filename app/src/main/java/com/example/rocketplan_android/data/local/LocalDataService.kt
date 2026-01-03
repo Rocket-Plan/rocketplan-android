@@ -93,6 +93,14 @@ class LocalDataService private constructor(
         _currentCompanyId = null
     }
 
+    /**
+     * Runs the given block within a database transaction.
+     * If the block throws an exception, the transaction is rolled back.
+     */
+    suspend fun <T> runInTransaction(block: suspend () -> T): T = withContext(ioDispatcher) {
+        database.withTransaction { block() }
+    }
+
     // region Project accessors
     fun observeProjects(): Flow<List<OfflineProjectEntity>> = dao.observeProjects()
 
