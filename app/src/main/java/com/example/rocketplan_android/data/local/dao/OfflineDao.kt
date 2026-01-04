@@ -50,7 +50,7 @@ interface OfflineDao {
     @Upsert
     suspend fun upsertProjects(projects: List<OfflineProjectEntity>)
 
-    @Query("UPDATE offline_projects SET propertyId = NULL WHERE propertyId = :propertyId")
+    @Query("UPDATE offline_projects SET propertyId = NULL, propertyType = NULL WHERE propertyId = :propertyId")
     suspend fun clearProjectPropertyId(propertyId: Long)
 
     @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
@@ -96,10 +96,10 @@ interface OfflineDao {
     @Query("SELECT MAX(updatedAt) FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0")
     suspend fun getLatestLocationUpdatedAt(projectId: Long): Date?
 
-    @Query("SELECT * FROM offline_locations WHERE uuid = :uuid LIMIT 1")
+    @Query("SELECT * FROM offline_locations WHERE uuid = :uuid AND isDeleted = 0 LIMIT 1")
     suspend fun getLocationByUuid(uuid: String): OfflineLocationEntity?
 
-    @Query("SELECT * FROM offline_locations WHERE locationId = :locationId LIMIT 1")
+    @Query("SELECT * FROM offline_locations WHERE locationId = :locationId AND isDeleted = 0 LIMIT 1")
     suspend fun getLocation(locationId: Long): OfflineLocationEntity?
 
     @Query("UPDATE offline_locations SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
@@ -938,6 +938,12 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_sync_queue WHERE entityType = 'room' AND entityId IN (SELECT roomId FROM offline_rooms WHERE projectId IN (:projectIds))")
     suspend fun deleteSyncOpsForRoomsByProject(projectIds: List<Long>): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'room' AND entityId IN (SELECT roomId FROM offline_rooms WHERE locationId = :locationId)")
+    suspend fun deleteSyncOpsForRoomsByLocation(locationId: Long): Int
+
+    @Query("SELECT roomId FROM offline_rooms WHERE locationId = :locationId")
+    suspend fun getRoomIdsForLocation(locationId: Long): List<Long>
 
     @Query("DELETE FROM offline_sync_queue WHERE entityType = 'photo' AND entityId IN (SELECT photoId FROM offline_photos WHERE projectId IN (:projectIds))")
     suspend fun deleteSyncOpsForPhotosByProject(projectIds: List<Long>): Int

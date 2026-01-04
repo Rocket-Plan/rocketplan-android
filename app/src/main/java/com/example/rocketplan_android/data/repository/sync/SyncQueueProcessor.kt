@@ -1189,11 +1189,17 @@ class SyncQueueProcessor(
     }
 
     /**
-     * Cascade deletes a location: marks child rooms as deleted and marks the location as deleted.
+     * Cascade deletes a location: deletes room children (photos, notes, logs, albums, etc.),
+     * clears sync queue ops for rooms, marks rooms as deleted, and marks location as deleted.
      */
     private suspend fun cascadeDeleteLocation(location: OfflineLocationEntity) {
-        // Mark all rooms in this location as deleted
-        localDataService.markRoomsDeletedByLocation(location.locationId)
+        // Full cascade: delete room children, clear sync ops, mark rooms deleted
+        val photosToCleanup = localDataService.cascadeDeleteRoomsByLocation(location.locationId)
+        // Clean up cached photo files
+        photosToCleanup.forEach { photo ->
+            photo.cachedOriginalPath?.let { runCatching { java.io.File(it).delete() } }
+            photo.cachedThumbnailPath?.let { runCatching { java.io.File(it).delete() } }
+        }
         // Mark location as deleted and synced
         val cleaned = location.copy(
             isDirty = false,

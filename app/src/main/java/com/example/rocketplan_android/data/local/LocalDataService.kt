@@ -930,6 +930,63 @@ class LocalDataService private constructor(
         dao.markRoomsDeletedByLocation(locationId)
     }
 
+    suspend fun deleteSyncOpsForRoomsByLocation(locationId: Long) = withContext(ioDispatcher) {
+        dao.deleteSyncOpsForRoomsByLocation(locationId)
+    }
+
+    suspend fun getRoomIdsForLocation(locationId: Long): List<Long> = withContext(ioDispatcher) {
+        dao.getRoomIdsForLocation(locationId)
+    }
+
+    /**
+     * Cascade deletes all rooms in a location: deletes room children (photos, notes, logs, etc.)
+     * and marks rooms as deleted. Returns photos with cached files for disk cleanup.
+     */
+    suspend fun cascadeDeleteRoomsByLocation(locationId: Long): List<OfflinePhotoEntity> = withContext(ioDispatcher) {
+        val roomIds = dao.getRoomIdsForLocation(locationId)
+        if (roomIds.isEmpty()) return@withContext emptyList()
+
+        val photosToDelete = mutableListOf<OfflinePhotoEntity>()
+
+        database.withTransaction {
+            roomIds.forEach { roomId ->
+                // Get room to find serverId for snapshot cleanup
+                val room = dao.getRoom(roomId)
+                val ids = buildSet {
+                    add(roomId)
+                    room?.serverId?.let { add(it) }
+                }
+
+                // Collect cached photos for disk cleanup
+                ids.forEach { id ->
+                    photosToDelete.addAll(dao.getPhotosForRoomSnapshot(id))
+                }
+
+                // Delete all room children
+                ids.forEach { id ->
+                    dao.deleteAlbumPhotosByRoomId(id)
+                    dao.markAlbumsDeletedByRoomId(id)
+                    dao.clearRoomPhotoSnapshots(id)
+                    dao.deletePhotosByRoomId(id)
+                    dao.deleteNotesByRoomId(id)
+                    dao.deleteDamagesByRoomId(id)
+                    dao.deleteEquipmentByRoomId(id)
+                    dao.deleteMoistureLogsByRoomId(id)
+                    dao.deleteAtmosphericLogsByRoomId(id)
+                    dao.deleteWorkScopesByRoomId(id)
+                }
+            }
+
+            // Mark all rooms as deleted
+            dao.markRoomsDeletedByLocation(locationId)
+
+            // Clear sync queue ops for rooms in this location
+            dao.deleteSyncOpsForRoomsByLocation(locationId)
+        }
+
+        photosToDelete
+    }
+
     suspend fun clearProjectPropertyId(propertyId: Long) = withContext(ioDispatcher) {
         dao.clearProjectPropertyId(propertyId)
     }
