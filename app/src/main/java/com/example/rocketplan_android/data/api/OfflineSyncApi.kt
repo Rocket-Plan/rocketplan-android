@@ -174,6 +174,12 @@ interface OfflineSyncApi {
         @Query("include") include: String? = "propertyType,asbestosStatus,propertyDamageTypes,damageCause"
     ): PropertyResourceResponse
 
+    @HTTP(method = "DELETE", path = "/api/properties/{propertyId}", hasBody = true)
+    suspend fun deleteProperty(
+        @Path("propertyId") propertyId: Long,
+        @Body body: DeleteWithTimestampRequest
+    )
+
     @GET("/api/properties/{propertyId}/levels")
     suspend fun getPropertyLevels(
         @Path("propertyId") propertyId: Long
@@ -190,6 +196,12 @@ interface OfflineSyncApi {
         @Path("propertyId") propertyId: Long,
         @Body body: CreateLocationRequest
     ): LocationDto
+
+    @HTTP(method = "DELETE", path = "/api/locations/{locationId}", hasBody = true)
+    suspend fun deleteLocation(
+        @Path("locationId") locationId: Long,
+        @Body body: DeleteWithTimestampRequest
+    )
 
     // Damage types / causes (Project Loss Info)
     @GET("/api/projects/{projectId}/property-damage-types")

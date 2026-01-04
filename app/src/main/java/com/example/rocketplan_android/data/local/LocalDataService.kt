@@ -126,6 +126,9 @@ class LocalDataService private constructor(
     suspend fun getLocationByUuid(uuid: String): OfflineLocationEntity? =
         withContext(ioDispatcher) { dao.getLocationByUuid(uuid) }
 
+    suspend fun getLocation(locationId: Long): OfflineLocationEntity? =
+        withContext(ioDispatcher) { dao.getLocation(locationId) }
+
     fun observeRooms(projectId: Long): Flow<List<OfflineRoomEntity>> =
         dao.observeRoomsForProject(projectId)
 

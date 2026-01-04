@@ -223,14 +223,14 @@ class SyncQueueProcessor(
                     when (operation.operationType) {
                         SyncOperationType.CREATE -> handlePendingPropertyCreation(operation)
                         SyncOperationType.UPDATE -> handlePendingPropertyUpdate(operation)
-                        SyncOperationType.DELETE -> OperationOutcome.DROP
+                        SyncOperationType.DELETE -> handlePendingPropertyDeletion(operation)
                     }
                 }
                 "location" -> handleOperation(operation, "pending:location") {
                     when (operation.operationType) {
                         SyncOperationType.CREATE -> handlePendingLocationCreation(operation)
                         SyncOperationType.UPDATE -> OperationOutcome.DROP
-                        SyncOperationType.DELETE -> OperationOutcome.DROP
+                        SyncOperationType.DELETE -> handlePendingLocationDeletion(operation)
                     }
                 }
                 "room" -> handleOperation(operation, "pending:room") {
@@ -369,6 +369,26 @@ class SyncQueueProcessor(
         localDataService.enqueueSyncOperation(operation)
     }
 
+    override suspend fun enqueueLocationDeletion(
+        location: OfflineLocationEntity,
+        lockUpdatedAt: String?
+    ) {
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "location",
+            entityId = location.locationId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
+        enqueueOperation(
+            entityType = "location",
+            entityId = location.locationId,
+            entityUuid = location.uuid,
+            operationType = SyncOperationType.DELETE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.HIGH
+        )
+    }
+
     override suspend fun enqueueRoomCreation(
         room: OfflineRoomEntity,
         roomTypeId: Long,
@@ -505,6 +525,26 @@ class SyncQueueProcessor(
             operationType = SyncOperationType.UPDATE,
             payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
             priority = SyncPriority.MEDIUM
+        )
+    }
+
+    override suspend fun enqueuePropertyDeletion(
+        property: OfflinePropertyEntity,
+        lockUpdatedAt: String?
+    ) {
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "property",
+            entityId = property.propertyId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
+        enqueueOperation(
+            entityType = "property",
+            entityId = property.propertyId,
+            entityUuid = property.uuid,
+            operationType = SyncOperationType.DELETE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.HIGH
         )
     }
 
@@ -1090,6 +1130,53 @@ class SyncQueueProcessor(
         }
 
         persistProperty(payload.projectId, resolved, payload.propertyTypeValue, property, false)
+        return OperationOutcome.SUCCESS
+    }
+
+    private suspend fun handlePendingPropertyDeletion(
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        val property = localDataService.getProperty(operation.entityId) ?: return OperationOutcome.DROP
+        val serverId = property.serverId
+        if (serverId == null) {
+            // Never reached server; delete local row
+            localDataService.deleteProperty(property.propertyId)
+            return OperationOutcome.SUCCESS
+        }
+        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: property.updatedAt.toApiTimestamp()
+        try {
+            api.deleteProperty(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
+        } catch (error: Throwable) {
+            if (!error.isMissingOnServer()) {
+                throw error
+            }
+        }
+        // Property entity has no isDeleted flag, so delete the row
+        localDataService.deleteProperty(property.propertyId)
+        return OperationOutcome.SUCCESS
+    }
+
+    private suspend fun handlePendingLocationDeletion(
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        val location = localDataService.getLocation(operation.entityId) ?: return OperationOutcome.DROP
+        val serverId = location.serverId ?: return OperationOutcome.SUCCESS
+        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: location.updatedAt.toApiTimestamp()
+        try {
+            api.deleteLocation(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
+        } catch (error: Throwable) {
+            if (!error.isMissingOnServer()) {
+                throw error
+            }
+        }
+        // Mark as deleted and synced (location has isDeleted flag)
+        val cleaned = location.copy(
+            isDirty = false,
+            isDeleted = true,
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncedAt = now()
+        )
+        localDataService.saveLocations(listOf(cleaned))
         return OperationOutcome.SUCCESS
     }
 

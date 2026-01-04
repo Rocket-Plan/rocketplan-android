@@ -64,6 +64,11 @@ interface SyncQueueEnqueuer {
         lockUpdatedAt: String? = null
     )
 
+    suspend fun enqueuePropertyDeletion(
+        property: OfflinePropertyEntity,
+        lockUpdatedAt: String? = null
+    )
+
     // ============================================================================
     // Location Operations
     // ============================================================================
@@ -79,6 +84,11 @@ interface SyncQueueEnqueuer {
         isAccessible: Boolean,
         isCommercial: Boolean,
         idempotencyKey: String?
+    )
+
+    suspend fun enqueueLocationDeletion(
+        location: OfflineLocationEntity,
+        lockUpdatedAt: String? = null
     )
 
     // ============================================================================
