@@ -30,6 +30,7 @@ class SyncNetworkMonitor(
     companion object {
         private const val TAG = "SyncNetworkMonitor"
         private const val RESTORE_DEBOUNCE_MS = 2_000L
+        private const val LOST_DEBOUNCE_MS = 1_000L
     }
 
     private val connectivityManager =
@@ -38,11 +39,19 @@ class SyncNetworkMonitor(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val stateMutex = Mutex()
     private var restoreJob: Job? = null
+    private var lostJob: Job? = null
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
-            Log.d(TAG, "Network available")
-            handleNetworkRestored()
+            val capabilities = connectivityManager.getNetworkCapabilities(network)
+            val hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+            val hasValidated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+            if (hasInternet && hasValidated) {
+                Log.d(TAG, "Network available (validated)")
+                handleNetworkRestored()
+            } else {
+                Log.d(TAG, "Network available but not validated yet")
+            }
         }
 
         override fun onLost(network: Network) {
@@ -59,6 +68,9 @@ class SyncNetworkMonitor(
             if (hasInternet && hasValidated) {
                 Log.d(TAG, "Network validated and available")
                 handleNetworkRestored()
+            } else {
+                Log.d(TAG, "Network no longer validated")
+                scheduleNetworkLost()
             }
         }
     }
@@ -84,6 +96,8 @@ class SyncNetworkMonitor(
                 if (!isNetworkAvailable.compareAndSet(true, false)) {
                     return@withLock
                 }
+                lostJob?.cancel()
+                lostJob = null
                 restoreJob?.cancel()
                 restoreJob = null
             }
@@ -95,6 +109,8 @@ class SyncNetworkMonitor(
             stateMutex.withLock {
                 if (isNetworkAvailable.compareAndSet(false, true)) {
                     Log.d(TAG, "Network restored - triggering sync queue refresh")
+                    lostJob?.cancel()
+                    lostJob = null
                     scheduleRefreshLocked()
                 }
             }
@@ -124,6 +140,18 @@ class SyncNetworkMonitor(
                     "Network restore sync failed: ${e.message}",
                     mapOf("error" to (e.message ?: "unknown"))
                 )
+            }
+        }
+    }
+
+    private fun scheduleNetworkLost() {
+        scope.launch {
+            stateMutex.withLock {
+                lostJob?.cancel()
+                lostJob = scope.launch {
+                    delay(LOST_DEBOUNCE_MS)
+                    handleNetworkLost()
+                }
             }
         }
     }
