@@ -1139,8 +1139,8 @@ class SyncQueueProcessor(
         val property = localDataService.getProperty(operation.entityId) ?: return OperationOutcome.DROP
         val serverId = property.serverId
         if (serverId == null) {
-            // Never reached server; delete local row
-            localDataService.deleteProperty(property.propertyId)
+            // Never reached server; cascade delete locally
+            cascadeDeleteProperty(property.propertyId)
             return OperationOutcome.SUCCESS
         }
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: property.updatedAt.toApiTimestamp()
@@ -1151,16 +1151,30 @@ class SyncQueueProcessor(
                 throw error
             }
         }
-        // Property entity has no isDeleted flag, so delete the row
-        localDataService.deleteProperty(property.propertyId)
+        // Cascade delete: clear project reference and delete the property row
+        cascadeDeleteProperty(property.propertyId)
         return OperationOutcome.SUCCESS
+    }
+
+    /**
+     * Cascade deletes a property: clears project.propertyId reference and deletes the property row.
+     * Note: Locations/rooms are tied to projectId, not propertyId, so they persist with the project.
+     */
+    private suspend fun cascadeDeleteProperty(propertyId: Long) {
+        localDataService.clearProjectPropertyId(propertyId)
+        localDataService.deleteProperty(propertyId)
     }
 
     private suspend fun handlePendingLocationDeletion(
         operation: OfflineSyncQueueEntity
     ): OperationOutcome {
         val location = localDataService.getLocation(operation.entityId) ?: return OperationOutcome.DROP
-        val serverId = location.serverId ?: return OperationOutcome.SUCCESS
+        val serverId = location.serverId
+        if (serverId == null) {
+            // Never reached server; cascade delete locally
+            cascadeDeleteLocation(location)
+            return OperationOutcome.SUCCESS
+        }
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: location.updatedAt.toApiTimestamp()
         try {
             api.deleteLocation(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
@@ -1169,7 +1183,18 @@ class SyncQueueProcessor(
                 throw error
             }
         }
-        // Mark as deleted and synced (location has isDeleted flag)
+        // Cascade delete: mark child rooms as deleted, then mark location as deleted
+        cascadeDeleteLocation(location)
+        return OperationOutcome.SUCCESS
+    }
+
+    /**
+     * Cascade deletes a location: marks child rooms as deleted and marks the location as deleted.
+     */
+    private suspend fun cascadeDeleteLocation(location: OfflineLocationEntity) {
+        // Mark all rooms in this location as deleted
+        localDataService.markRoomsDeletedByLocation(location.locationId)
+        // Mark location as deleted and synced
         val cleaned = location.copy(
             isDirty = false,
             isDeleted = true,
@@ -1177,7 +1202,6 @@ class SyncQueueProcessor(
             lastSyncedAt = now()
         )
         localDataService.saveLocations(listOf(cleaned))
-        return OperationOutcome.SUCCESS
     }
 
     private suspend fun handlePendingRoomCreation(

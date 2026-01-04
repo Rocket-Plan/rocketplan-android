@@ -926,6 +926,14 @@ class LocalDataService private constructor(
         }
     }
 
+    suspend fun markRoomsDeletedByLocation(locationId: Long) = withContext(ioDispatcher) {
+        dao.markRoomsDeletedByLocation(locationId)
+    }
+
+    suspend fun clearProjectPropertyId(propertyId: Long) = withContext(ioDispatcher) {
+        dao.clearProjectPropertyId(propertyId)
+    }
+
     suspend fun markPhotosDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
         dao.markPhotosDeleted(serverIds)

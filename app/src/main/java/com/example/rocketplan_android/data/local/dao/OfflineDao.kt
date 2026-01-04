@@ -50,6 +50,9 @@ interface OfflineDao {
     @Upsert
     suspend fun upsertProjects(projects: List<OfflineProjectEntity>)
 
+    @Query("UPDATE offline_projects SET propertyId = NULL WHERE propertyId = :propertyId")
+    suspend fun clearProjectPropertyId(propertyId: Long)
+
     @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
     fun observeProjects(): Flow<List<OfflineProjectEntity>>
 
@@ -120,6 +123,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_rooms SET isDeleted = 1 WHERE projectId = :projectId")
     suspend fun markRoomsDeletedByProject(projectId: Long)
+
+    @Query("UPDATE offline_rooms SET isDeleted = 1, isDirty = 1 WHERE locationId = :locationId")
+    suspend fun markRoomsDeletedByLocation(locationId: Long)
 
     @Query("SELECT * FROM offline_rooms WHERE roomId = :roomId LIMIT 1")
     suspend fun getRoom(roomId: Long): OfflineRoomEntity?
