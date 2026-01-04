@@ -324,6 +324,12 @@ interface OfflineDao {
 
     @Query("UPDATE offline_atmospheric_logs SET isDeleted = 1 WHERE projectId = :projectId")
     suspend fun markAtmosphericLogsDeletedByProject(projectId: Long)
+
+    @Query("SELECT * FROM offline_atmospheric_logs WHERE uuid = :uuid LIMIT 1")
+    suspend fun getAtmosphericLogByUuid(uuid: String): OfflineAtmosphericLogEntity?
+
+    @Query("SELECT * FROM offline_atmospheric_logs WHERE logId = :logId LIMIT 1")
+    suspend fun getAtmosphericLog(logId: Long): OfflineAtmosphericLogEntity?
     // endregion
 
     // region Photos

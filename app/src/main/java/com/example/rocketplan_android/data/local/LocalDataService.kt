@@ -7,6 +7,7 @@ import androidx.paging.PagingConfig
 import androidx.paging.PagingData
 import androidx.room.withTransaction
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
+import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.dao.OfflineDao
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
@@ -57,6 +58,7 @@ class LocalDataService private constructor(
 
     private val database: OfflineDatabase = OfflineDatabase.getInstance(context)
     private val dao: OfflineDao = database.offlineDao()
+    private val imageProcessorDao: ImageProcessorDao = database.imageProcessorDao()
 
     @Volatile
     private var _currentCompanyId: Long? = null
@@ -264,6 +266,12 @@ class LocalDataService private constructor(
 
     fun observeAtmosphericLogsForRoom(roomId: Long): Flow<List<OfflineAtmosphericLogEntity>> =
         dao.observeAtmosphericLogsForRoom(roomId)
+
+    suspend fun getAtmosphericLogByUuid(uuid: String): OfflineAtmosphericLogEntity? =
+        withContext(ioDispatcher) { dao.getAtmosphericLogByUuid(uuid) }
+
+    suspend fun getAtmosphericLog(logId: Long): OfflineAtmosphericLogEntity? =
+        withContext(ioDispatcher) { dao.getAtmosphericLog(logId) }
 
     fun observePhotosForProject(projectId: Long): Flow<List<OfflinePhotoEntity>> =
         dao.observePhotosForProject(projectId)
@@ -670,6 +678,14 @@ class LocalDataService private constructor(
                 dao.deleteMoistureLogsByRoomId(id)
                 dao.deleteAtmosphericLogsByRoomId(id)
                 dao.deleteWorkScopesByRoomId(id)
+
+                // Delete image processor assemblies and their photos for this room
+                val assemblyIds = imageProcessorDao.getAssemblyIdsByRoomId(id)
+                if (assemblyIds.isNotEmpty()) {
+                    imageProcessorDao.deletePhotosByAssemblyIds(assemblyIds)
+                    imageProcessorDao.deleteAssembliesByRoomId(id)
+                    Log.d("LocalDataService", "🗑️ Cascade deleted ${assemblyIds.size} assemblies for roomId=$id")
+                }
             }
         }
 
@@ -974,6 +990,14 @@ class LocalDataService private constructor(
                     dao.deleteMoistureLogsByRoomId(id)
                     dao.deleteAtmosphericLogsByRoomId(id)
                     dao.deleteWorkScopesByRoomId(id)
+
+                    // Delete image processor assemblies and their photos for this room
+                    val assemblyIds = imageProcessorDao.getAssemblyIdsByRoomId(id)
+                    if (assemblyIds.isNotEmpty()) {
+                        imageProcessorDao.deletePhotosByAssemblyIds(assemblyIds)
+                        imageProcessorDao.deleteAssembliesByRoomId(id)
+                        Log.d("LocalDataService", "🗑️ Cascade deleted ${assemblyIds.size} assemblies for roomId=$id")
+                    }
                 }
             }
 

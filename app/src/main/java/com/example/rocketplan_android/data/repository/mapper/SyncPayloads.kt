@@ -68,3 +68,33 @@ internal data class PendingRoomCreationPayload(
     val locationUuid: String,   // UUID-based resolution (simpler than local IDs)
     val idempotencyKey: String?
 )
+
+internal data class PendingLocationUpdatePayload(
+    val locationId: Long,
+    val locationUuid: String,
+    val name: String?,
+    val floorNumber: Int?,
+    val isAccessible: Boolean?,
+    val lockUpdatedAt: String?
+)
+
+internal data class PendingRoomUpdatePayload(
+    val roomId: Long,
+    val roomUuid: String?,
+    val projectId: Long,
+    val locationId: Long?,
+    val isSource: Boolean,
+    val levelId: Long?,
+    val roomTypeId: Long?,
+    val lockUpdatedAt: String?
+)
+
+internal data class PendingAtmosphericLogCreationPayload(
+    val localLogId: Long,
+    val logUuid: String,
+    val projectId: Long,
+    val projectUuid: String?,
+    val roomId: Long?,
+    val roomUuid: String?,
+    val idempotencyKey: String?
+)

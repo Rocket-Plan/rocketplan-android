@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.repository.sync
 
+import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
@@ -86,6 +87,14 @@ interface SyncQueueEnqueuer {
         idempotencyKey: String?
     )
 
+    suspend fun enqueueLocationUpdate(
+        location: OfflineLocationEntity,
+        name: String?,
+        floorNumber: Int?,
+        isAccessible: Boolean?,
+        lockUpdatedAt: String? = null
+    )
+
     suspend fun enqueueLocationDeletion(
         location: OfflineLocationEntity,
         lockUpdatedAt: String? = null
@@ -106,6 +115,14 @@ interface SyncQueueEnqueuer {
         levelUuid: String,
         locationUuid: String,
         idempotencyKey: String?
+    )
+
+    suspend fun enqueueRoomUpdate(
+        room: OfflineRoomEntity,
+        isSource: Boolean,
+        levelId: Long?,
+        roomTypeId: Long?,
+        lockUpdatedAt: String? = null
     )
 
     suspend fun enqueueRoomDeletion(
@@ -161,6 +178,20 @@ interface SyncQueueEnqueuer {
 
     suspend fun enqueuePhotoDeletion(
         photo: OfflinePhotoEntity,
+        lockUpdatedAt: String? = null
+    )
+
+    // ============================================================================
+    // Atmospheric Log Operations
+    // ============================================================================
+
+    suspend fun enqueueAtmosphericLogUpsert(
+        log: OfflineAtmosphericLogEntity,
+        lockUpdatedAt: String? = null
+    )
+
+    suspend fun enqueueAtmosphericLogDeletion(
+        log: OfflineAtmosphericLogEntity,
         lockUpdatedAt: String? = null
     )
 }

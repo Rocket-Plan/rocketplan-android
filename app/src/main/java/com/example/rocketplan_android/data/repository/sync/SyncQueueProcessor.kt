@@ -7,6 +7,7 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncPriority
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
@@ -25,6 +26,9 @@ import com.example.rocketplan_android.data.model.DeleteProjectRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
+import com.example.rocketplan_android.data.model.UpdateLocationRequest
+import com.example.rocketplan_android.data.model.UpdateRoomRequest
+import com.example.rocketplan_android.data.model.AtmosphericLogRequest
 import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
@@ -42,6 +46,9 @@ import com.example.rocketplan_android.data.repository.mapper.PendingProjectCreat
 import com.example.rocketplan_android.data.repository.mapper.PendingPropertyCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingPropertyUpdatePayload
 import com.example.rocketplan_android.data.repository.mapper.PendingRoomCreationPayload
+import com.example.rocketplan_android.data.repository.mapper.PendingLocationUpdatePayload
+import com.example.rocketplan_android.data.repository.mapper.PendingRoomUpdatePayload
+import com.example.rocketplan_android.data.repository.mapper.PendingAtmosphericLogCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toRequest
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
@@ -229,14 +236,14 @@ class SyncQueueProcessor(
                 "location" -> handleOperation(operation, "pending:location") {
                     when (operation.operationType) {
                         SyncOperationType.CREATE -> handlePendingLocationCreation(operation)
-                        SyncOperationType.UPDATE -> OperationOutcome.DROP
+                        SyncOperationType.UPDATE -> handlePendingLocationUpdate(operation)
                         SyncOperationType.DELETE -> handlePendingLocationDeletion(operation)
                     }
                 }
                 "room" -> handleOperation(operation, "pending:room") {
                     when (operation.operationType) {
                         SyncOperationType.CREATE -> handlePendingRoomCreation(operation)
-                        SyncOperationType.UPDATE -> OperationOutcome.DROP
+                        SyncOperationType.UPDATE -> handlePendingRoomUpdate(operation)
                         SyncOperationType.DELETE -> handlePendingRoomDeletion(operation)
                     }
                 }
@@ -265,6 +272,13 @@ class SyncQueueProcessor(
                     when (operation.operationType) {
                         SyncOperationType.DELETE -> handlePendingPhotoDeletion(operation)
                         else -> OperationOutcome.DROP
+                    }
+                }
+                "atmospheric_log" -> handleOperation(operation, "pending:atmospheric") {
+                    when (operation.operationType) {
+                        SyncOperationType.CREATE,
+                        SyncOperationType.UPDATE -> handlePendingAtmosphericLogUpsert(operation)
+                        SyncOperationType.DELETE -> handlePendingAtmosphericLogDeletion(operation)
                     }
                 }
                 else -> {
@@ -367,6 +381,54 @@ class SyncQueueProcessor(
             priority = SyncPriority.MEDIUM
         )
         localDataService.enqueueSyncOperation(operation)
+    }
+
+    override suspend fun enqueueLocationUpdate(
+        location: OfflineLocationEntity,
+        name: String?,
+        floorNumber: Int?,
+        isAccessible: Boolean?,
+        lockUpdatedAt: String?
+    ) {
+        if (location.serverId == null) {
+            // Location not yet synced; update the pending CREATE payload instead
+            val updated = updateCreateOperationPayload("location", location.locationId) { payload ->
+                val existing = runCatching {
+                    gson.fromJson(String(payload, Charsets.UTF_8), PendingLocationCreationPayload::class.java)
+                }.getOrNull() ?: return@updateCreateOperationPayload null
+                val refreshed = existing.copy(
+                    locationName = name ?: existing.locationName,
+                    floorNumber = floorNumber ?: existing.floorNumber,
+                    isAccessible = isAccessible ?: existing.isAccessible
+                )
+                gson.toJson(refreshed).toByteArray(Charsets.UTF_8)
+            }
+            if (!updated) {
+                Log.w(TAG, "⚠️ [enqueueLocationUpdate] No pending create for location ${location.locationId}; skipping update")
+            }
+            return
+        }
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "location",
+            entityId = location.locationId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingLocationUpdatePayload(
+            locationId = location.locationId,
+            locationUuid = location.uuid,
+            name = name,
+            floorNumber = floorNumber,
+            isAccessible = isAccessible,
+            lockUpdatedAt = resolvedLockUpdatedAt
+        )
+        enqueueOperation(
+            entityType = "location",
+            entityId = location.locationId,
+            entityUuid = location.uuid,
+            operationType = SyncOperationType.UPDATE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
     }
 
     override suspend fun enqueueLocationDeletion(
@@ -548,6 +610,56 @@ class SyncQueueProcessor(
         )
     }
 
+    override suspend fun enqueueRoomUpdate(
+        room: OfflineRoomEntity,
+        isSource: Boolean,
+        levelId: Long?,
+        roomTypeId: Long?,
+        lockUpdatedAt: String?
+    ) {
+        if (room.serverId == null) {
+            // Room not yet synced; update the pending CREATE payload instead
+            val updated = updateCreateOperationPayload("room", room.roomId) { payload ->
+                val existing = runCatching {
+                    gson.fromJson(String(payload, Charsets.UTF_8), PendingRoomCreationPayload::class.java)
+                }.getOrNull() ?: return@updateCreateOperationPayload null
+                val refreshed = existing.copy(
+                    isSource = isSource,
+                    levelServerId = levelId ?: existing.levelServerId,
+                    roomTypeId = roomTypeId ?: existing.roomTypeId
+                )
+                gson.toJson(refreshed).toByteArray(Charsets.UTF_8)
+            }
+            if (!updated) {
+                Log.w(TAG, "⚠️ [enqueueRoomUpdate] No pending create for room ${room.roomId}; skipping update")
+            }
+            return
+        }
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "room",
+            entityId = room.roomId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingRoomUpdatePayload(
+            roomId = room.roomId,
+            roomUuid = room.uuid,
+            projectId = room.projectId,
+            locationId = room.locationId,
+            isSource = isSource,
+            levelId = levelId,
+            roomTypeId = roomTypeId,
+            lockUpdatedAt = resolvedLockUpdatedAt
+        )
+        enqueueOperation(
+            entityType = "room",
+            entityId = room.roomId,
+            entityUuid = room.uuid,
+            operationType = SyncOperationType.UPDATE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
     override suspend fun enqueueRoomDeletion(
         room: OfflineRoomEntity,
         lockUpdatedAt: String?
@@ -712,6 +824,74 @@ class SyncQueueProcessor(
             operationType = SyncOperationType.DELETE,
             payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
             priority = SyncPriority.LOW
+        )
+    }
+
+    override suspend fun enqueueAtmosphericLogUpsert(
+        log: OfflineAtmosphericLogEntity,
+        lockUpdatedAt: String?
+    ) {
+        val entityId = resolveEntityId(log.logId, log.uuid)
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "atmospheric_log",
+            entityId = entityId,
+            fallback = lockUpdatedAt
+        )
+        val opType = if (log.serverId == null) SyncOperationType.CREATE else SyncOperationType.UPDATE
+
+        if (opType == SyncOperationType.CREATE) {
+            // For creates, we need to store the full payload
+            val project = localDataService.getProject(log.projectId)
+            val room = log.roomId?.let { localDataService.getRoom(it) }
+            val payload = PendingAtmosphericLogCreationPayload(
+                localLogId = log.logId,
+                logUuid = log.uuid,
+                projectId = log.projectId,
+                projectUuid = project?.uuid,
+                roomId = log.roomId,
+                roomUuid = room?.uuid,
+                idempotencyKey = log.uuid
+            )
+            enqueueOperation(
+                entityType = "atmospheric_log",
+                entityId = entityId,
+                entityUuid = log.uuid,
+                operationType = opType,
+                payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+                priority = SyncPriority.MEDIUM
+            )
+        } else {
+            // For updates, just use the lock payload
+            val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
+            enqueueOperation(
+                entityType = "atmospheric_log",
+                entityId = entityId,
+                entityUuid = log.uuid,
+                operationType = opType,
+                payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+                priority = SyncPriority.MEDIUM
+            )
+        }
+    }
+
+    override suspend fun enqueueAtmosphericLogDeletion(
+        log: OfflineAtmosphericLogEntity,
+        lockUpdatedAt: String?
+    ) {
+        val entityId = resolveEntityId(log.logId, log.uuid)
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "atmospheric_log",
+            entityId = entityId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
+        enqueueOperation(
+            entityType = "atmospheric_log",
+            entityId = entityId,
+            entityUuid = log.uuid,
+            operationType = SyncOperationType.DELETE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
         )
     }
 
@@ -1171,6 +1351,46 @@ class SyncQueueProcessor(
         localDataService.deleteProperty(propertyId)
     }
 
+    private suspend fun handlePendingLocationUpdate(
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        val payload = runCatching {
+            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingLocationUpdatePayload::class.java)
+        }.getOrNull() ?: return OperationOutcome.DROP
+
+        val location = localDataService.getLocationByUuid(payload.locationUuid)
+            ?: localDataService.getLocation(payload.locationId)
+            ?: return OperationOutcome.DROP
+
+        val serverId = location.serverId ?: return OperationOutcome.SKIP
+
+        val request = UpdateLocationRequest(
+            name = payload.name,
+            floorNumber = payload.floorNumber,
+            isAccessible = payload.isAccessible,
+            updatedAt = payload.lockUpdatedAt
+        )
+
+        try {
+            api.updateLocation(serverId, request)
+        } catch (error: Throwable) {
+            if (error.isConflict()) {
+                // Handle conflict by re-fetching and retrying
+                Log.w(TAG, "⚠️ [handlePendingLocationUpdate] Conflict for location $serverId, will retry")
+                return OperationOutcome.SKIP
+            }
+            throw error
+        }
+
+        val synced = location.copy(
+            isDirty = false,
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncedAt = now()
+        )
+        localDataService.saveLocations(listOf(synced))
+        return OperationOutcome.SUCCESS
+    }
+
     private suspend fun handlePendingLocationDeletion(
         operation: OfflineSyncQueueEntity
     ): OperationOutcome {
@@ -1443,6 +1663,45 @@ class SyncQueueProcessor(
         return OperationOutcome.SUCCESS
     }
 
+    private suspend fun handlePendingRoomUpdate(
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        val payload = runCatching {
+            gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingRoomUpdatePayload::class.java)
+        }.getOrNull() ?: return OperationOutcome.DROP
+
+        val room = payload.roomUuid?.let { localDataService.getRoomByUuid(it) }
+            ?: localDataService.getRoom(payload.roomId)
+            ?: return OperationOutcome.DROP
+
+        val serverId = room.serverId ?: return OperationOutcome.SKIP
+
+        val request = UpdateRoomRequest(
+            isSource = payload.isSource,
+            levelId = payload.levelId,
+            roomTypeId = payload.roomTypeId,
+            updatedAt = payload.lockUpdatedAt
+        )
+
+        try {
+            api.updateRoom(serverId, request)
+        } catch (error: Throwable) {
+            if (error.isConflict()) {
+                Log.w(TAG, "⚠️ [handlePendingRoomUpdate] Conflict for room $serverId, will retry")
+                return OperationOutcome.SKIP
+            }
+            throw error
+        }
+
+        val synced = room.copy(
+            isDirty = false,
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncedAt = now()
+        )
+        localDataService.saveRooms(listOf(synced))
+        return OperationOutcome.SUCCESS
+    }
+
     private suspend fun handlePendingRoomDeletion(
         operation: OfflineSyncQueueEntity
     ): OperationOutcome {
@@ -1642,6 +1901,100 @@ class SyncQueueProcessor(
             lastSyncedAt = now()
         )
         localDataService.savePhotos(listOf(cleaned))
+        return OperationOutcome.SUCCESS
+    }
+
+    private suspend fun handlePendingAtmosphericLogUpsert(
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        val log = localDataService.getAtmosphericLogByUuid(operation.entityUuid)
+            ?: localDataService.getAtmosphericLog(operation.entityId)
+            ?: return OperationOutcome.DROP
+
+        if (log.isDeleted) return OperationOutcome.DROP
+
+        // For CREATE operations, we need the project/room server IDs
+        val project = localDataService.getProject(log.projectId)
+        val projectServerId = project?.serverId ?: return OperationOutcome.SKIP
+
+        // If there's a room, we need its server ID
+        val roomServerId: Long? = if (log.roomId != null) {
+            val room = localDataService.getRoom(log.roomId)
+            room?.serverId ?: return OperationOutcome.SKIP
+        } else {
+            null
+        }
+
+        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: log.updatedAt.toApiTimestamp()
+
+        val request = AtmosphericLogRequest(
+            uuid = log.uuid,
+            date = log.date.toApiTimestamp(),
+            temperature = log.temperature,
+            relativeHumidity = log.relativeHumidity,
+            dewPoint = log.dewPoint,
+            gpp = log.gpp,
+            pressure = log.pressure,
+            windSpeed = log.windSpeed,
+            isExternal = log.isExternal,
+            isInlet = log.isInlet,
+            inletId = log.inletId,
+            roomUuid = log.roomId?.let { localDataService.getRoom(it)?.uuid },
+            projectUuid = project.uuid,
+            idempotencyKey = log.uuid,
+            updatedAt = lockUpdatedAt
+        )
+
+        val dto = if (log.serverId == null) {
+            // CREATE - route to room or project
+            if (roomServerId != null) {
+                api.createRoomAtmosphericLog(roomServerId, request)
+            } else {
+                api.createProjectAtmosphericLog(projectServerId, request)
+            }
+        } else {
+            // UPDATE
+            api.updateAtmosphericLog(log.serverId, request)
+        }
+
+        val synced = log.copy(
+            serverId = dto.id,
+            isDirty = false,
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncedAt = now()
+        )
+        localDataService.saveAtmosphericLogs(listOf(synced))
+        return OperationOutcome.SUCCESS
+    }
+
+    private suspend fun handlePendingAtmosphericLogDeletion(
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        val log = localDataService.getAtmosphericLogByUuid(operation.entityUuid)
+            ?: localDataService.getAtmosphericLog(operation.entityId)
+            ?: return OperationOutcome.DROP
+
+        val serverId = log.serverId ?: return OperationOutcome.SUCCESS
+        val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: log.updatedAt.toApiTimestamp()
+
+        try {
+            val response = api.deleteAtmosphericLog(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
+            if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
+                throw HttpException(response)
+            }
+        } catch (error: Throwable) {
+            if (!error.isMissingOnServer()) {
+                throw error
+            }
+        }
+
+        val cleaned = log.copy(
+            isDirty = false,
+            isDeleted = true,
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncedAt = now()
+        )
+        localDataService.saveAtmosphericLogs(listOf(cleaned))
         return OperationOutcome.SUCCESS
     }
 

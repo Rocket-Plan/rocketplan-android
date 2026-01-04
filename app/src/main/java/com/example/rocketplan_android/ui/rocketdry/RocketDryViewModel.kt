@@ -36,6 +36,7 @@ class RocketDryViewModel(
 
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
+    private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
 
     private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
     val uiState: StateFlow<RocketDryUiState> = _uiState
@@ -172,6 +173,24 @@ class RocketDryViewModel(
                         "RocketDryVM",
                         "✅ External atmospheric log saved: uuid=${log.uuid}"
                     )
+                    // Enqueue for sync to server
+                    runCatching {
+                        // Re-fetch the saved log to get the generated logId
+                        val savedLog = localDataService.getAtmosphericLogByUuid(log.uuid)
+                        if (savedLog != null) {
+                            offlineSyncRepository.enqueueAtmosphericLogSync(savedLog)
+                            android.util.Log.d(
+                                "RocketDryVM",
+                                "📤 External atmospheric log enqueued for sync: uuid=${log.uuid}"
+                            )
+                        }
+                    }.onFailure {
+                        android.util.Log.e(
+                            "RocketDryVM",
+                            "⚠️ Failed to enqueue atmospheric log for sync uuid=${log.uuid}",
+                            it
+                        )
+                    }
                 }
                 .onFailure {
                     android.util.Log.e(

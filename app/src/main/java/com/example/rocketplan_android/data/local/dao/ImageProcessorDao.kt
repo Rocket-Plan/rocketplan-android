@@ -123,6 +123,12 @@ interface ImageProcessorDao {
 
     @Query("DELETE FROM image_processor_assemblies")
     suspend fun deleteAllAssemblies()
+
+    @Query("DELETE FROM image_processor_assemblies WHERE roomId = :roomId")
+    suspend fun deleteAssembliesByRoomId(roomId: Long): Int
+
+    @Query("SELECT assemblyId FROM image_processor_assemblies WHERE roomId = :roomId")
+    suspend fun getAssemblyIdsByRoomId(roomId: Long): List<String>
     // endregion
 
     // region Photo operations
@@ -193,5 +199,8 @@ interface ImageProcessorDao {
 
     @Query("DELETE FROM image_processor_photos WHERE assemblyLocalId = :assemblyLocalId")
     suspend fun deletePhotosForAssembly(assemblyLocalId: Long)
+
+    @Query("DELETE FROM image_processor_photos WHERE assemblyUuid IN (:assemblyIds)")
+    suspend fun deletePhotosByAssemblyIds(assemblyIds: List<String>): Int
     // endregion
 }

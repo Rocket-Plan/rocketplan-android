@@ -36,6 +36,9 @@ import com.example.rocketplan_android.data.model.ProjectResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
 import com.example.rocketplan_android.data.model.CreateRoomRequest
+import com.example.rocketplan_android.data.model.UpdateLocationRequest
+import com.example.rocketplan_android.data.model.UpdateRoomRequest
+import com.example.rocketplan_android.data.model.AtmosphericLogRequest
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
@@ -197,6 +200,12 @@ interface OfflineSyncApi {
         @Body body: CreateLocationRequest
     ): LocationDto
 
+    @PUT("/api/locations/{locationId}")
+    suspend fun updateLocation(
+        @Path("locationId") locationId: Long,
+        @Body body: UpdateLocationRequest
+    ): LocationDto
+
     @HTTP(method = "DELETE", path = "/api/locations/{locationId}", hasBody = true)
     suspend fun deleteLocation(
         @Path("locationId") locationId: Long,
@@ -248,6 +257,12 @@ interface OfflineSyncApi {
         @Path("locationId") locationId: Long,
         @Body request: CreateRoomRequest
     ): JsonElement
+
+    @PUT("/api/rooms/{roomId}")
+    suspend fun updateRoom(
+        @Path("roomId") roomId: Long,
+        @Body request: UpdateRoomRequest
+    ): RoomDto
 
     @HTTP(method = "DELETE", path = "/api/rooms/{roomId}", hasBody = true)
     suspend fun deleteRoom(
@@ -317,6 +332,30 @@ interface OfflineSyncApi {
         @Path("roomId") roomId: Long,
         @Query("filter[updated_date]") updatedSince: String? = null
     ): List<AtmosphericLogDto>
+
+    @POST("/api/projects/{projectId}/atmospheric-logs")
+    suspend fun createProjectAtmosphericLog(
+        @Path("projectId") projectId: Long,
+        @Body body: AtmosphericLogRequest
+    ): AtmosphericLogDto
+
+    @POST("/api/rooms/{roomId}/atmospheric-logs")
+    suspend fun createRoomAtmosphericLog(
+        @Path("roomId") roomId: Long,
+        @Body body: AtmosphericLogRequest
+    ): AtmosphericLogDto
+
+    @PUT("/api/atmospheric-logs/{logId}")
+    suspend fun updateAtmosphericLog(
+        @Path("logId") logId: Long,
+        @Body body: AtmosphericLogRequest
+    ): AtmosphericLogDto
+
+    @HTTP(method = "DELETE", path = "/api/atmospheric-logs/{logId}", hasBody = true)
+    suspend fun deleteAtmosphericLog(
+        @Path("logId") logId: Long,
+        @Body body: DeleteWithTimestampRequest
+    ): Response<Unit>
 
     @GET("/api/rooms/{roomId}/damage-materials/logs")
     suspend fun getRoomMoistureLogs(

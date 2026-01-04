@@ -81,13 +81,7 @@ class ImageProcessorRepository(
                 metadata = mapOf("project_id_local" to projectId.toString())
             )
         val projectServerId = project.serverId
-            ?: return@withContext logFailure(
-                message = "Project is not synced with the server",
-                metadata = mapOf(
-                    "project_id_local" to projectId.toString(),
-                    "assembly_context" to "image_processor"
-                )
-            )
+        val waitingForProjectSync = projectServerId == null
 
         val roomServerId = if (roomId != null) {
             val room = offlineDao.getRoom(roomId)
@@ -103,9 +97,10 @@ class ImageProcessorRepository(
             null
         }
         val waitingForRoomSync = roomId != null && roomServerId == null
+        val waitingForSync = waitingForProjectSync || waitingForRoomSync
         val resolvedRoomId = roomServerId ?: roomId
 
-        val config = if (waitingForRoomSync) {
+        val config = if (waitingForSync) {
             configurationRepository.getCachedConfiguration()
         } else {
             configurationRepository.getConfiguration()
@@ -121,14 +116,16 @@ class ImageProcessorRepository(
         }
         val processingUrl = config?.url?.takeIf { it.isNotBlank() } ?: ""
         val apiKey = config?.apiKey
-        if (processingUrl.isBlank() && waitingForRoomSync) {
+        if (processingUrl.isBlank() && waitingForSync) {
             remoteLogger?.log(
                 level = LogLevel.WARN,
                 tag = TAG,
-                message = "Image processor config unavailable; deferring assembly until room sync",
+                message = "Image processor config unavailable; deferring assembly until sync",
                 metadata = mapOf(
                     "project_id_local" to projectId.toString(),
-                    "room_id_local" to (roomId?.toString() ?: "null")
+                    "room_id_local" to (roomId?.toString() ?: "null"),
+                    "waiting_for_project" to waitingForProjectSync.toString(),
+                    "waiting_for_room" to waitingForRoomSync.toString()
                 )
             )
         }
@@ -136,7 +133,7 @@ class ImageProcessorRepository(
         val assemblyId = UUID.randomUUID().toString().replace("-", "")
         val now = System.currentTimeMillis()
         val totalBytes = preparedFiles.sumOf { getFileSize(it.uri) }
-        val status = if (waitingForRoomSync) {
+        val status = if (waitingForSync) {
             AssemblyStatus.WAITING_FOR_ROOM.value
         } else {
             AssemblyStatus.QUEUED.value
@@ -194,15 +191,17 @@ class ImageProcessorRepository(
             )
         )
 
-        if (waitingForRoomSync) {
+        if (waitingForSync) {
             remoteLogger?.log(
                 level = LogLevel.INFO,
                 tag = TAG,
-                message = "Assembly deferred until room sync completes",
+                message = "Assembly deferred until sync completes",
                 metadata = mapOf(
                     "assembly_id" to assemblyId,
                     "project_id_local" to projectId.toString(),
-                    "room_id_local" to (roomId?.toString() ?: "null")
+                    "room_id_local" to (roomId?.toString() ?: "null"),
+                    "waiting_for_project" to waitingForProjectSync.toString(),
+                    "waiting_for_room" to waitingForRoomSync.toString()
                 )
             )
             return@withContext Result.success(assemblyId)

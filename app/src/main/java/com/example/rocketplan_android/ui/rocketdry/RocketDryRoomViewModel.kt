@@ -115,6 +115,24 @@ class RocketDryRoomViewModel(
                         "RocketDryRoomVM",
                         "✅ Saved atmospheric log for roomId=$roomId uuid=${log.uuid}"
                     )
+                    // Enqueue for sync to server
+                    runCatching {
+                        // Re-fetch the saved log to get the generated logId
+                        val savedLog = localDataService.getAtmosphericLogByUuid(log.uuid)
+                        if (savedLog != null) {
+                            offlineSyncRepository.enqueueAtmosphericLogSync(savedLog)
+                            android.util.Log.d(
+                                "RocketDryRoomVM",
+                                "📤 Atmospheric log enqueued for sync: uuid=${log.uuid}"
+                            )
+                        }
+                    }.onFailure {
+                        android.util.Log.e(
+                            "RocketDryRoomVM",
+                            "⚠️ Failed to enqueue atmospheric log for sync uuid=${log.uuid}",
+                            it
+                        )
+                    }
                 }
                 .onFailure {
                     android.util.Log.e(

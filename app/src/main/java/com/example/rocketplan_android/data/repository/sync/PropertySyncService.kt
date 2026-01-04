@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
+import java.io.IOException
 import java.util.Date
 import com.example.rocketplan_android.util.UuidUtils
 
@@ -31,6 +32,7 @@ class PropertySyncService(
     private val localDataService: LocalDataService,
     private val roomTypeRepository: RoomTypeRepository,
     private val syncQueueEnqueuer: () -> SyncQueueEnqueuer,
+    private val isNetworkAvailable: () -> Boolean = { false },
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private val propertyIncludes = "propertyType,asbestosStatus,propertyDamageTypes,damageCause"
@@ -48,8 +50,12 @@ class PropertySyncService(
             val project = localDataService.getAllProjects().firstOrNull { it.projectId == projectId }
                 ?: throw Exception("Project not found locally")
             val projectServerId = project.serverId
-            if (projectServerId == null) {
-                Log.d(TAG, "[createProjectProperty] Project $projectId not synced yet; creating pending property")
+            val isOnline = isNetworkAvailable()
+
+            // Create pending property if project not synced OR offline
+            if (projectServerId == null || !isOnline) {
+                Log.d(TAG, "[createProjectProperty] Creating pending property " +
+                    "(projectId=$projectId, serverId=$projectServerId, online=$isOnline)")
                 return@runCatching createPendingProperty(
                     project = project,
                     propertyTypeValue = propertyTypeValue,
@@ -80,6 +86,15 @@ class PropertySyncService(
                     )
                 }
                 throw error
+            } catch (error: IOException) {
+                // Network failure - fall back to pending property for offline resilience
+                Log.w(TAG, "[createProjectProperty] Network error, falling back to pending property", error)
+                return@runCatching createPendingProperty(
+                    project = project,
+                    propertyTypeValue = propertyTypeValue,
+                    propertyTypeId = request.propertyTypeId,
+                    idempotencyKey = resolvedIdempotencyKey
+                )
             }
 
             val refreshed = runCatching {

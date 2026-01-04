@@ -5,6 +5,7 @@ import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
+import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -96,6 +97,7 @@ class OfflineSyncRepository(
             localDataService = localDataService,
             roomTypeRepository = roomTypeRepository,
             syncQueueEnqueuer = { syncQueueProcessor },
+            isNetworkAvailable = isNetworkAvailable,
             ioDispatcher = ioDispatcher
         )
     }
@@ -874,6 +876,28 @@ class OfflineSyncRepository(
         log: OfflineMoistureLogEntity
     ): OfflineMoistureLogEntity =
         moistureLogSyncService.upsertMoistureLogOffline(log)
+
+    /**
+     * Enqueue an atmospheric log for sync to the server.
+     * Call this after saving the log to local storage.
+     */
+    suspend fun enqueueAtmosphericLogSync(
+        log: OfflineAtmosphericLogEntity,
+        lockUpdatedAt: String? = null
+    ) {
+        syncQueueProcessor.enqueueAtmosphericLogUpsert(log, lockUpdatedAt)
+    }
+
+    /**
+     * Enqueue an atmospheric log deletion for sync to the server.
+     * Call this after marking the log as deleted locally.
+     */
+    suspend fun enqueueAtmosphericLogDeletion(
+        log: OfflineAtmosphericLogEntity,
+        lockUpdatedAt: String? = null
+    ) {
+        syncQueueProcessor.enqueueAtmosphericLogDeletion(log, lockUpdatedAt)
+    }
 
     suspend fun deleteEquipmentOffline(
         equipmentId: Long? = null,
