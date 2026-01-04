@@ -96,6 +96,12 @@ class SyncNetworkMonitor(
                 if (!isNetworkAvailable.compareAndSet(true, false)) {
                     return@withLock
                 }
+                Log.d(TAG, "Network lost")
+                remoteLogger?.log(
+                    com.example.rocketplan_android.logging.LogLevel.INFO,
+                    TAG,
+                    "Sync network lost"
+                )
                 lostJob?.cancel()
                 lostJob = null
                 restoreJob?.cancel()
@@ -109,6 +115,11 @@ class SyncNetworkMonitor(
             stateMutex.withLock {
                 if (isNetworkAvailable.compareAndSet(false, true)) {
                     Log.d(TAG, "Network restored - triggering sync queue refresh")
+                    remoteLogger?.log(
+                        com.example.rocketplan_android.logging.LogLevel.INFO,
+                        TAG,
+                        "Sync network restored - triggering refresh"
+                    )
                     lostJob?.cancel()
                     lostJob = null
                     scheduleRefreshLocked()

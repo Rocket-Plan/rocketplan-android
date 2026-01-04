@@ -205,7 +205,15 @@ class SyncQueueManager(
      */
     suspend fun resetFailedOperations() {
         try {
-            localDataService.resetFailedOperationsForRetry()
+            val resetCount = localDataService.resetFailedOperationsForRetry()
+            if (resetCount > 0) {
+                remoteLogger.log(
+                    LogLevel.INFO,
+                    TAG,
+                    "Reset failed operations for retry",
+                    mapOf("reset_count" to resetCount.toString())
+                )
+            }
         } catch (e: Exception) {
             Log.w(TAG, "⚠️ Failed to reset failed operations", e)
         }

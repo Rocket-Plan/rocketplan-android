@@ -7,6 +7,8 @@ import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.util.Log
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -23,8 +25,9 @@ import kotlinx.coroutines.sync.withLock
  */
 class ImageProcessorNetworkMonitor(
     context: Context,
-    private val queueManager: ImageProcessorQueueManager
-    ) {
+    private val queueManager: ImageProcessorQueueManager,
+    private val remoteLogger: RemoteLogger? = null
+) {
     companion object {
         private const val TAG = "ImgProcessorNetMonitor"
         private const val RESTORE_DEBOUNCE_MS = 2_000L
@@ -101,6 +104,11 @@ class ImageProcessorNetworkMonitor(
             }
             if (shouldPause) {
                 Log.d(TAG, "⏸️ Network lost - pausing active assemblies")
+                remoteLogger?.log(
+                    LogLevel.INFO,
+                    TAG,
+                    "Image processor network lost - pausing assemblies"
+                )
                 // Mark uploading assemblies as WAITING_FOR_CONNECTIVITY (matching iOS behavior)
                 queueManager.pauseForConnectivity()
             }
@@ -114,6 +122,11 @@ class ImageProcessorNetworkMonitor(
             }
             if (shouldSchedule) {
                 Log.d(TAG, "🔄 Network restored - triggering retry queue (debounced, bypass timeout)")
+                remoteLogger?.log(
+                    LogLevel.INFO,
+                    TAG,
+                    "Image processor network restored - triggering retry queue"
+                )
                 scheduleRetry()
             }
         }

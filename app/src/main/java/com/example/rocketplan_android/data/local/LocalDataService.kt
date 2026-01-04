@@ -1118,10 +1118,11 @@ class LocalDataService private constructor(
      * Resets FAILED operations back to PENDING for retry.
      * Clears skipCount and scheduledAt to give them a fresh start.
      * Call this when dependencies may have resolved (e.g., parent entity synced).
+     * @return The number of operations reset
      */
-    suspend fun resetFailedOperationsForRetry() = withContext(ioDispatcher) {
+    suspend fun resetFailedOperationsForRetry(): Int = withContext(ioDispatcher) {
         val failed = dao.getSyncOperationsByStatus(SyncStatus.FAILED)
-        if (failed.isEmpty()) return@withContext
+        if (failed.isEmpty()) return@withContext 0
 
         Log.d("LocalDataService", "♻️ Resetting ${failed.size} failed operations for retry")
         failed.forEach { op ->
@@ -1133,6 +1134,7 @@ class LocalDataService private constructor(
             )
             dao.upsertSyncOperation(reset)
         }
+        failed.size
     }
 
     /** Counts all pending sync operations for a project and its children (photos, notes, rooms, etc.) */

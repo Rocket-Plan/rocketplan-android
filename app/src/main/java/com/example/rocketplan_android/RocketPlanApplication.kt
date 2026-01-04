@@ -250,7 +250,8 @@ class RocketPlanApplication : Application() {
         // Initialize network monitor for connectivity-based retries
         imageProcessorNetworkMonitor = com.example.rocketplan_android.data.network.ImageProcessorNetworkMonitor(
             context = this,
-            queueManager = imageProcessorQueueManager
+            queueManager = imageProcessorQueueManager,
+            remoteLogger = remoteLogger
         )
         syncNetworkMonitor = SyncNetworkMonitor(
             context = this,

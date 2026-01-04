@@ -1161,6 +1161,12 @@ class SyncQueueProcessor(
      * Note: Locations/rooms are tied to projectId, not propertyId, so they persist with the project.
      */
     private suspend fun cascadeDeleteProperty(propertyId: Long) {
+        remoteLogger?.log(
+            LogLevel.INFO,
+            TAG,
+            "Cascade deleting property",
+            mapOf("propertyId" to propertyId.toString())
+        )
         localDataService.clearProjectPropertyId(propertyId)
         localDataService.deleteProperty(propertyId)
     }
@@ -1193,8 +1199,25 @@ class SyncQueueProcessor(
      * clears sync queue ops for rooms, marks rooms as deleted, and marks location as deleted.
      */
     private suspend fun cascadeDeleteLocation(location: OfflineLocationEntity) {
+        remoteLogger?.log(
+            LogLevel.INFO,
+            TAG,
+            "Cascade deleting location",
+            mapOf(
+                "locationId" to location.locationId.toString(),
+                "locationUuid" to location.uuid
+            )
+        )
         // Full cascade: delete room children, clear sync ops, mark rooms deleted
         val photosToCleanup = localDataService.cascadeDeleteRoomsByLocation(location.locationId)
+        if (photosToCleanup.isNotEmpty()) {
+            remoteLogger?.log(
+                LogLevel.DEBUG,
+                TAG,
+                "Cleaning up cached photos from cascade delete",
+                mapOf("photo_count" to photosToCleanup.size.toString())
+            )
+        }
         // Clean up cached photo files
         photosToCleanup.forEach { photo ->
             photo.cachedOriginalPath?.let { runCatching { java.io.File(it).delete() } }
@@ -1544,11 +1567,26 @@ class SyncQueueProcessor(
     ): OperationOutcome {
         val equipment = localDataService.getEquipmentByUuid(operation.entityUuid) ?: return OperationOutcome.DROP
         if (equipment.isDeleted) return OperationOutcome.DROP
-        val projectServerId = resolveServerProjectId(equipment.projectId) ?: return OperationOutcome.SKIP
+        val projectServerId = resolveServerProjectId(equipment.projectId)
+        if (projectServerId == null) {
+            remoteLogger?.log(
+                LogLevel.DEBUG,
+                TAG,
+                "Equipment waiting for project to sync",
+                mapOf("equipmentUuid" to equipment.uuid, "projectId" to equipment.projectId.toString())
+            )
+            return OperationOutcome.SKIP
+        }
         val roomServerId = equipment.roomId?.let { roomId ->
             localDataService.getRoom(roomId)?.serverId
         }
         if (equipment.roomId != null && roomServerId == null) {
+            remoteLogger?.log(
+                LogLevel.DEBUG,
+                TAG,
+                "Equipment waiting for room to sync",
+                mapOf("equipmentUuid" to equipment.uuid, "roomId" to equipment.roomId.toString())
+            )
             return OperationOutcome.SKIP
         }
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload) ?: equipment.updatedAt.toApiTimestamp()
@@ -1899,6 +1937,16 @@ class SyncQueueProcessor(
                 TAG,
                 "⚠️ [syncPendingMoistureLogs] Missing server ids (project=$projectServerId, room=$roomServerId) for log uuid=${log.uuid}"
             )
+            remoteLogger?.log(
+                LogLevel.DEBUG,
+                TAG,
+                "Moisture log waiting for dependencies to sync",
+                mapOf(
+                    "logUuid" to log.uuid,
+                    "hasProjectServerId" to (projectServerId != null).toString(),
+                    "hasRoomServerId" to (roomServerId != null).toString()
+                )
+            )
             return null
         }
 
@@ -1911,6 +1959,12 @@ class SyncQueueProcessor(
             Log.w(
                 TAG,
                 "⚠️ [syncPendingMoistureLogs] Unable to resolve material server id for log uuid=${log.uuid}"
+            )
+            remoteLogger?.log(
+                LogLevel.DEBUG,
+                TAG,
+                "Moisture log waiting for material to sync",
+                mapOf("logUuid" to log.uuid, "materialId" to log.materialId.toString())
             )
             return null
         }
