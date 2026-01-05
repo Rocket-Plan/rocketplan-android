@@ -588,14 +588,31 @@ interface OfflineDao {
 
     /**
      * Get room IDs that have pending photo deletions (photos marked isDeleted=1 but not yet synced).
+     * Returns BOTH local roomId AND associated room serverId to handle ID mismatches after relink.
      * Used to avoid resurrecting deleted photos during mismatch sync.
      */
     @Query("""
-        SELECT DISTINCT roomId
-        FROM offline_photos
-        WHERE projectId = :projectId AND isDeleted = 1 AND roomId IS NOT NULL
+        SELECT DISTINCT p.roomId AS roomId
+        FROM offline_photos p
+        WHERE p.projectId = :projectId AND p.isDeleted = 1 AND p.roomId IS NOT NULL
+        UNION
+        SELECT DISTINCT r.serverId AS roomId
+        FROM offline_photos p
+        INNER JOIN offline_rooms r ON p.roomId = r.roomId
+        WHERE p.projectId = :projectId AND p.isDeleted = 1 AND p.roomId IS NOT NULL AND r.serverId IS NOT NULL
     """)
     suspend fun getRoomIdsWithPendingPhotoDeletions(projectId: Long): List<Long>
+
+    /**
+     * Get server IDs of photos pending deletion for a specific room.
+     * Used to filter out these photos during sync to prevent resurrection.
+     */
+    @Query("""
+        SELECT serverId
+        FROM offline_photos
+        WHERE roomId = :roomId AND isDeleted = 1 AND serverId IS NOT NULL
+    """)
+    suspend fun getPendingPhotoServerIdsForRoom(roomId: Long): List<Long>
 
     data class RoomPhotoCount(val roomId: Long, val count: Int)
     // endregion

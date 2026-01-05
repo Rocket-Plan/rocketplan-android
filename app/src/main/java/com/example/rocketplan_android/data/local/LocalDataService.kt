@@ -298,6 +298,11 @@ class LocalDataService private constructor(
             dao.getRoomIdsWithPendingPhotoDeletions(projectId).toSet()
         }
 
+    suspend fun getPendingPhotoServerIdsForRoom(roomId: Long): Set<Long> =
+        withContext(ioDispatcher) {
+            dao.getPendingPhotoServerIdsForRoom(roomId).toSet()
+        }
+
     fun pagedPhotosForRoom(
         roomId: Long,
         pageSize: Int = DEFAULT_ROOM_PHOTO_PAGE_SIZE

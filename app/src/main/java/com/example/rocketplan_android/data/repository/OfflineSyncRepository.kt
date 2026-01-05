@@ -1031,13 +1031,16 @@ class OfflineSyncRepository(
 
     /**
      * Syncs photos for a single room. Returns SyncResult for composability.
+     *
+     * @param excludedPhotoServerIds Server IDs of photos pending local deletion to skip during sync
      */
     suspend fun syncRoomPhotos(
         projectId: Long,
         roomId: Long,
         ignoreCheckpoint: Boolean = false,
-        source: String? = null
-    ): SyncResult = photoSyncService.syncRoomPhotos(projectId, roomId, ignoreCheckpoint, source)
+        source: String? = null,
+        excludedPhotoServerIds: Set<Long> = emptySet()
+    ): SyncResult = photoSyncService.syncRoomPhotos(projectId, roomId, ignoreCheckpoint, source, excludedPhotoServerIds)
 
     /**
      * Legacy API: syncs photos for a single room without returning SyncResult.
@@ -1049,6 +1052,11 @@ class OfflineSyncRepository(
     /**
      * Syncs photos only for rooms where server photo count exceeds local count.
      * Much faster than full photo sync when only a few rooms have new photos.
+     *
+     * Unlike the old implementation that skipped entire rooms with pending deletions,
+     * this now syncs those rooms but filters out specific photos pending deletion.
+     * This allows new photos from other clients to be fetched while preventing
+     * resurrection of locally deleted photos.
      */
     suspend fun syncRoomsWithMismatchedPhotoCounts(projectId: Long): Int = withContext(ioDispatcher) {
         val rooms = localDataService.getRoomsByProject(projectId)
@@ -1060,17 +1068,9 @@ class OfflineSyncRepository(
         // Get local photo counts in a single grouped query (avoids N+1)
         val localPhotoCounts = localDataService.getPhotoCountsByProject(projectId)
 
-        // Get rooms with pending photo deletions to avoid resurrecting deleted photos
-        val roomsWithPendingDeletions = localDataService.getRoomIdsWithPendingPhotoDeletions(projectId)
-
         // Find rooms where server says more photos than we have locally
         val roomsToSync = rooms.filter { room ->
             val roomKey = room.serverId ?: room.roomId
-            // Skip rooms with pending deletions - syncing could resurrect deleted photos
-            if (roomsWithPendingDeletions.contains(roomKey)) {
-                Log.d("API", "📷 [syncMismatched] Skipping room ${room.title} - has pending photo deletions")
-                return@filter false
-            }
             val serverCount = room.photoCount ?: 0
             val localCount = localPhotoCounts[roomKey] ?: 0
             serverCount > localCount
@@ -1086,13 +1086,22 @@ class OfflineSyncRepository(
         for (room in roomsToSync) {
             val roomServerId = room.serverId ?: continue
             try {
+                // Get server IDs of photos pending local deletion for this room.
+                // These will be filtered out during sync to prevent resurrection,
+                // while still allowing new photos from other clients to be fetched.
+                val pendingDeletionServerIds = localDataService.getPendingPhotoServerIdsForRoom(roomServerId)
+                if (pendingDeletionServerIds.isNotEmpty()) {
+                    Log.d("API", "📷 [syncMismatched] Room ${room.title} has ${pendingDeletionServerIds.size} photos pending deletion - will filter during sync")
+                }
+
                 // Use ignoreCheckpoint=true to fetch all photos, not just since last checkpoint.
                 // This handles cases where local photos were lost due to partial sync or DB reset.
                 val result = photoSyncService.syncRoomPhotos(
                     projectId = projectId,
                     roomId = roomServerId,
                     ignoreCheckpoint = true,
-                    source = "mismatch-sync"
+                    source = "mismatch-sync",
+                    excludedPhotoServerIds = pendingDeletionServerIds
                 )
                 if (result.success) {
                     syncedCount++

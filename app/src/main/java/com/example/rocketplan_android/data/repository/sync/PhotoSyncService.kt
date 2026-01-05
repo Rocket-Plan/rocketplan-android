@@ -112,12 +112,14 @@ class PhotoSyncService(
      * Syncs photos for a single room. Returns SyncResult for composability.
      *
      * @param source Optional caller identifier for telemetry (e.g., "RoomDetailFragment")
+     * @param excludedPhotoServerIds Server IDs of photos pending local deletion to skip during sync
      */
     suspend fun syncRoomPhotos(
         projectId: Long,
         roomId: Long,
         ignoreCheckpoint: Boolean = false,
-        source: String? = null
+        source: String? = null,
+        excludedPhotoServerIds: Set<Long> = emptySet()
     ): SyncResult = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
         val checkpointKey = roomPhotosKey(roomId)
@@ -171,7 +173,7 @@ class PhotoSyncService(
             return@withContext emptyResult
         }
 
-        if (persistPhotos(photos, defaultRoomId = roomId, defaultProjectId = projectId)) {
+        if (persistPhotos(photos, defaultRoomId = roomId, defaultProjectId = projectId, excludedPhotoServerIds = excludedPhotoServerIds)) {
             Log.d(TAG, "💾 [syncRoomPhotos] Saved ${photos.size} photos for room $roomId")
             photoCacheScheduler.schedulePrefetch()
         }
@@ -419,7 +421,8 @@ class PhotoSyncService(
     internal suspend fun persistPhotos(
         photos: List<PhotoDto>,
         defaultRoomId: Long? = null,
-        defaultProjectId: Long? = null
+        defaultProjectId: Long? = null,
+        excludedPhotoServerIds: Set<Long> = emptySet()
     ): Boolean {
         if (photos.isEmpty()) {
             return false
@@ -427,8 +430,15 @@ class PhotoSyncService(
 
         val entities = mutableListOf<OfflinePhotoEntity>()
         var mismatchCount = 0
+        var skippedPendingDeletionCount = 0
         val roomsNeedingSnapshotRefresh = mutableMapOf<Long, Int>()
         for (photo in photos) {
+            // Skip photos that are pending local deletion to avoid resurrecting them
+            if (photo.id in excludedPhotoServerIds) {
+                skippedPendingDeletionCount++
+                continue
+            }
+
             val existing = localDataService.getPhotoByServerId(photo.id)
             val preservedRoom = existing?.roomId
 
@@ -463,6 +473,9 @@ class PhotoSyncService(
 
         if (mismatchCount > 0) {
             Log.w(TAG, "⚠️ [persistPhotos] Fixed $mismatchCount photos with mismatched projectId")
+        }
+        if (skippedPendingDeletionCount > 0) {
+            Log.d(TAG, "🗑️ [persistPhotos] Skipped $skippedPendingDeletionCount photos pending local deletion")
         }
 
         localDataService.savePhotos(entities)
