@@ -220,7 +220,7 @@ class OfflineSyncRepository(
         Log.d("API", "🗑️ [deleteProject] Starting delete for local project ID: $localProjectId")
 
         // Get the project to retrieve its server ID
-        val project = localDataService.getAllProjects().firstOrNull { it.projectId == localProjectId }
+        val project = localDataService.getProject(localProjectId)
             ?: run {
                 Log.e("API", "❌ [deleteProject] Project not found locally: $localProjectId")
                 throw Exception("Project not found locally")
@@ -415,7 +415,7 @@ class OfflineSyncRepository(
                 room.toEntity(existing, projectId = detail.id, locationId = room.locationId)
             }
             localDataService.saveRooms(resolvedRooms)
-            itemCount += rooms.size
+            itemCount += resolvedRooms.size
         }
         ensureActive()
 
@@ -535,7 +535,7 @@ class OfflineSyncRepository(
 
         // 5. Albums (needed for photo organization)
         runCatching {
-            fetchAllPages { page -> api.getProjectAlbums(projectId, page) }
+            fetchAllPages { page -> api.getProjectAlbums(serverProjectId, page) }
         }.onSuccess { albums ->
             val albumEntities = albums.map { it.toEntity(defaultProjectId = projectId) }
             localDataService.saveAlbums(albumEntities)
@@ -572,8 +572,7 @@ class OfflineSyncRepository(
             companyId = companyId,
             statusValue = request.projectStatusId.toString(),
             projectAddress = projectAddress,
-            addressRequest = addressReq,
-            idempotencyKey = idempotencyKey
+            addressRequest = addressReq
         )
         syncQueueProcessor.enqueueProjectCreation(
             project = pending,
@@ -616,7 +615,7 @@ class OfflineSyncRepository(
         runCatching {
             val project = localDataService.getProject(projectId)
                 ?: throw IllegalStateException("Project not found locally")
-            if (project.status.equals(status.apiValue, ignoreCase = true)) {
+            if (project.status?.equals(status.apiValue, ignoreCase = true) == true) {
                 return@runCatching project
             }
             val lockUpdatedAt = project.updatedAt.toApiTimestamp()
@@ -1135,6 +1134,7 @@ class OfflineSyncRepository(
         val results = mutableListOf<T>()
         var page = 1
         while (true) {
+            coroutineContext.ensureActive()
             val response = fetch(page)
             results += response.data
             val current = response.meta?.currentPage ?: page
@@ -1165,8 +1165,7 @@ class OfflineSyncRepository(
         companyId: Long,
         statusValue: String,
         projectAddress: ProjectAddressDto?,
-        addressRequest: CreateAddressRequest,
-        idempotencyKey: String? = null
+        addressRequest: CreateAddressRequest
     ): OfflineProjectEntity {
         val timestamp = now()
         val localId = -System.currentTimeMillis()
