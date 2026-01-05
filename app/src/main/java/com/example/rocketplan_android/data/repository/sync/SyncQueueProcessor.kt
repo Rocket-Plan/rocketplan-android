@@ -56,6 +56,7 @@ import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.util.parseTargetMoisture
 import com.google.gson.Gson
 import retrofit2.HttpException
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -1544,6 +1545,25 @@ class SyncQueueProcessor(
         if (!isNetworkAvailable()) {
             Log.d(TAG, "⏭️ [handlePendingRoomCreation] No network available; will retry later")
             return OperationOutcome.SKIP
+        }
+
+        // Verify parent project exists on server (not soft-deleted)
+        val projectExists = runCatching { api.getProjectDetail(projectServerId) }
+            .onFailure { if (it is CancellationException) throw it }
+            .isSuccess
+        if (!projectExists) {
+            Log.e(TAG, "❌ [handlePendingRoomCreation] Parent project $projectServerId not found or deleted; dropping room creation for '${payload.roomName}'")
+            remoteLogger?.log(
+                LogLevel.ERROR,
+                TAG,
+                "Room creation failed: parent project deleted",
+                mapOf(
+                    "roomName" to payload.roomName,
+                    "projectServerId" to projectServerId.toString(),
+                    "localProjectId" to payload.projectId.toString()
+                )
+            )
+            return OperationOutcome.DROP
         }
 
         val finalLevelId = levelServerId
