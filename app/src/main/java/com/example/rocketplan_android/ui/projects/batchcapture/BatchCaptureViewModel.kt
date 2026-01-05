@@ -308,6 +308,27 @@ class BatchCaptureViewModel(
         }
     }
 
+    /**
+     * Log camera errors to remote logging for diagnostics.
+     */
+    fun logCameraError(errorType: String, errorMessage: String?, exception: Throwable? = null) {
+        remoteLogger.log(
+            level = LogLevel.ERROR,
+            tag = TAG,
+            message = "Camera error: $errorType",
+            metadata = buildMap {
+                put("error_type", errorType)
+                put("error_message", errorMessage ?: "unknown")
+                put("project_id", projectId.toString())
+                put("room_id", roomId.toString())
+                exception?.let {
+                    put("exception_class", it.javaClass.simpleName)
+                    put("exception_message", it.message ?: "no message")
+                }
+            }
+        )
+    }
+
     override fun onCleared() {
         super.onCleared()
         // Don't delete files here - they may still be needed for upload

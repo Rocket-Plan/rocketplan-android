@@ -463,6 +463,7 @@ class BatchCaptureFragment : Fragment() {
                             is FlirState.Error -> {
                                 flirStatusText.text = state.message
                                 flirReady = false
+                                viewModel.logCameraError("flir_state_error", state.message)
                             }
                         }
                     }
@@ -470,6 +471,7 @@ class BatchCaptureFragment : Fragment() {
 
                 launch {
                     flirController.errors.collect { message ->
+                        viewModel.logCameraError("flir_error", message)
                         Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
                     }
                 }
@@ -645,6 +647,7 @@ class BatchCaptureFragment : Fragment() {
                 bindCameraUseCases()
             } catch (e: Exception) {
                 Log.e(TAG, "Camera initialization failed", e)
+                viewModel.logCameraError("initialization_failed", e.message, e)
                 Toast.makeText(
                     context,
                     getString(R.string.camera_error, e.message),
@@ -684,6 +687,7 @@ class BatchCaptureFragment : Fragment() {
             Log.d(TAG, "Camera bound successfully")
         } catch (e: Exception) {
             Log.e(TAG, "Camera binding failed", e)
+            viewModel.logCameraError("binding_failed", e.message, e)
             Toast.makeText(
                 context,
                 getString(R.string.camera_error, e.message),
@@ -728,6 +732,7 @@ class BatchCaptureFragment : Fragment() {
 
                 override fun onError(exception: ImageCaptureException) {
                     Log.e(TAG, "Photo capture failed", exception)
+                    viewModel.logCameraError("capture_failed", exception.message, exception)
                     photoFile.delete()
                     val ctx = context ?: return
                     Toast.makeText(
