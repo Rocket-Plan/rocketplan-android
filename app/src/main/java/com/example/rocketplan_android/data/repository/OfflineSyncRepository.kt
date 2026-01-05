@@ -1174,8 +1174,11 @@ class OfflineSyncRepository(
         addressRequest: CreateAddressRequest
     ): OfflineProjectEntity {
         val timestamp = now()
-        // Use nanoTime XOR'd with random bits to avoid collision if called within same millisecond
-        val localId = -(System.nanoTime() xor (Math.random() * Long.MAX_VALUE).toLong()).coerceAtLeast(1)
+        // Generate unique negative ID using nanoTime XOR'd with random bits
+        val xorResult = System.nanoTime() xor (Math.random() * Long.MAX_VALUE).toLong()
+        // Take absolute value first (handle Long.MIN_VALUE overflow), ensure at least 1, then negate
+        val absValue = if (xorResult == Long.MIN_VALUE) Long.MAX_VALUE else kotlin.math.abs(xorResult)
+        val localId = -absValue.coerceAtLeast(1)
         val resolvedTitle = listOfNotNull(
             projectAddress?.address?.takeIf { it.isNotBlank() },
             addressRequest.address?.takeIf { it.isNotBlank() },
