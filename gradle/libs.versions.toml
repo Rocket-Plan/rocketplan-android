@@ -35,7 +35,7 @@ pusher = "2.4.4"
 camerax = "1.4.0"
 playServicesMaps = "18.2.0"
 playServicesLocation = "21.0.1"
-sentry = "7.16.0"
+sentry = "8.14.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }

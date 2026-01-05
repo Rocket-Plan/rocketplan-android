@@ -200,6 +200,28 @@ dependencies {
     // Core library desugaring for java.time API support on Android 7+
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
+    // Security vulnerability fixes for transitive dependencies
+    constraints {
+        implementation("com.google.protobuf:protobuf-java:3.25.5") {
+            because("CVE-2024-7254: StackOverflow vulnerability in Protocol Buffers")
+        }
+        implementation("commons-io:commons-io:2.14.0") {
+            because("CVE-2024-47554: DoS vulnerability in XmlStreamReader")
+        }
+        implementation("io.netty:netty-codec-http2:4.1.124.Final") {
+            because("CVE-2025-55163, GHSA-xpw8-rcwv-8f8p: HTTP/2 DDoS vulnerabilities")
+        }
+        implementation("io.netty:netty-handler:4.1.124.Final") {
+            because("CVE-2025-24970: SSL packet validation vulnerability")
+        }
+        implementation("io.netty:netty-codec-http:4.1.124.Final") {
+            because("Align with netty-handler security update")
+        }
+        implementation("io.netty:netty-handler-proxy:4.1.124.Final") {
+            because("Align with netty-handler security update")
+        }
+    }
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
