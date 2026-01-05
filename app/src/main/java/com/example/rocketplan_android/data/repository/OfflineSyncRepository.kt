@@ -1047,6 +1047,66 @@ class OfflineSyncRepository(
         photoSyncService.refreshRoomPhotos(projectId, roomId)
 
     /**
+     * Syncs photos only for rooms where server photo count exceeds local count.
+     * Much faster than full photo sync when only a few rooms have new photos.
+     */
+    suspend fun syncRoomsWithMismatchedPhotoCounts(projectId: Long): Int = withContext(ioDispatcher) {
+        val rooms = localDataService.getRoomsByProject(projectId)
+        if (rooms.isEmpty()) {
+            Log.d("API", "📷 [syncMismatched] No rooms for project $projectId")
+            return@withContext 0
+        }
+
+        // Get local photo counts in a single grouped query (avoids N+1)
+        val localPhotoCounts = localDataService.getPhotoCountsByProject(projectId)
+
+        // Get rooms with pending photo deletions to avoid resurrecting deleted photos
+        val roomsWithPendingDeletions = localDataService.getRoomIdsWithPendingPhotoDeletions(projectId)
+
+        // Find rooms where server says more photos than we have locally
+        val roomsToSync = rooms.filter { room ->
+            val roomKey = room.serverId ?: room.roomId
+            // Skip rooms with pending deletions - syncing could resurrect deleted photos
+            if (roomsWithPendingDeletions.contains(roomKey)) {
+                Log.d("API", "📷 [syncMismatched] Skipping room ${room.title} - has pending photo deletions")
+                return@filter false
+            }
+            val serverCount = room.photoCount ?: 0
+            val localCount = localPhotoCounts[roomKey] ?: 0
+            serverCount > localCount
+        }
+
+        if (roomsToSync.isEmpty()) {
+            Log.d("API", "📷 [syncMismatched] All rooms have matching photo counts for project $projectId")
+            return@withContext 0
+        }
+
+        Log.d("API", "📷 [syncMismatched] Syncing ${roomsToSync.size} rooms with photo count mismatches")
+        var syncedCount = 0
+        for (room in roomsToSync) {
+            val roomServerId = room.serverId ?: continue
+            try {
+                // Use ignoreCheckpoint=true to fetch all photos, not just since last checkpoint.
+                // This handles cases where local photos were lost due to partial sync or DB reset.
+                val result = photoSyncService.syncRoomPhotos(
+                    projectId = projectId,
+                    roomId = roomServerId,
+                    ignoreCheckpoint = true,
+                    source = "mismatch-sync"
+                )
+                if (result.success) {
+                    syncedCount++
+                    Log.d("API", "📷 [syncMismatched] Synced room ${room.title} (${room.serverId})")
+                }
+            } catch (e: Exception) {
+                Log.w("API", "📷 [syncMismatched] Failed to sync room ${room.title}", e)
+            }
+        }
+        Log.d("API", "📷 [syncMismatched] Completed: synced $syncedCount/${roomsToSync.size} rooms")
+        syncedCount
+    }
+
+    /**
      * Syncs project-level photos (floor, location, unit).
      * This is typically done in the background as it's not needed for room navigation.
      */

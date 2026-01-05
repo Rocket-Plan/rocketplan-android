@@ -134,6 +134,9 @@ class LocalDataService private constructor(
     fun observeRooms(projectId: Long): Flow<List<OfflineRoomEntity>> =
         dao.observeRoomsForProject(projectId)
 
+    suspend fun getRoomsByProject(projectId: Long): List<OfflineRoomEntity> =
+        withContext(ioDispatcher) { dao.getRoomsForProject(projectId) }
+
     fun observeRoomTypes(propertyServerId: Long, filterType: String): Flow<List<OfflineRoomTypeEntity>> =
         dao.observeRoomTypes(propertyServerId, filterType)
 
@@ -281,6 +284,19 @@ class LocalDataService private constructor(
 
     fun observePhotoCountForRoom(roomId: Long): Flow<Int> =
         dao.observePhotoCountForRoom(roomId)
+
+    suspend fun getPhotoCountForRoom(roomId: Long): Int =
+        dao.getPhotoCountForRoom(roomId)
+
+    suspend fun getPhotoCountsByProject(projectId: Long): Map<Long, Int> =
+        withContext(ioDispatcher) {
+            dao.getPhotoCountsByProject(projectId).associate { it.roomId to it.count }
+        }
+
+    suspend fun getRoomIdsWithPendingPhotoDeletions(projectId: Long): Set<Long> =
+        withContext(ioDispatcher) {
+            dao.getRoomIdsWithPendingPhotoDeletions(projectId).toSet()
+        }
 
     fun pagedPhotosForRoom(
         roomId: Long,

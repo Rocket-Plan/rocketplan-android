@@ -115,6 +115,10 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_rooms WHERE projectId = :projectId AND isDeleted = 0 ORDER BY title")
     fun observeRoomsForProject(projectId: Long): Flow<List<OfflineRoomEntity>>
+
+    @Query("SELECT * FROM offline_rooms WHERE projectId = :projectId AND isDeleted = 0 ORDER BY title")
+    suspend fun getRoomsForProject(projectId: Long): List<OfflineRoomEntity>
+
     @Query("SELECT roomId FROM offline_rooms WHERE projectId = :projectId")
     suspend fun getRoomIdsForProject(projectId: Long): List<Long>
 
@@ -566,6 +570,34 @@ interface OfflineDao {
 
     @Query("SELECT COUNT(*) FROM offline_photos WHERE roomId = :roomId AND isDeleted = 0")
     fun observePhotoCountForRoom(roomId: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM offline_photos WHERE roomId = :roomId AND isDeleted = 0")
+    suspend fun getPhotoCountForRoom(roomId: Long): Int
+
+    /**
+     * Get photo counts for all rooms in a project in a single query.
+     * More efficient than N+1 individual count queries.
+     */
+    @Query("""
+        SELECT roomId, COUNT(*) as count
+        FROM offline_photos
+        WHERE projectId = :projectId AND isDeleted = 0 AND roomId IS NOT NULL
+        GROUP BY roomId
+    """)
+    suspend fun getPhotoCountsByProject(projectId: Long): List<RoomPhotoCount>
+
+    /**
+     * Get room IDs that have pending photo deletions (photos marked isDeleted=1 but not yet synced).
+     * Used to avoid resurrecting deleted photos during mismatch sync.
+     */
+    @Query("""
+        SELECT DISTINCT roomId
+        FROM offline_photos
+        WHERE projectId = :projectId AND isDeleted = 1 AND roomId IS NOT NULL
+    """)
+    suspend fun getRoomIdsWithPendingPhotoDeletions(projectId: Long): List<Long>
+
+    data class RoomPhotoCount(val roomId: Long, val count: Int)
     // endregion
 
     // region Albums

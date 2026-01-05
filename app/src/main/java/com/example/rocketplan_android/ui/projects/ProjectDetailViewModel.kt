@@ -158,13 +158,18 @@ class ProjectDetailViewModel(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                Log.d("ProjectDetailVM", "🔄 Pull-to-refresh project $projectId (rooms + thumbnails only)")
+                Log.d("ProjectDetailVM", "🔄 Pull-to-refresh project $projectId (rooms + targeted photo sync)")
                 val results = offlineSyncRepository.syncProjectGraph(projectId, skipPhotos = true, source = "ProjectDetailFragment")
                 val essentials = results.firstOrNull { it.segment == SyncSegment.PROJECT_ESSENTIALS }
                 if (essentials == null || !essentials.success) {
                     Log.w("ProjectDetailVM", "⚠️ Project refresh incomplete for project $projectId; essentials=$essentials")
                 } else {
-                    Log.d("ProjectDetailVM", "✅ Project refresh complete for project $projectId; rooms updated")
+                    Log.d("ProjectDetailVM", "✅ Project essentials synced for project $projectId; checking photo mismatches")
+                    // Sync only rooms with photo count mismatches (much faster than full sync)
+                    val syncedRooms = offlineSyncRepository.syncRoomsWithMismatchedPhotoCounts(projectId)
+                    if (syncedRooms > 0) {
+                        Log.d("ProjectDetailVM", "📷 Synced photos for $syncedRooms rooms with count mismatches")
+                    }
                 }
             } catch (t: Throwable) {
                 Log.e("ProjectDetailVM", "❌ Failed to refresh project $projectId via pull-to-refresh", t)
