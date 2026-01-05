@@ -58,8 +58,6 @@ import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
-import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
-import com.example.rocketplan_android.data.model.offline.RestoreRecordsResponse
 import com.example.rocketplan_android.data.model.offline.OfflineRoomTypeCatalogResponse
 
 interface OfflineSyncApi {
@@ -500,9 +498,4 @@ interface OfflineSyncApi {
         @Query("since") since: String,
         @Query("types[]") types: List<String>? = null
     ): Response<DeletedRecordsResponse>
-
-    @POST("/api/sync/restore")
-    suspend fun restoreDeletedRecords(
-        @Body request: RestoreRecordsRequest
-    ): RestoreRecordsResponse
 }

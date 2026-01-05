@@ -34,7 +34,6 @@ import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
-import com.example.rocketplan_android.data.model.offline.RestoreRecordsRequest
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
@@ -1550,14 +1549,6 @@ class SyncQueueProcessor(
         val finalLevelId = levelServerId
         val finalLocationId = locationServerId
 
-        restoreDeletedParents(
-            mapOf(
-                "projects" to listOf(projectServerId),
-                "locations" to listOf(finalLocationId),
-                "levels" to listOf(finalLevelId)
-            )
-        )
-
         val payloadRoomUuid = payload.roomUuid?.takeIf { it.isNotBlank() }
         val idempotencyKey = payload.idempotencyKey
             ?: payloadRoomUuid
@@ -2433,26 +2424,6 @@ class SyncQueueProcessor(
         )
         localDataService.saveMaterials(listOf(updated))
         return updated
-    }
-
-    private suspend fun restoreDeletedParents(targets: Map<String, List<Long>>) {
-        targets.forEach { (type, ids) ->
-            val filteredIds = ids.filter { it > 0 }
-            if (filteredIds.isEmpty()) return@forEach
-
-            runCatching {
-                api.restoreDeletedRecords(RestoreRecordsRequest(type = type, ids = filteredIds))
-            }
-                .onSuccess { response ->
-                    Log.d(
-                        TAG,
-                        "♻️ [syncRestore] type=$type restored=${response.restored.size}, already_restored=${response.alreadyRestored.size}, not_found=${response.notFound.size}, unauthorized=${response.unauthorized.size}"
-                    )
-                }
-                .onFailure { error ->
-                    Log.w(TAG, "⚠️ [syncRestore] Failed to restore $type ids=${filteredIds.joinToString()}", error)
-                }
-        }
     }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
