@@ -42,6 +42,7 @@ import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import com.example.rocketplan_android.util.DateUtils
 import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -230,9 +231,11 @@ class OfflineSyncRepository(
 
         val lockUpdatedAt = project.updatedAt.toApiTimestamp()
 
+        // Cascade delete child entities and clear sync ops (runs in transaction)
         localDataService.deleteProject(localProjectId)
-        val markedProject = localDataService.getProject(localProjectId) ?: project
-        val marked = markedProject.copy(
+
+        // Use the original project data to avoid race condition from re-fetching
+        val marked = project.copy(
             isDeleted = true,
             isDirty = true,
             syncStatus = SyncStatus.PENDING,
@@ -240,10 +243,10 @@ class OfflineSyncRepository(
         )
         localDataService.saveProjects(listOf(marked))
 
-        val serverId = marked.serverId
+        val serverId = project.serverId
         if (serverId == null) {
-            localDataService.removeSyncOperationsForEntity(entityType = "project", entityId = marked.projectId)
-            logLocalDeletion("project", marked.projectId, marked.uuid)
+            localDataService.removeSyncOperationsForEntity(entityType = "project", entityId = project.projectId)
+            logLocalDeletion("project", project.projectId, project.uuid)
             val cleaned = marked.copy(
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
@@ -536,6 +539,9 @@ class OfflineSyncRepository(
         // 5. Albums (needed for photo organization)
         runCatching {
             fetchAllPages { page -> api.getProjectAlbums(serverProjectId, page) }
+        }.onFailure { error ->
+            // Rethrow CancellationException to properly propagate coroutine cancellation
+            if (error is CancellationException) throw error
         }.onSuccess { albums ->
             val albumEntities = albums.map { it.toEntity(defaultProjectId = projectId) }
             localDataService.saveAlbums(albumEntities)
@@ -1168,7 +1174,8 @@ class OfflineSyncRepository(
         addressRequest: CreateAddressRequest
     ): OfflineProjectEntity {
         val timestamp = now()
-        val localId = -System.currentTimeMillis()
+        // Use nanoTime XOR'd with random bits to avoid collision if called within same millisecond
+        val localId = -(System.nanoTime() xor (Math.random() * Long.MAX_VALUE).toLong()).coerceAtLeast(1)
         val resolvedTitle = listOfNotNull(
             projectAddress?.address?.takeIf { it.isNotBlank() },
             addressRequest.address?.takeIf { it.isNotBlank() },
