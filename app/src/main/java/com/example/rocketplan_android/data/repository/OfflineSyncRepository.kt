@@ -54,6 +54,7 @@ import com.example.rocketplan_android.util.UuidUtils
 
 // Status value for locally-created projects not yet synced to server
 private const val OFFLINE_PENDING_STATUS = "pending_offline"
+private const val TAG = "OfflineSyncRepo"
 
 data class PhotoDeletionResult(val synced: Boolean)
 data class RoomDeletionResult(val synced: Boolean)
@@ -192,9 +193,14 @@ class OfflineSyncRepository(
 
         // Set callback to refresh room photos after successful assembly upload
         manager.onAssemblyUploadCompleted = { projectId, roomId ->
-            Log.d("OfflineSyncRepo", "📸 Assembly upload completed, refreshing photos for room $roomId")
+            Log.d(TAG, "📸 Assembly upload completed, refreshing photos for room $roomId")
             photoSyncService.refreshRoomPhotos(projectId, roomId)
         }
+    }
+
+    fun detachImageProcessorQueueManager() {
+        imageProcessorQueueManager?.onAssemblyUploadCompleted = null
+        imageProcessorQueueManager = null
     }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
@@ -481,6 +487,7 @@ class OfflineSyncRepository(
             val propertyId = property.id
             val existingLocationData = localDataService.getLatestLocationUpdate(projectId = projectId)
             val levels = runCatching { api.getPropertyLevels(propertyId) }
+                .onFailure { if (it is CancellationException) throw it }
                 .getOrNull()?.data ?: emptyList()
 
             val updatedSinceParam = existingLocationData?.let { DateUtils.formatApiDate(it) }
@@ -497,6 +504,7 @@ class OfflineSyncRepository(
                     updatedSince = updatedSinceParam
                 )
             }
+                .onFailure { if (it is CancellationException) throw it }
                 .getOrNull()?.data ?: emptyList()
 
             Log.d("API", "✅ [FAST] Received ${levels.size} levels + ${nested.size} nested locations for property $propertyId")
@@ -518,10 +526,10 @@ class OfflineSyncRepository(
             val rooms = roomSyncService.fetchRoomsForLocation(locationId)
             if (rooms.isNotEmpty()) {
                 val resolvedRooms = rooms.map { room ->
-                val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
-                room.toEntity(
-                    existing = existing,
-                    projectId = projectId,
+                    val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
+                    room.toEntity(
+                        existing = existing,
+                        projectId = projectId,
                         locationId = room.locationId ?: locationId
                     )
                 }
@@ -533,7 +541,10 @@ class OfflineSyncRepository(
 
         // 4. Relink room-scoped data (ensures foreign keys are correct)
         runCatching { localDataService.relinkRoomScopedData() }
-            .onFailure { Log.e("API", "❌ [syncProjectEssentials] Relink failed", it) }
+            .onFailure { error ->
+                if (error is CancellationException) throw error
+                Log.e("API", "❌ [syncProjectEssentials] Relink failed", error)
+            }
         ensureActive()
 
         // 5. Albums (needed for photo organization)
@@ -1089,6 +1100,7 @@ class OfflineSyncRepository(
         Log.d("API", "📷 [syncMismatched] Syncing ${roomsToSync.size} rooms with photo count mismatches")
         var syncedCount = 0
         for (room in roomsToSync) {
+            ensureActive()
             val roomServerId = room.serverId ?: continue
             try {
                 // Get server IDs of photos pending local deletion for this room.
