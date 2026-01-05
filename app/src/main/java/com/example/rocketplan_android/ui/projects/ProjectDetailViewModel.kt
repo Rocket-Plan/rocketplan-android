@@ -40,6 +40,7 @@ class ProjectDetailViewModel(
     private val localDataService = rocketPlanApp.localDataService
     private val syncQueueManager = rocketPlanApp.syncQueueManager
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val imageProcessorDao = rocketPlanApp.imageProcessorDao
 
     private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
     val uiState: StateFlow<ProjectDetailUiState> = _uiState
@@ -71,14 +72,16 @@ class ProjectDetailViewModel(
                     syncQueueManager.photoSyncingProjects,
                     syncQueueManager.projectSyncingProjects,
                     localDataService.observeDamages(projectId),
-                    localDataService.observeWorkScopes(projectId)
-                ) { photoSyncingProjects, projectSyncingProjects, damages, workScopes ->
-                    SyncExtras(photoSyncingProjects, projectSyncingProjects, damages, workScopes)
+                    localDataService.observeWorkScopes(projectId),
+                    imageProcessorDao.observePendingPhotoCountsByProject(projectId)
+                ) { photoSyncingProjects, projectSyncingProjects, damages, workScopes, pendingCounts ->
+                    val pendingCountsMap = pendingCounts.associate { it.roomId to it.pendingCount }
+                    SyncExtras(photoSyncingProjects, projectSyncingProjects, damages, workScopes, pendingCountsMap)
                 }
             ) { data, extra -> data to extra }
             .mapLatest { (data, extra) ->
                 val (projects, rooms, photos, notes, albums) = data
-                val (photoSyncingProjects, projectSyncingProjects, damages, workScopes) = extra
+                val (photoSyncingProjects, projectSyncingProjects, damages, workScopes, pendingPhotoCounts) = extra
 
                 Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
                 val project = projects.firstOrNull { it.projectId == projectId }
@@ -97,7 +100,8 @@ class ProjectDetailViewModel(
                         photos = photos,
                         damages = damages,
                         workScopes = workScopes,
-                        isProjectPhotoSyncing = isProjectPhotoSyncing
+                        isProjectPhotoSyncing = isProjectPhotoSyncing,
+                        pendingPhotoCounts = pendingPhotoCounts
                     )
                     val damageTotal = sections.sumOf { section -> section.rooms.sumOf { it.damageCount } }
                     val header = project.toHeader(notes.size, damageTotal)
@@ -207,7 +211,8 @@ class ProjectDetailViewModel(
         photos: List<OfflinePhotoEntity>,
         damages: List<OfflineDamageEntity>,
         workScopes: List<OfflineWorkScopeEntity>,
-        isProjectPhotoSyncing: Boolean
+        isProjectPhotoSyncing: Boolean,
+        pendingPhotoCounts: Map<Long, Int> = emptyMap()
     ): List<RoomLevelSection> {
         val visibleRooms = filterNot { room ->
             room.roomId == 0L
@@ -275,11 +280,16 @@ class ProjectDetailViewModel(
                             typeId = room.roomTypeId,
                             iconName = room.roomType ?: room.title
                         )
+                        // Look up pending photo count using both local and server IDs
+                        val pendingCount = relatedRoomIds.sumOf { id ->
+                            pendingPhotoCounts[id] ?: 0
+                        }
                         RoomCard(
                             roomId = roomKey,
                             title = room.title,
                             level = level,
                             photoCount = resolvedPhotoCount,
+                            pendingPhotoCount = pendingCount,
                             damageCount = damageCount,
                             scopeTotal = scopeTotal,
                             thumbnailUrl = resolvedThumbnail,
@@ -381,6 +391,7 @@ data class RoomCard(
     val title: String,
     val level: String,
     val photoCount: Int,
+    val pendingPhotoCount: Int = 0,
     val damageCount: Int,
     val scopeTotal: Double,
     val thumbnailUrl: String?,
@@ -444,5 +455,6 @@ private data class SyncExtras(
     val photoSyncingProjects: Set<Long>,
     val projectSyncingProjects: Set<Long>,
     val damages: List<OfflineDamageEntity>,
-    val workScopes: List<OfflineWorkScopeEntity>
+    val workScopes: List<OfflineWorkScopeEntity>,
+    val pendingPhotoCounts: Map<Long, Int> = emptyMap()
 )

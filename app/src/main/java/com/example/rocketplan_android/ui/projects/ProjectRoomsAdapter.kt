@@ -150,7 +150,9 @@ class ProjectRoomsAdapter(
             roomScopeTotal.isVisible = false
             roomTypeIcon.isVisible = false
 
-            val hasAnyPhotos = room.photoCount > 0 || !room.thumbnailUrl.isNullOrBlank()
+            val hasPendingPhotos = room.pendingPhotoCount > 0
+            val totalPhotoCount = room.photoCount + room.pendingPhotoCount
+            val hasAnyPhotos = totalPhotoCount > 0 || !room.thumbnailUrl.isNullOrBlank()
             if (!hasAnyPhotos && !room.isLoadingPhotos) {
                 // Empty state: mimic iOS card with icon over light background
                 gradientOverlay.isVisible = false
@@ -166,12 +168,25 @@ class ProjectRoomsAdapter(
             } else {
                 roomIconContainer.isVisible = false
                 gradientOverlay.isVisible = true
-                photoCount.text = itemView.resources.getQuantityString(
-                    R.plurals.photo_count,
-                    room.photoCount,
-                    room.photoCount
-                )
-                spinner.isVisible = room.isLoadingPhotos
+                // Show total count including pending, with indicator if pending
+                val displayCount = if (hasPendingPhotos) totalPhotoCount else room.photoCount
+                val countText = if (hasPendingPhotos) {
+                    // Show pending indicator with count
+                    itemView.resources.getQuantityString(
+                        R.plurals.photo_count,
+                        displayCount,
+                        displayCount
+                    ) + " ⏳"
+                } else {
+                    itemView.resources.getQuantityString(
+                        R.plurals.photo_count,
+                        displayCount,
+                        displayCount
+                    )
+                }
+                photoCount.text = countText
+                // Show spinner for loading OR pending uploads
+                spinner.isVisible = room.isLoadingPhotos || hasPendingPhotos
 
                 val needsReload = previousRoom?.let { hasVisualDifferences(it, room) || hasModeChanged } ?: true
                 if (needsReload) {
@@ -189,11 +204,21 @@ class ProjectRoomsAdapter(
                 }
             }
             thumbnail.isVisible = true
-            photoCount.text = itemView.resources.getQuantityString(
-                R.plurals.photo_count,
-                room.photoCount,
-                room.photoCount
-            )
+            // Final photo count display (handles both states)
+            val finalDisplayCount = if (hasPendingPhotos) totalPhotoCount else room.photoCount
+            photoCount.text = if (hasPendingPhotos) {
+                itemView.resources.getQuantityString(
+                    R.plurals.photo_count,
+                    finalDisplayCount,
+                    finalDisplayCount
+                ) + " ⏳"
+            } else {
+                itemView.resources.getQuantityString(
+                    R.plurals.photo_count,
+                    finalDisplayCount,
+                    finalDisplayCount
+                )
+            }
             itemView.setOnClickListener { onRoomClick(room) }
         }
 

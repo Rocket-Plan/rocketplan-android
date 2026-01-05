@@ -188,6 +188,12 @@ class OfflineSyncRepository(
 
     fun attachImageProcessorQueueManager(manager: ImageProcessorQueueManager) {
         imageProcessorQueueManager = manager
+
+        // Set callback to refresh room photos after successful assembly upload
+        manager.onAssemblyUploadCompleted = { projectId, roomId ->
+            Log.d("OfflineSyncRepo", "📸 Assembly upload completed, refreshing photos for room $roomId")
+            photoSyncService.refreshRoomPhotos(projectId, roomId)
+        }
     }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {

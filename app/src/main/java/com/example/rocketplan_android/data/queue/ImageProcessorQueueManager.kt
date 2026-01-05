@@ -76,6 +76,12 @@ class ImageProcessorQueueManager(
     }
 
     /**
+     * Callback invoked when an assembly completes successfully.
+     * Used to trigger photo sync for the room after upload.
+     */
+    var onAssemblyUploadCompleted: (suspend (projectId: Long, roomId: Long) -> Unit)? = null
+
+    /**
      * Recover assemblies left in UPLOADING state after process death.
      * Called on cold start to reset interrupted uploads.
      */
@@ -1131,6 +1137,11 @@ class ImageProcessorQueueManager(
 
         // Only clear upload data on terminal success (keep for retries on failure)
         if (success) {
+            // Get assembly info before cleanup for photo sync trigger
+            val assembly = dao.getAssembly(assemblyId)
+            val projectId = assembly?.projectId
+            val roomId = assembly?.roomId
+
             withContext(Dispatchers.IO) {
                 uploadStore.remove(assemblyId)
 
@@ -1151,6 +1162,16 @@ class ImageProcessorQueueManager(
                 }
             }
             Log.d(TAG, "🗑️ Upload data and temp files cleaned for assembly $assemblyId")
+
+            // Trigger photo sync for the room to update UI
+            if (projectId != null && roomId != null) {
+                Log.d(TAG, "🔄 Triggering photo sync for room $roomId (project $projectId)")
+                try {
+                    onAssemblyUploadCompleted?.invoke(projectId, roomId)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to trigger photo sync callback", e)
+                }
+            }
         } else {
             Log.d(TAG, "💾 Upload data and temp files preserved for retry - assembly $assemblyId")
         }

@@ -129,6 +129,23 @@ interface ImageProcessorDao {
 
     @Query("SELECT assemblyId FROM image_processor_assemblies WHERE roomId = :roomId")
     suspend fun getAssemblyIdsByRoomId(roomId: Long): List<String>
+
+    @Query(
+        """
+        SELECT a.roomId, SUM(a.totalFiles) as pendingCount
+        FROM image_processor_assemblies a
+        WHERE a.projectId = :projectId
+          AND a.status NOT IN ('completed', 'failed')
+          AND a.roomId IS NOT NULL
+        GROUP BY a.roomId
+        """
+    )
+    fun observePendingPhotoCountsByProject(projectId: Long): Flow<List<RoomPendingCount>>
+
+    data class RoomPendingCount(
+        val roomId: Long,
+        val pendingCount: Int
+    )
     // endregion
 
     // region Photo operations

@@ -564,15 +564,22 @@ class RoomSyncService(
 
         location = location ?: validated.first()
 
-        val level = validated.firstOrNull { it.serverId != null && it.serverId == location.parentLocationId }
-            ?: validated.firstOrNull { it.locationId == location.parentLocationId }
-            // If no parent found, look for any synced top-level location to use as the level
-            ?: validated.firstOrNull { it.serverId != null && it.parentLocationId == null && it.locationId != location.locationId }
-            // Also check for any pending top-level location (fully offline scenario)
-            ?: validated.firstOrNull { it.parentLocationId == null && it.locationId != location.locationId }
-            // Last resort: use location itself (valid for single-unit properties)
-            ?: location
+        // If location is already a top-level location (no parent), use it as the level directly
+        val level = if (location.parentLocationId == null) {
+            location
+        } else {
+            // Try to find the parent location
+            validated.firstOrNull { it.serverId != null && it.serverId == location.parentLocationId }
+                ?: validated.firstOrNull { it.locationId == location.parentLocationId }
+                // If parent not found, look for any synced top-level location
+                ?: validated.firstOrNull { it.serverId != null && it.parentLocationId == null }
+                // Also check for any pending top-level location (fully offline scenario)
+                ?: validated.firstOrNull { it.parentLocationId == null }
+                // Last resort: use location itself
+                ?: location
+        }
 
+        Log.d(TAG, "[resolveLocationForRoom] Resolved level='${level.title}' (id=${level.locationId}), location='${location.title}' (id=${location.locationId}, parent=${location.parentLocationId})")
         return level to location
     }
 

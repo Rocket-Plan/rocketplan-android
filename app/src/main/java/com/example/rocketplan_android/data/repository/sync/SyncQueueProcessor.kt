@@ -1571,12 +1571,15 @@ class SyncQueueProcessor(
             return OperationOutcome.SKIP
         }
 
+        // When level == location (single-level property), don't send level_id/level_uuid
+        // as the server expects these to be null when creating rooms directly on a floor
+        val isSingleLevel = payload.levelUuid == payload.locationUuid
         val request = CreateRoomRequest(
             name = payload.roomName,
             uuid = payloadRoomUuid,
             roomTypeId = resolvedRoomTypeId,
-            levelId = finalLevelId,
-            levelUuid = payload.levelUuid,
+            levelId = if (isSingleLevel) null else finalLevelId,
+            levelUuid = if (isSingleLevel) null else payload.levelUuid,
             locationUuid = payload.locationUuid,
             isSource = payload.isSource,
             idempotencyKey = idempotencyKey
@@ -1586,7 +1589,7 @@ class SyncQueueProcessor(
             Log.d(
                 TAG,
                 "📤 [handlePendingRoomCreation] createRoom payload: " +
-                    "locationId=$finalLocationId levelId=$finalLevelId " +
+                    "locationId=$finalLocationId levelId=${if (isSingleLevel) "null (single-level)" else finalLevelId} " +
                     "roomTypeId=$resolvedRoomTypeId name='${payload.roomName}' " +
                     "typeName='${payload.roomTypeName}' isSource=${payload.isSource} " +
                     "idempotencyKey=${idempotencyKey ?: "null"} projectId=${payload.projectId}"
