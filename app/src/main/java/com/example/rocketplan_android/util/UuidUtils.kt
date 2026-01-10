@@ -50,8 +50,11 @@ object UuidUtils {
                 // Same millisecond: increment counter for monotonicity
                 counter++
                 if (counter > 0xFFF) {
-                    // Counter overflow: wait for next millisecond
-                    Thread.sleep(1)
+                    // Counter overflow: spin-wait for next millisecond
+                    // Using yield instead of sleep to avoid blocking while holding lock
+                    while (System.currentTimeMillis() == lastTimestamp) {
+                        Thread.yield()
+                    }
                     lastTimestamp = System.currentTimeMillis()
                     counter = random.nextInt(0x100)
                 }
