@@ -318,10 +318,13 @@ class FlirCameraController(
                 setupError = t
                 logError("🎬 [GL Thread] glSetupPipeline failed: ${t.message}")
             } finally {
+                logDebug("🎬 [GL Thread] finally block reached, calling countDown()")
                 setupLatch.countDown()
+                logDebug("🎬 [GL Thread] countDown() complete")
             }
         }
 
+        logDebug("🎬 Waiting on setupLatch...")
         if (!setupLatch.await(1, TimeUnit.SECONDS)) {
             val message = "🎬 GL pipeline setup timed out"
             ThermalLog.e(TAG, message)
@@ -653,12 +656,17 @@ class FlirCameraController(
         }
         val holderValid = renderTarget?.isValid() ?: false
         logDebug("$reason: applying surface ${width}x$height, glReady=${cam.glIsGlContextReady()}, holderValid=$holderValid")
+        logDebug("$reason: calling glOnSurfaceChanged...")
         cam.glOnSurfaceChanged(width, height)
+        logDebug("$reason: glOnSurfaceChanged complete")
         try {
+            logDebug("$reason: calling glSetViewport...")
             cam.glSetViewport(0, 0, width, height)
+            logDebug("$reason: glSetViewport complete")
         } catch (t: Throwable) {
             logWarn("$reason: glSetViewport failed: ${t.message}")
         }
+        logDebug("$reason: applySurfaceAndViewport complete")
     }
 
     private interface GlRenderTarget {

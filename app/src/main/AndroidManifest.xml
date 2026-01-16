@@ -86,6 +86,11 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
+
+        <!-- Enable OpenCL library for FLIR SDK (required for ACE platform in SDK 2.16.0+) -->
+        <uses-native-library
+            android:name="libOpenCL.so"
+            android:required="false" />
     </application>
 
 </manifest>
