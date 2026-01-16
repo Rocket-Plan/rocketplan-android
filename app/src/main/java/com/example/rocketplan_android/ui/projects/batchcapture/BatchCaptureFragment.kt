@@ -104,6 +104,8 @@ class BatchCaptureFragment : Fragment() {
     // Camera
     private var captureMode: CaptureMode = CaptureMode.REGULAR
     private var imageCapture: ImageCapture? = null
+    private var isCapturing = false
+    private var captureTimeoutJob: kotlinx.coroutines.Job? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var cameraExecutor: ExecutorService
     private var lensFacing = CameraSelector.LENS_FACING_BACK
@@ -153,6 +155,7 @@ class BatchCaptureFragment : Fragment() {
                 if (granted) {
                     startActiveMode()
                 } else if (isAdded) {
+                    viewModel.logCameraError("permission_denied", "Camera permission denied by user")
                     Toast.makeText(
                         requireContext(),
                         getString(R.string.camera_permission_required),
@@ -416,12 +419,31 @@ class BatchCaptureFragment : Fragment() {
      * Called by both UI shutter button and hardware trigger button.
      */
     private fun triggerCapture() {
-        Log.d(TAG, "triggerCapture() called, captureMode=$captureMode")
+        Log.d(TAG, "triggerCapture() called, captureMode=$captureMode, isCapturing=$isCapturing")
+        if (isCapturing) {
+            Log.d(TAG, "Capture already in progress, ignoring")
+            return
+        }
+        isCapturing = true
         if (captureMode == CaptureMode.REGULAR) {
+            startCaptureTimeout(REGULAR_CAPTURE_TIMEOUT_MS, "regular_capture_timeout")
             capturePhoto()
         } else {
             Log.d(TAG, "Requesting FLIR snapshot...")
+            startCaptureTimeout(FLIR_CAPTURE_TIMEOUT_MS, "flir_capture_timeout")
             flirController.requestSnapshot()
+        }
+    }
+
+    private fun startCaptureTimeout(timeoutMs: Long, errorType: String) {
+        captureTimeoutJob?.cancel()
+        captureTimeoutJob = viewLifecycleOwner.lifecycleScope.launch {
+            kotlinx.coroutines.delay(timeoutMs)
+            if (isCapturing) {
+                Log.w(TAG, "$errorType - resetting capture lock")
+                viewModel.logCameraError(errorType, "Capture request timed out after ${timeoutMs}ms")
+                isCapturing = false
+            }
         }
     }
 
@@ -444,15 +466,21 @@ class BatchCaptureFragment : Fragment() {
                             FlirState.Idle -> {
                                 flirStatusText.text = getString(R.string.flir_status_idle)
                                 flirReady = false
+                                captureTimeoutJob?.cancel()
+                                isCapturing = false  // Reset if FLIR disconnected mid-capture
                             }
                             FlirState.Discovering -> {
                                 flirStatusText.text = getString(R.string.flir_status_discovering)
                                 flirReady = false
+                                captureTimeoutJob?.cancel()
+                                isCapturing = false  // Reset if reconnecting
                             }
                             is FlirState.Connecting -> {
                                 flirStatusText.text =
                                     getString(R.string.flir_status_connecting, state.identity.deviceId)
                                 flirReady = false
+                                captureTimeoutJob?.cancel()
+                                isCapturing = false  // Reset if reconnecting
                             }
                             is FlirState.Streaming -> {
                                 flirStatusText.text =
@@ -463,6 +491,8 @@ class BatchCaptureFragment : Fragment() {
                             is FlirState.Error -> {
                                 flirStatusText.text = state.message
                                 flirReady = false
+                                captureTimeoutJob?.cancel()
+                                isCapturing = false  // Reset capture lock so user can retry
                                 viewModel.logCameraError("flir_state_error", state.message)
                             }
                         }
@@ -471,6 +501,8 @@ class BatchCaptureFragment : Fragment() {
 
                 launch {
                     flirController.errors.collect { message ->
+                        captureTimeoutJob?.cancel()
+                        isCapturing = false
                         viewModel.logCameraError("flir_error", message)
                         Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
                     }
@@ -478,6 +510,8 @@ class BatchCaptureFragment : Fragment() {
 
                 launch {
                     flirController.snapshots.collect { file ->
+                        captureTimeoutJob?.cancel()
+                        isCapturing = false
                         val added = viewModel.addPhoto(file, isIr = true)
                         if (!added) {
                             file.delete()
@@ -659,7 +693,11 @@ class BatchCaptureFragment : Fragment() {
 
     private fun bindCameraUseCases() {
         val context = context ?: return
-        val cameraProvider = cameraProvider ?: return
+        val cameraProvider = cameraProvider ?: run {
+            Log.w(TAG, "bindCameraUseCases called but cameraProvider is null")
+            viewModel.logCameraError("binding_skipped", "cameraProvider is null")
+            return
+        }
 
         val cameraSelector = CameraSelector.Builder()
             .requireLensFacing(lensFacing)
@@ -697,10 +735,23 @@ class BatchCaptureFragment : Fragment() {
     }
 
     private fun capturePhoto() {
-        val imageCapture = imageCapture ?: return
-        val context = context ?: return
+        val imageCapture = imageCapture ?: run {
+            Log.w(TAG, "capturePhoto called but imageCapture is null")
+            viewModel.logCameraError("capture_skipped", "imageCapture is null - camera not ready")
+            isCapturing = false
+            return
+        }
+        val context = context ?: run {
+            isCapturing = false
+            return
+        }
 
-        val photoFile = createTempPhotoFile() ?: return
+        val photoFile = createTempPhotoFile() ?: run {
+            Log.e(TAG, "Failed to create temp photo file")
+            viewModel.logCameraError("capture_skipped", "Failed to create temp photo file")
+            isCapturing = false
+            return
+        }
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
@@ -723,6 +774,8 @@ class BatchCaptureFragment : Fragment() {
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                    captureTimeoutJob?.cancel()
+                    isCapturing = false
                     Log.d(TAG, "Photo captured: ${photoFile.absolutePath}")
                     val added = viewModel.addPhoto(photoFile)
                     if (!added) {
@@ -731,6 +784,8 @@ class BatchCaptureFragment : Fragment() {
                 }
 
                 override fun onError(exception: ImageCaptureException) {
+                    captureTimeoutJob?.cancel()
+                    isCapturing = false
                     Log.e(TAG, "Photo capture failed", exception)
                     viewModel.logCameraError("capture_failed", exception.message, exception)
                     photoFile.delete()
@@ -807,6 +862,8 @@ class BatchCaptureFragment : Fragment() {
 
     companion object {
         private const val TAG = "BatchCaptureFrag"
+        private const val REGULAR_CAPTURE_TIMEOUT_MS = 10000L  // 10 seconds for regular camera
+        private const val FLIR_CAPTURE_TIMEOUT_MS = 5000L     // 5 seconds for FLIR
     }
 }
 

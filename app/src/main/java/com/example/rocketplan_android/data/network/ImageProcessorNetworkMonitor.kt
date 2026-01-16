@@ -43,12 +43,8 @@ class ImageProcessorNetworkMonitor(
         override fun onAvailable(network: Network) {
             val capabilities = connectivityManager.getNetworkCapabilities(network)
             val hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
-            val hasValidated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
-            if (hasInternet && hasValidated) {
-                Log.d(TAG, "🌐 Network available (validated)")
+            if (hasInternet) {
                 handleNetworkRestored()
-            } else {
-                Log.d(TAG, "🌐 Network available but not validated yet")
             }
         }
 
@@ -62,13 +58,9 @@ class ImageProcessorNetworkMonitor(
             networkCapabilities: NetworkCapabilities
         ) {
             val hasInternet = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            val hasValidated = networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-
-            if (hasInternet && hasValidated) {
-                Log.d(TAG, "🌐 Network validated and available")
+            if (hasInternet) {
                 handleNetworkRestored()
             } else {
-                Log.d(TAG, "📡 Network no longer validated")
                 handleNetworkLost()
             }
         }
@@ -79,8 +71,7 @@ class ImageProcessorNetworkMonitor(
         val activeNetwork = connectivityManager.activeNetwork
         val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
         val initialAvailable =
-            capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
-                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+            capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         isNetworkAvailable.set(initialAvailable)
 
         // Register network callback

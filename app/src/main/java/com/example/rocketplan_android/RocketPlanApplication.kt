@@ -41,6 +41,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.thermal.FlirSdkManager
 import com.example.rocketplan_android.config.AppConfig
+import android.os.Build
 import io.sentry.Sentry
 import io.sentry.android.core.SentryAndroid
 
@@ -125,6 +126,7 @@ class RocketPlanApplication : Application() {
             context = this,
             secureStorage = secureStorage
         )
+        logDeviceInfo()
         photoCacheManager = PhotoCacheManager(this, localDataService, remoteLogger)
         syncCheckpointStore = SyncCheckpointStore(this)
         imageProcessingConfigStore = ImageProcessingConfigStore.getInstance(this)
@@ -143,8 +145,7 @@ class RocketPlanApplication : Application() {
             runCatching {
                 val network = connectivityManager?.activeNetwork
                 val capabilities = connectivityManager?.getNetworkCapabilities(network)
-                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
             }.getOrDefault(false) // Default to false (offline) on exceptions for safety
         }
 
@@ -282,6 +283,30 @@ class RocketPlanApplication : Application() {
                 )
             }
         }
+    }
+
+    private fun logDeviceInfo() {
+        remoteLogger.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Device hardware information",
+            metadata = mapOf(
+                "model" to Build.MODEL,
+                "device" to Build.DEVICE,
+                "hardware" to Build.HARDWARE,
+                "manufacturer" to Build.MANUFACTURER,
+                "board" to Build.BOARD,
+                "product" to Build.PRODUCT,
+                "brand" to Build.BRAND,
+                "fingerprint" to Build.FINGERPRINT,
+                "bootloader" to Build.BOOTLOADER,
+                "display" to Build.DISPLAY,
+                "id" to Build.ID,
+                "sdk_int" to Build.VERSION.SDK_INT.toString(),
+                "release" to Build.VERSION.RELEASE,
+                "incremental" to Build.VERSION.INCREMENTAL
+            )
+        )
     }
 
     private fun initSentry() {
