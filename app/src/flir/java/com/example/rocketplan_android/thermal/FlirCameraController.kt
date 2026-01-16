@@ -34,8 +34,6 @@ import com.flir.thermalsdk.utils.FileUtils
 import com.flir.thermalsdk.utils.Pair
 import java.io.File
 import java.io.IOException
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.microedition.khronos.egl.EGLConfig as GLConfigLegacy
 import javax.microedition.khronos.opengles.GL10
@@ -298,11 +296,9 @@ class FlirCameraController(
 
         // Reference app uses false, but we must pass true for visible preview on device
         // (false = headless / no preview; true = GL output to surface)
-        logDebug("🎬 Setting up GL pipeline...")
-        val setupLatch = CountDownLatch(1)
-        var setupError: Throwable? = null
+        logDebug("🎬 Setting up GL pipeline (async)...")
         runOnGlThread {
-            try {
+            val setupError: Throwable? = try {
                 logDebug("🎬 [GL Thread] glSetupPipeline(stream, true)")
                 cam.glSetupPipeline(stream, true)
                 logDebug("🎬 [GL Thread] glSetupPipeline complete, glIsGlContextReady=${cam.glIsGlContextReady()}")
@@ -314,50 +310,47 @@ class FlirCameraController(
                     logDebug("🎬 [GL Thread] Applying stored surface after setup: ${lastSurfaceWidth}x${lastSurfaceHeight}")
                     applySurfaceAndViewport(cam, lastSurfaceWidth, lastSurfaceHeight, "setupPipeline(stored)")
                 }
+                null // Success - no error
             } catch (t: Throwable) {
-                setupError = t
                 logError("🎬 [GL Thread] glSetupPipeline failed: ${t.message}")
-            } finally {
-                logDebug("🎬 [GL Thread] finally block reached, calling countDown()")
-                setupLatch.countDown()
-                logDebug("🎬 [GL Thread] countDown() complete")
+                t // Capture the error
             }
-        }
 
-        logDebug("🎬 Waiting on setupLatch...")
-        if (!setupLatch.await(1, TimeUnit.SECONDS)) {
-            val message = "🎬 GL pipeline setup timed out"
-            ThermalLog.e(TAG, message)
-            _state.value = FlirState.Error(message)
-            _errors.tryEmit(message)
-            return
-        }
+            // Continue on IO scope once GL work is done
+            scope.launch {
+                // Check if disconnected while GL setup was in progress
+                if (camera == null) {
+                    logDebug("🎬 Camera disconnected during GL setup, aborting stream start")
+                    return@launch
+                }
 
-        setupError?.let {
-            val message = "🎬 Failed to set up GL pipeline: ${it.message}"
-            ThermalLog.e(TAG, message)
-            _state.value = FlirState.Error(message)
-            _errors.tryEmit(message)
-            return
-        }
+                if (setupError != null) {
+                    val message = "🎬 Failed to set up GL pipeline: ${setupError.message}"
+                    ThermalLog.e(TAG, message)
+                    _state.value = FlirState.Error(message)
+                    _errors.tryEmit(message)
+                    return@launch
+                }
 
-        _state.value = FlirState.Streaming(identity, info)
+                logDebug("🎬 GL setup complete, starting stream...")
+                _state.value = FlirState.Streaming(identity, info)
 
-        logDebug("🎬 Starting stream...")
-        target.setRenderMode(RenderMode.CONTINUOUS)
-        logDebug("🎬 Surface ready for streaming: target=${target.description()}")
-        stream.start(
-            {
+                target.setRenderMode(RenderMode.CONTINUOUS)
+                logDebug("🎬 Surface ready for streaming: target=${target.description()}")
+                stream.start(
+                    {
+                        target.requestRender()
+                    },
+                    { error ->
+                        val message = "🎬 Stream error: $error"
+                        logWarn(message)
+                        _errors.tryEmit(message)
+                    }
+                )
+                logDebug("🎬 Stream started, isStreaming=${stream.isStreaming}")
                 target.requestRender()
-            },
-            { error ->
-                val message = "🎬 Stream error: $error"
-                logWarn(message)
-                _errors.tryEmit(message)
             }
-        )
-        logDebug("🎬 Stream started, isStreaming=${stream.isStreaming}")
-        target.requestRender()
+        }
     }
 
     fun currentStreamSelection(): StreamSelection? {
@@ -397,67 +390,60 @@ class FlirCameraController(
             logDebug("🔀 Reapplying current stream index=$newIndex isThermal=${newStream.isThermal}")
         }
 
-        val setupResult = setupPipeline(cam, newStream, "cycleStream")
-        if (!setupResult.success) {
-            val message = if (setupResult.timedOut) {
-                "🔀 cycleStream(): GL pipeline setup timed out"
-            } else {
-                "🔀 cycleStream(): setup error ${setupResult.error?.message}"
-            }
-            logWarn(message)
-            _errors.tryEmit(message)
-            _state.value = FlirState.Error(message)
+        setupPipelineAsync(cam, newStream, "cycleStream") { setupError ->
+            if (setupError != null) {
+                val message = "🔀 cycleStream(): setup error ${setupError.message}"
+                logWarn(message)
+                _errors.tryEmit(message)
+                _state.value = FlirState.Error(message)
 
-            // Attempt to recover the previous stream if we switched away and setup failed.
-            if (previousStream != null && previousStream != newStream) {
-                logWarn("🔀 cycleStream(): restoring previous stream after failure")
-                setupPipeline(cam, previousStream, "cycleStream(recover)")
-                activeStream = previousStream
-                previousStream.start({ target.requestRender() }, { error ->
-                    val recoverMessage = "🔀 Stream error after recovery: $error"
-                    logWarn(recoverMessage)
-                    _errors.tryEmit(recoverMessage)
-                })
-                target.requestRender()
+                // Attempt to recover the previous stream if we switched away and setup failed.
+                if (previousStream != null && previousStream != newStream) {
+                    logWarn("🔀 cycleStream(): restoring previous stream after failure")
+                    setupPipelineAsync(cam, previousStream, "cycleStream(recover)") { recoverError ->
+                        if (recoverError == null) {
+                            activeStream = previousStream
+                            previousStream.start({ target.requestRender() }, { error ->
+                                val recoverMessage = "🔀 Stream error after recovery: $error"
+                                logWarn(recoverMessage)
+                                _errors.tryEmit(recoverMessage)
+                            })
+                            target.requestRender()
+                        }
+                    }
+                }
+                return@setupPipelineAsync
             }
-            return
+
+            activeStream = newStream
+            target.setRenderMode(RenderMode.CONTINUOUS)
+            newStream.start({ target.requestRender() }, { error ->
+                val message = "🔀 Stream error after switch: $error"
+                logWarn(message)
+                _errors.tryEmit(message)
+            })
+            target.requestRender()
         }
-
-        activeStream = newStream
-        target.setRenderMode(RenderMode.CONTINUOUS)
-        newStream.start({ target.requestRender() }, { error ->
-            val message = "🔀 Stream error after switch: $error"
-            logWarn(message)
-            _errors.tryEmit(message)
-        })
-        target.requestRender()
     }
 
-    private data class PipelineResult(val success: Boolean, val timedOut: Boolean = false, val error: Throwable? = null)
-
-    private fun setupPipeline(cam: Camera, stream: Stream, reason: String): PipelineResult {
-        val latch = CountDownLatch(1)
-        var setupError: Throwable? = null
+    private fun setupPipelineAsync(cam: Camera, stream: Stream, reason: String, onComplete: (Throwable?) -> Unit) {
         runOnGlThread {
-            try {
+            val setupError: Throwable? = try {
                 logDebug("🔀 [$reason][GL Thread] glSetupPipeline(stream, true)")
                 cam.glSetupPipeline(stream, true)
                 if (lastSurfaceWidth > 0 && lastSurfaceHeight > 0 && cam.glIsGlContextReady()) {
                     applySurfaceAndViewport(cam, lastSurfaceWidth, lastSurfaceHeight, reason)
                 }
+                null
             } catch (t: Throwable) {
-                setupError = t
                 logError("🔀 [$reason][GL Thread] glSetupPipeline failed: ${t.message}")
-            } finally {
-                latch.countDown()
+                t
+            }
+
+            scope.launch {
+                onComplete(setupError)
             }
         }
-
-        val timedOut = !latch.await(1, TimeUnit.SECONDS)
-        if (timedOut) {
-            logWarn("🔀 [$reason] GL pipeline setup timed out")
-        }
-        return PipelineResult(success = !timedOut && setupError == null, timedOut = timedOut, error = setupError)
     }
 
     fun disconnect() {
@@ -466,28 +452,36 @@ class FlirCameraController(
             val currentCamera = camera
             activeStream?.stop()
             renderTarget?.setRenderMode(RenderMode.WHEN_DIRTY)
-            // FLIR's Camera.glTeardownPipeline() has a 500ms sleep before teardown
-            // We replicate that here to ensure GL resources are properly released
-            val latch = CountDownLatch(1)
-            runOnGlThread {
-                try {
-                    Thread.sleep(500)
-                    currentCamera?.glTeardownPipeline()
-                } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                } finally {
-                    latch.countDown()
-                }
-            }
-            // Best-effort wait so teardown completes before disconnect/cleanup
-            if (!latch.await(1, TimeUnit.SECONDS)) {
-                ThermalLog.w(TAG, "disconnect(): GL teardown did not finish in time")
-            }
-            currentCamera?.disconnect()
+
+            // Clear state immediately so new connections don't race
             camera = null
             activeStream = null
             _state.value = FlirState.Idle
             DiscoveryFactory.getInstance().stop(communicationInterface)
+
+            // Teardown GL resources asynchronously
+            runOnGlThread {
+                try {
+                    // FLIR's Camera.glTeardownPipeline() has a 500ms sleep before teardown
+                    Thread.sleep(500)
+                    currentCamera?.glTeardownPipeline()
+                    logDebug("disconnect(): GL teardown complete")
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                } catch (t: Throwable) {
+                    logWarn("disconnect(): GL teardown error: ${t.message}")
+                }
+
+                // Disconnect camera after GL teardown
+                scope.launch {
+                    try {
+                        currentCamera?.disconnect()
+                        logDebug("disconnect(): Camera disconnected")
+                    } catch (t: Throwable) {
+                        logWarn("disconnect(): Camera disconnect error: ${t.message}")
+                    }
+                }
+            }
         }
     }
 
