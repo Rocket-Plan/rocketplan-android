@@ -206,6 +206,7 @@ class FlirCaptureFragment : Fragment() {
 
                 launch {
                     controller.errors.collect { message ->
+                        viewModel.logCameraError("flir_error", message)
                         Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
                     }
                 }

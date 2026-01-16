@@ -205,6 +205,12 @@ dependencies {
         implementation("com.google.protobuf:protobuf-java:3.25.5") {
             because("CVE-2024-7254: StackOverflow vulnerability in Protocol Buffers")
         }
+        implementation("com.google.protobuf:protobuf-kotlin:3.25.5") {
+            because("CVE-2024-7254: StackOverflow vulnerability in Protocol Buffers")
+        }
+        implementation("com.google.protobuf:protobuf-java-util:3.25.5") {
+            because("CVE-2024-7254: Align with protobuf-java security update")
+        }
         implementation("commons-io:commons-io:2.14.0") {
             because("CVE-2024-47554: DoS vulnerability in XmlStreamReader")
         }
