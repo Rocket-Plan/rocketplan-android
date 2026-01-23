@@ -2,8 +2,9 @@ package com.example.rocketplan_android.data.repository.sync.handlers
 
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
-import com.example.rocketplan_android.data.model.offline.PropertyDto
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
+import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.data.repository.SyncResult
 import com.example.rocketplan_android.logging.RemoteLogger
@@ -30,4 +31,12 @@ class PushHandlerContext(
     val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?
 ) {
     fun now(): Date = Date()
+
+    /**
+     * Records a conflict for user resolution.
+     * Called by push handlers when they detect a 409 conflict that should be resolved by the user.
+     */
+    suspend fun recordConflict(conflict: OfflineConflictResolutionEntity) {
+        localDataService.upsertConflict(conflict)
+    }
 }

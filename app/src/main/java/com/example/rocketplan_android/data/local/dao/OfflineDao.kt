@@ -1047,7 +1047,19 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_conflicts ORDER BY detectedAt DESC")
     fun observeConflicts(): Flow<List<OfflineConflictResolutionEntity>>
 
+    @Query("SELECT * FROM offline_conflicts WHERE resolvedAt IS NULL ORDER BY detectedAt DESC")
+    fun observeUnresolvedConflicts(): Flow<List<OfflineConflictResolutionEntity>>
+
+    @Query("SELECT * FROM offline_conflicts WHERE conflictId = :conflictId LIMIT 1")
+    suspend fun getConflict(conflictId: String): OfflineConflictResolutionEntity?
+
+    @Query("SELECT COUNT(*) FROM offline_conflicts WHERE resolvedAt IS NULL")
+    fun observeUnresolvedConflictCount(): Flow<Int>
+
     @Query("DELETE FROM offline_conflicts WHERE conflictId = :conflictId")
     suspend fun deleteConflict(conflictId: String)
+
+    @Query("DELETE FROM offline_conflicts WHERE resolvedAt IS NOT NULL")
+    suspend fun deleteResolvedConflicts()
     // endregion
 }

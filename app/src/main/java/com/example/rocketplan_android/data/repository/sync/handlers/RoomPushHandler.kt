@@ -3,6 +3,7 @@ package com.example.rocketplan_android.data.repository.sync.handlers
 import android.util.Log
 import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.UpdateRoomRequest
@@ -295,10 +296,69 @@ class RoomPushHandler(
             ctx.api.updateRoom(serverId, request)
         } catch (error: Throwable) {
             if (error.isConflict()) {
-                Log.w(SYNC_TAG, "⚠️ [handlePendingRoomUpdate] Conflict for room $serverId, will retry")
-                return OperationOutcome.SKIP
+                Log.w(SYNC_TAG, "⚠️ [handlePendingRoomUpdate] 409 conflict for room $serverId; fetching fresh and retrying")
+                // Fetch fresh room data from server
+                val freshRoom = runCatching {
+                    ctx.api.getRoomDetail(serverId)
+                }
+                    .onFailure { if (it is CancellationException) throw it }
+                    .getOrElse { fetchError ->
+                        Log.e(SYNC_TAG, "❌ [handlePendingRoomUpdate] Failed to fetch fresh room $serverId", fetchError)
+                        // Can't fetch fresh data - restore local and drop
+                        val restored = room.copy(
+                            isDirty = false,
+                            syncStatus = SyncStatus.SYNCED
+                        )
+                        ctx.localDataService.saveRooms(listOf(restored))
+                        return OperationOutcome.DROP
+                    }
+
+                // Retry with fresh updatedAt
+                val retryRequest = UpdateRoomRequest(
+                    isSource = payload.isSource,
+                    levelId = payload.levelId,
+                    roomTypeId = payload.roomTypeId,
+                    updatedAt = freshRoom.updatedAt
+                )
+                val retryResult = runCatching { ctx.api.updateRoom(serverId, retryRequest) }
+                    .onFailure { if (it is CancellationException) throw it }
+                if (retryResult.isFailure) {
+                    val retryError = retryResult.exceptionOrNull()
+                    if (retryError?.isConflict() == true) {
+                        Log.w(
+                            SYNC_TAG,
+                            "⚠️ [handlePendingRoomUpdate] Retry still got 409; recording conflict for user resolution"
+                        )
+                        // Record conflict for user resolution instead of silent server restore
+                        val conflict = OfflineConflictResolutionEntity(
+                            conflictId = UuidUtils.generateUuidV7(),
+                            entityType = "room",
+                            entityId = room.roomId,
+                            entityUuid = room.uuid,
+                            localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "title" to room.title,
+                                "roomTypeId" to room.roomTypeId,
+                                "isSource" to payload.isSource,
+                                "levelId" to payload.levelId
+                            )).toByteArray(Charsets.UTF_8),
+                            remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "title" to (freshRoom.name ?: freshRoom.title),
+                                "roomTypeId" to freshRoom.roomType?.id,
+                                "isSource" to freshRoom.isAccessible,
+                                "levelId" to freshRoom.level?.id
+                            )).toByteArray(Charsets.UTF_8),
+                            conflictType = "UPDATE_CONFLICT",
+                            detectedAt = ctx.now()
+                        )
+                        ctx.recordConflict(conflict)
+                        return OperationOutcome.CONFLICT_PENDING
+                    }
+                    throw retryError!!
+                }
+                Log.d(SYNC_TAG, "✅ [handlePendingRoomUpdate] Retry update succeeded for room $serverId")
+            } else {
+                throw error
             }
-            throw error
         }
 
         val synced = room.copy(

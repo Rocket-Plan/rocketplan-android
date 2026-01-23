@@ -75,6 +75,11 @@
             app:tabMode="scrollable"
             app:tabGravity="fill" />
 
+        <!-- Conflict Resolution Banner -->
+        <include
+            android:id="@+id/conflictBannerInclude"
+            layout="@layout/layout_conflict_banner" />
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/assemblyUploadBubble"
             android:layout_width="match_parent"

@@ -11,5 +11,7 @@ enum class OperationOutcome {
     /** Operation failed but should retry immediately */
     RETRY,
     /** Operation should be dropped (e.g., entity no longer exists) */
-    DROP
+    DROP,
+    /** Operation has a conflict pending user resolution; keep in queue with CONFLICT status */
+    CONFLICT_PENDING
 }

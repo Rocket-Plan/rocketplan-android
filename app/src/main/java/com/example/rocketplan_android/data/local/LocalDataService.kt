@@ -1189,8 +1189,24 @@ class LocalDataService private constructor(
 
     fun observeConflicts(): Flow<List<OfflineConflictResolutionEntity>> = dao.observeConflicts()
 
+    fun observeUnresolvedConflicts(): Flow<List<OfflineConflictResolutionEntity>> = dao.observeUnresolvedConflicts()
+
+    fun observeUnresolvedConflictCount(): Flow<Int> = dao.observeUnresolvedConflictCount()
+
+    suspend fun getConflict(conflictId: String): OfflineConflictResolutionEntity? = withContext(ioDispatcher) {
+        dao.getConflict(conflictId)
+    }
+
+    suspend fun upsertConflict(conflict: OfflineConflictResolutionEntity) = withContext(ioDispatcher) {
+        dao.upsertConflict(conflict)
+    }
+
     suspend fun resolveConflict(conflictId: String) = withContext(ioDispatcher) {
         dao.deleteConflict(conflictId)
+    }
+
+    suspend fun deleteResolvedConflicts() = withContext(ioDispatcher) {
+        dao.deleteResolvedConflicts()
     }
     // endregion
 

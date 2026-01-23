@@ -103,7 +103,8 @@ class SyncQueueProcessor(
         SUCCESS,
         SKIP,
         RETRY,
-        DROP
+        DROP,
+        CONFLICT_PENDING
     }
 
     private fun HandlerOutcome.toLocal(): OperationOutcome = when (this) {
@@ -111,6 +112,7 @@ class SyncQueueProcessor(
         HandlerOutcome.SKIP -> OperationOutcome.SKIP
         HandlerOutcome.RETRY -> OperationOutcome.RETRY
         HandlerOutcome.DROP -> OperationOutcome.DROP
+        HandlerOutcome.CONFLICT_PENDING -> OperationOutcome.CONFLICT_PENDING
     }
 
     private fun now() = Date()
@@ -188,6 +190,27 @@ class SyncQueueProcessor(
                             }
                         }
                         OperationOutcome.RETRY -> Unit
+                        OperationOutcome.CONFLICT_PENDING -> {
+                            // Mark operation as having a conflict pending user resolution
+                            Log.i(TAG, "⚠️ [$label] Conflict pending for op=${operation.operationId}")
+                            remoteLogger?.log(
+                                LogLevel.INFO,
+                                TAG,
+                                "Sync operation has conflict pending user resolution",
+                                mapOf(
+                                    "operationId" to operation.operationId,
+                                    "entityType" to operation.entityType,
+                                    "entityId" to operation.entityId.toString(),
+                                    "operationType" to operation.operationType.name
+                                )
+                            )
+                            val conflictOp = operation.copy(
+                                status = SyncStatus.CONFLICT,
+                                lastAttemptAt = Date(),
+                                errorMessage = "Conflict pending user resolution"
+                            )
+                            localDataService.enqueueSyncOperation(conflictOp)
+                        }
                     }
                 }
                 .onFailure { error ->

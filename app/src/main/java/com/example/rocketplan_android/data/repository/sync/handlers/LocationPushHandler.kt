@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.CreateLocationRequest
@@ -14,6 +15,7 @@ import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.util.UuidUtils
+import kotlinx.coroutines.CancellationException
 import java.io.File
 
 /**
@@ -126,10 +128,64 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             ctx.api.updateLocation(serverId, request)
         } catch (error: Throwable) {
             if (error.isConflict()) {
-                Log.w(SYNC_TAG, "⚠️ [handlePendingLocationUpdate] Conflict for location $serverId, will retry")
-                return OperationOutcome.SKIP
+                Log.w(SYNC_TAG, "⚠️ [handlePendingLocationUpdate] 409 conflict for location $serverId; fetching fresh and retrying")
+                // Fetch fresh location data from server
+                val freshLocation = fetchFreshLocation(location, serverId)
+                if (freshLocation == null) {
+                    Log.e(SYNC_TAG, "❌ [handlePendingLocationUpdate] Failed to fetch fresh location $serverId")
+                    // Can't fetch fresh data - restore local and drop
+                    val restored = location.copy(
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED
+                    )
+                    ctx.localDataService.saveLocations(listOf(restored))
+                    return OperationOutcome.DROP
+                }
+
+                // Retry with fresh updatedAt
+                val retryRequest = UpdateLocationRequest(
+                    name = payload.name,
+                    floorNumber = payload.floorNumber,
+                    isAccessible = payload.isAccessible,
+                    updatedAt = freshLocation.updatedAt
+                )
+                val retryResult = runCatching { ctx.api.updateLocation(serverId, retryRequest) }
+                    .onFailure { if (it is CancellationException) throw it }
+                if (retryResult.isFailure) {
+                    val retryError = retryResult.exceptionOrNull()
+                    if (retryError?.isConflict() == true) {
+                        Log.w(
+                            SYNC_TAG,
+                            "⚠️ [handlePendingLocationUpdate] Retry still got 409; recording conflict for user resolution"
+                        )
+                        // Record conflict for user resolution instead of silent server restore
+                        val conflict = OfflineConflictResolutionEntity(
+                            conflictId = UuidUtils.generateUuidV7(),
+                            entityType = "location",
+                            entityId = location.locationId,
+                            entityUuid = location.uuid,
+                            localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "name" to payload.name,
+                                "title" to location.title,
+                                "isAccessible" to payload.isAccessible
+                            )).toByteArray(Charsets.UTF_8),
+                            remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "name" to freshLocation.name,
+                                "title" to freshLocation.title,
+                                "isAccessible" to freshLocation.isAccessible
+                            )).toByteArray(Charsets.UTF_8),
+                            conflictType = "UPDATE_CONFLICT",
+                            detectedAt = ctx.now()
+                        )
+                        ctx.recordConflict(conflict)
+                        return OperationOutcome.CONFLICT_PENDING
+                    }
+                    throw retryError!!
+                }
+                Log.d(SYNC_TAG, "✅ [handlePendingLocationUpdate] Retry update succeeded for location $serverId")
+            } else {
+                throw error
             }
-            throw error
         }
 
         val synced = location.copy(
@@ -139,6 +195,28 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
         )
         ctx.localDataService.saveLocations(listOf(synced))
         return OperationOutcome.SUCCESS
+    }
+
+    /**
+     * Fetches fresh location data from server via property locations endpoint.
+     * Returns null if unable to fetch (project/property not found, or API error).
+     */
+    private suspend fun fetchFreshLocation(
+        location: OfflineLocationEntity,
+        serverId: Long
+    ): com.example.rocketplan_android.data.model.offline.LocationDto? {
+        // Get property server ID via project → property chain
+        val project = ctx.localDataService.getProject(location.projectId) ?: return null
+        val propertyId = project.propertyId ?: return null
+        val property = ctx.localDataService.getProperty(propertyId) ?: return null
+        val propertyServerId = property.serverId ?: return null
+
+        return runCatching {
+            ctx.api.getPropertyLocations(propertyServerId).data
+                .firstOrNull { it.id == serverId }
+        }
+            .onFailure { if (it is CancellationException) throw it }
+            .getOrNull()
     }
 
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {

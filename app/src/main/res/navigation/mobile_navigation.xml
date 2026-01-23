@@ -484,6 +484,13 @@
             app:destination="@id/projectLandingFragment" />
     </fragment>
 
+    <!-- Conflict List Fragment -->
+    <fragment
+        android:id="@+id/conflictListFragment"
+        android:name="com.example.rocketplan_android.ui.conflict.ConflictListFragment"
+        android:label="@string/conflicts_title"
+        tools:layout="@layout/fragment_conflict_list" />
+
     <fragment
         android:id="@+id/companyInfoFragment"
         android:name="com.example.rocketplan_android.ui.company.CompanyInfoFragment"

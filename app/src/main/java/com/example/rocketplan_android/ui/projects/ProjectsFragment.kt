@@ -29,6 +29,9 @@ import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.repository.ConflictRepository
+import com.example.rocketplan_android.ui.conflict.ConflictBannerManager
+import com.example.rocketplan_android.ui.conflict.ConflictBannerState
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.progressindicator.LinearProgressIndicator
@@ -49,6 +52,8 @@ class ProjectsFragment : Fragment() {
     private val viewModel: ProjectsViewModel by activityViewModels()
     private lateinit var rocketPlanApp: RocketPlanApplication
     private lateinit var authRepository: AuthRepository
+    private lateinit var conflictRepository: ConflictRepository
+    private var conflictBannerManager: ConflictBannerManager? = null
 
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
@@ -56,6 +61,8 @@ class ProjectsFragment : Fragment() {
     private lateinit var refreshButton: ImageView
     private lateinit var fabNewProject: FloatingActionButton
     private lateinit var assemblyUploadBubble: View
+    private lateinit var conflictBanner: View
+    private lateinit var conflictSubtitle: TextView
     private lateinit var assemblyUploadIconProgress: CircularProgressIndicator
     private lateinit var assemblyUploadIconCounter: TextView
     private lateinit var assemblyUploadSubtitle: TextView
@@ -83,6 +90,10 @@ class ProjectsFragment : Fragment() {
 
         rocketPlanApp = requireActivity().application as RocketPlanApplication
         authRepository = rocketPlanApp.authRepository
+        conflictRepository = ConflictRepository(
+            rocketPlanApp.localDataService,
+            com.google.gson.Gson()
+        )
 
         tabLayout = view.findViewById(R.id.tabLayout)
         viewPager = view.findViewById(R.id.viewPager)
@@ -96,10 +107,13 @@ class ProjectsFragment : Fragment() {
         assemblyUploadPhotos = view.findViewById(R.id.assemblyUploadPhotos)
         assemblyUploadStatus = view.findViewById(R.id.assemblyUploadStatus)
         assemblyUploadProgress = view.findViewById(R.id.assemblyUploadProgress)
+        conflictBanner = view.findViewById(R.id.conflictBannerInclude)
+        conflictSubtitle = view.findViewById(R.id.conflictSubtitle)
 
         setupViewPager()
         setupUserInterface()
         observeAssemblyUploads()
+        setupConflictBanner()
     }
 
     private fun setupViewPager() {
@@ -220,6 +234,34 @@ class ProjectsFragment : Fragment() {
                     assemblyUploadStatus.setTextColor(textColor)
                 }
             }
+        }
+    }
+
+    private fun setupConflictBanner() {
+        conflictBannerManager = ConflictBannerManager(conflictRepository, viewLifecycleOwner.lifecycleScope)
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                conflictBannerManager?.bannerState?.collectLatest { state ->
+                    when (state) {
+                        is ConflictBannerState.Hidden -> {
+                            conflictBanner.isVisible = false
+                        }
+                        is ConflictBannerState.Visible -> {
+                            conflictBanner.isVisible = true
+                            conflictSubtitle.text = resources.getQuantityString(
+                                R.plurals.conflicts_pending,
+                                state.count,
+                                state.count
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        conflictBanner.setOnClickListener {
+            findNavController().navigate(R.id.conflictListFragment)
         }
     }
 

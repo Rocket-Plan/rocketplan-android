@@ -1,0 +1,106 @@
+package com.example.rocketplan_android.ui.conflict
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.repository.ConflictItem
+import com.example.rocketplan_android.data.repository.ConflictRepository
+import com.example.rocketplan_android.data.repository.ConflictResolution
+import com.google.gson.Gson
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+
+/**
+ * UI state for the conflict list screen.
+ */
+sealed class ConflictListUiState {
+    data object Loading : ConflictListUiState()
+    data class Success(val conflicts: List<ConflictItem>) : ConflictListUiState()
+    data class Error(val message: String) : ConflictListUiState()
+}
+
+/**
+ * ViewModel for the conflict list screen.
+ */
+class ConflictListViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val conflictRepository: ConflictRepository
+
+    private val _uiState = MutableStateFlow<ConflictListUiState>(ConflictListUiState.Loading)
+    val uiState: StateFlow<ConflictListUiState> = _uiState.asStateFlow()
+
+    private val _resolving = MutableStateFlow(false)
+    val resolving: StateFlow<Boolean> = _resolving.asStateFlow()
+
+    init {
+        val app = application as RocketPlanApplication
+        conflictRepository = ConflictRepository(
+            localDataService = app.localDataService,
+            gson = Gson()
+        )
+        observeConflicts()
+    }
+
+    private fun observeConflicts() {
+        conflictRepository.observeConflicts()
+            .onEach { conflicts ->
+                _uiState.value = ConflictListUiState.Success(conflicts)
+            }
+            .catch { error ->
+                _uiState.value = ConflictListUiState.Error(error.message ?: "Unknown error")
+            }
+            .launchIn(viewModelScope)
+    }
+
+    /**
+     * Resolves a single conflict.
+     */
+    fun resolveConflict(conflictId: String, resolution: ConflictResolution) {
+        viewModelScope.launch {
+            _resolving.value = true
+            try {
+                when (resolution) {
+                    ConflictResolution.KEEP_LOCAL -> conflictRepository.resolveKeepLocal(conflictId)
+                    ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflictId)
+                }
+            } finally {
+                _resolving.value = false
+            }
+        }
+    }
+
+    /**
+     * Resolves all conflicts with the same strategy.
+     */
+    fun resolveAll(resolution: ConflictResolution) {
+        viewModelScope.launch {
+            _resolving.value = true
+            try {
+                val currentState = _uiState.value
+                if (currentState is ConflictListUiState.Success) {
+                    currentState.conflicts.forEach { conflict ->
+                        when (resolution) {
+                            ConflictResolution.KEEP_LOCAL -> conflictRepository.resolveKeepLocal(conflict.conflictId)
+                            ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflict.conflictId)
+                        }
+                    }
+                }
+            } finally {
+                _resolving.value = false
+            }
+        }
+    }
+
+    /**
+     * Gets a single conflict for detail view.
+     */
+    suspend fun getConflict(conflictId: String): ConflictItem? {
+        return conflictRepository.getConflict(conflictId)
+    }
+}
