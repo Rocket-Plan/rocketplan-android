@@ -124,6 +124,7 @@ class DeletedRecordsSyncService(
     }
 
     companion object {
+        // Note: moisture_logs and atmospheric_logs are not supported by the backend API
         val DEFAULT_TYPES = listOf(
             "projects",
             "photos",
@@ -132,8 +133,6 @@ class DeletedRecordsSyncService(
             "locations",
             "equipment",
             "damage_materials",
-            "moisture_logs",
-            "atmospheric_logs",
             "work_scope_actions"
         )
         private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)

@@ -64,6 +64,8 @@ class SyncQueueManager(
     val initialSyncCompleted: StateFlow<Boolean> = _initialSyncCompleted
     private val assignedProjectIds = MutableStateFlow<Set<Long>>(emptySet())
     val assignedProjects: StateFlow<Set<Long>> = assignedProjectIds
+    private val _assignedProjectsLoaded = MutableStateFlow(false)
+    val assignedProjectsLoaded: StateFlow<Boolean> = _assignedProjectsLoaded
 
     // Track active project sync jobs for cancellation
     private val activeProjectSyncJobs = mutableMapOf<Long, Job>()
@@ -551,6 +553,7 @@ class SyncQueueManager(
                     // For incremental sync, merge new assigned IDs with existing ones
                     assignedProjectIds.value = assignedProjectIds.value + assignedIds
                 }
+                _assignedProjectsLoaded.value = true
 
                 // Then sync all projects for the active company (used for WIP/all)
                 syncRepository.syncCompanyProjects(

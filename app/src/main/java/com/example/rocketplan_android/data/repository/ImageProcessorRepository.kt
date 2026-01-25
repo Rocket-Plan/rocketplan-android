@@ -96,8 +96,9 @@ class ImageProcessorRepository(
         } else {
             null
         }
-        val waitingForRoomSync = roomId != null && roomServerId == null
-        val waitingForSync = waitingForProjectSync || waitingForRoomSync
+        // Don't block on room sync - photos can upload to project level and be associated later
+        val waitingForRoomSync = false // Previously: roomId != null && roomServerId == null
+        val waitingForSync = waitingForProjectSync // Room sync no longer blocks
         val resolvedRoomId = roomServerId ?: roomId
 
         val config = if (waitingForSync) {

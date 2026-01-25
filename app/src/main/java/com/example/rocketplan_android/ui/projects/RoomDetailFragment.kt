@@ -1152,17 +1152,14 @@ class RoomDetailFragment : Fragment() {
         }
 
         val waitingForRealtime = awaitingRealtimePhotos
+        val adapterItemCount = photoAdapter.itemCount
 
-        if (snapshotRefreshInProgress) {
-            loadingOverlay.isVisible = true
-            photosRecyclerView.isVisible = false
-            placeholderContainer.isVisible = false
-            placeholderImage.isVisible = false
-            photosLoadingSpinner.isVisible = false
+        // Don't show full loading overlay for snapshot refresh - it causes flicker
+        // Only show spinner for initial load when we have no data yet
+        if (snapshotRefreshInProgress && adapterItemCount == 0 && latestPhotoCount == 0) {
+            photosLoadingSpinner.isVisible = true
             return
         }
-
-        val adapterItemCount = photoAdapter.itemCount
         val hasPhotos = adapterItemCount > 0
         val effectiveLoadState = latestLoadState
         val isLoading = effectiveLoadState is LoadState.Loading && adapterItemCount == 0

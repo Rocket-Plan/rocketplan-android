@@ -40,15 +40,6 @@
                 android:textColor="@color/main_purple"
                 android:textStyle="bold" />
 
-            <ImageView
-                android:id="@+id/refreshButton"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@android:drawable/ic_menu_rotate"
-                android:padding="8dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Refresh" />
-
             <TextView
                 android:id="@+id/userInitials"
                 android:layout_width="40dp"

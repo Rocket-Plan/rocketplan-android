@@ -67,14 +67,15 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
                 localDataService.observeProjects(),
                 authRepository.observeCompanyId(),
                 syncQueueManager.assignedProjects,
-                syncQueueManager.initialSyncCompleted
-            ) { projects, companyId, assignedIds, syncCompleted ->
+                syncQueueManager.initialSyncCompleted,
+                syncQueueManager.assignedProjectsLoaded
+            ) { projects, companyId, assignedIds, syncCompleted, assignedLoaded ->
                 val filteredProjects = companyId?.let { id ->
                     projects.filter { it.companyId == id }
                 } ?: projects
-                ProjectsData(filteredProjects, companyId, assignedIds, syncCompleted)
+                ProjectsData(filteredProjects, companyId, assignedIds, syncCompleted, assignedLoaded)
             }.collect { data ->
-                Log.d(TAG, "📊 Received ${data.projects.size} projects from database for company ${data.companyId ?: "unknown"} (assigned=${data.assignedIds.size}, syncCompleted=${data.syncCompleted})")
+                Log.d(TAG, "📊 Received ${data.projects.size} projects from database for company ${data.companyId ?: "unknown"} (assigned=${data.assignedIds.size}, syncCompleted=${data.syncCompleted}, assignedLoaded=${data.assignedLoaded})")
 
                 val mappedProjects = data.projects.map { it.toListItem() }
                 val myProjects = mappedProjects.filter { data.assignedIds.contains(it.projectId) }
@@ -85,10 +86,10 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
 
                 Log.d(TAG, "✅ Projects - My Projects: ${myProjects.size}, byStatus: [$statusCounts]")
 
-                // Keep showing loading state until initial sync completes (unless we have projects)
-                if (mappedProjects.isEmpty() && !data.syncCompleted) {
+                // Keep showing loading state until initial sync completes and assigned projects are loaded
+                if (!data.assignedLoaded || (mappedProjects.isEmpty() && !data.syncCompleted)) {
                     // Still loading - keep the loading state
-                    Log.d(TAG, "⏳ Waiting for initial sync to complete...")
+                    Log.d(TAG, "⏳ Waiting for sync to complete (assignedLoaded=${data.assignedLoaded}, syncCompleted=${data.syncCompleted})...")
                 } else {
                     _uiState.value = ProjectsUiState.Success(myProjects, projectsByStatus)
                 }
@@ -273,5 +274,6 @@ private data class ProjectsData(
     val projects: List<com.example.rocketplan_android.data.local.entity.OfflineProjectEntity>,
     val companyId: Long?,
     val assignedIds: Set<Long>,
-    val syncCompleted: Boolean
+    val syncCompleted: Boolean,
+    val assignedLoaded: Boolean
 )

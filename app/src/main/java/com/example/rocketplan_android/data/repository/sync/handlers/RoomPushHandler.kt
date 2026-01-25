@@ -195,13 +195,41 @@ class RoomPushHandler(
         val rawResponse = try {
             ctx.api.createRoom(finalLocationId, request)
         } catch (error: HttpException) {
+            val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
             if (AppConfig.isLoggingEnabled) {
-                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
                 Log.w(
                     SYNC_TAG,
                     "❌ [handlePendingRoomCreation] createRoom failed: code=${error.code()} " +
                         "body=${errorBody ?: "null"}"
                 )
+            }
+            // Handle 404 - location doesn't exist on server (was deleted)
+            if (error.isMissingOnServer() && errorBody?.contains("Location") == true) {
+                Log.w(
+                    SYNC_TAG,
+                    "⚠️ [handlePendingRoomCreation] Location $finalLocationId not found on server; " +
+                        "marking as deleted and dropping room creation"
+                )
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN,
+                    SYNC_TAG,
+                    "Room creation failed: parent location deleted on server",
+                    mapOf(
+                        "roomName" to payload.roomName,
+                        "locationServerId" to finalLocationId.toString(),
+                        "projectId" to projectServerId.toString()
+                    )
+                )
+                // Mark the stale location as deleted locally
+                location?.let { loc ->
+                    ctx.localDataService.markLocationsDeleted(listOf(finalLocationId))
+                }
+                // Also mark the pending room as deleted since it can't be created
+                ctx.localDataService.getRoom(payload.localRoomId)?.let { room ->
+                    val deleted = room.copy(isDeleted = true, isDirty = false, syncStatus = SyncStatus.SYNCED)
+                    ctx.localDataService.saveRooms(listOf(deleted))
+                }
+                return OperationOutcome.DROP
             }
             throw error
         }

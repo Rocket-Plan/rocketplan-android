@@ -58,7 +58,6 @@ class ProjectsFragment : Fragment() {
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
     private lateinit var userInitials: TextView
-    private lateinit var refreshButton: ImageView
     private lateinit var fabNewProject: FloatingActionButton
     private lateinit var assemblyUploadBubble: View
     private lateinit var conflictBanner: View
@@ -98,7 +97,6 @@ class ProjectsFragment : Fragment() {
         tabLayout = view.findViewById(R.id.tabLayout)
         viewPager = view.findViewById(R.id.viewPager)
         userInitials = view.findViewById(R.id.userInitials)
-        refreshButton = view.findViewById(R.id.refreshButton)
         fabNewProject = view.findViewById(R.id.fabNewProject)
         assemblyUploadBubble = view.findViewById(R.id.assemblyUploadBubble)
         assemblyUploadIconProgress = view.findViewById(R.id.assemblyUploadIconProgress)
@@ -140,11 +138,6 @@ class ProjectsFragment : Fragment() {
 
     private fun setupUserInterface() {
         loadUserInitials()
-
-        refreshButton.setOnClickListener {
-            viewModel.refreshProjects()
-            Toast.makeText(context, R.string.refreshing, Toast.LENGTH_SHORT).show()
-        }
 
         fabNewProject.setOnClickListener {
             findNavController().navigate(R.id.action_nav_projects_to_createProjectFragment)

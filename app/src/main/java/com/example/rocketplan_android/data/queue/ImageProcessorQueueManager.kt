@@ -153,15 +153,21 @@ class ImageProcessorQueueManager(
                 continue
             }
 
+            // Try to resolve server room ID, but don't block if room hasn't synced
+            // Photos will upload to project level and can be associated with room later
             val roomServerId = resolveServerRoomId(assembly.roomId)
             if (assembly.roomId != null && roomServerId == null) {
-                Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} waiting for room sync (roomId=${assembly.roomId})")
-                updateAssemblyStatus(
-                    assembly.assemblyId,
-                    AssemblyStatus.WAITING_FOR_ROOM,
-                    "Room is not synced yet"
+                Log.d(TAG, "📤 Assembly ${assembly.assemblyId} proceeding without room sync (roomId=${assembly.roomId}) - will upload to project level")
+                remoteLogger?.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "Assembly proceeding without room sync - uploading to project level",
+                    metadata = mapOf(
+                        "assembly_id" to assembly.assemblyId,
+                        "local_room_id" to assembly.roomId.toString(),
+                        "project_id" to projectServerId.toString()
+                    )
                 )
-                continue
             }
 
             if (roomServerId != null && assembly.roomId != roomServerId) {
@@ -318,10 +324,11 @@ class ImageProcessorQueueManager(
             return false
         }
 
+        // Try to resolve server room ID, but proceed without it if room hasn't synced
+        // Photos will upload to project level and can be associated with room later
         val roomServerId = assembly.roomId?.let { resolveServerRoomId(it) }
         if (assembly.roomId != null && roomServerId == null) {
-            Log.w(TAG, "⏳ Room not synced for assembly ${assembly.assemblyId}")
-            return false
+            Log.d(TAG, "📤 Assembly ${assembly.assemblyId} proceeding without room sync - will upload to project level")
         }
 
         val request = ImageProcessorAssemblyRequest(
