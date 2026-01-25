@@ -127,11 +127,7 @@ class EquipmentRoomFragment : Fragment() {
                 roomIcon.contentDescription = state.roomName
                 adapter.submitList(state.equipment)
                 emptyState.isVisible = state.equipment.isEmpty()
-                addCardSubtitle.text = if (state.equipment.isEmpty()) {
-                    getString(R.string.equipment_room_empty)
-                } else {
-                    getString(R.string.equipment_room_add_cta)
-                }
+                addCardSubtitle.isVisible = state.equipment.isEmpty()
             }
         }
     }
