@@ -101,7 +101,10 @@ internal fun buildProjectEntity(
     val resolvedTitle = titleCandidates.firstOrNull {
         it != null && !it.all { c -> c.isDigit() || c == '-' }
     } ?: "Project $id"
-    val resolvedUuid = uuid ?: uid ?: existing?.uuid ?: "project-$id"
+    val resolvedUuid = uuid?.takeIf { it.isNotBlank() }
+        ?: uid?.takeIf { it.isNotBlank() }
+        ?: existing?.uuid?.takeIf { it.isNotBlank() }
+        ?: "project-$id"
     val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
 
     // Preserve existing propertyId - only update if we have no local property
@@ -220,7 +223,9 @@ internal fun PropertyDto.toEntity(
     val resolvedZip = postalCode?.takeIf { it.isNotBlank() } ?: projectAddress?.zip
     val resolvedLat = latitude ?: projectAddress?.latitude?.toDoubleOrNull()
     val resolvedLng = longitude ?: projectAddress?.longitude?.toDoubleOrNull()
-    val resolvedUuid = existing?.uuid ?: uuid ?: UuidUtils.generateUuidV7()
+    val resolvedUuid = existing?.uuid?.takeIf { it.isNotBlank() }
+        ?: uuid?.takeIf { it.isNotBlank() }
+        ?: UuidUtils.generateUuidV7()
     // When existing is a pending property (negative ID) but server returned a positive ID,
     // use the server ID to complete the ID resolution
     val resolvedId = if (existing?.propertyId != null && existing.propertyId < 0 && id > 0) {
@@ -286,7 +291,9 @@ internal fun RoomDto.toEntity(
 ): OfflineRoomEntity {
     val timestamp = now()
     val serverId = id.takeIf { it > 0 }
-    val resolvedUuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7()
+    val resolvedUuid = uuid?.takeIf { it.isNotBlank() }
+        ?: existing?.uuid?.takeIf { it.isNotBlank() }
+        ?: UuidUtils.generateUuidV7()
     val createdAtValue = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp
     val updatedAtValue = DateUtils.parseApiDate(updatedAt) ?: timestamp
 

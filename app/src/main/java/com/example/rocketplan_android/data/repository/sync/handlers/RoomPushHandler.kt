@@ -264,9 +264,9 @@ class RoomPushHandler(
         val resolvedRoomId = existing?.roomId
             ?: payload.localRoomId.takeIf { it != 0L }
             ?: dto.id
-        val resolvedUuid = existing?.uuid
-            ?: payloadRoomUuid
-            ?: dto.uuid
+        val resolvedUuid = existing?.uuid?.takeIf { it.isNotBlank() }
+            ?: payloadRoomUuid?.takeIf { it.isNotBlank() }
+            ?: dto.uuid?.takeIf { it.isNotBlank() }
             ?: UuidUtils.generateUuidV7()
 
         val entity = dto.toEntity(

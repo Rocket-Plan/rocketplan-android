@@ -97,6 +97,10 @@ class RoomDetailViewModel(
     private var lastSyncedServerRoomId: Long? = null
     private var lastScopeSyncedRoomId: Long? = null
     private var lastScopeSyncAt = 0L
+
+    // Scope category filter
+    private val _selectedScopeCategory = MutableStateFlow<String?>(null) // null = "All"
+    val selectedScopeCategory: StateFlow<String?> = _selectedScopeCategory.asStateFlow()
     private var lastDamagesSyncedRoomId: Long? = null
     private var lastDamagesSyncAt = 0L
     private var currentPhotoLookupRoomId: Long? = null
@@ -333,6 +337,33 @@ class RoomDetailViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+    // Unique category names from scope groups
+    val scopeCategories: StateFlow<List<String>> = roomScopeGroups
+        .map { groups -> groups.map { it.title }.distinct().sorted() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    // Filtered scope groups based on selected category
+    val filteredRoomScopeGroups: StateFlow<List<RoomScopeGroup>> =
+        combine(roomScopeGroups, _selectedScopeCategory) { groups, selectedCategory ->
+            if (selectedCategory == null) {
+                groups // "All" - show everything
+            } else {
+                groups.filter { it.title == selectedCategory }
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
+    fun selectScopeCategory(category: String?) {
+        _selectedScopeCategory.value = category
+    }
 
     init {
         Log.d(TAG, "📦 init(projectId=$projectId, roomId=$roomId)")

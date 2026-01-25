@@ -94,7 +94,9 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             .firstOrNull { it.uuid == payload.locationUuid || it.locationId == payload.localLocationId }
         val entity = dto.toEntity(defaultProjectId = payload.projectId).copy(
             locationId = existing?.locationId ?: dto.id,
-            uuid = existing?.uuid ?: dto.uuid ?: UuidUtils.generateUuidV7(),
+            uuid = existing?.uuid?.takeIf { it.isNotBlank() }
+                ?: dto.uuid?.takeIf { it.isNotBlank() }
+                ?: UuidUtils.generateUuidV7(),
             syncStatus = SyncStatus.SYNCED,
             isDirty = false,
             lastSyncedAt = ctx.now()

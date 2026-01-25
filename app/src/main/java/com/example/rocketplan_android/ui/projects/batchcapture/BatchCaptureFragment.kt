@@ -42,6 +42,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
+import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.thermal.FlirCameraController
@@ -815,11 +816,11 @@ class BatchCaptureFragment : Fragment() {
         // Instead, we use FLIR's fusion modes which combines thermal+visual in a single view
         dualPreviewContainer.isVisible = false
 
-        // Mode toggle and FLIR controls container - always visible so user can switch modes
-        flirControlsContainer.isVisible = true
+        // Mode toggle and FLIR controls container - only visible on FLIR builds
+        flirControlsContainer.isVisible = BuildConfig.HAS_FLIR_SUPPORT
 
         // FLIR-specific controls (palette, fusion, etc.) visible for all FLIR modes
-        flirControls.isVisible = usesFlir
+        flirControls.isVisible = usesFlir && BuildConfig.HAS_FLIR_SUPPORT
 
         // Flash only works in REGULAR mode (not IR or DUAL since IR doesn't use flash)
         flashButton.isEnabled = captureMode == CaptureMode.REGULAR

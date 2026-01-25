@@ -828,32 +828,28 @@ class RoomDetailFragment : Fragment() {
             return
         }
 
-        // On FLIR devices, skip the menu and go directly to capture
-        // (capture mode can be selected on the capture screen itself)
+        // On FLIR devices, show a menu to choose between standard and IR capture
+        // On standard devices, go directly to batch capture (no menu needed)
         if (BuildConfig.HAS_FLIR_SUPPORT) {
-            navigateToFlirCapture()
-            return
-        }
-
-        val popup = PopupMenu(requireContext(), anchor)
-        popup.menuInflater.inflate(R.menu.menu_add_photo_options, popup.menu)
-        popup.menu.findItem(R.id.menu_add_photo_flir)?.isVisible = BuildConfig.HAS_FLIR_SUPPORT
-        popup.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.menu_add_photo_standard -> {
-                    navigateToBatchCapture()
-                    true
+            val popup = PopupMenu(requireContext(), anchor)
+            popup.menuInflater.inflate(R.menu.menu_add_photo_options, popup.menu)
+            popup.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.menu_add_photo_standard -> {
+                        navigateToBatchCapture()
+                        true
+                    }
+                    R.id.menu_add_photo_flir -> {
+                        navigateToFlirCapture()
+                        true
+                    }
+                    else -> false
                 }
-
-                R.id.menu_add_photo_flir -> {
-                    navigateToFlirCapture()
-                    true
-                }
-
-                else -> false
             }
+            popup.show()
+        } else {
+            navigateToBatchCapture()
         }
-        popup.show()
     }
 
     private fun observeNavigationResults() {
@@ -937,10 +933,15 @@ class RoomDetailFragment : Fragment() {
                     }
                 }
                 launch {
-                    viewModel.roomScopeGroups.collect { scopes ->
+                    viewModel.filteredRoomScopeGroups.collect { scopes ->
                         latestScopeGroups = scopes
                         scopeAdapter.submitList(scopes)
                         updateScopeVisibility()
+                    }
+                }
+                launch {
+                    viewModel.scopeCategories.collect { categories ->
+                        updateScopeCategoryButtons(categories)
                     }
                 }
                 launch {
@@ -1187,6 +1188,58 @@ class RoomDetailFragment : Fragment() {
         photosRecyclerView.post {
             Log.d(TAG, "📐 RecyclerView dimensions: width=${photosRecyclerView.width}, height=${photosRecyclerView.height}, measuredHeight=${photosRecyclerView.measuredHeight}, childCount=${photosRecyclerView.childCount}")
         }
+    }
+
+    private var currentCategoryButtons = mutableListOf<com.google.android.material.button.MaterialButton>()
+
+    private fun updateScopeCategoryButtons(categories: List<String>) {
+        // Only show category buttons on Scope tab with multiple categories
+        val shouldShow = viewModel.selectedTab.value == RoomDetailTab.SCOPE && categories.size > 1
+        damageCategoryGroup.isVisible = shouldShow
+
+        if (!shouldShow) return
+
+        // Remove old dynamic buttons (keep the "All" button)
+        currentCategoryButtons.forEach { damageCategoryGroup.removeView(it) }
+        currentCategoryButtons.clear()
+
+        // Create dynamic buttons for each category
+        categories.forEach { category ->
+            val button = com.google.android.material.button.MaterialButton(
+                requireContext(),
+                null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
+            ).apply {
+                id = View.generateViewId()
+                text = category
+                isAllCaps = false
+                layoutParams = android.view.ViewGroup.MarginLayoutParams(
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
+                    android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    marginEnd = (8 * resources.displayMetrics.density).toInt()
+                }
+                setOnClickListener {
+                    viewModel.selectScopeCategory(category)
+                    damageCategoryGroup.findViewById<com.google.android.material.button.MaterialButton>(R.id.damageFilterAll)?.isChecked = false
+                    currentCategoryButtons.forEach { btn -> btn.isChecked = btn == this }
+                    this.isChecked = true
+                }
+            }
+            currentCategoryButtons.add(button)
+            damageCategoryGroup.addView(button)
+        }
+
+        // Setup "All" button click
+        damageCategoryGroup.findViewById<com.google.android.material.button.MaterialButton>(R.id.damageFilterAll)?.setOnClickListener {
+            viewModel.selectScopeCategory(null)
+            it as com.google.android.material.button.MaterialButton
+            it.isChecked = true
+            currentCategoryButtons.forEach { btn -> btn.isChecked = false }
+        }
+
+        // Select "All" by default
+        damageCategoryGroup.check(R.id.damageFilterAll)
     }
 
     companion object {
