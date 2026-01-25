@@ -44,3 +44,6 @@ fastlane/test_output
 fastlane/README.md
 Gemfile.lock
 vendor/bundle
+
+# Deploy artifacts
+/deploy/
