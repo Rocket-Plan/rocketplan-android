@@ -189,7 +189,9 @@ class ProjectRoomsAdapter(
                 if (hasProcessingProgress) {
                     val progress = room.processingProgress!!
                     processingContainer.isVisible = true
+                    processingProgress.isVisible = true
                     processingProgress.text = "${progress.completed}/${progress.total}"
+                    Log.d(TAG, "📊 Showing progress for room ${room.roomId}: ${progress.completed}/${progress.total}")
                 } else {
                     processingContainer.isVisible = room.isLoadingPhotos
                     processingProgress.isVisible = false

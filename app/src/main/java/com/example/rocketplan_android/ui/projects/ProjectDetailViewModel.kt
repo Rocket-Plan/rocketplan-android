@@ -77,6 +77,9 @@ class ProjectDetailViewModel(
                     imageProcessorDao.observeProcessingProgressByProject(projectId)
                 ) { photoSyncingProjects, projectSyncingProjects, damages, workScopes, progressList ->
                     val progressMap = progressList.associateBy { it.roomId }
+                    if (progressList.isNotEmpty()) {
+                        Log.d("ProjectDetailVM", "📊 Processing progress: ${progressList.map { "${it.roomId}: ${it.completedPhotos}/${it.totalPhotos}" }}")
+                    }
                     SyncExtras(photoSyncingProjects, projectSyncingProjects, damages, workScopes, progressMap)
                 }
             ) { data, extra -> data to extra }
