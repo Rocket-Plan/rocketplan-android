@@ -95,7 +95,8 @@ class ProjectRoomsAdapter(
         private val thumbnail: ImageView = view.findViewById(R.id.roomThumbnail)
         private val title: TextView = view.findViewById(R.id.roomTitle)
         private val photoCount: TextView = view.findViewById(R.id.photoCount)
-        private val spinner: View = view.findViewById(R.id.loadingSpinner)
+        private val processingContainer: View = view.findViewById(R.id.processingContainer)
+        private val processingProgress: TextView = view.findViewById(R.id.processingProgress)
         private val roomIconContainer: View = view.findViewById(R.id.roomIconContainer)
         private val roomTypeIcon: ImageView = view.findViewById(R.id.roomTypeIcon)
         private val roomScopeTotal: TextView = view.findViewById(R.id.roomScopeTotal)
@@ -130,7 +131,7 @@ class ProjectRoomsAdapter(
                     count
                 )
                 roomScopeTotal.text = formatScopeTotal(room.scopeTotal)
-                spinner.isVisible = false
+                processingContainer.isVisible = false
                 val shouldResetPlaceholder = previousRoom == null ||
                     previousRoom.roomId != room.roomId ||
                     previousRoom.iconRes != room.iconRes ||
@@ -150,7 +151,7 @@ class ProjectRoomsAdapter(
             roomScopeTotal.isVisible = false
             roomTypeIcon.isVisible = false
 
-            val hasPendingPhotos = room.pendingPhotoCount > 0
+            val hasProcessingProgress = room.processingProgress != null
             val totalPhotoCount = room.photoCount + room.pendingPhotoCount
             val hasAnyPhotos = totalPhotoCount > 0 || !room.thumbnailUrl.isNullOrBlank()
             if (!hasAnyPhotos && !room.isLoadingPhotos) {
@@ -161,32 +162,13 @@ class ProjectRoomsAdapter(
                 roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_light)
                 title.setTextColor(ContextCompat.getColor(itemView.context, R.color.black))
                 photoCount.setTextColor(ContextCompat.getColor(itemView.context, R.color.light_text_rp))
-                spinner.isVisible = false
+                processingContainer.isVisible = false
                 thumbnail.load(R.drawable.bg_room_placeholder_white) {
                     crossfade(previousRoom == null || hasModeChanged)
                 }
             } else {
                 roomIconContainer.isVisible = false
                 gradientOverlay.isVisible = true
-                // Show total count including pending, with indicator if pending
-                val displayCount = if (hasPendingPhotos) totalPhotoCount else room.photoCount
-                val countText = if (hasPendingPhotos) {
-                    // Show pending indicator with count
-                    itemView.resources.getQuantityString(
-                        R.plurals.photo_count,
-                        displayCount,
-                        displayCount
-                    ) + " ⏳"
-                } else {
-                    itemView.resources.getQuantityString(
-                        R.plurals.photo_count,
-                        displayCount,
-                        displayCount
-                    )
-                }
-                photoCount.text = countText
-                // Show spinner for loading OR pending uploads
-                spinner.isVisible = room.isLoadingPhotos || hasPendingPhotos
 
                 val needsReload = previousRoom?.let { hasVisualDifferences(it, room) || hasModeChanged } ?: true
                 if (needsReload) {
@@ -202,23 +184,24 @@ class ProjectRoomsAdapter(
                 } else {
                     Log.v(TAG, "✅ Skipping reload for room id=${room.roomId} (same as previous)")
                 }
+
+                // Show processing progress overlay with spinner and count
+                if (hasProcessingProgress) {
+                    val progress = room.processingProgress!!
+                    processingContainer.isVisible = true
+                    processingProgress.text = "${progress.completed}/${progress.total}"
+                } else {
+                    processingContainer.isVisible = room.isLoadingPhotos
+                    processingProgress.isVisible = false
+                }
             }
             thumbnail.isVisible = true
-            // Final photo count display (handles both states)
-            val finalDisplayCount = if (hasPendingPhotos) totalPhotoCount else room.photoCount
-            photoCount.text = if (hasPendingPhotos) {
-                itemView.resources.getQuantityString(
-                    R.plurals.photo_count,
-                    finalDisplayCount,
-                    finalDisplayCount
-                ) + " ⏳"
-            } else {
-                itemView.resources.getQuantityString(
-                    R.plurals.photo_count,
-                    finalDisplayCount,
-                    finalDisplayCount
-                )
-            }
+            // Photo count display - show confirmed count only (processing shown in overlay)
+            photoCount.text = itemView.resources.getQuantityString(
+                R.plurals.photo_count,
+                room.photoCount,
+                room.photoCount
+            )
             itemView.setOnClickListener { onRoomClick(room) }
         }
 

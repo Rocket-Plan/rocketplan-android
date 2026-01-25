@@ -85,13 +85,6 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
 
                 Log.d(TAG, "✅ Projects - My Projects: ${myProjects.size}, byStatus: [$statusCounts]")
 
-                remoteLogger.log(
-                    level = LogLevel.DEBUG,
-                    tag = TAG,
-                    message = "Projects updated: my=${myProjects.size}, byStatus=[$statusCounts]",
-                    metadata = mapOf("source" to "room_update")
-                )
-
                 // Keep showing loading state until initial sync completes (unless we have projects)
                 if (mappedProjects.isEmpty() && !data.syncCompleted) {
                     // Still loading - keep the loading state

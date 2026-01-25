@@ -146,6 +146,34 @@ interface ImageProcessorDao {
         val roomId: Long,
         val pendingCount: Int
     )
+
+    /**
+     * Observes processing progress per room: total photos and completed count.
+     * Used to display "3/5" style progress indicators on room cards.
+     */
+    @Query(
+        """
+        SELECT
+            a.roomId,
+            SUM(a.totalFiles) as totalPhotos,
+            COALESCE(SUM(
+                (SELECT COUNT(*) FROM image_processor_photos p
+                 WHERE p.assemblyLocalId = a.id AND p.status = 'completed')
+            ), 0) as completedPhotos
+        FROM image_processor_assemblies a
+        WHERE a.projectId = :projectId
+          AND a.status NOT IN ('completed', 'failed', 'cancelled')
+          AND a.roomId IS NOT NULL
+        GROUP BY a.roomId
+        """
+    )
+    fun observeProcessingProgressByProject(projectId: Long): Flow<List<RoomProcessingProgress>>
+
+    data class RoomProcessingProgress(
+        val roomId: Long,
+        val totalPhotos: Int,
+        val completedPhotos: Int
+    )
     // endregion
 
     // region Photo operations

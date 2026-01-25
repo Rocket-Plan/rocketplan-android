@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -73,15 +74,15 @@ class ProjectDetailViewModel(
                     syncQueueManager.projectSyncingProjects,
                     localDataService.observeDamages(projectId),
                     localDataService.observeWorkScopes(projectId),
-                    imageProcessorDao.observePendingPhotoCountsByProject(projectId)
-                ) { photoSyncingProjects, projectSyncingProjects, damages, workScopes, pendingCounts ->
-                    val pendingCountsMap = pendingCounts.associate { it.roomId to it.pendingCount }
-                    SyncExtras(photoSyncingProjects, projectSyncingProjects, damages, workScopes, pendingCountsMap)
+                    imageProcessorDao.observeProcessingProgressByProject(projectId)
+                ) { photoSyncingProjects, projectSyncingProjects, damages, workScopes, progressList ->
+                    val progressMap = progressList.associateBy { it.roomId }
+                    SyncExtras(photoSyncingProjects, projectSyncingProjects, damages, workScopes, progressMap)
                 }
             ) { data, extra -> data to extra }
             .mapLatest { (data, extra) ->
                 val (projects, rooms, photos, notes, albums) = data
-                val (photoSyncingProjects, projectSyncingProjects, damages, workScopes, pendingPhotoCounts) = extra
+                val (photoSyncingProjects, projectSyncingProjects, damages, workScopes, processingProgressMap) = extra
 
                 Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
                 val project = projects.firstOrNull { it.projectId == projectId }
@@ -101,7 +102,7 @@ class ProjectDetailViewModel(
                         damages = damages,
                         workScopes = workScopes,
                         isProjectPhotoSyncing = isProjectPhotoSyncing,
-                        pendingPhotoCounts = pendingPhotoCounts
+                        processingProgressMap = processingProgressMap
                     )
                     val damageTotal = sections.sumOf { section -> section.rooms.sumOf { it.damageCount } }
                     val header = project.toHeader(notes.size, damageTotal)
@@ -217,7 +218,7 @@ class ProjectDetailViewModel(
         damages: List<OfflineDamageEntity>,
         workScopes: List<OfflineWorkScopeEntity>,
         isProjectPhotoSyncing: Boolean,
-        pendingPhotoCounts: Map<Long, Int> = emptyMap()
+        processingProgressMap: Map<Long, ImageProcessorDao.RoomProcessingProgress> = emptyMap()
     ): List<RoomLevelSection> {
         val visibleRooms = filterNot { room ->
             room.roomId == 0L
@@ -285,16 +286,25 @@ class ProjectDetailViewModel(
                             typeId = room.roomTypeId,
                             iconName = room.roomType ?: room.title
                         )
-                        // Look up pending photo count using both local and server IDs
-                        val pendingCount = relatedRoomIds.sumOf { id ->
-                            pendingPhotoCounts[id] ?: 0
+                        // Look up processing progress using both local and server IDs
+                        val progress = relatedRoomIds.mapNotNull { id ->
+                            processingProgressMap[id]
+                        }.let { progressList ->
+                            if (progressList.isEmpty()) null
+                            else {
+                                val totalPhotos = progressList.fold(0) { acc, p -> acc + p.totalPhotos }
+                                val completedPhotos = progressList.fold(0) { acc, p -> acc + p.completedPhotos }
+                                ProcessingProgress(completed = completedPhotos, total = totalPhotos)
+                            }
                         }
+                        val pendingCount = progress?.total ?: 0
                         RoomCard(
                             roomId = roomKey,
                             title = room.title,
                             level = level,
                             photoCount = resolvedPhotoCount,
                             pendingPhotoCount = pendingCount,
+                            processingProgress = progress,
                             damageCount = damageCount,
                             scopeTotal = scopeTotal,
                             thumbnailUrl = resolvedThumbnail,
@@ -397,11 +407,17 @@ data class RoomCard(
     val level: String,
     val photoCount: Int,
     val pendingPhotoCount: Int = 0,
+    val processingProgress: ProcessingProgress? = null,
     val damageCount: Int,
     val scopeTotal: Double,
     val thumbnailUrl: String?,
     val isLoadingPhotos: Boolean,
     val iconRes: Int
+)
+
+data class ProcessingProgress(
+    val completed: Int,
+    val total: Int
 )
 
 data class AlbumSection(
@@ -461,5 +477,5 @@ private data class SyncExtras(
     val projectSyncingProjects: Set<Long>,
     val damages: List<OfflineDamageEntity>,
     val workScopes: List<OfflineWorkScopeEntity>,
-    val pendingPhotoCounts: Map<Long, Int> = emptyMap()
+    val processingProgress: Map<Long, ImageProcessorDao.RoomProcessingProgress> = emptyMap()
 )

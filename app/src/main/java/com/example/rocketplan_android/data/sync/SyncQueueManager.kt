@@ -598,17 +598,8 @@ class SyncQueueManager(
                 }
 
                 val skipped = projects - eligible.toSet()
-                skipped.forEach { project ->
-                    remoteLogger.log(
-                        LogLevel.DEBUG,
-                        TAG,
-                        "Skipped project due to recent sync",
-                        mapOf(
-                            "projectId" to project.projectId.toString(),
-                            "lastSyncedAt" to (project.lastSyncedAt?.time?.toString() ?: "null"),
-                            "recentCutoff" to recentCutoff.toString()
-                        )
-                    )
+                if (skipped.isNotEmpty()) {
+                    Log.d(TAG, "Skipped ${skipped.size} projects due to recent sync")
                 }
 
                 // Mark initial sync as completed so UI can show empty state if needed
