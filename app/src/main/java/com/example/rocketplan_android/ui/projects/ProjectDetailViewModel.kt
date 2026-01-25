@@ -293,6 +293,9 @@ class ProjectDetailViewModel(
                         val damageCount = damages.count { damage ->
                             val rid = damage.roomId ?: return@count false
                             relatedRoomIds.contains(rid)
+                        } + workScopes.count { scope ->
+                            val rid = scope.roomId ?: return@count false
+                            relatedRoomIds.contains(rid)
                         }
                         val scopeTotal = relatedRoomIds.sumOf { id ->
                             scopeTotalsByRoom[id] ?: 0.0

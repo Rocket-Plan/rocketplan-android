@@ -265,6 +265,25 @@ class RoomDetailViewModel(
             started = SharingStarted.WhileSubscribed(5_000),
             initialValue = emptyList()
         )
+
+    // Filtered room damage sections based on selected scope category
+    val filteredRoomDamageSections: StateFlow<List<RoomDamageSection>> =
+        combine(roomDamageSections, _selectedScopeCategory) { sections, selectedCategory ->
+            if (selectedCategory == null) {
+                sections // "All" - show everything
+            } else {
+                sections.map { section ->
+                    section.copy(
+                        scopeGroups = section.scopeGroups.filter { it.title == selectedCategory }
+                    )
+                }
+            }
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList()
+        )
+
     val roomScopeGroups: StateFlow<List<RoomScopeGroup>> =
         combine(_resolvedRoom, localDataService.observeWorkScopes(projectId)) { room, scopes ->
             val resolvedRoom = room ?: return@combine emptyList()

@@ -945,7 +945,7 @@ class RoomDetailFragment : Fragment() {
                     }
                 }
                 launch {
-                    viewModel.roomDamageSections.collect { sections ->
+                    viewModel.filteredRoomDamageSections.collect { sections ->
                         latestDamageSections = sections
                         roomDamageSectionAdapter.submitList(sections)
                         updateDamageAndScopeVisibility()
@@ -1193,8 +1193,9 @@ class RoomDetailFragment : Fragment() {
     private var currentCategoryButtons = mutableListOf<com.google.android.material.button.MaterialButton>()
 
     private fun updateScopeCategoryButtons(categories: List<String>) {
-        // Only show category buttons on Scope tab with multiple categories
-        val shouldShow = viewModel.selectedTab.value == RoomDetailTab.SCOPE && categories.size > 1
+        // Show category buttons on Damages/Scope tab when there are multiple categories
+        val tab = viewModel.selectedTab.value
+        val shouldShow = (tab == RoomDetailTab.DAMAGES || tab == RoomDetailTab.SCOPE) && categories.size > 1
         damageCategoryGroup.isVisible = shouldShow
 
         if (!shouldShow) return
@@ -1203,7 +1204,7 @@ class RoomDetailFragment : Fragment() {
         currentCategoryButtons.forEach { damageCategoryGroup.removeView(it) }
         currentCategoryButtons.clear()
 
-        // Create dynamic buttons for each category
+        // Create dynamic buttons for each category from actual data
         categories.forEach { category ->
             val button = com.google.android.material.button.MaterialButton(
                 requireContext(),

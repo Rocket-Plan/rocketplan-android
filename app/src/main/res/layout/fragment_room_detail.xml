@@ -446,6 +446,7 @@
                 android:visibility="gone"
                 app:singleSelection="true">
 
+                <!-- Only "All" button in XML - category buttons are added dynamically based on actual data -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/damageFilterAll"
                     style="@style/Widget.RocketPlan.DamageFilterButton"
@@ -453,32 +454,6 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="8dp"
                     android:text="@string/all"
-                    android:textAllCaps="false" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/damageFilterCat1"
-                    style="@style/Widget.RocketPlan.DamageFilterButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:text="@string/cat_1"
-                    android:textAllCaps="false" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/damageFilterCat2"
-                    style="@style/Widget.RocketPlan.DamageFilterButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:text="@string/cat_2"
-                    android:textAllCaps="false" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/damageFilterCat3"
-                    style="@style/Widget.RocketPlan.DamageFilterButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/cat_3"
                     android:textAllCaps="false" />
             </com.google.android.material.button.MaterialButtonToggleGroup>
 

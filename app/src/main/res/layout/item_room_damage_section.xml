@@ -136,12 +136,14 @@
         </LinearLayout>
     </FrameLayout>
 
+    <!-- Filter buttons hidden - filtering done at room level, not per-section -->
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/sectionFilterGroup"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:gravity="start"
+        android:visibility="gone"
         app:singleSelection="true">
 
         <com.google.android.material.button.MaterialButton
@@ -151,32 +153,6 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="8dp"
             android:text="@string/all"
-            android:textAllCaps="false" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/sectionFilterCat1"
-            style="@style/Widget.RocketPlan.DamageFilterButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="@string/cat_1"
-            android:textAllCaps="false" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/sectionFilterCat2"
-            style="@style/Widget.RocketPlan.DamageFilterButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:text="@string/cat_2"
-            android:textAllCaps="false" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/sectionFilterCat3"
-            style="@style/Widget.RocketPlan.DamageFilterButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/cat_3"
             android:textAllCaps="false" />
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
