@@ -37,7 +37,7 @@ data class RoomTypePickerUiState(
 )
 
 sealed interface RoomTypePickerEvent {
-    data class RoomCreated(val roomName: String) : RoomTypePickerEvent
+    data class RoomCreated(val roomId: Long, val roomName: String) : RoomTypePickerEvent
     data class RoomCreationFailed(val message: String?) : RoomTypePickerEvent
 }
 
@@ -156,10 +156,10 @@ class RoomTypePickerViewModel(
                 isExterior = mode == RoomTypePickerMode.EXTERIOR,
                 idempotencyKey = idempotencyKey
             )
-                .onSuccess { _ ->
+                .onSuccess { room ->
                     _uiState.update { state -> state.copy(isCreating = false) }
                     clearRoomIdempotencyKey()
-                    _events.emit(RoomTypePickerEvent.RoomCreated(roomName))
+                    _events.emit(RoomTypePickerEvent.RoomCreated(room.roomId, roomName))
                 }
                 .onFailure { throwable: Throwable ->
                     val message = when (throwable) {

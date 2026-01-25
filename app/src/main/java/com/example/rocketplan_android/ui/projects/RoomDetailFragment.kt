@@ -823,6 +823,14 @@ class RoomDetailFragment : Fragment() {
             Log.d(TAG, "Ignoring add photo action; Photos tab not active")
             return
         }
+
+        // On FLIR devices, skip the menu and go directly to capture
+        // (capture mode can be selected on the capture screen itself)
+        if (BuildConfig.HAS_FLIR_SUPPORT) {
+            navigateToFlirCapture()
+            return
+        }
+
         val popup = PopupMenu(requireContext(), anchor)
         popup.menuInflater.inflate(R.menu.menu_add_photo_options, popup.menu)
         popup.menu.findItem(R.id.menu_add_photo_flir)?.isVisible = BuildConfig.HAS_FLIR_SUPPORT

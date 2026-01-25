@@ -385,6 +385,11 @@
             android:name="mode"
             app:argType="string"
             android:defaultValue="ROOM" />
+
+        <action
+            android:id="@+id/action_roomTypePickerFragment_to_roomDetailFragment"
+            app:destination="@id/roomDetailFragment"
+            app:popUpTo="@id/projectDetailFragment" />
     </fragment>
 
     <fragment

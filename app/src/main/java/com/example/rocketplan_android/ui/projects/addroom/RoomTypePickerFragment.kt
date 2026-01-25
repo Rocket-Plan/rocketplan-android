@@ -117,7 +117,13 @@ class RoomTypePickerFragment : Fragment() {
                                 getString(R.string.room_type_selected_toast, event.roomName),
                                 Toast.LENGTH_SHORT
                             ).show()
-                            findNavController().navigateUp()
+                            val action = RoomTypePickerFragmentDirections
+                                .actionRoomTypePickerFragmentToRoomDetailFragment(
+                                    projectId = args.projectId,
+                                    roomId = event.roomId,
+                                    startTab = "photos"
+                                )
+                            findNavController().navigate(action)
                         }
                         is RoomTypePickerEvent.RoomCreationFailed -> {
                             Toast.makeText(

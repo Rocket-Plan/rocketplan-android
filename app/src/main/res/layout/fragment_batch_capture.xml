@@ -170,6 +170,7 @@
                 android:text="@string/regular"
                 android:textColor="@android:color/white"
                 app:strokeColor="@android:color/white"
+                app:backgroundTint="@color/mode_button_bg_selector"
                 android:textAllCaps="false" />
 
             <com.google.android.material.button.MaterialButton
@@ -180,6 +181,7 @@
                 android:text="@string/ir"
                 android:textColor="@android:color/white"
                 app:strokeColor="@android:color/white"
+                app:backgroundTint="@color/mode_button_bg_selector"
                 android:textAllCaps="false" />
 
             <com.google.android.material.button.MaterialButton
@@ -190,6 +192,7 @@
                 android:text="@string/ir_visual"
                 android:textColor="@android:color/white"
                 app:strokeColor="@android:color/white"
+                app:backgroundTint="@color/mode_button_bg_selector"
                 android:textAllCaps="false" />
 
             <com.google.android.material.button.MaterialButton
@@ -200,6 +203,7 @@
                 android:text="Blend"
                 android:textColor="@android:color/white"
                 app:strokeColor="@android:color/white"
+                app:backgroundTint="@color/mode_button_bg_selector"
                 android:textAllCaps="false" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
         </HorizontalScrollView>
@@ -218,6 +222,15 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:visibility="gone">
+
+                <ProgressBar
+                    android:id="@+id/flirInitSpinner"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginEnd="8dp"
+                    android:indeterminateTint="@android:color/white"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
 
                 <TextView
                     android:id="@+id/flirStatusText"

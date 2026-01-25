@@ -15,6 +15,7 @@ import android.view.TextureView
 import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.ImageView
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
@@ -88,6 +89,7 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var flirControlsContainer: View
     private lateinit var flirControls: View
     private lateinit var flirStatusText: TextView
+    private lateinit var flirInitSpinner: ProgressBar
     private lateinit var flirPaletteSwitch: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var flirFusionSwitch: com.google.android.material.switchmaterial.SwitchMaterial
     private lateinit var flirMeasurementsSwitch: com.google.android.material.switchmaterial.SwitchMaterial
@@ -270,6 +272,7 @@ class BatchCaptureFragment : Fragment() {
         flirControlsContainer = view.findViewById(R.id.flirControlsContainer)
         flirControls = view.findViewById(R.id.flirControls)
         flirStatusText = view.findViewById(R.id.flirStatusText)
+        flirInitSpinner = view.findViewById(R.id.flirInitSpinner)
         flirPaletteSwitch = view.findViewById(R.id.flirPaletteSwitch)
         flirFusionSwitch = view.findViewById(R.id.flirFusionSwitch)
         flirMeasurementsSwitch = view.findViewById(R.id.flirMeasurementsSwitch)
@@ -582,6 +585,7 @@ class BatchCaptureFragment : Fragment() {
                         when (state) {
                             FlirState.Idle -> {
                                 flirStatusText.text = getString(R.string.flir_status_idle)
+                                flirInitSpinner.visibility = View.GONE
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset if FLIR disconnected mid-capture
@@ -589,6 +593,7 @@ class BatchCaptureFragment : Fragment() {
                             }
                             FlirState.Discovering -> {
                                 flirStatusText.text = getString(R.string.flir_status_discovering)
+                                flirInitSpinner.visibility = View.VISIBLE
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset if reconnecting
@@ -597,6 +602,7 @@ class BatchCaptureFragment : Fragment() {
                             is FlirState.Connecting -> {
                                 flirStatusText.text =
                                     getString(R.string.flir_status_connecting, state.identity.deviceId)
+                                flirInitSpinner.visibility = View.VISIBLE
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset if reconnecting
@@ -605,11 +611,13 @@ class BatchCaptureFragment : Fragment() {
                             is FlirState.Streaming -> {
                                 flirStatusText.text =
                                     getString(R.string.flir_status_streaming, state.identity.deviceId)
+                                flirInitSpinner.visibility = View.GONE
                                 flirReady = true
                                 renderState(viewModel.uiState.value) // Update shutter button
                             }
                             is FlirState.Error -> {
                                 flirStatusText.text = state.message
+                                flirInitSpinner.visibility = View.GONE
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset capture lock so user can retry
