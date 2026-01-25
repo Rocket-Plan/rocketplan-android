@@ -104,3 +104,77 @@ versionName = "1.29 ($buildNumber)"
 ```
 
 Use `fastlane bump` to increment automatically.
+
+## Architecture
+
+### Offline-First Data Flow
+
+The app uses an offline-first architecture with Room database as the source of truth:
+
+```
+Server API ─► SyncServices ─► Room Database ─► UI (via Flow)
+                   ▲                              │
+                   └──────── Pending Ops ◄────────┘
+```
+
+1. **UI reads from Room** via reactive Flows
+2. **User actions** create pending operations in the sync queue
+3. **SyncQueueManager** processes pending operations and syncs with server
+4. **Server changes** update Room, which triggers UI updates
+
+### Sync Architecture
+
+Key sync components in `data/repository/sync/` and `data/sync/`:
+
+| Component | Purpose |
+|-----------|---------|
+| `SyncQueueManager` | Orchestrates all sync jobs, manages queue priority |
+| `ProjectSyncService` | Syncs project list using incremental checkpoints |
+| `DeletedRecordsSyncService` | Fetches deletions from `/api/sync/deleted` endpoint |
+| `SyncJob` | Sealed class defining job types (SyncProjects, SyncDeletedRecords, etc.) |
+
+**Sync job flow:**
+```
+ensureInitialSync() / refreshProjects()
+    └─► EnsureUserContext
+    └─► ProcessPendingOperations
+    └─► SyncDeletedRecords        # Fetch explicit deletions from server
+    └─► SyncProjects(force=true)  # Fetch all projects
+```
+
+**Deletion sync:** Uses `/api/sync/deleted?since=<timestamp>` endpoint instead of inferring deletions from absence in API responses. This prevents data loss from incomplete API responses.
+
+### Image Processor & Pusher Realtime
+
+Photo uploads use the ImageProcessor system with Pusher for realtime status updates:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `ImageProcessorQueueManager` | `data/queue/` | Manages upload queue |
+| `ImageProcessorRealtimeManager` | `realtime/` | Handles Pusher status updates |
+| `PusherService` | `realtime/` | Pusher connection management |
+
+**Photo upload flow:**
+```
+Capture ─► LocalDB (pending) ─► Upload ─► Server Processing ─► Pusher Event ─► Complete
+              │                              │                      │
+              └── UI shows spinner ──────────┴──────────────────────┘
+```
+
+**Pusher channels:**
+- `imageprocessornotification.AssemblyId.<id>` - Photo/assembly status updates
+- Events: `ImageProcessorPhotoUpdated`, `ImageProcessorUpdated`
+
+**Status transitions:**
+- `created` → `uploading` → `processing` → `completed`
+- UI shows spinner until status becomes `completed` or `failed`
+
+### Key Files
+
+| Area | Files |
+|------|-------|
+| Sync Queue | `SyncQueueManager.kt`, `SyncJob.kt` |
+| Project Sync | `ProjectSyncService.kt`, `DeletedRecordsSyncService.kt` |
+| Local Storage | `LocalDataService.kt`, `OfflineDao.kt` |
+| Image Upload | `ImageProcessorQueueManager.kt`, `ImageProcessorRealtimeManager.kt` |
+| Pusher | `PusherService.kt`, `PusherConfig.kt` |
