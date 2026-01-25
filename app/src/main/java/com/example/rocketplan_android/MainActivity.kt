@@ -38,6 +38,8 @@ import com.example.rocketplan_android.data.repository.ImageProcessingConfigurati
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.data.sync.SyncQueueManager
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import com.google.android.material.appbar.AppBarLayout
 import kotlinx.coroutines.launch
 
@@ -64,6 +66,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
     private lateinit var imageProcessorQueueManager: ImageProcessorQueueManager
     private lateinit var roomTypeRepository: RoomTypeRepository
+    private lateinit var remoteLogger: RemoteLogger
     private lateinit var contentLayoutParams: CoordinatorLayout.LayoutParams
     private lateinit var scrollingContentBehavior: AppBarLayout.ScrollingViewBehavior
 
@@ -86,6 +89,7 @@ class MainActivity : AppCompatActivity() {
         imageProcessingConfigurationRepository = rocketPlanApp.imageProcessingConfigurationRepository
         imageProcessorQueueManager = rocketPlanApp.imageProcessorQueueManager
         roomTypeRepository = rocketPlanApp.roomTypeRepository
+        remoteLogger = rocketPlanApp.remoteLogger
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
@@ -145,6 +149,18 @@ class MainActivity : AppCompatActivity() {
                 focused.clearFocus()
                 imm.hideSoftInputFromWindow(focused.windowToken, 0)
             }
+
+            // Log navigation event to remote logger
+            val screenName = destination.label?.toString() ?: destination.displayName
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = "Navigation",
+                message = "Navigated to $screenName",
+                metadata = mapOf(
+                    "screen_name" to screenName,
+                    "destination_id" to destination.id.toString()
+                )
+            )
 
             val isBottomNavDestination = bottomNavDestinations.contains(destination.id)
             bottomNavigation.isVisible = isBottomNavDestination
