@@ -26,6 +26,7 @@ import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.NoteableDto
+import com.example.rocketplan_android.data.model.offline.FlexibleDataResponse
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
@@ -186,7 +187,7 @@ class OfflineSyncRepositoryTest {
         )
         coEvery { api.getRoomPhotos(any(), any(), any(), any(), any()) } returns JsonObject()
         coEvery { api.getRoomAtmosphericLogs(any()) } returns emptyList()
-        coEvery { api.getRoomMoistureLogs(any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getRoomMoistureLogs(any(), any()) } returns FlexibleDataResponse(data = null)
         coEvery { api.getRoomDamageMaterials(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomWorkScope(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomEquipment(any()) } returns emptyList()
@@ -370,7 +371,7 @@ class OfflineSyncRepositoryTest {
         coEvery { api.getRoomPhotos(any(), any(), any(), any(), any()) } returns JsonObject()
         coEvery { api.getRoomPhotos(roomId, any(), any(), any(), any()) } returns roomPhotosResponse(roomPhotoDto)
         coEvery { api.getRoomAtmosphericLogs(any()) } returns emptyList()
-        coEvery { api.getRoomMoistureLogs(any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getRoomMoistureLogs(any(), any()) } returns FlexibleDataResponse(data = null)
         coEvery { api.getRoomDamageMaterials(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomWorkScope(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomEquipment(any()) } returns emptyList()
@@ -1094,7 +1095,7 @@ class OfflineSyncRepositoryTest {
         )
         coEvery { api.getProjectAtmosphericLogs(projectId, any<String>()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomWorkScope(roomId) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getRoomMoistureLogs(roomId, any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getRoomMoistureLogs(roomId, any()) } returns FlexibleDataResponse(data = null)
         coEvery { api.getRoomDamageMaterials(roomId) } returns PaginatedResponse(data = listOf(damageWithRoom))
 
         val localDataService = mockk<LocalDataService>(relaxed = true)
@@ -1203,7 +1204,7 @@ class OfflineSyncRepositoryTest {
             )
         )
         coEvery { api.getRoomWorkScope(any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getRoomMoistureLogs(any(), any()) } returns PaginatedResponse(data = emptyList())
+        coEvery { api.getRoomMoistureLogs(any(), any()) } returns FlexibleDataResponse(data = null)
         coEvery { api.getRoomDamageMaterials(any()) } returns PaginatedResponse(data = emptyList())
 
         val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
