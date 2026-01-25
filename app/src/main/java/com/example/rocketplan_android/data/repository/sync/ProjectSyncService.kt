@@ -1,9 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync
 
-import android.util.Log
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
-import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.repository.mapper.latestTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
@@ -12,7 +10,6 @@ import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.Date
 
 // Checkpoint keys for incremental sync
 private fun companyProjectsKey(companyId: Long, assignedOnly: Boolean) =
@@ -31,8 +28,6 @@ class ProjectSyncService(
     private val syncCheckpointStore: SyncCheckpointStore,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
-    private fun now() = Date()
-
     /**
      * Syncs all projects for a company from the server.
      * Uses incremental sync via checkpoint unless forceFullSync is true.
@@ -64,45 +59,9 @@ class ProjectSyncService(
             }
         )
 
-        // Reconcile full company sync against local data to remove stale entries.
-        if (forceFullSync && !assignedToMe) {
-            val serverProjectIds = projects.map { it.id }.toSet()
-            val localProjects = localDataService.getAllProjects()
-            val localProjectsForCompany = localProjects.filter { it.companyId == companyId }
-            val orphanedProjects = localProjectsForCompany.filter { project ->
-                project.serverId != null &&
-                    project.serverId !in serverProjectIds &&
-                    !project.isDirty
-            }
-            val foreignCompanyProjects = localProjects.filter { project ->
-                project.companyId != null &&
-                    project.companyId != companyId &&
-                    project.serverId != null &&
-                    !project.isDirty
-            }
-            val toRemove = (orphanedProjects + foreignCompanyProjects).distinctBy { it.projectId }
-            if (toRemove.isNotEmpty()) {
-                Log.d(
-                    TAG,
-                    "🧹 [syncCompanyProjects] Removing ${toRemove.size} stale projects (orphans=${orphanedProjects.size}, foreignCompany=${foreignCompanyProjects.size})"
-                )
-                toRemove.forEach { stale ->
-                    Log.d(
-                        TAG,
-                        "   - Removing stale: ${stale.uuid} (serverId=${stale.serverId}, companyId=${stale.companyId})"
-                    )
-                }
-                val cleared = toRemove.map {
-                    it.copy(
-                        isDeleted = true,
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED,
-                        lastSyncedAt = now()
-                    )
-                }
-                localDataService.saveProjects(cleared)
-            }
-        }
+        // Note: Deletion sync is handled separately by DeletedRecordsSyncService
+        // which uses the /api/sync/deleted endpoint to get explicit deletions from the server.
+        // We no longer infer deletions from absence in the project list response.
 
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }
@@ -151,9 +110,5 @@ class ProjectSyncService(
             page = current + 1
         }
         return results
-    }
-
-    companion object {
-        private const val TAG = "API"
     }
 }

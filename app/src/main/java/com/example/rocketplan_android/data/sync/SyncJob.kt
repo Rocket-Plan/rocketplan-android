@@ -10,6 +10,8 @@ sealed class SyncJob(
     data class SyncProjects(val force: Boolean = false) :
         SyncJob(priority = if (force) 0 else 1, key = "sync_projects")
 
+    data object SyncDeletedRecords : SyncJob(priority = 0, key = "sync_deleted_records")
+
     enum class ProjectSyncMode {
         FULL,
         ESSENTIALS_ONLY,

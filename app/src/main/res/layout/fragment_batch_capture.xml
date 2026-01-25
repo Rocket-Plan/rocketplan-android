@@ -35,6 +35,37 @@
             />
     </FrameLayout>
 
+    <!-- Dual Preview Container (side-by-side regular + IR) -->
+    <LinearLayout
+        android:id="@+id/dualPreviewContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        android:background="@android:color/black"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <androidx.camera.view.PreviewView
+            android:id="@+id/dualCameraPreview"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1">
+
+            <TextureView
+                android:id="@+id/dualFlirTextureView"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+    </LinearLayout>
+
     <!-- Top Controls Overlay -->
     <LinearLayout
         android:id="@+id/topControls"
@@ -119,6 +150,11 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scrollbars="none">
+
         <com.google.android.material.button.MaterialButtonToggleGroup
             android:id="@+id/modeToggle"
             android:layout_width="wrap_content"
@@ -132,6 +168,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/regular"
+                android:textColor="@android:color/white"
+                app:strokeColor="@android:color/white"
                 android:textAllCaps="false" />
 
             <com.google.android.material.button.MaterialButton
@@ -140,8 +178,31 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/ir"
+                android:textColor="@android:color/white"
+                app:strokeColor="@android:color/white"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/irVisualModeButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/ir_visual"
+                android:textColor="@android:color/white"
+                app:strokeColor="@android:color/white"
+                android:textAllCaps="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/blendModeButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Blend"
+                android:textColor="@android:color/white"
+                app:strokeColor="@android:color/white"
                 android:textAllCaps="false" />
         </com.google.android.material.button.MaterialButtonToggleGroup>
+        </HorizontalScrollView>
 
         <HorizontalScrollView
             android:layout_width="match_parent"

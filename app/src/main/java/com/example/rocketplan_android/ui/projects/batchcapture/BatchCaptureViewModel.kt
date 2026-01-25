@@ -47,7 +47,8 @@ data class BatchPhotoItem(
     val number: Int,
     val categoryAlbumId: Long?,
     val categoryName: String?,
-    val isIr: Boolean = false
+    val isIr: Boolean = false,
+    val visualFile: File? = null
 )
 
 sealed interface BatchCaptureEvent {
@@ -131,7 +132,7 @@ class BatchCaptureViewModel(
         _uiState.update { it.copy(selectedCategoryId = albumId) }
     }
 
-    fun addPhoto(photoFile: File, isIr: Boolean = false): Boolean {
+    fun addPhoto(photoFile: File, isIr: Boolean = false, visualFile: File? = null): Boolean {
         val currentState = _uiState.value
         if (currentState.photos.size >= currentState.maxPhotos) {
             Log.w(TAG, "Cannot add photo: limit reached (${currentState.maxPhotos})")
@@ -147,14 +148,15 @@ class BatchCaptureViewModel(
             categoryName = currentState.categories.firstOrNull { option ->
                 option.albumId == currentState.selectedCategoryId
             }?.name,
-            isIr = isIr
+            isIr = isIr,
+            visualFile = visualFile
         )
 
         _uiState.update { state ->
             state.copy(photos = state.photos + newPhoto)
         }
 
-        Log.d(TAG, "Photo added: ${newPhoto.number}/${currentState.maxPhotos}")
+        Log.d(TAG, "Photo added: ${newPhoto.number}/${currentState.maxPhotos}, visualFile=${visualFile?.name}")
         return true
     }
 
@@ -163,8 +165,11 @@ class BatchCaptureViewModel(
             val updatedPhotos = state.photos
                 .filter { it.id != photoId }
                 .also { filtered ->
-                    // Find the removed photo and delete its file
-                    state.photos.find { it.id == photoId }?.file?.delete()
+                    // Find the removed photo and delete its files (thermal + visual if present)
+                    state.photos.find { it.id == photoId }?.let { photo ->
+                        photo.file.delete()
+                        photo.visualFile?.delete()
+                    }
                 }
                 .mapIndexed { index, photo ->
                     photo.copy(number = index + 1)
@@ -175,9 +180,10 @@ class BatchCaptureViewModel(
     }
 
     fun clearBatch() {
-        // Delete all temp files
+        // Delete all temp files (thermal + visual)
         _uiState.value.photos.forEach { photo ->
             photo.file.delete()
+            photo.visualFile?.delete()
         }
         _uiState.update { it.copy(photos = emptyList()) }
         _events.tryEmit(BatchCaptureEvent.BatchCleared)
@@ -219,31 +225,46 @@ class BatchCaptureViewModel(
                 currentState.photos.forEach { batchPhoto ->
                     val category = batchPhoto.categoryName ?: return@forEach
                     albumAssignments.getOrPut(category) { mutableListOf() }.add(batchPhoto.file.name)
+                    // Also add visual file to album if present
+                    batchPhoto.visualFile?.let { visualFile ->
+                        albumAssignments.getOrPut(category) { mutableListOf() }.add(visualFile.name)
+                    }
                 }
 
-                // Create FileToUpload list
-                val filesToUpload = currentState.photos.map { batchPhoto ->
-                    com.example.rocketplan_android.data.model.FileToUpload(
-                        uri = Uri.fromFile(batchPhoto.file),
-                        filename = batchPhoto.file.name,
-                        deleteOnCompletion = true
-                    )
+                // Create FileToUpload list - include both thermal and visual files
+                val filesToUpload = currentState.photos.flatMap { batchPhoto ->
+                    buildList {
+                        add(com.example.rocketplan_android.data.model.FileToUpload(
+                            uri = Uri.fromFile(batchPhoto.file),
+                            filename = batchPhoto.file.name,
+                            deleteOnCompletion = true
+                        ))
+                        // Add visual file if present
+                        batchPhoto.visualFile?.let { visualFile ->
+                            add(com.example.rocketplan_android.data.model.FileToUpload(
+                                uri = Uri.fromFile(visualFile),
+                                filename = visualFile.name,
+                                deleteOnCompletion = true
+                            ))
+                        }
+                    }
                 }
 
-                // Collect IR photo data - for standalone thermal photos, use same file for both thermal and visual
+                // Collect IR photo data - use visual file name if present, otherwise thermal for both
                 val irPhotoData = currentState.photos
                     .filter { it.isIr }
                     .map { photo ->
                         val uuid = UUID.randomUUID().toString()
-                        Log.d(TAG, "Adding IR photo: ${photo.file.name} with uuid=$uuid")
+                        val visualFileName = photo.visualFile?.name ?: photo.file.name
+                        Log.d(TAG, "Adding IR photo: thermal=${photo.file.name}, visual=$visualFileName with uuid=$uuid")
                         mapOf(uuid to com.example.rocketplan_android.data.model.IRPhotoData(
                             thermalFileName = photo.file.name,
-                            visualFileName = photo.file.name
+                            visualFileName = visualFileName
                         ))
                     }
                 Log.d(TAG, "IR photo count: ${irPhotoData.size} of ${currentState.photos.size} total photos")
                 currentState.photos.forEach { photo ->
-                    Log.d(TAG, "Photo ${photo.file.name}: isIr=${photo.isIr}")
+                    Log.d(TAG, "Photo ${photo.file.name}: isIr=${photo.isIr}, visualFile=${photo.visualFile?.name}")
                 }
 
                 // Create assembly

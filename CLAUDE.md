@@ -65,6 +65,34 @@ json_key_file("path/to/your/play-store-key.json")
 ./gradlew compileDevStandardDebugKotlin # Compile only (fast check)
 ```
 
+## FLIR Device
+
+FLIR builds use the `flir` product flavor with ARM64 native libraries.
+
+### Build & Install
+
+```bash
+./gradlew installDevFlirDebug           # Build and install FLIR debug APK
+```
+
+### WiFi Debugging
+
+FLIR ixx device IP: `192.168.0.57`
+
+To connect over WiFi (after enabling once via USB):
+
+```bash
+adb connect 192.168.0.57:5555
+```
+
+To enable WiFi debugging (requires USB connection once):
+
+```bash
+adb tcpip 5555
+adb connect <device-ip>:5555
+# Then unplug USB
+```
+
 ## Version Management
 
 Build number is in `app/build.gradle.kts`:

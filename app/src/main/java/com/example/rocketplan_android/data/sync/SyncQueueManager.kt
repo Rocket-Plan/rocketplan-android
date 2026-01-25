@@ -60,6 +60,8 @@ class SyncQueueManager(
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val errors: SharedFlow<String> = _errors
     private val initialSyncStarted = AtomicBoolean(false)
+    private val _initialSyncCompleted = MutableStateFlow(false)
+    val initialSyncCompleted: StateFlow<Boolean> = _initialSyncCompleted
     private val assignedProjectIds = MutableStateFlow<Set<Long>>(emptySet())
     val assignedProjects: StateFlow<Set<Long>> = assignedProjectIds
 
@@ -127,6 +129,7 @@ class SyncQueueManager(
         if (initialSyncStarted.compareAndSet(false, true)) {
             enqueue(SyncJob.EnsureUserContext)
             enqueue(SyncJob.ProcessPendingOperations)
+            enqueue(SyncJob.SyncDeletedRecords)  // Sync deletions from server
             enqueue(SyncJob.SyncProjects(force = true))  // Full sync on first login
         }
     }
@@ -135,6 +138,7 @@ class SyncQueueManager(
         scope.launch {
             enqueue(SyncJob.EnsureUserContext)
             enqueue(SyncJob.ProcessPendingOperations)
+            enqueue(SyncJob.SyncDeletedRecords)  // Sync deletions from server
             enqueue(SyncJob.SyncProjects(force = true))
         }
     }
@@ -606,6 +610,23 @@ class SyncQueueManager(
                         )
                     )
                 }
+
+                // Mark initial sync as completed so UI can show empty state if needed
+                if (!_initialSyncCompleted.value) {
+                    _initialSyncCompleted.value = true
+                    Log.d(TAG, "✅ Initial project sync completed")
+                }
+            }
+
+            is SyncJob.SyncDeletedRecords -> {
+                if (!isNetworkAvailable()) {
+                    Log.d(TAG, "⏭️ Skipping SyncDeletedRecords (no network)")
+                    return
+                }
+                syncRepository.syncDeletedRecords()
+                    .onFailure { error ->
+                        Log.e(TAG, "❌ Failed to sync deleted records", error)
+                    }
             }
 
             is SyncJob.SyncProjectGraph -> {

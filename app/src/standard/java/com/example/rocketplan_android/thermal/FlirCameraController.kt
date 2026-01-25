@@ -23,6 +23,7 @@ class FlirCameraController(context: Context) {
     val state: StateFlow<FlirState> = _state
 
     val snapshots: Flow<File> = emptyFlow()
+    val snapshotsWithVisual: Flow<FlirSnapshotResult> = emptyFlow()
     val errors: Flow<String> = emptyFlow()
 
     fun attachSurface(glSurfaceView: GLSurfaceView) {
@@ -62,6 +63,10 @@ class FlirCameraController(context: Context) {
     }
 
     fun requestSnapshot() {
+        // No-op: FLIR not supported
+    }
+
+    fun setExtractVisualEnabled(enabled: Boolean) {
         // No-op: FLIR not supported
     }
 

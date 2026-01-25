@@ -2,6 +2,7 @@ package com.example.rocketplan_android.ui.projects.batchcapture
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.opengl.GLSurfaceView
@@ -42,6 +43,7 @@ import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.thermal.FlirCameraController
+import com.example.rocketplan_android.thermal.FlirSnapshotResult
 import com.example.rocketplan_android.thermal.FlirState
 import com.example.rocketplan_android.thermal.FusionMode
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -56,7 +58,9 @@ import com.example.rocketplan_android.ui.projects.PhotosAddedResult
 
 class BatchCaptureFragment : Fragment() {
 
-    private enum class CaptureMode { REGULAR, IR }
+    // IR_VISUAL = IR thermal + extracted 8MP visual image from FLIR radiometric JPEG
+    // BLEND = thermal + visual blended together
+    private enum class CaptureMode { REGULAR, IR, IR_VISUAL, BLEND }
 
     private val args: BatchCaptureFragmentArgs by navArgs()
 
@@ -76,6 +80,12 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var modeToggle: MaterialButtonToggleGroup
     private lateinit var regularModeButton: MaterialButton
     private lateinit var irModeButton: MaterialButton
+    private lateinit var irVisualModeButton: MaterialButton
+    private lateinit var blendModeButton: MaterialButton
+    private lateinit var dualPreviewContainer: View
+    private lateinit var dualCameraPreview: PreviewView
+    private lateinit var dualFlirTextureView: TextureView
+    private lateinit var flirControlsContainer: View
     private lateinit var flirControls: View
     private lateinit var flirStatusText: TextView
     private lateinit var flirPaletteSwitch: com.google.android.material.switchmaterial.SwitchMaterial
@@ -106,6 +116,7 @@ class BatchCaptureFragment : Fragment() {
     private var imageCapture: ImageCapture? = null
     private var isCapturing = false
     private var captureTimeoutJob: kotlinx.coroutines.Job? = null
+    private var pendingDualCaptures = 0  // Track pending captures in DUAL mode
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var cameraExecutor: ExecutorService
     private var lensFacing = CameraSelector.LENS_FACING_BACK
@@ -115,20 +126,57 @@ class BatchCaptureFragment : Fragment() {
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
 
+    private fun isFlirMode(mode: CaptureMode) = mode != CaptureMode.REGULAR
+
     private val flirTextureListener = object : TextureView.SurfaceTextureListener {
         override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
-            flirController.attachTextureSurface(surface, width, height)
-            if (captureMode == CaptureMode.IR && hasCameraPermission()) {
-                startActiveMode()
+            // Attach for all FLIR modes (IR and all DUAL variants use same texture view)
+            if (isFlirMode(captureMode)) {
+                flirController.attachTextureSurface(surface, width, height)
+                // Defer transform until view is fully laid out
+                flirTextureView.post {
+                    applyCenterCropTransform(flirTextureView, FLIR_CAMERA_WIDTH, FLIR_CAMERA_HEIGHT)
+                }
+                if (hasCameraPermission()) {
+                    startActiveMode()
+                }
             }
         }
 
         override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
-            flirController.updateTextureSurfaceSize(width, height)
+            if (isFlirMode(captureMode)) {
+                flirController.updateTextureSurfaceSize(width, height)
+                flirTextureView.post {
+                    applyCenterCropTransform(flirTextureView, FLIR_CAMERA_WIDTH, FLIR_CAMERA_HEIGHT)
+                }
+            }
         }
 
         override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
-            flirController.detachTextureSurface()
+            // Detach for all FLIR modes
+            if (isFlirMode(captureMode)) {
+                flirController.detachTextureSurface()
+            }
+            return true
+        }
+
+        override fun onSurfaceTextureUpdated(surface: SurfaceTexture) {
+            // No-op
+        }
+    }
+
+    // Note: dualFlirTextureListener is no longer used - DUAL mode now uses flirTextureView with MSX fusion
+    // Keeping this as a no-op listener for the dualFlirTextureView that's still in the layout
+    private val dualFlirTextureListener = object : TextureView.SurfaceTextureListener {
+        override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
+            // No-op - DUAL mode now uses flirTextureView instead
+        }
+
+        override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
+            // No-op
+        }
+
+        override fun onSurfaceTextureDestroyed(surface: SurfaceTexture): Boolean {
             return true
         }
 
@@ -140,10 +188,11 @@ class BatchCaptureFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        captureMode = if (args.captureMode.equals("ir", ignoreCase = true)) {
-            CaptureMode.IR
-        } else {
-            CaptureMode.REGULAR
+        captureMode = when {
+            args.captureMode.equals("ir", ignoreCase = true) -> CaptureMode.IR
+            args.captureMode.equals("ir_visual", ignoreCase = true) -> CaptureMode.IR_VISUAL
+            args.captureMode.equals("blend", ignoreCase = true) -> CaptureMode.BLEND
+            else -> CaptureMode.REGULAR
         }
 
         flirController = FlirCameraController(requireContext())
@@ -191,7 +240,12 @@ class BatchCaptureFragment : Fragment() {
         observeViewModel()
 
         // Apply initial mode selection and start appropriate pipeline
-        modeToggle.check(if (captureMode == CaptureMode.IR) R.id.irModeButton else R.id.regularModeButton)
+        modeToggle.check(when (captureMode) {
+            CaptureMode.IR -> R.id.irModeButton
+            CaptureMode.IR_VISUAL -> R.id.irVisualModeButton
+            CaptureMode.BLEND -> R.id.blendModeButton
+            else -> R.id.regularModeButton
+        })
         updateModeUi()
 
         if (hasCameraPermission()) {
@@ -208,6 +262,12 @@ class BatchCaptureFragment : Fragment() {
         modeToggle = view.findViewById(R.id.modeToggle)
         regularModeButton = view.findViewById(R.id.regularModeButton)
         irModeButton = view.findViewById(R.id.irModeButton)
+        irVisualModeButton = view.findViewById(R.id.irVisualModeButton)
+        blendModeButton = view.findViewById(R.id.blendModeButton)
+        dualPreviewContainer = view.findViewById(R.id.dualPreviewContainer)
+        dualCameraPreview = view.findViewById(R.id.dualCameraPreview)
+        dualFlirTextureView = view.findViewById(R.id.dualFlirTextureView)
+        flirControlsContainer = view.findViewById(R.id.flirControlsContainer)
         flirControls = view.findViewById(R.id.flirControls)
         flirStatusText = view.findViewById(R.id.flirStatusText)
         flirPaletteSwitch = view.findViewById(R.id.flirPaletteSwitch)
@@ -245,6 +305,7 @@ class BatchCaptureFragment : Fragment() {
             }
             flirFallbackSurface?.let { flirController.attachSurface(it) }
         } else {
+            // Set up IR mode FLIR texture view
             flirTextureView.isOpaque = false
             flirTextureView.surfaceTextureListener = flirTextureListener
             val surfaceTexture = flirTextureView.surfaceTexture
@@ -253,6 +314,19 @@ class BatchCaptureFragment : Fragment() {
                     surfaceTexture,
                     flirTextureView.width,
                     flirTextureView.height
+                )
+                applyCenterCropTransform(flirTextureView, FLIR_CAMERA_WIDTH, FLIR_CAMERA_HEIGHT)
+            }
+
+            // Set up dual mode FLIR texture view
+            dualFlirTextureView.isOpaque = false
+            dualFlirTextureView.surfaceTextureListener = dualFlirTextureListener
+            val dualSurfaceTexture = dualFlirTextureView.surfaceTexture
+            if (dualFlirTextureView.isAvailable && dualSurfaceTexture != null) {
+                dualFlirTextureListener.onSurfaceTextureAvailable(
+                    dualSurfaceTexture,
+                    dualFlirTextureView.width,
+                    dualFlirTextureView.height
                 )
             }
         }
@@ -264,6 +338,7 @@ class BatchCaptureFragment : Fragment() {
             flirFallbackSurface = null
         } else {
             flirTextureView.surfaceTextureListener = null
+            dualFlirTextureView.surfaceTextureListener = null
             flirController.detachTextureSurface()
         }
     }
@@ -297,11 +372,15 @@ class BatchCaptureFragment : Fragment() {
         }
 
         modeToggle.addOnButtonCheckedListener { _, checkedId, isChecked ->
+            Log.d(TAG, "modeToggle: checkedId=$checkedId, isChecked=$isChecked")
             if (!isChecked) return@addOnButtonCheckedListener
             val newMode = when (checkedId) {
                 R.id.irModeButton -> CaptureMode.IR
+                R.id.irVisualModeButton -> CaptureMode.IR_VISUAL
+                R.id.blendModeButton -> CaptureMode.BLEND
                 else -> CaptureMode.REGULAR
             }
+            Log.d(TAG, "modeToggle: newMode=$newMode")
             switchMode(newMode)
         }
 
@@ -425,13 +504,36 @@ class BatchCaptureFragment : Fragment() {
             return
         }
         isCapturing = true
-        if (captureMode == CaptureMode.REGULAR) {
-            startCaptureTimeout(REGULAR_CAPTURE_TIMEOUT_MS, "regular_capture_timeout")
-            capturePhoto()
-        } else {
-            Log.d(TAG, "Requesting FLIR snapshot...")
-            startCaptureTimeout(FLIR_CAPTURE_TIMEOUT_MS, "flir_capture_timeout")
-            flirController.requestSnapshot()
+
+        when (captureMode) {
+            CaptureMode.REGULAR -> {
+                pendingDualCaptures = 1
+                startCaptureTimeout(REGULAR_CAPTURE_TIMEOUT_MS, "regular_capture_timeout")
+                capturePhoto()
+            }
+            CaptureMode.IR -> {
+                pendingDualCaptures = 1
+                Log.d(TAG, "Requesting FLIR snapshot...")
+                flirController.setExtractVisualEnabled(false)
+                startCaptureTimeout(FLIR_CAPTURE_TIMEOUT_MS, "flir_capture_timeout")
+                flirController.requestSnapshot()
+            }
+            CaptureMode.IR_VISUAL -> {
+                // IR_VISUAL mode extracts both thermal and 8MP visual from FLIR radiometric JPEG
+                pendingDualCaptures = 1
+                Log.d(TAG, "Requesting FLIR snapshot with visual extraction...")
+                flirController.setExtractVisualEnabled(true)
+                startCaptureTimeout(FLIR_CAPTURE_TIMEOUT_MS, "ir_visual_capture_timeout")
+                flirController.requestSnapshot()
+            }
+            CaptureMode.BLEND -> {
+                // BLEND mode uses FLIR's blending fusion - captures single image with thermal + visual blended
+                pendingDualCaptures = 1
+                Log.d(TAG, "Triggering BLEND capture")
+                flirController.setExtractVisualEnabled(false)
+                startCaptureTimeout(FLIR_CAPTURE_TIMEOUT_MS, "blend_capture_timeout")
+                flirController.requestSnapshot()
+            }
         }
     }
 
@@ -443,7 +545,22 @@ class BatchCaptureFragment : Fragment() {
                 Log.w(TAG, "$errorType - resetting capture lock")
                 viewModel.logCameraError(errorType, "Capture request timed out after ${timeoutMs}ms")
                 isCapturing = false
+                pendingDualCaptures = 0
             }
+        }
+    }
+
+    /**
+     * Called when a single capture completes (success or failure).
+     * In DUAL mode, waits for both captures before releasing the lock.
+     */
+    private fun onCaptureComplete() {
+        pendingDualCaptures--
+        Log.d(TAG, "onCaptureComplete: pendingDualCaptures=$pendingDualCaptures")
+        if (pendingDualCaptures <= 0) {
+            captureTimeoutJob?.cancel()
+            isCapturing = false
+            pendingDualCaptures = 0
         }
     }
 
@@ -468,12 +585,14 @@ class BatchCaptureFragment : Fragment() {
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset if FLIR disconnected mid-capture
+                                pendingDualCaptures = 0
                             }
                             FlirState.Discovering -> {
                                 flirStatusText.text = getString(R.string.flir_status_discovering)
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset if reconnecting
+                                pendingDualCaptures = 0
                             }
                             is FlirState.Connecting -> {
                                 flirStatusText.text =
@@ -481,6 +600,7 @@ class BatchCaptureFragment : Fragment() {
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset if reconnecting
+                                pendingDualCaptures = 0
                             }
                             is FlirState.Streaming -> {
                                 flirStatusText.text =
@@ -493,6 +613,7 @@ class BatchCaptureFragment : Fragment() {
                                 flirReady = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset capture lock so user can retry
+                                pendingDualCaptures = 0
                                 viewModel.logCameraError("flir_state_error", state.message)
                             }
                         }
@@ -501,23 +622,26 @@ class BatchCaptureFragment : Fragment() {
 
                 launch {
                     flirController.errors.collect { message ->
-                        captureTimeoutJob?.cancel()
-                        isCapturing = false
+                        onCaptureComplete()
                         viewModel.logCameraError("flir_error", message)
                         Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show()
                     }
                 }
 
                 launch {
-                    flirController.snapshots.collect { file ->
-                        captureTimeoutJob?.cancel()
-                        isCapturing = false
-                        val added = viewModel.addPhoto(file, isIr = true)
+                    flirController.snapshotsWithVisual.collect { result ->
+                        onCaptureComplete()
+                        val added = viewModel.addPhoto(
+                            photoFile = result.thermalFile,
+                            isIr = true,
+                            visualFile = result.visualFile
+                        )
                         if (!added) {
-                            file.delete()
+                            result.thermalFile.delete()
+                            result.visualFile?.delete()
                             Log.w(TAG, "Failed to add FLIR snapshot: limit reached")
                         } else {
-                            Log.d(TAG, "FLIR snapshot added: ${file.name}")
+                            Log.d(TAG, "FLIR snapshot added: thermal=${result.thermalFile.name}, visual=${result.visualFile?.name}")
                         }
                     }
                 }
@@ -553,8 +677,10 @@ class BatchCaptureFragment : Fragment() {
             lastPhotoPreview.visibility = View.INVISIBLE
         }
 
-        val shutterEnabled = state.canTakeMore &&
-            (captureMode == CaptureMode.REGULAR || flirReady)
+        val shutterEnabled = state.canTakeMore && when (captureMode) {
+            CaptureMode.REGULAR -> true
+            else -> flirReady  // All FLIR modes require flirReady
+        }
         Log.d(TAG, "Shutter enabled: $shutterEnabled (canTakeMore=${state.canTakeMore}, isProcessing=${state.isProcessing}, captureMode=$captureMode, flirReady=$flirReady)")
         shutterButton.isEnabled = shutterEnabled
         shutterInner.alpha = if (shutterEnabled) 1f else 0.5f
@@ -613,57 +739,115 @@ class BatchCaptureFragment : Fragment() {
             ContextCompat.checkSelfPermission(requireContext(), it) == PackageManager.PERMISSION_GRANTED
         }
 
-    private fun isFlirSurfaceReady(): Boolean {
-        return if (useGlSurfaceFallback) {
-            flirFallbackSurface != null
-        } else {
-            flirTextureView.isAvailable && flirTextureView.surfaceTexture != null
-        }
+    private fun getFusionModeFor(mode: CaptureMode) = when (mode) {
+        CaptureMode.BLEND -> FusionMode.BLENDING
+        else -> FusionMode.THERMAL_ONLY  // IR, IR_VISUAL, REGULAR all use thermal only
     }
 
     private fun switchMode(newMode: CaptureMode) {
-        if (captureMode == newMode) return
+        Log.d(TAG, "switchMode: currentMode=$captureMode, newMode=$newMode")
+        if (captureMode == newMode) {
+            Log.d(TAG, "switchMode: same mode, ignoring")
+            return
+        }
+
+        val oldMode = captureMode
+        val wasUsingFlir = isFlirMode(oldMode)
+        val willUseFlir = isFlirMode(newMode)
+
+        // Only disconnect FLIR when going to REGULAR mode (not using FLIR anymore)
+        // Don't disconnect when switching between IR and DUAL modes to avoid GL crashes
+        if (wasUsingFlir && !willUseFlir) {
+            Log.d(TAG, "switchMode: Disconnecting FLIR (going to REGULAR mode)")
+            flirReady = false
+            flirController.disconnect()
+        } else if (wasUsingFlir && willUseFlir) {
+            // Switching between IR and DUAL modes - both use same flirTextureView
+            // Just need to change fusion mode, no surface change needed
+            val fusionMode = getFusionModeFor(newMode)
+            Log.d(TAG, "switchMode: Switching FLIR fusion mode to $fusionMode")
+            flirController.setFusionMode(fusionMode)
+            // Keep flirReady as-is since stream continues
+        }
+
         captureMode = newMode
         updateModeUi()
-        if (hasCameraPermission()) {
-            startActiveMode()
-        } else {
-            cameraPermissionLauncher.launch(cameraPermissions)
+        if (!wasUsingFlir && willUseFlir) {
+            // Starting FLIR fresh
+            if (hasCameraPermission()) {
+                startActiveMode()
+            } else {
+                cameraPermissionLauncher.launch(cameraPermissions)
+            }
+        } else if (!willUseFlir) {
+            // Going to REGULAR mode
+            if (hasCameraPermission()) {
+                startActiveMode()
+            } else {
+                cameraPermissionLauncher.launch(cameraPermissions)
+            }
         }
+        // If switching between IR and DUAL, stream is already running, just update UI
     }
 
     private fun updateModeUi() {
-        val isIr = captureMode == CaptureMode.IR
-        Log.d(TAG, "updateModeUi: isIr=$isIr")
-        flirControls.isVisible = isIr
-        flirPreviewContainer.isVisible = isIr
-        flirTextureView.isVisible = isIr && !useGlSurfaceFallback
-        flirFallbackSurface?.isVisible = isIr && useGlSurfaceFallback
-        cameraPreview.isVisible = !isIr
-        flashButton.isEnabled = !isIr
-        flashButton.alpha = if (isIr) 0.4f else 1f
+        val usesFlir = isFlirMode(captureMode)
+        Log.d(TAG, "updateModeUi: captureMode=$captureMode, usesFlir=$usesFlir")
+
+        // Single preview visibility
+        cameraPreview.isVisible = captureMode == CaptureMode.REGULAR
+        // FLIR preview container: visible for all FLIR modes (IR and all DUAL variants)
+        flirPreviewContainer.isVisible = usesFlir
+        flirTextureView.isVisible = usesFlir && !useGlSurfaceFallback
+        flirFallbackSurface?.isVisible = usesFlir && useGlSurfaceFallback
+
+        // Dual preview container (side-by-side) - hidden because FLIR camera splitter prevents CameraX access
+        // Instead, we use FLIR's fusion modes which combines thermal+visual in a single view
+        dualPreviewContainer.isVisible = false
+
+        // Mode toggle and FLIR controls container - always visible so user can switch modes
+        flirControlsContainer.isVisible = true
+
+        // FLIR-specific controls (palette, fusion, etc.) visible for all FLIR modes
+        flirControls.isVisible = usesFlir
+
+        // Flash only works in REGULAR mode (not IR or DUAL since IR doesn't use flash)
+        flashButton.isEnabled = captureMode == CaptureMode.REGULAR
+        flashButton.alpha = if (captureMode == CaptureMode.REGULAR) 1f else 0.4f
+
         Log.d(
             TAG,
-            "updateModeUi: flirPreviewContainer.visibility=${flirPreviewContainer.visibility}, cameraPreview.visibility=${cameraPreview.visibility}"
+            "updateModeUi: flirPreviewContainer.visibility=${flirPreviewContainer.visibility}, cameraPreview.visibility=${cameraPreview.visibility}, dualPreviewContainer.visibility=${dualPreviewContainer.visibility}"
         )
     }
 
     private fun startActiveMode() {
-        when (captureMode) {
-            CaptureMode.REGULAR -> {
-                flirReady = false
-                flirController.disconnect()
-                startCamera()
-            }
-            CaptureMode.IR -> {
-                if (!isFlirSurfaceReady()) {
-                    Log.d(TAG, "startActiveMode: FLIR surface not ready, waiting for availability")
-                    return
-                }
-                stopRegularCamera()
-                flirController.startDiscovery()
-            }
+        if (captureMode == CaptureMode.REGULAR) {
+            flirReady = false
+            flirController.disconnect()
+            startCamera()
+            return
         }
+
+        // All FLIR modes (IR, DUAL, DUAL2, DUAL3, DUAL4)
+        val fusionMode = getFusionModeFor(captureMode)
+        flirController.setFusionMode(fusionMode)
+
+        // Check if FLIR surface is ready
+        val surface = flirTextureView.surfaceTexture
+        val surfaceReady = if (useGlSurfaceFallback) {
+            flirFallbackSurface != null
+        } else {
+            flirTextureView.isAvailable && surface != null
+        }
+        if (!surfaceReady) {
+            Log.d(TAG, "startActiveMode: FLIR surface not ready for $captureMode mode, waiting for availability")
+            return
+        }
+        stopRegularCamera()
+        Log.d(TAG, "startActiveMode: Starting $captureMode mode with $fusionMode fusion")
+        flirController.attachTextureSurface(surface!!, flirTextureView.width, flirTextureView.height)
+        flirController.startDiscovery()
     }
 
     private fun stopRegularCamera() {
@@ -703,10 +887,11 @@ class BatchCaptureFragment : Fragment() {
             .requireLensFacing(lensFacing)
             .build()
 
+        val previewView = cameraPreview  // All FLIR modes use flirTextureView, not CameraX preview
         val preview = Preview.Builder()
             .build()
             .also {
-                it.surfaceProvider = cameraPreview.surfaceProvider
+                it.surfaceProvider = previewView.surfaceProvider
             }
 
         imageCapture = ImageCapture.Builder()
@@ -738,18 +923,18 @@ class BatchCaptureFragment : Fragment() {
         val imageCapture = imageCapture ?: run {
             Log.w(TAG, "capturePhoto called but imageCapture is null")
             viewModel.logCameraError("capture_skipped", "imageCapture is null - camera not ready")
-            isCapturing = false
+            onCaptureComplete()
             return
         }
         val context = context ?: run {
-            isCapturing = false
+            onCaptureComplete()
             return
         }
 
         val photoFile = createTempPhotoFile() ?: run {
             Log.e(TAG, "Failed to create temp photo file")
             viewModel.logCameraError("capture_skipped", "Failed to create temp photo file")
-            isCapturing = false
+            onCaptureComplete()
             return
         }
 
@@ -774,8 +959,7 @@ class BatchCaptureFragment : Fragment() {
             ContextCompat.getMainExecutor(context),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                    captureTimeoutJob?.cancel()
-                    isCapturing = false
+                    onCaptureComplete()
                     Log.d(TAG, "Photo captured: ${photoFile.absolutePath}")
                     val added = viewModel.addPhoto(photoFile)
                     if (!added) {
@@ -784,8 +968,7 @@ class BatchCaptureFragment : Fragment() {
                 }
 
                 override fun onError(exception: ImageCaptureException) {
-                    captureTimeoutJob?.cancel()
-                    isCapturing = false
+                    onCaptureComplete()
                     Log.e(TAG, "Photo capture failed", exception)
                     viewModel.logCameraError("capture_failed", exception.message, exception)
                     photoFile.delete()
@@ -860,10 +1043,49 @@ class BatchCaptureFragment : Fragment() {
         super.onPause()
     }
 
+    /**
+     * Apply center-crop transform to TextureView so FLIR preview fills the screen.
+     * The FLIR camera outputs at a fixed aspect ratio (typically 4:3), so we scale
+     * to fill and crop the excess.
+     */
+    private fun applyCenterCropTransform(textureView: TextureView, cameraWidth: Int, cameraHeight: Int) {
+        val viewWidth = textureView.width.toFloat()
+        val viewHeight = textureView.height.toFloat()
+        Log.d(TAG, "applyCenterCropTransform called: view=${viewWidth}x${viewHeight}, camera=${cameraWidth}x${cameraHeight}")
+        if (viewWidth == 0f || viewHeight == 0f || cameraWidth == 0 || cameraHeight == 0) {
+            Log.w(TAG, "applyCenterCropTransform: skipping due to zero dimensions")
+            return
+        }
+
+        val cameraAspect = cameraWidth.toFloat() / cameraHeight
+        val viewAspect = viewWidth / viewHeight
+
+        val scaleX: Float
+        val scaleY: Float
+        if (cameraAspect > viewAspect) {
+            // Camera is wider (landscape) than view (portrait) - scale Y to fill height
+            scaleX = 1f
+            scaleY = cameraAspect / viewAspect
+        } else {
+            // Camera is taller than view - scale X to fill width
+            scaleX = viewAspect / cameraAspect
+            scaleY = 1f
+        }
+
+        val matrix = Matrix()
+        matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
+        textureView.setTransform(matrix)
+        Log.d(TAG, "Applied center-crop transform: scaleX=$scaleX, scaleY=$scaleY")
+    }
+
     companion object {
         private const val TAG = "BatchCaptureFrag"
         private const val REGULAR_CAPTURE_TIMEOUT_MS = 10000L  // 10 seconds for regular camera
         private const val FLIR_CAPTURE_TIMEOUT_MS = 5000L     // 5 seconds for FLIR
+        private const val DUAL_CAPTURE_TIMEOUT_MS = 15000L    // 15 seconds for dual capture (both)
+        // FLIR ACE camera resolution - adjust if your camera has different specs
+        private const val FLIR_CAMERA_WIDTH = 640
+        private const val FLIR_CAMERA_HEIGHT = 480
     }
 }
 

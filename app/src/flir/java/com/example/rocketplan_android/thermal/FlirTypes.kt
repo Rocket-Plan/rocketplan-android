@@ -2,6 +2,7 @@ package com.example.rocketplan_android.thermal
 
 import com.flir.thermalsdk.live.CameraInformation
 import com.flir.thermalsdk.live.Identity
+import java.io.File
 
 // Re-export FLIR SDK types for use in main source set
 typealias FusionMode = com.flir.thermalsdk.image.fusion.FusionMode
@@ -15,3 +16,5 @@ sealed class FlirState {
     data class Streaming(val identity: FlirIdentity, val info: FlirCameraInformation?) : FlirState()
     data class Error(val message: String) : FlirState()
 }
+
+// Note: FlirSnapshotResult is also defined in FlirCameraController.kt for backward compatibility

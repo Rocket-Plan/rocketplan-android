@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.thermal
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.PixelFormat
 import android.graphics.SurfaceTexture
 import android.opengl.EGL14
@@ -30,9 +31,11 @@ import com.flir.thermalsdk.live.discovery.DiscoveryEventListener
 import com.flir.thermalsdk.live.discovery.DiscoveryFactory
 import com.flir.thermalsdk.live.streaming.Stream
 import com.flir.thermalsdk.log.ThermalLog
+import com.flir.thermalsdk.androidsdk.image.BitmapAndroid
 import com.flir.thermalsdk.utils.FileUtils
 import com.flir.thermalsdk.utils.Pair
 import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.microedition.khronos.egl.EGLConfig as GLConfigLegacy
@@ -71,6 +74,11 @@ class FlirCameraController(
 
     private val _snapshots = MutableSharedFlow<File>(extraBufferCapacity = 1)
     val snapshots: SharedFlow<File> = _snapshots.asSharedFlow()
+
+    private val _snapshotsWithVisual = MutableSharedFlow<FlirSnapshotResult>(extraBufferCapacity = 1)
+    val snapshotsWithVisual: SharedFlow<FlirSnapshotResult> = _snapshotsWithVisual.asSharedFlow()
+
+    private val extractVisualOnSnapshot = AtomicBoolean(false)
 
     private var camera: Camera? = null
     private var activeStream: Stream? = null
@@ -194,6 +202,11 @@ class FlirCameraController(
         // Request a render to trigger onDrawFrame where snapshot is processed
         renderTarget?.requestRender()
         ThermalLog.d(TAG, "📸 snapshotRequested=true, requestRender() called")
+    }
+
+    fun setExtractVisualEnabled(enabled: Boolean) {
+        extractVisualOnSnapshot.set(enabled)
+        ThermalLog.d(TAG, "📸 setExtractVisualEnabled: $enabled")
     }
 
     fun startDiscovery() {
@@ -450,7 +463,11 @@ class FlirCameraController(
         scope.launch {
             ThermalLog.d(TAG, "disconnect()")
             val currentCamera = camera
-            activeStream?.stop()
+            try {
+                activeStream?.stop()
+            } catch (t: Throwable) {
+                logWarn("disconnect(): Stream stop error: ${t.message}")
+            }
             renderTarget?.setRenderMode(RenderMode.WHEN_DIRTY)
 
             // Clear state immediately so new connections don't race
@@ -578,6 +595,9 @@ class FlirCameraController(
             thermalImageProcessed = true
             thermalImage.palette = currentPalette
             val fusion: Fusion? = thermalImage.fusion
+            if (frameCount % 60 == 0L) {
+                logDebug("🔀 Fusion: fusion=${fusion != null}, mode=$currentFusionMode")
+            }
             fusion?.setFusionMode(currentFusionMode)
 
             if (enableMeasurements) {
@@ -611,8 +631,34 @@ class FlirCameraController(
                 try {
                     thermalImage.saveAs(snapshotPath)
                     logDebug("📸 [onDrawFrame] ✅ Snapshot saved: $snapshotPath")
-                    val emitted = _snapshots.tryEmit(File(snapshotPath))
-                    logDebug("📸 [onDrawFrame] Emitted to flow: $emitted")
+                    val thermalFile = File(snapshotPath)
+
+                    // Extract visual image if enabled
+                    var visualFile: File? = null
+                    if (extractVisualOnSnapshot.get()) {
+                        try {
+                            val visualBuffer = thermalImage.fusion?.getPhoto()
+                            if (visualBuffer != null) {
+                                val bitmap = BitmapAndroid.createBitmap(visualBuffer).bitMap
+                                val visualPath = FileUtils.prepareUniqueFileName(imagesRoot, "ACE_VIS_", "jpg")
+                                FileOutputStream(visualPath).use { out ->
+                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                                }
+                                visualFile = File(visualPath)
+                                logDebug("📸 [onDrawFrame] ✅ Visual image extracted: $visualPath")
+                            } else {
+                                logWarn("📸 [onDrawFrame] Visual extraction enabled but fusion.getPhoto() returned null")
+                            }
+                        } catch (e: Exception) {
+                            logError("📸 [onDrawFrame] Failed to extract visual: ${e.message}")
+                        }
+                    }
+
+                    // Emit to both flows
+                    val emitted = _snapshots.tryEmit(thermalFile)
+                    logDebug("📸 [onDrawFrame] Emitted to snapshots flow: $emitted")
+                    val emittedWithVisual = _snapshotsWithVisual.tryEmit(FlirSnapshotResult(thermalFile, visualFile))
+                    logDebug("📸 [onDrawFrame] Emitted to snapshotsWithVisual flow: $emittedWithVisual, visualFile=${visualFile?.name}")
                 } catch (e: IOException) {
                     val message = "📸 [onDrawFrame] ❌ Unable to take snapshot: ${e.message}"
                     logError(message)
@@ -941,3 +987,12 @@ class FlirCameraController(
         Log.e(TAG, message)
     }
 }
+
+/**
+ * Result of a FLIR snapshot capture, containing the thermal file
+ * and optionally the extracted visual image file.
+ */
+data class FlirSnapshotResult(
+    val thermalFile: File,
+    val visualFile: File?
+)

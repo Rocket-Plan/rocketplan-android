@@ -455,6 +455,7 @@
     <string name="add_photo_flir">Thermal photo (FLIR)</string>
     <string name="regular">Regular</string>
     <string name="ir">IR</string>
+    <string name="ir_visual">IR+V</string>
     <string name="dual">Dual</string>
     <string name="camera_permission_required">Camera permission is required to capture photos.</string>
     <string name="camera_file_error">Could not prepare storage for the new photo.</string>
