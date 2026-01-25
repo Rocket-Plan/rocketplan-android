@@ -43,6 +43,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirSnapshotResult
 import com.example.rocketplan_android.thermal.FlirState
@@ -197,7 +198,8 @@ class BatchCaptureFragment : Fragment() {
             else -> CaptureMode.REGULAR
         }
 
-        flirController = FlirCameraController(requireContext())
+        val rocketPlanApp = requireActivity().application as RocketPlanApplication
+        flirController = FlirCameraController(requireContext(), rocketPlanApp.remoteLogger)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         cameraPermissionLauncher =

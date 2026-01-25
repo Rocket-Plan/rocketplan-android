@@ -21,6 +21,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
 import com.example.rocketplan_android.ui.projects.PhotosAddedResult
@@ -74,7 +75,8 @@ class FlirCaptureFragment : Fragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        controller = FlirCameraController(requireContext())
+        val rocketPlanApp = requireActivity().application as RocketPlanApplication
+        controller = FlirCameraController(requireContext(), rocketPlanApp.remoteLogger)
         cameraPermissionLauncher =
             registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
                 val granted = permissions.entries.all { it.value }

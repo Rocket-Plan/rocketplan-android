@@ -13,6 +13,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirState
 import com.google.android.material.button.MaterialButton
@@ -54,7 +55,8 @@ class FlirTestFragment : Fragment(), CoroutineScope {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        controller = FlirCameraController(requireContext())
+        val rocketPlanApp = requireActivity().application as RocketPlanApplication
+        controller = FlirCameraController(requireContext(), rocketPlanApp.remoteLogger)
         permissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { perms ->
             val granted = perms.entries.all { it.value }
             if (granted) {

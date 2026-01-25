@@ -14,6 +14,8 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
 import android.view.Surface
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import com.flir.thermalsdk.ErrorCode
 import com.flir.thermalsdk.image.Palette
 import com.flir.thermalsdk.image.PaletteManager
@@ -57,6 +59,7 @@ import kotlinx.coroutines.launch
  */
 class FlirCameraController(
     context: Context,
+    private val remoteLogger: RemoteLogger,
     private val communicationInterface: CommunicationInterface = CommunicationInterface.ACE
 ) {
     companion object {
@@ -212,6 +215,12 @@ class FlirCameraController(
     fun startDiscovery() {
         _state.value = FlirState.Discovering
         ThermalLog.d(TAG, "Starting discovery on $communicationInterface")
+        remoteLogger.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "FLIR camera discovery started",
+            metadata = mapOf("interface" to communicationInterface.toString())
+        )
         DiscoveryFactory.getInstance().scan(object : DiscoveryEventListener {
             override fun onCameraFound(discoveredCamera: DiscoveredCamera) {
                 val foundIdentity = discoveredCamera.identity
@@ -219,6 +228,15 @@ class FlirCameraController(
                 if (foundIdentity.cameraType == CameraType.ACE &&
                     foundIdentity.communicationInterface == communicationInterface
                 ) {
+                    remoteLogger.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "FLIR camera found",
+                        metadata = mapOf(
+                            "device_id" to foundIdentity.deviceId,
+                            "camera_type" to foundIdentity.cameraType.toString()
+                        )
+                    )
                     DiscoveryFactory.getInstance().stop(communicationInterface)
                     connect(foundIdentity)
                 }
@@ -230,6 +248,15 @@ class FlirCameraController(
             ) {
                 val message = "Discovery error: $error"
                 ThermalLog.e(TAG, message)
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "FLIR camera discovery failed",
+                    metadata = mapOf(
+                        "interface" to communicationInterface.toString(),
+                        "error" to error.toString()
+                    )
+                )
                 _state.value = FlirState.Error(message)
                 _errors.tryEmit(message)
             }
@@ -241,6 +268,12 @@ class FlirCameraController(
         scope.launch {
             try {
                 ThermalLog.d(TAG, "Connecting to ${identity.deviceId}")
+                remoteLogger.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "FLIR camera connecting",
+                    metadata = mapOf("device_id" to identity.deviceId)
+                )
                 if (camera == null) {
                     camera = Camera()
                 }
@@ -249,6 +282,15 @@ class FlirCameraController(
                     { error ->
                         val message = "Connection error: $error"
                         ThermalLog.e(TAG, message)
+                        remoteLogger.log(
+                            level = LogLevel.ERROR,
+                            tag = TAG,
+                            message = "FLIR camera connection error",
+                            metadata = mapOf(
+                                "device_id" to identity.deviceId,
+                                "error" to error.toString()
+                            )
+                        )
                         _state.value = FlirState.Error(message)
                         _errors.tryEmit(message)
                     },
@@ -257,10 +299,29 @@ class FlirCameraController(
 
                 val info: FlirCameraInformation? = camera?.remoteControl?.cameraInformation()?.sync
                 ThermalLog.d(TAG, "Camera connected: $info")
+                remoteLogger.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "FLIR camera connected",
+                    metadata = mapOf(
+                        "device_id" to identity.deviceId,
+                        "model" to (info?.toString() ?: "unknown"),
+                        "serial" to (info?.serialNumber ?: "unknown")
+                    )
+                )
                 startStream(identity, info)
             } catch (io: IOException) {
                 val message = "Connection error: ${io.message}"
                 ThermalLog.e(TAG, message)
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "FLIR camera connection failed",
+                    metadata = mapOf(
+                        "device_id" to identity.deviceId,
+                        "error" to (io.message ?: "unknown")
+                    )
+                )
                 _state.value = FlirState.Error(message)
                 _errors.tryEmit(message)
             }
@@ -340,6 +401,15 @@ class FlirCameraController(
                 if (setupError != null) {
                     val message = "🎬 Failed to set up GL pipeline: ${setupError.message}"
                     ThermalLog.e(TAG, message)
+                    remoteLogger.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "FLIR GL pipeline setup failed",
+                        metadata = mapOf(
+                            "device_id" to identity.deviceId,
+                            "error" to (setupError.message ?: "unknown")
+                        )
+                    )
                     _state.value = FlirState.Error(message)
                     _errors.tryEmit(message)
                     return@launch
@@ -357,10 +427,28 @@ class FlirCameraController(
                     { error ->
                         val message = "🎬 Stream error: $error"
                         logWarn(message)
+                        remoteLogger.log(
+                            level = LogLevel.ERROR,
+                            tag = TAG,
+                            message = "FLIR stream error",
+                            metadata = mapOf(
+                                "device_id" to identity.deviceId,
+                                "error" to error.toString()
+                            )
+                        )
                         _errors.tryEmit(message)
                     }
                 )
                 logDebug("🎬 Stream started, isStreaming=${stream.isStreaming}")
+                remoteLogger.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "FLIR stream started",
+                    metadata = mapOf(
+                        "device_id" to identity.deviceId,
+                        "is_thermal" to stream.isThermal.toString()
+                    )
+                )
                 target.requestRender()
             }
         }
@@ -462,6 +550,11 @@ class FlirCameraController(
     fun disconnect() {
         scope.launch {
             ThermalLog.d(TAG, "disconnect()")
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "FLIR camera disconnecting"
+            )
             val currentCamera = camera
             try {
                 activeStream?.stop()
@@ -659,9 +752,26 @@ class FlirCameraController(
                     logDebug("📸 [onDrawFrame] Emitted to snapshots flow: $emitted")
                     val emittedWithVisual = _snapshotsWithVisual.tryEmit(FlirSnapshotResult(thermalFile, visualFile))
                     logDebug("📸 [onDrawFrame] Emitted to snapshotsWithVisual flow: $emittedWithVisual, visualFile=${visualFile?.name}")
+                    remoteLogger.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "FLIR snapshot captured",
+                        metadata = mapOf(
+                            "thermal_file" to thermalFile.name,
+                            "visual_file" to (visualFile?.name ?: "none"),
+                            "width" to thermalImage.width.toString(),
+                            "height" to thermalImage.height.toString()
+                        )
+                    )
                 } catch (e: IOException) {
                     val message = "📸 [onDrawFrame] ❌ Unable to take snapshot: ${e.message}"
                     logError(message)
+                    remoteLogger.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "FLIR snapshot capture failed",
+                        metadata = mapOf("error" to (e.message ?: "unknown"))
+                    )
                     _errors.tryEmit(message)
                 }
             }
