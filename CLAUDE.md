@@ -98,7 +98,7 @@ adb connect <device-ip>:5555
 Build number is in `app/build.gradle.kts`:
 
 ```kotlin
-val buildNumber = 6
+val buildNumber = 8  // Current as of Jan 2026
 versionCode = buildNumber
 versionName = "1.29 ($buildNumber)"
 ```
