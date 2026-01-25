@@ -286,6 +286,7 @@ class RocketPlanApplication : Application() {
     }
 
     private fun logDeviceInfo() {
+        val displayMetrics = resources.displayMetrics
         remoteLogger.log(
             level = LogLevel.INFO,
             tag = TAG,
@@ -304,7 +305,11 @@ class RocketPlanApplication : Application() {
                 "id" to Build.ID,
                 "sdk_int" to Build.VERSION.SDK_INT.toString(),
                 "release" to Build.VERSION.RELEASE,
-                "incremental" to Build.VERSION.INCREMENTAL
+                "incremental" to Build.VERSION.INCREMENTAL,
+                "screen_width" to displayMetrics.widthPixels.toString(),
+                "screen_height" to displayMetrics.heightPixels.toString(),
+                "screen_density" to displayMetrics.density.toString(),
+                "density_dpi" to displayMetrics.densityDpi.toString()
             )
         )
     }

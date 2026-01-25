@@ -129,6 +129,10 @@ class RoomDetailFragment : Fragment() {
         RoomPhotoAddAdapter { navigateToBatchCapture() }
     }
 
+    private val processingPhotosAdapter by lazy {
+        ProcessingPhotosAdapter()
+    }
+
     private val photoAdapter by lazy {
         RoomPhotoPagingAdapter(
             onPhotoSelected = { openPhotoViewer(it) }
@@ -251,7 +255,7 @@ class RoomDetailFragment : Fragment() {
     private fun configureRecycler() {
         albumsRecyclerView.configureForAlbums(albumsAdapter)
 
-        photoConcatAdapter = ConcatAdapter(addPhotoAdapter, photoAdapter, photoLoadStateAdapter)
+        photoConcatAdapter = ConcatAdapter(addPhotoAdapter, processingPhotosAdapter, photoAdapter, photoLoadStateAdapter)
 
         val gridLayoutManager = androidx.recyclerview.widget.GridLayoutManager(requireContext(), 3).apply {
             spanSizeLookup = object : androidx.recyclerview.widget.GridLayoutManager.SpanSizeLookup() {
@@ -953,7 +957,18 @@ class RoomDetailFragment : Fragment() {
                         updatePhotoVisibility()
                     }
                 }
-                // In-flight assembly banner removed - processing happens silently in background
+                // Show processing progress in the grid (single icon with count badge)
+                launch {
+                    viewModel.inFlightAssembly.collect { assembly ->
+                        val progress = assembly?.let {
+                            ProcessingProgressState(it.processedCount, it.totalCount)
+                        }
+                        processingPhotosAdapter.submitProgress(progress)
+                        Log.d(TAG, "📊 Processing progress: ${assembly?.processedCount ?: 0}/${assembly?.totalCount ?: 0}")
+                    }
+                }
+                // Hide the banner - processing status is now shown in the grid
+                inFlightBanner.isVisible = false
                 launch {
                     viewModel.isPhotoRefreshInProgress.collect { refreshing ->
                         swipeRefreshLayout.isRefreshing =

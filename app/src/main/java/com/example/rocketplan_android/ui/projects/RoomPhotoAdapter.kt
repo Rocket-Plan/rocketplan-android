@@ -122,6 +122,54 @@ class RoomPhotoAddAdapter(
     }
 }
 
+data class ProcessingPhotoItem(
+    val photoId: String,
+    val status: String
+)
+
+data class ProcessingProgressState(
+    val completed: Int,
+    val total: Int
+)
+
+class ProcessingPhotosAdapter : RecyclerView.Adapter<ProcessingPhotosAdapter.ProcessingPhotoViewHolder>() {
+
+    private var progress: ProcessingProgressState? = null
+
+    fun submitProgress(newProgress: ProcessingProgressState?) {
+        val oldProgress = progress
+        progress = newProgress
+        when {
+            oldProgress == null && newProgress != null -> notifyItemInserted(0)
+            oldProgress != null && newProgress == null -> notifyItemRemoved(0)
+            oldProgress != null && newProgress != null -> notifyItemChanged(0)
+        }
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProcessingPhotoViewHolder {
+        val view = LayoutInflater
+            .from(parent.context)
+            .inflate(R.layout.item_room_photo_processing, parent, false)
+        return ProcessingPhotoViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ProcessingPhotoViewHolder, position: Int) {
+        progress?.let { holder.bind(it) }
+    }
+
+    override fun getItemCount(): Int = if (progress != null) 1 else 0
+
+    class ProcessingPhotoViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        private val spinner: ProgressBar = view.findViewById(R.id.processingSpinner)
+        private val countLabel: TextView = view.findViewById(R.id.processingCount)
+
+        fun bind(progress: ProcessingProgressState) {
+            spinner.isVisible = true
+            countLabel.text = "${progress.completed}/${progress.total}"
+        }
+    }
+}
+
 class RoomPhotoLoadStateAdapter(
     private val onRetry: () -> Unit
 ) : LoadStateAdapter<RoomPhotoLoadStateAdapter.LoadStateViewHolder>() {

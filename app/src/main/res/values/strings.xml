@@ -161,6 +161,7 @@
     <string name="menu">Menu</string>
     <string name="edit_project">Edit Project</string>
     <string name="photos">Photos</string>
+    <string name="processing">Processing</string>
     <string name="damages">Damages</string>
     <string name="sketch">Sketch</string>
     <string name="add_note">Add a note</string>

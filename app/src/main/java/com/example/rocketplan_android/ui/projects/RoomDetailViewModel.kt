@@ -111,6 +111,8 @@ class RoomDetailViewModel(
     private val processedAssemblyIds = mutableSetOf<String>()
     private val _inFlightAssembly = MutableStateFlow<InFlightAssemblyState?>(null)
     val inFlightAssembly: StateFlow<InFlightAssemblyState?> = _inFlightAssembly.asStateFlow()
+    private val _processingPhotos = MutableStateFlow<List<ProcessingPhotoItem>>(emptyList())
+    val processingPhotos: StateFlow<List<ProcessingPhotoItem>> = _processingPhotos.asStateFlow()
     private var inFlightAssemblyJob: Job? = null
     private var assemblyWatcherJob: Job? = null
     private val scopeCatalogCache = MutableStateFlow<List<ScopeCatalogItem>>(emptyList())
@@ -1008,12 +1010,18 @@ class RoomDetailViewModel(
                                 processedCount = processed,
                                 totalCount = active.totalFiles
                             )
+                            // Update processing photos for grid display
+                            val processingItems = photos
+                                .filter { it.status != PhotoStatus.COMPLETED.value }
+                                .map { ProcessingPhotoItem(photoId = it.photoId, status = it.status) }
+                            _processingPhotos.value = processingItems
                         }
                 }
             } else {
                 inFlightAssemblyJob?.cancel()
                 inFlightAssemblyJob = null
                 _inFlightAssembly.value = null
+                _processingPhotos.value = emptyList()
             }
         }
     }
