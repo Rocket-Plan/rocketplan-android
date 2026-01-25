@@ -112,19 +112,54 @@ class ImageProcessorRealtimeManager(
             errorMessage = update.errorMessage ?: assembly.errorMessage
         )
         dao.updateAssembly(updatedAssembly)
-        if (mappedStatus == AssemblyStatus.COMPLETED &&
-            assembly.status != AssemblyStatus.COMPLETED.value
-        ) {
-            Log.d(TAG, "✅ Assembly $assemblyId marked complete from Pusher")
-            remoteLogger?.log(
-                level = LogLevel.INFO,
-                tag = TAG,
-                message = "Assembly marked complete from Pusher",
-                metadata = mapOf(
-                    "assembly_id" to assemblyId,
-                    "status" to mappedStatus.value
-                )
-            )
+
+        // Log status transitions
+        if (mappedStatus != null && assembly.status != mappedStatus.value) {
+            when (mappedStatus) {
+                AssemblyStatus.PROCESSING -> {
+                    Log.d(TAG, "⚙️ Assembly $assemblyId now processing (was ${assembly.status})")
+                    remoteLogger?.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "Assembly status changed to processing",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "previous_status" to assembly.status,
+                            "new_status" to mappedStatus.value
+                        )
+                    )
+                }
+                AssemblyStatus.COMPLETED -> {
+                    Log.d(TAG, "✅ Assembly $assemblyId marked complete from Pusher")
+                    remoteLogger?.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "Assembly marked complete from Pusher",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "previous_status" to assembly.status,
+                            "new_status" to mappedStatus.value
+                        )
+                    )
+                }
+                AssemblyStatus.FAILED -> {
+                    Log.e(TAG, "❌ Assembly $assemblyId failed (was ${assembly.status})")
+                    remoteLogger?.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "Assembly failed",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "previous_status" to assembly.status,
+                            "new_status" to mappedStatus.value,
+                            "error" to (update.errorMessage ?: "unknown")
+                        )
+                    )
+                }
+                else -> {
+                    Log.d(TAG, "📡 Assembly $assemblyId status: ${assembly.status} → ${mappedStatus.value}")
+                }
+            }
         }
 
         update.photos?.forEach { photoUpdate ->
@@ -188,6 +223,8 @@ class ImageProcessorRealtimeManager(
         val localStatus = AssemblyStatus.fromValue(assembly.status)
         val backendStatus = update.status?.lowercase(Locale.US) ?: return false
 
+        // Only ignore "processing" updates if we've already completed locally
+        // (prevents going backward from completed -> processing)
         if (localStatus == AssemblyStatus.COMPLETED && backendStatus == "processing") {
             Log.d(
                 TAG,
@@ -207,30 +244,15 @@ class ImageProcessorRealtimeManager(
             return true
         }
 
-        if (localStatus in setOf(
-                AssemblyStatus.RETRYING,
-                AssemblyStatus.CREATING,
-                AssemblyStatus.CREATED,
-                AssemblyStatus.UPLOADING,
-                AssemblyStatus.FAILED
-            ) && backendStatus == "processing"
-        ) {
+        // Accept "processing" updates from backend when local is in earlier stages
+        // This allows the UI to show spinner while server processes photos
+        if (backendStatus == "processing") {
             Log.d(
                 TAG,
-                "⏭️ Ignoring stale Pusher update for assembly ${assembly.assemblyId} " +
+                "📡 Accepting processing update for assembly ${assembly.assemblyId} " +
                     "(local=${assembly.status}, backend=$backendStatus)"
             )
-            remoteLogger?.log(
-                level = LogLevel.DEBUG,
-                tag = TAG,
-                message = "Ignored stale Pusher update (local in terminal/transition, backend processing)",
-                metadata = mapOf(
-                    "assembly_id" to assembly.assemblyId,
-                    "local_status" to assembly.status,
-                    "backend_status" to backendStatus
-                )
-            )
-            return true
+            return false
         }
 
         return false
