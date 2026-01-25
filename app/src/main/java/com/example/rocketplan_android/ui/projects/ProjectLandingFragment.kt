@@ -26,8 +26,10 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.model.ProjectStatus
+import com.example.rocketplan_android.logging.LogLevel
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -127,6 +129,7 @@ class ProjectLandingFragment : Fragment() {
         }
         rocketScanCard.setOnClickListener {
             val summary = latestSummary ?: return@setOnClickListener
+            val remoteLogger = (requireActivity().application as RocketPlanApplication).remoteLogger
             Log.d(
                 "ProjectLanding",
                 "RocketScan click: hasProperty=${summary.hasProperty}, hasLevels=${summary.hasLevels}, " +
@@ -134,21 +137,49 @@ class ProjectLandingFragment : Fragment() {
             )
 
             when {
-                // No property at all - need to create one via type selection
+                // Sync is in progress - go to detail and let it show loading state
+                // Don't show type selection while syncing, property may not have loaded yet
+                summary.isSyncing -> {
+                    remoteLogger.log(
+                        level = LogLevel.INFO,
+                        tag = "ProjectLanding",
+                        message = "Navigating to detail while sync in progress",
+                        metadata = mapOf(
+                            "project_id" to args.projectId.toString(),
+                            "has_property" to summary.hasProperty.toString(),
+                            "has_levels" to summary.hasLevels.toString()
+                        )
+                    )
+                    val action = ProjectLandingFragmentDirections
+                        .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
+                    findNavController().navigate(action)
+                }
+                // No property at all AND sync is complete - need to create one via type selection
                 !summary.hasProperty -> {
+                    remoteLogger.log(
+                        level = LogLevel.INFO,
+                        tag = "ProjectLanding",
+                        message = "Navigating to type selection - no property after sync",
+                        metadata = mapOf("project_id" to args.projectId.toString())
+                    )
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
                     findNavController().navigate(action)
                 }
-                // Property exists but no levels yet AND sync is not in progress
-                // If sync is in progress, go to detail and let it show loading state
-                !summary.hasLevels && !summary.isSyncing -> {
+                // Property exists but no levels yet - need to select property type
+                !summary.hasLevels -> {
+                    remoteLogger.log(
+                        level = LogLevel.INFO,
+                        tag = "ProjectLanding",
+                        message = "Navigating to type selection - no levels",
+                        metadata = mapOf("project_id" to args.projectId.toString())
+                    )
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
                     findNavController().navigate(action)
                 }
                 else -> {
-                    // Has property and either has levels or sync is in progress
+                    // Has property and levels
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
                     findNavController().navigate(action)

@@ -352,7 +352,8 @@ class ProjectDetailFragment : Fragment() {
         // Keep the add-room row static; room cards already show sync spinners.
         roomActionsProgressBar.isVisible = false
         val isBlocked = roomCreationStatus == RoomCreationStatus.MISSING_PROPERTY ||
-            roomCreationStatus == RoomCreationStatus.UNSYNCED_PROPERTY
+            roomCreationStatus == RoomCreationStatus.UNSYNCED_PROPERTY ||
+            roomCreationStatus == RoomCreationStatus.SYNCING
         addRoomCard.isEnabled = !isBlocked
         addRoomCard.isClickable = !isBlocked
         addExteriorCard.isEnabled = !isBlocked
@@ -369,6 +370,8 @@ class ProjectDetailFragment : Fragment() {
                 showRoomCreationWarning(R.string.room_type_error_missing_property)
             RoomCreationStatus.UNSYNCED_PROPERTY ->
                 showRoomCreationWarning(R.string.room_creation_property_sync_pending)
+            RoomCreationStatus.SYNCING ->
+                showRoomCreationWarning(R.string.room_creation_sync_in_progress)
             RoomCreationStatus.UNKNOWN ->
                 showRoomCreationWarning(R.string.room_creation_loading_message)
         }

@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.data.repository.SyncSegment
+import com.example.rocketplan_android.logging.LogLevel
 
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class ProjectDetailViewModel(
@@ -42,6 +43,7 @@ class ProjectDetailViewModel(
     private val syncQueueManager = rocketPlanApp.syncQueueManager
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
     private val imageProcessorDao = rocketPlanApp.imageProcessorDao
+    private val remoteLogger = rocketPlanApp.remoteLogger
 
     private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
     val uiState: StateFlow<ProjectDetailUiState> = _uiState
@@ -109,7 +111,18 @@ class ProjectDetailViewModel(
                     )
                     val damageTotal = sections.sumOf { section -> section.rooms.sumOf { it.damageCount } }
                     val header = project.toHeader(notes.size, damageTotal)
-                    val roomCreationStatus = project.resolveRoomCreationStatus(localDataService)
+                    val roomCreationStatus = project.resolveRoomCreationStatus(localDataService, isProjectSyncing)
+                    if (roomCreationStatus == RoomCreationStatus.SYNCING) {
+                        remoteLogger.log(
+                            level = LogLevel.INFO,
+                            tag = "ProjectDetailVM",
+                            message = "Room creation blocked - sync in progress",
+                            metadata = mapOf(
+                                "project_id" to projectId.toString(),
+                                "has_property_id" to (project.propertyId != null).toString()
+                            )
+                        )
+                    }
                     ProjectDetailUiState.Ready(
                         header = header,
                         levelSections = sections,
@@ -438,14 +451,21 @@ enum class RoomCreationStatus {
     UNKNOWN,
     AVAILABLE,
     MISSING_PROPERTY,
-    UNSYNCED_PROPERTY
+    UNSYNCED_PROPERTY,
+    SYNCING
 }
 
 private suspend fun OfflineProjectEntity.resolveRoomCreationStatus(
-    localDataService: LocalDataService
+    localDataService: LocalDataService,
+    isSyncing: Boolean
 ): RoomCreationStatus {
     val propertyLocalId = propertyId
     if (propertyLocalId == null) {
+        // If sync is in progress, property may not have loaded yet - show loading state
+        if (isSyncing) {
+            android.util.Log.d("RoomCreation", "⏳ SYNCING: project $projectId has null propertyId but sync is in progress")
+            return RoomCreationStatus.SYNCING
+        }
         android.util.Log.d("RoomCreation", "❌ MISSING_PROPERTY: project $projectId has null propertyId")
         return RoomCreationStatus.MISSING_PROPERTY
     }
@@ -453,6 +473,11 @@ private suspend fun OfflineProjectEntity.resolveRoomCreationStatus(
     val property = localDataService.getProperty(propertyLocalId)
         ?: localDataService.getPropertyByServerId(propertyLocalId)
     if (property == null) {
+        // If sync is in progress, property may not have loaded yet - show loading state
+        if (isSyncing) {
+            android.util.Log.d("RoomCreation", "⏳ SYNCING: project $projectId has propertyId=$propertyLocalId but property not found, sync in progress")
+            return RoomCreationStatus.SYNCING
+        }
         android.util.Log.d("RoomCreation", "❌ MISSING_PROPERTY: project $projectId has propertyId=$propertyLocalId but getProperty returned null")
         return RoomCreationStatus.MISSING_PROPERTY
     }

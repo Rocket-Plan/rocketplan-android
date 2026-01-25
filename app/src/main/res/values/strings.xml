@@ -179,6 +179,7 @@
     <string name="room_type_error_generic">Unable to load room types. Try again.</string>
     <string name="room_type_error_missing_property">Add property details to this project before creating rooms.</string>
     <string name="room_creation_property_sync_pending">Property details are syncing. Try again shortly.</string>
+    <string name="room_creation_sync_in_progress">Syncing project data. Please wait…</string>
     <string name="room_creation_loading_message">Project info is still loading. Please wait and try again.</string>
     <string name="room_type_fallback_name">Room Type %1$d</string>
     <string name="no_rooms_placeholder">Start building your project by adding rooms.</string>
