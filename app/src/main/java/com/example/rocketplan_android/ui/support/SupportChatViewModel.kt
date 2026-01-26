@@ -49,12 +49,12 @@ class SupportChatViewModel(
                 isClosed = conversation?.status == "closed"
             )
 
-            // Mark as read and sync messages if we have a valid serverId
+            // Sync messages first, then mark as read (order matters to avoid marking stale messages)
             conversation?.let {
                 val serverId = it.serverId
                 if (serverId != null && serverId > 0) {
-                    supportSyncService.markAsRead(it)
                     supportSyncService.syncMessages(serverId)
+                    supportSyncService.markAsRead(it)
                 }
             }
         }

@@ -272,10 +272,14 @@ class RoomDetailViewModel(
             if (selectedCategory == null) {
                 sections // "All" - show everything
             } else {
-                sections.map { section ->
-                    section.copy(
-                        scopeGroups = section.scopeGroups.filter { it.title == selectedCategory }
-                    )
+                // Filter scope groups and remove sections with no matching content
+                sections.mapNotNull { section ->
+                    val filteredGroups = section.scopeGroups.filter { it.title == selectedCategory }
+                    if (filteredGroups.isEmpty() && section.damageItems.isEmpty()) {
+                        null // Remove section entirely if no matching content
+                    } else {
+                        section.copy(scopeGroups = filteredGroups)
+                    }
                 }
             }
         }.stateIn(
@@ -549,6 +553,7 @@ class RoomDetailViewModel(
             val now = Date()
             val lookupRoomId = room.serverId ?: room.roomId
             val scope = OfflineWorkScopeEntity(
+                workScopeId = -System.currentTimeMillis(),
                 uuid = UUID.randomUUID().toString(),
                 projectId = projectId,
                 roomId = lookupRoomId,
@@ -705,11 +710,13 @@ class RoomDetailViewModel(
                 .toSet()
             val now = Date()
             val lookupRoomId = room.serverId ?: room.roomId
+            val baseId = System.nanoTime()
             val newEntities = options
                 .filter { it.title.isNotBlank() }
                 .filter { option -> option.title.trim().lowercase(Locale.US) !in existingNames }
-                .map { option ->
+                .mapIndexed { index, option ->
                     OfflineWorkScopeEntity(
+                        workScopeId = -(baseId + index),
                         uuid = UUID.randomUUID().toString(),
                         projectId = projectId,
                         roomId = lookupRoomId,

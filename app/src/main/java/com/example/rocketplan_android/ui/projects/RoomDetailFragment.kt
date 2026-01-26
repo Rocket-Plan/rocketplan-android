@@ -10,7 +10,6 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import androidx.core.widget.addTextChangedListener
@@ -193,6 +192,11 @@ class RoomDetailFragment : Fragment() {
         syncQueueManager.resumeProjectPhotoSync(args.projectId)
     }
 
+    override fun onDestroyView() {
+        // Clear dynamic button references to prevent memory leaks
+        currentCategoryButtons.clear()
+        super.onDestroyView()
+    }
 
     private fun bindViews(root: View) {
         roomIcon = root.findViewById(R.id.roomIcon)
@@ -828,25 +832,10 @@ class RoomDetailFragment : Fragment() {
             return
         }
 
-        // On FLIR devices, show a menu to choose between standard and IR capture
-        // On standard devices, go directly to batch capture (no menu needed)
+        // On FLIR devices, go directly to FLIR/IR capture (no menu needed)
+        // On standard devices, go directly to batch capture
         if (BuildConfig.HAS_FLIR_SUPPORT) {
-            val popup = PopupMenu(requireContext(), anchor)
-            popup.menuInflater.inflate(R.menu.menu_add_photo_options, popup.menu)
-            popup.setOnMenuItemClickListener { item ->
-                when (item.itemId) {
-                    R.id.menu_add_photo_standard -> {
-                        navigateToBatchCapture()
-                        true
-                    }
-                    R.id.menu_add_photo_flir -> {
-                        navigateToFlirCapture()
-                        true
-                    }
-                    else -> false
-                }
-            }
-            popup.show()
+            navigateToFlirCapture()
         } else {
             navigateToBatchCapture()
         }
