@@ -149,6 +149,7 @@ class SupportSyncService(
         val uuid = UuidUtils.generateUuidV7()
 
         val conversation = OfflineSupportConversationEntity(
+            conversationId = -System.currentTimeMillis(),
             uuid = uuid,
             userId = userId,
             categoryId = categoryId,
@@ -185,6 +186,7 @@ class SupportSyncService(
         val uuid = UuidUtils.generateUuidV7()
 
         val message = OfflineSupportMessageEntity(
+            messageId = -System.currentTimeMillis(),
             uuid = uuid,
             conversationId = conversation.conversationId,
             conversationServerId = conversation.serverId,

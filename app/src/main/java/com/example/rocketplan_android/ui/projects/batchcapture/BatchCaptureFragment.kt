@@ -768,10 +768,11 @@ class BatchCaptureFragment : Fragment() {
 
         // Only disconnect FLIR when going to REGULAR mode (not using FLIR anymore)
         // Don't disconnect when switching between IR and DUAL modes to avoid GL crashes
+        // Note: We don't call disconnect() here - startActiveMode() will handle it with
+        // proper callback to avoid ERROR_CAMERA_IN_USE race condition
         if (wasUsingFlir && !willUseFlir) {
-            Log.d(TAG, "switchMode: Disconnecting FLIR (going to REGULAR mode)")
+            Log.d(TAG, "switchMode: Going to REGULAR mode (disconnect will be handled by startActiveMode)")
             flirReady = false
-            flirController.disconnect()
         } else if (wasUsingFlir && willUseFlir) {
             // Switching between IR and DUAL modes - both use same flirTextureView
             // Just need to change fusion mode, no surface change needed
@@ -835,8 +836,13 @@ class BatchCaptureFragment : Fragment() {
     private fun startActiveMode() {
         if (captureMode == CaptureMode.REGULAR) {
             flirReady = false
-            flirController.disconnect()
-            startCamera()
+            // Wait for FLIR camera to fully disconnect before starting regular camera
+            // This prevents ERROR_CAMERA_IN_USE race condition
+            flirController.disconnect {
+                activity?.runOnUiThread {
+                    startCamera()
+                }
+            }
             return
         }
 

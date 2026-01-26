@@ -15,10 +15,10 @@
 
         <ImageView
             android:id="@+id/sectionRoomIcon"
-            android:layout_width="@dimen/icon_size_card_large"
-            android:layout_height="@dimen/icon_size_card_large"
+            android:layout_width="@dimen/icon_size_tile"
+            android:layout_height="@dimen/icon_size_tile"
             android:background="@drawable/bg_icon_circle_light"
-            android:padding="8dp"
+            android:padding="16dp"
             android:scaleType="centerInside"
             android:src="@drawable/ic_door" />
 

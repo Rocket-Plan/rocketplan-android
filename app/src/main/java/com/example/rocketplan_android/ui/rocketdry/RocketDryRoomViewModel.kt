@@ -91,6 +91,7 @@ class RocketDryRoomViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val now = Date()
             val log = OfflineAtmosphericLogEntity(
+                logId = -System.currentTimeMillis(),
                 uuid = UUID.randomUUID().toString(),
                 projectId = projectId,
                 roomId = roomId,
@@ -158,6 +159,7 @@ class RocketDryRoomViewModel(
             "🎯 Creating material goal materialUuid=$materialUuid name='$materialName' targetMoisture=$targetMoisture roomId=$roomId"
         )
         val material = OfflineMaterialEntity(
+            materialId = -System.currentTimeMillis(),
             uuid = materialUuid,
             name = materialName,
             description = targetMoisture?.let {
@@ -184,6 +186,7 @@ class RocketDryRoomViewModel(
 
         // Anchor the material to the room with a goal log so it appears immediately.
         val log = OfflineMoistureLogEntity(
+            logId = -System.currentTimeMillis(),
             uuid = UUID.randomUUID().toString(),
             projectId = projectId,
             roomId = roomId,
@@ -218,6 +221,7 @@ class RocketDryRoomViewModel(
         val material = localDataService.getMaterial(materialId) ?: return@withContext false
         val now = Date()
         val log = OfflineMoistureLogEntity(
+            logId = -System.currentTimeMillis(),
             uuid = UUID.randomUUID().toString(),
             projectId = projectId,
             roomId = roomId,

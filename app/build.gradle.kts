@@ -40,7 +40,7 @@ android {
         applicationId = "com.rocketplantech.rocketplan"
         minSdk = 24
         targetSdk = 35
-        val buildNumber = 8
+        val buildNumber = 9
         versionCode = buildNumber
         versionName = "1.29 ($buildNumber)"
 
@@ -247,6 +247,7 @@ dependencies {
 
     // Crash reporting
     implementation(libs.sentry.android)
+
     // Pusher for standard builds (includes SLF4J)
     "standardImplementation"(libs.pusher)
     "standardImplementation"("org.slf4j:slf4j-android:1.7.36")

@@ -30,6 +30,7 @@ class NoteSyncService(
     ): OfflineNoteEntity = withContext(ioDispatcher) {
         val timestamp = now()
         val pending = OfflineNoteEntity(
+            noteId = -System.currentTimeMillis(),
             uuid = UuidUtils.generateUuidV7(),
             projectId = projectId,
             roomId = roomId,

@@ -149,6 +149,7 @@ class RocketDryViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val now = Date()
             val log = OfflineAtmosphericLogEntity(
+                logId = -System.currentTimeMillis(),
                 uuid = UUID.randomUUID().toString(),
                 projectId = projectId,
                 roomId = roomId,
@@ -253,12 +254,10 @@ class RocketDryViewModel(
         logsByRoom: Map<Long?, List<AtmosphericLogItem>>,
         rooms: Map<Long, OfflineRoomEntity>
     ): List<AtmosphericLogArea> {
-        val roomIds = buildSet {
-            addAll(rooms.keys)
-            addAll(logsByRoom.keys.filterNotNull())
-        }
+        // Only include rooms that actually have atmospheric logs
+        val roomIdsWithLogs = logsByRoom.keys.filterNotNull().toSet()
 
-        val areas = roomIds.map { roomId ->
+        val areas = roomIdsWithLogs.map { roomId ->
             val roomLabel = rooms[roomId]?.title?.takeIf { it.isNotBlank() }
             val label = roomLabel ?: rocketPlanApp.getString(R.string.rocketdry_atmos_room_unknown)
             AtmosphericLogArea(

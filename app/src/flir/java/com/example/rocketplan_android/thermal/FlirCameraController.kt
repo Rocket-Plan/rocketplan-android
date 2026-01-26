@@ -547,7 +547,7 @@ class FlirCameraController(
         }
     }
 
-    fun disconnect() {
+    fun disconnect(onComplete: (() -> Unit)? = null) {
         scope.launch {
             ThermalLog.d(TAG, "disconnect()")
             remoteLogger.log(
@@ -569,12 +569,19 @@ class FlirCameraController(
             _state.value = FlirState.Idle
             DiscoveryFactory.getInstance().stop(communicationInterface)
 
-            // Teardown GL resources asynchronously
+            // If no camera was connected, complete immediately
+            if (currentCamera == null) {
+                logDebug("disconnect(): No camera to disconnect, completing immediately")
+                onComplete?.invoke()
+                return@launch
+            }
+
+            // Teardown GL resources and disconnect camera synchronously before completing
             runOnGlThread {
                 try {
                     // FLIR's Camera.glTeardownPipeline() has a 500ms sleep before teardown
                     Thread.sleep(500)
-                    currentCamera?.glTeardownPipeline()
+                    currentCamera.glTeardownPipeline()
                     logDebug("disconnect(): GL teardown complete")
                 } catch (_: InterruptedException) {
                     Thread.currentThread().interrupt()
@@ -582,15 +589,25 @@ class FlirCameraController(
                     logWarn("disconnect(): GL teardown error: ${t.message}")
                 }
 
-                // Disconnect camera after GL teardown
-                scope.launch {
-                    try {
-                        currentCamera?.disconnect()
-                        logDebug("disconnect(): Camera disconnected")
-                    } catch (t: Throwable) {
-                        logWarn("disconnect(): Camera disconnect error: ${t.message}")
-                    }
+                // Disconnect camera after GL teardown - do this synchronously
+                try {
+                    currentCamera.disconnect()
+                    logDebug("disconnect(): Camera disconnected")
+                } catch (t: Throwable) {
+                    logWarn("disconnect(): Camera disconnect error: ${t.message}")
                 }
+
+                // Give Android's camera service time to fully release the hardware
+                // Without this delay, Camera2 may get ERROR_CAMERA_IN_USE
+                try {
+                    Thread.sleep(300)
+                    logDebug("disconnect(): Post-disconnect delay complete")
+                } catch (_: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                }
+
+                // Signal completion after camera is fully released
+                onComplete?.invoke()
             }
         }
     }

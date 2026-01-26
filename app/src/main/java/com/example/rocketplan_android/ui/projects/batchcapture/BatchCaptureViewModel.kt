@@ -268,6 +268,8 @@ class BatchCaptureViewModel(
                 }
 
                 // Create assembly
+                // Only pass entityType/entityId when room has synced (has serverId)
+                // Otherwise photos upload to project level and get associated later
                 val result = imageProcessorRepository.createAssembly(
                     roomId = room.roomId,
                     projectId = projectId,
@@ -278,7 +280,7 @@ class BatchCaptureViewModel(
                     irPhotos = irPhotoData,
                     order = emptyList(),
                     notes = emptyMap(),
-                    entityType = "room",
+                    entityType = if (room.serverId != null) "room" else null,
                     entityId = room.serverId
                 )
 

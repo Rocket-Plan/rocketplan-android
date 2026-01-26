@@ -72,8 +72,9 @@ class FlirCameraController(context: Context, remoteLogger: RemoteLogger) {
         // No-op: FLIR not supported
     }
 
-    fun disconnect() {
-        // No-op: FLIR not supported
+    fun disconnect(onComplete: (() -> Unit)? = null) {
+        // No-op: FLIR not supported - complete immediately
+        onComplete?.invoke()
     }
 
     fun onResume() {
