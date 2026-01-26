@@ -694,3 +694,85 @@ data class OfflineConflictResolutionEntity(
     val resolvedBy: String? = null,
     val notes: String? = null
 )
+
+// ============================================================================
+// Support Entities
+// ============================================================================
+
+@Entity(tableName = "offline_support_categories")
+data class OfflineSupportCategoryEntity(
+    @PrimaryKey val categoryId: Long,
+    val name: String,
+    val description: String?,
+    val fetchedAt: Date = Date()
+)
+
+@Entity(
+    tableName = "offline_support_conversations",
+    indices = [
+        Index(value = ["uuid"], unique = true),
+        Index(value = ["serverId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
+data class OfflineSupportConversationEntity(
+    @PrimaryKey(autoGenerate = true) val conversationId: Long = 0,
+    val serverId: Long? = null,
+    val uuid: String,
+    val userId: Long,
+    val categoryId: Long,
+    val subject: String,
+    val status: String = "open",
+    val unreadCount: Int = 0,
+    val lastMessageAt: Date? = null,
+    val createdAt: Date = Date(),
+    val updatedAt: Date = Date(),
+    val lastSyncedAt: Date? = null,
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
+    val syncVersion: Int = 0,
+    val isDirty: Boolean = false,
+    val isDeleted: Boolean = false
+)
+
+@Entity(
+    tableName = "offline_support_messages",
+    indices = [
+        Index(value = ["uuid"], unique = true),
+        Index(value = ["conversationId"]),
+        Index(value = ["serverId"]),
+        Index(value = ["syncStatus"])
+    ]
+)
+data class OfflineSupportMessageEntity(
+    @PrimaryKey(autoGenerate = true) val messageId: Long = 0,
+    val serverId: Long? = null,
+    val uuid: String,
+    val conversationId: Long,
+    val conversationServerId: Long? = null,
+    val senderId: Long,
+    val senderType: String,
+    val body: String,
+    val isRead: Boolean = false,
+    val createdAt: Date = Date(),
+    val updatedAt: Date = Date(),
+    val lastSyncedAt: Date? = null,
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
+    val syncVersion: Int = 0,
+    val isDirty: Boolean = false,
+    val isDeleted: Boolean = false
+)
+
+@Entity(
+    tableName = "offline_support_message_attachments",
+    indices = [Index(value = ["messageId"]), Index(value = ["serverId"])]
+)
+data class OfflineSupportMessageAttachmentEntity(
+    @PrimaryKey(autoGenerate = true) val attachmentId: Long = 0,
+    val serverId: Long? = null,
+    val messageId: Long,
+    val fileName: String,
+    val fileUrl: String?,
+    val localPath: String?,
+    val fileSize: Long = 0,
+    val mimeType: String?
+)

@@ -15,6 +15,8 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
@@ -31,6 +33,8 @@ import com.example.rocketplan_android.data.repository.mapper.PendingRoomCreation
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationUpdatePayload
 import com.example.rocketplan_android.data.repository.mapper.PendingRoomUpdatePayload
 import com.example.rocketplan_android.data.repository.mapper.PendingAtmosphericLogCreationPayload
+import com.example.rocketplan_android.data.repository.mapper.PendingSupportConversationPayload
+import com.example.rocketplan_android.data.repository.mapper.PendingSupportMessagePayload
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.google.gson.Gson
@@ -53,6 +57,7 @@ import com.example.rocketplan_android.data.repository.sync.handlers.ProjectPushH
 import com.example.rocketplan_android.data.repository.sync.handlers.PropertyPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.PushHandlerContext
 import com.example.rocketplan_android.data.repository.sync.handlers.RoomPushHandler
+import com.example.rocketplan_android.data.repository.sync.handlers.SupportPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.PendingProjectSyncResult
 
 data class PendingOperationResult(
@@ -98,6 +103,7 @@ class SyncQueueProcessor(
     private val moistureLogHandler by lazy { MoistureLogPushHandler(handlerContext) }
     private val photoHandler by lazy { PhotoPushHandler(handlerContext) }
     private val atmosphericLogHandler by lazy { AtmosphericLogPushHandler(handlerContext) }
+    private val supportHandler by lazy { SupportPushHandler(handlerContext) }
 
     private enum class OperationOutcome {
         SUCCESS,
@@ -310,6 +316,18 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> atmosphericLogHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> atmosphericLogHandler.handleDelete(operation).toLocal()
+                    }
+                }
+                "support_conversation" -> handleOperation(operation, "pending:support_conversation") {
+                    when (operation.operationType) {
+                        SyncOperationType.CREATE -> supportHandler.handleConversationCreate(operation).toLocal()
+                        else -> OperationOutcome.DROP
+                    }
+                }
+                "support_message" -> handleOperation(operation, "pending:support_message") {
+                    when (operation.operationType) {
+                        SyncOperationType.CREATE -> supportHandler.handleMessageCreate(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 else -> {
@@ -1010,6 +1028,53 @@ class SyncQueueProcessor(
             operationType = operationType,
             payload = payload,
             priority = priority
+        )
+        localDataService.enqueueSyncOperation(operation)
+    }
+
+    override suspend fun enqueueSupportConversationCreation(
+        conversation: OfflineSupportConversationEntity,
+        initialMessageBody: String
+    ) {
+        val payload = PendingSupportConversationPayload(
+            localConversationId = conversation.conversationId,
+            conversationUuid = conversation.uuid,
+            categoryId = conversation.categoryId,
+            subject = conversation.subject,
+            initialMessageBody = initialMessageBody,
+            idempotencyKey = conversation.uuid
+        )
+        val operation = OfflineSyncQueueEntity(
+            operationId = "support_conversation-${conversation.conversationId}-${UUID.randomUUID()}",
+            entityType = "support_conversation",
+            entityId = conversation.conversationId,
+            entityUuid = conversation.uuid,
+            operationType = SyncOperationType.CREATE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+        localDataService.enqueueSyncOperation(operation)
+    }
+
+    override suspend fun enqueueSupportMessageCreation(
+        message: OfflineSupportMessageEntity
+    ) {
+        val payload = PendingSupportMessagePayload(
+            localMessageId = message.messageId,
+            messageUuid = message.uuid,
+            conversationId = message.conversationId,
+            conversationServerId = message.conversationServerId,
+            body = message.body,
+            idempotencyKey = message.uuid
+        )
+        val operation = OfflineSyncQueueEntity(
+            operationId = "support_message-${message.messageId}-${UUID.randomUUID()}",
+            entityType = "support_message",
+            entityId = message.messageId,
+            entityUuid = message.uuid,
+            operationType = SyncOperationType.CREATE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
         )
         localDataService.enqueueSyncOperation(operation)
     }

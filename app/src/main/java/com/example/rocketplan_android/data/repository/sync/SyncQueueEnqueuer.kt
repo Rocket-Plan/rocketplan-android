@@ -9,6 +9,8 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 
@@ -193,5 +195,18 @@ interface SyncQueueEnqueuer {
     suspend fun enqueueAtmosphericLogDeletion(
         log: OfflineAtmosphericLogEntity,
         lockUpdatedAt: String? = null
+    )
+
+    // ============================================================================
+    // Support Operations
+    // ============================================================================
+
+    suspend fun enqueueSupportConversationCreation(
+        conversation: OfflineSupportConversationEntity,
+        initialMessageBody: String
+    )
+
+    suspend fun enqueueSupportMessageCreation(
+        message: OfflineSupportMessageEntity
     )
 }

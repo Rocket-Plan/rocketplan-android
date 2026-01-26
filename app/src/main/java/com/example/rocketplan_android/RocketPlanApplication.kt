@@ -21,6 +21,7 @@ import com.example.rocketplan_android.data.repository.ImageProcessorRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
+import com.example.rocketplan_android.data.repository.sync.SupportSyncService
 import com.example.rocketplan_android.data.storage.ImageProcessingConfigStore
 import com.example.rocketplan_android.data.storage.ImageProcessorUploadStore
 import com.example.rocketplan_android.data.storage.OfflineRoomTypeCatalogStore
@@ -95,6 +96,9 @@ class RocketPlanApplication : Application() {
     lateinit var roomTypeRepository: RoomTypeRepository
         private set
 
+    lateinit var supportSyncService: SupportSyncService
+        private set
+
     lateinit var photoSyncRealtimeManager: PhotoSyncRealtimeManager
         private set
     lateinit var projectRealtimeManager: ProjectRealtimeManager
@@ -140,6 +144,15 @@ class RocketPlanApplication : Application() {
             localDataService = localDataService,
             offlineRoomTypeCatalogStore = offlineRoomTypeCatalogStore
         )
+
+        // Note: syncQueueEnqueuer is provided as a lazy lambda since SyncQueueManager
+        // is not yet initialized at this point but will be by the time it's called
+        supportSyncService = SupportSyncService(
+            api = offlineSyncApi,
+            localDataService = localDataService,
+            syncQueueEnqueuer = { offlineSyncRepository.syncQueueEnqueuer }
+        )
+
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
         val isNetworkAvailable: () -> Boolean = {
             runCatching {

@@ -59,6 +59,11 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 import com.example.rocketplan_android.data.model.offline.OfflineRoomTypeCatalogResponse
+import com.example.rocketplan_android.data.model.offline.SupportCategoryDto
+import com.example.rocketplan_android.data.model.offline.SupportConversationDto
+import com.example.rocketplan_android.data.model.offline.SupportMessageDto
+import com.example.rocketplan_android.data.model.offline.CreateSupportConversationRequest
+import com.example.rocketplan_android.data.model.offline.CreateSupportMessageRequest
 
 interface OfflineSyncApi {
 
@@ -498,4 +503,46 @@ interface OfflineSyncApi {
         @Query("since") since: String,
         @Query("types[]") types: List<String>? = null
     ): Response<DeletedRecordsResponse>
+
+    // ============================================================================
+    // Support
+    // ============================================================================
+
+    @GET("/api/support/categories")
+    suspend fun getSupportCategories(): PaginatedResponse<SupportCategoryDto>
+
+    @GET("/api/support/conversations")
+    suspend fun getSupportConversations(): PaginatedResponse<SupportConversationDto>
+
+    @POST("/api/support/conversations")
+    suspend fun createSupportConversation(
+        @Body body: CreateSupportConversationRequest
+    ): SupportConversationDto
+
+    @GET("/api/support/conversations/{id}")
+    suspend fun getSupportConversation(
+        @Path("id") id: Long
+    ): SupportConversationDto
+
+    @POST("/api/support/conversations/{id}/close")
+    suspend fun closeSupportConversation(
+        @Path("id") id: Long
+    ): Response<Unit>
+
+    @GET("/api/support/conversations/{id}/messages")
+    suspend fun getSupportMessages(
+        @Path("id") id: Long,
+        @Query("page") page: Int? = null
+    ): PaginatedResponse<SupportMessageDto>
+
+    @POST("/api/support/conversations/{id}/messages")
+    suspend fun createSupportMessage(
+        @Path("id") id: Long,
+        @Body body: CreateSupportMessageRequest
+    ): SupportMessageDto
+
+    @POST("/api/support/conversations/{id}/messages/read")
+    suspend fun markSupportMessagesAsRead(
+        @Path("id") id: Long
+    ): Response<Unit>
 }

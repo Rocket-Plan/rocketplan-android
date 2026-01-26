@@ -98,3 +98,25 @@ internal data class PendingAtmosphericLogCreationPayload(
     val roomUuid: String?,
     val idempotencyKey: String?
 )
+
+// ============================================================================
+// Support Payloads
+// ============================================================================
+
+internal data class PendingSupportConversationPayload(
+    val localConversationId: Long,
+    val conversationUuid: String,
+    val categoryId: Long,
+    val subject: String,
+    val initialMessageBody: String,
+    val idempotencyKey: String
+)
+
+internal data class PendingSupportMessagePayload(
+    val localMessageId: Long,
+    val messageUuid: String,
+    val conversationId: Long,
+    val conversationServerId: Long?,
+    val body: String,
+    val idempotencyKey: String
+)

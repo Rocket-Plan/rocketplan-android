@@ -58,6 +58,7 @@ class ProjectsFragment : Fragment() {
     private lateinit var tabLayout: TabLayout
     private lateinit var viewPager: ViewPager2
     private lateinit var userInitials: TextView
+    private lateinit var helpIcon: ImageView
     private lateinit var fabNewProject: FloatingActionButton
     private lateinit var assemblyUploadBubble: View
     private lateinit var conflictBanner: View
@@ -97,6 +98,7 @@ class ProjectsFragment : Fragment() {
         tabLayout = view.findViewById(R.id.tabLayout)
         viewPager = view.findViewById(R.id.viewPager)
         userInitials = view.findViewById(R.id.userInitials)
+        helpIcon = view.findViewById(R.id.helpIcon)
         fabNewProject = view.findViewById(R.id.fabNewProject)
         assemblyUploadBubble = view.findViewById(R.id.assemblyUploadBubble)
         assemblyUploadIconProgress = view.findViewById(R.id.assemblyUploadIconProgress)
@@ -145,6 +147,10 @@ class ProjectsFragment : Fragment() {
 
         assemblyUploadBubble.setOnClickListener {
             findNavController().navigate(R.id.imageProcessorAssembliesFragment)
+        }
+
+        helpIcon.setOnClickListener {
+            findNavController().navigate(R.id.supportFragment)
         }
 
         userInitials.setOnClickListener {

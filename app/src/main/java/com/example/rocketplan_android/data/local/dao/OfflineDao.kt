@@ -35,6 +35,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogItemEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportCategoryEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import com.example.rocketplan_android.data.local.model.ProjectWithProperty
 import kotlinx.coroutines.flow.Flow
@@ -1061,5 +1065,92 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_conflicts WHERE resolvedAt IS NOT NULL")
     suspend fun deleteResolvedConflicts()
+    // endregion
+
+    // region Support Categories
+    @Upsert
+    suspend fun upsertSupportCategories(categories: List<OfflineSupportCategoryEntity>)
+
+    @Query("SELECT * FROM offline_support_categories ORDER BY name")
+    fun observeSupportCategories(): Flow<List<OfflineSupportCategoryEntity>>
+
+    @Query("SELECT * FROM offline_support_categories ORDER BY name")
+    suspend fun getSupportCategories(): List<OfflineSupportCategoryEntity>
+
+    @Query("DELETE FROM offline_support_categories")
+    suspend fun clearSupportCategories()
+    // endregion
+
+    // region Support Conversations
+    @Upsert
+    suspend fun upsertSupportConversations(conversations: List<OfflineSupportConversationEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSupportConversation(conversation: OfflineSupportConversationEntity): Long
+
+    @Query("SELECT * FROM offline_support_conversations WHERE isDeleted = 0 ORDER BY COALESCE(lastMessageAt, createdAt) DESC")
+    fun observeSupportConversations(): Flow<List<OfflineSupportConversationEntity>>
+
+    @Query("SELECT * FROM offline_support_conversations WHERE conversationId = :conversationId LIMIT 1")
+    suspend fun getSupportConversation(conversationId: Long): OfflineSupportConversationEntity?
+
+    @Query("SELECT * FROM offline_support_conversations WHERE serverId = :serverId LIMIT 1")
+    suspend fun getSupportConversationByServerId(serverId: Long): OfflineSupportConversationEntity?
+
+    @Query("SELECT * FROM offline_support_conversations WHERE uuid = :uuid LIMIT 1")
+    suspend fun getSupportConversationByUuid(uuid: String): OfflineSupportConversationEntity?
+
+    @Query("UPDATE offline_support_conversations SET status = :status, updatedAt = :updatedAt WHERE conversationId = :conversationId")
+    suspend fun updateSupportConversationStatus(conversationId: Long, status: String, updatedAt: Date)
+
+    @Query("UPDATE offline_support_conversations SET serverId = :serverId, syncStatus = :syncStatus, lastSyncedAt = :lastSyncedAt WHERE conversationId = :conversationId")
+    suspend fun updateSupportConversationServerId(
+        conversationId: Long,
+        serverId: Long,
+        syncStatus: SyncStatus,
+        lastSyncedAt: Date
+    )
+
+    @Query("SELECT COALESCE(SUM(unreadCount), 0) FROM offline_support_conversations WHERE isDeleted = 0")
+    fun observeTotalSupportUnreadCount(): Flow<Int>
+    // endregion
+
+    // region Support Messages
+    @Upsert
+    suspend fun upsertSupportMessages(messages: List<OfflineSupportMessageEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSupportMessage(message: OfflineSupportMessageEntity): Long
+
+    @Query("SELECT * FROM offline_support_messages WHERE conversationId = :conversationId AND isDeleted = 0 ORDER BY createdAt ASC")
+    fun observeSupportMessages(conversationId: Long): Flow<List<OfflineSupportMessageEntity>>
+
+    @Query("SELECT * FROM offline_support_messages WHERE messageId = :messageId LIMIT 1")
+    suspend fun getSupportMessage(messageId: Long): OfflineSupportMessageEntity?
+
+    @Query("SELECT * FROM offline_support_messages WHERE uuid = :uuid LIMIT 1")
+    suspend fun getSupportMessageByUuid(uuid: String): OfflineSupportMessageEntity?
+
+    @Query("UPDATE offline_support_messages SET isRead = 1 WHERE conversationId = :conversationId AND isRead = 0")
+    suspend fun markSupportMessagesAsRead(conversationId: Long)
+
+    @Query("UPDATE offline_support_messages SET serverId = :serverId, syncStatus = :syncStatus, lastSyncedAt = :lastSyncedAt WHERE messageId = :messageId")
+    suspend fun updateSupportMessageServerId(
+        messageId: Long,
+        serverId: Long,
+        syncStatus: SyncStatus,
+        lastSyncedAt: Date
+    )
+
+    @Query("DELETE FROM offline_support_messages WHERE conversationId = :conversationId")
+    suspend fun deleteSupportMessagesForConversation(conversationId: Long)
+    // endregion
+
+    // region Support Message Attachments
+    @Upsert
+    suspend fun upsertSupportMessageAttachments(attachments: List<OfflineSupportMessageAttachmentEntity>)
+
+    @Query("SELECT * FROM offline_support_message_attachments WHERE messageId = :messageId ORDER BY attachmentId")
+    suspend fun getAttachmentsForSupportMessage(messageId: Long): List<OfflineSupportMessageAttachmentEntity>
     // endregion
 }

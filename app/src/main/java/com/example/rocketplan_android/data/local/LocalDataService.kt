@@ -35,6 +35,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogItemEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportCategoryEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
 import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
 import com.example.rocketplan_android.data.local.entity.preferredImageSource
 import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
@@ -1238,6 +1242,129 @@ class LocalDataService private constructor(
 
     suspend fun getRecentAddresses(limit: Int = DEFAULT_RECENT_ADDRESS_COUNT): List<String> =
         withContext(ioDispatcher) { dao.getRecentAddresses(limit) }
+
+    // region Support Categories
+    fun observeSupportCategories(): Flow<List<OfflineSupportCategoryEntity>> =
+        dao.observeSupportCategories()
+
+    suspend fun getSupportCategories(): List<OfflineSupportCategoryEntity> =
+        withContext(ioDispatcher) { dao.getSupportCategories() }
+
+    suspend fun replaceSupportCategories(categories: List<OfflineSupportCategoryEntity>) =
+        withContext(ioDispatcher) {
+            dao.clearSupportCategories()
+            if (categories.isNotEmpty()) {
+                dao.upsertSupportCategories(categories)
+            }
+        }
+    // endregion
+
+    // region Support Conversations
+    fun observeSupportConversations(): Flow<List<OfflineSupportConversationEntity>> =
+        dao.observeSupportConversations()
+
+    suspend fun getSupportConversation(conversationId: Long): OfflineSupportConversationEntity? =
+        withContext(ioDispatcher) { dao.getSupportConversation(conversationId) }
+
+    suspend fun getSupportConversationByServerId(serverId: Long): OfflineSupportConversationEntity? =
+        withContext(ioDispatcher) { dao.getSupportConversationByServerId(serverId) }
+
+    suspend fun getSupportConversationByUuid(uuid: String): OfflineSupportConversationEntity? =
+        withContext(ioDispatcher) { dao.getSupportConversationByUuid(uuid) }
+
+    suspend fun saveSupportConversation(conversation: OfflineSupportConversationEntity): Long =
+        withContext(ioDispatcher) {
+            if (conversation.conversationId == 0L) {
+                dao.insertSupportConversation(conversation)
+            } else {
+                dao.upsertSupportConversations(listOf(conversation))
+                conversation.conversationId
+            }
+        }
+
+    suspend fun saveSupportConversations(conversations: List<OfflineSupportConversationEntity>) =
+        withContext(ioDispatcher) {
+            if (conversations.isNotEmpty()) {
+                dao.upsertSupportConversations(conversations)
+            }
+        }
+
+    suspend fun updateSupportConversationStatus(conversationId: Long, status: String) =
+        withContext(ioDispatcher) {
+            dao.updateSupportConversationStatus(conversationId, status, Date())
+        }
+
+    suspend fun updateSupportConversationServerId(
+        conversationId: Long,
+        serverId: Long
+    ) = withContext(ioDispatcher) {
+        dao.updateSupportConversationServerId(
+            conversationId,
+            serverId,
+            SyncStatus.SYNCED,
+            Date()
+        )
+    }
+
+    fun observeTotalSupportUnreadCount(): Flow<Int> = dao.observeTotalSupportUnreadCount()
+    // endregion
+
+    // region Support Messages
+    fun observeSupportMessages(conversationId: Long): Flow<List<OfflineSupportMessageEntity>> =
+        dao.observeSupportMessages(conversationId)
+
+    suspend fun getSupportMessage(messageId: Long): OfflineSupportMessageEntity? =
+        withContext(ioDispatcher) { dao.getSupportMessage(messageId) }
+
+    suspend fun getSupportMessageByUuid(uuid: String): OfflineSupportMessageEntity? =
+        withContext(ioDispatcher) { dao.getSupportMessageByUuid(uuid) }
+
+    suspend fun saveSupportMessage(message: OfflineSupportMessageEntity): Long =
+        withContext(ioDispatcher) {
+            if (message.messageId == 0L) {
+                dao.insertSupportMessage(message)
+            } else {
+                dao.upsertSupportMessages(listOf(message))
+                message.messageId
+            }
+        }
+
+    suspend fun saveSupportMessages(messages: List<OfflineSupportMessageEntity>) =
+        withContext(ioDispatcher) {
+            if (messages.isNotEmpty()) {
+                dao.upsertSupportMessages(messages)
+            }
+        }
+
+    suspend fun markSupportMessagesAsRead(conversationId: Long) =
+        withContext(ioDispatcher) {
+            dao.markSupportMessagesAsRead(conversationId)
+        }
+
+    suspend fun updateSupportMessageServerId(
+        messageId: Long,
+        serverId: Long
+    ) = withContext(ioDispatcher) {
+        dao.updateSupportMessageServerId(
+            messageId,
+            serverId,
+            SyncStatus.SYNCED,
+            Date()
+        )
+    }
+    // endregion
+
+    // region Support Attachments
+    suspend fun saveSupportMessageAttachments(attachments: List<OfflineSupportMessageAttachmentEntity>) =
+        withContext(ioDispatcher) {
+            if (attachments.isNotEmpty()) {
+                dao.upsertSupportMessageAttachments(attachments)
+            }
+        }
+
+    suspend fun getAttachmentsForSupportMessage(messageId: Long): List<OfflineSupportMessageAttachmentEntity> =
+        withContext(ioDispatcher) { dao.getAttachmentsForSupportMessage(messageId) }
+    // endregion
 
     companion object {
         @Volatile

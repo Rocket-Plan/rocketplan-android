@@ -530,4 +530,43 @@
             app:argType="long" />
     </fragment>
 
+    <!-- Support Fragments -->
+    <fragment
+        android:id="@+id/supportFragment"
+        android:name="com.example.rocketplan_android.ui.support.SupportFragment"
+        android:label="@string/support_title"
+        tools:layout="@layout/fragment_support">
+
+        <action
+            android:id="@+id/action_to_chat"
+            app:destination="@id/supportChatFragment" />
+
+        <action
+            android:id="@+id/action_to_new"
+            app:destination="@id/newSupportConversationFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/supportChatFragment"
+        android:name="com.example.rocketplan_android.ui.support.SupportChatFragment"
+        android:label="@string/support_chat_title"
+        tools:layout="@layout/fragment_support_chat">
+
+        <argument
+            android:name="conversationId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/newSupportConversationFragment"
+        android:name="com.example.rocketplan_android.ui.support.NewSupportConversationFragment"
+        android:label="@string/support_new_conversation"
+        tools:layout="@layout/fragment_new_support_conversation">
+
+        <action
+            android:id="@+id/action_to_chat"
+            app:destination="@id/supportChatFragment"
+            app:popUpTo="@id/supportFragment" />
+    </fragment>
+
 </navigation>

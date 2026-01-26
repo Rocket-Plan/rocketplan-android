@@ -695,3 +695,63 @@ data class AddWorkScopeItemsRequest(
     @SerializedName("selected_items")
     val selectedItems: List<WorkScopeItemRequest>
 )
+
+// ============================================================================
+// Support DTOs
+// ============================================================================
+
+data class SupportCategoryDto(
+    val id: Long,
+    val name: String?,
+    val description: String?,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("updated_at") val updatedAt: String?
+)
+
+data class SupportConversationDto(
+    val id: Long,
+    val uuid: String?,
+    @SerializedName("user_id") val userId: Long?,
+    @SerializedName("category_id") val categoryId: Long?,
+    val subject: String?,
+    val status: String?,  // "open", "closed"
+    @SerializedName("unread_count") val unreadCount: Int?,
+    @SerializedName("last_message_at") val lastMessageAt: String?,
+    val category: SupportCategoryDto?,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("updated_at") val updatedAt: String?
+)
+
+data class SupportMessageDto(
+    val id: Long,
+    val uuid: String?,
+    @SerializedName("conversation_id") val conversationId: Long?,
+    @SerializedName("sender_id") val senderId: Long?,
+    @SerializedName("sender_type") val senderType: String?,  // "user", "admin"
+    val body: String?,
+    @SerializedName("is_read") val isRead: Boolean?,
+    val attachments: List<SupportMessageAttachmentDto>?,
+    @SerializedName("created_at") val createdAt: String?,
+    @SerializedName("updated_at") val updatedAt: String?
+)
+
+data class SupportMessageAttachmentDto(
+    val id: Long,
+    @SerializedName("message_id") val messageId: Long?,
+    @SerializedName("file_name") val fileName: String?,
+    @SerializedName("file_url") val fileUrl: String?,
+    @SerializedName("file_size") val fileSize: Long?,
+    @SerializedName("mime_type") val mimeType: String?
+)
+
+data class CreateSupportConversationRequest(
+    @SerializedName("category_id") val categoryId: Long,
+    val subject: String,
+    val body: String,
+    @SerializedName("idempotency_key") val idempotencyKey: String? = null
+)
+
+data class CreateSupportMessageRequest(
+    val body: String,
+    @SerializedName("idempotency_key") val idempotencyKey: String? = null
+)

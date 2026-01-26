@@ -45,4 +45,13 @@
     <color name="dark_gray">#666666</color>
     <color name="severity_low_bg">#E7F5EF</color>
     <color name="severity_medium_bg">#FFF6E5</color>
+
+    <!-- Support Feature Colors -->
+    <color name="primary_rp">#9A00FF</color>
+    <color name="text_primary_rp">#2C2736</color>
+    <color name="surface_rp">#FFFFFF</color>
+    <color name="surface_variant_rp">#F3F3F6</color>
+    <color name="divider_rp">#E8E7ED</color>
+    <color name="success_rp">#007760</color>
+    <color name="error_rp">#C50000</color>
 </resources>

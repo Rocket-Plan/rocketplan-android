@@ -11,6 +11,7 @@
     <string name="action_sync_status">Sync Status</string>
     <string name="action_terms_and_conditions">Terms &amp; Conditions</string>
     <string name="action_about">About</string>
+    <string name="action_test_crash">Test Sentry</string>
     <string name="sync_activity_heading">Sync Activity</string>
     <string name="sync_recent_events_heading">Recent sync messages</string>
     <string name="sync_queue_heading">Offline queue</string>
@@ -649,4 +650,29 @@
         <item quantity="one">%d day ago</item>
         <item quantity="other">%d days ago</item>
     </plurals>
+
+    <!-- Support -->
+    <string name="action_support">Support</string>
+    <string name="support_title">Support</string>
+    <string name="support_chat_title">Conversation</string>
+    <string name="support_empty">No conversations yet</string>
+    <string name="support_new_conversation">New Conversation</string>
+    <string name="support_category_label">Category</string>
+    <string name="support_subject_label">Subject</string>
+    <string name="support_message_label">Message</string>
+    <string name="support_send">Send</string>
+    <string name="support_close_conversation">Close Conversation</string>
+    <string name="support_close_conversation_confirm">Are you sure you want to close this conversation?</string>
+    <string name="support_close">Close</string>
+    <string name="support_status_open">Open</string>
+    <string name="support_status_closed">Closed</string>
+    <string name="support_pending">Sending…</string>
+    <string name="support_admin_label">Support</string>
+    <string name="support_select_category">Please select a category</string>
+    <string name="support_subject_required">Subject is required</string>
+    <string name="support_message_required">Message is required</string>
+    <string name="just_now">Just now</string>
+    <string name="minutes_ago">%1$d min ago</string>
+    <string name="hours_ago">%1$d hr ago</string>
+    <string name="days_ago">%1$d days ago</string>
 </resources>

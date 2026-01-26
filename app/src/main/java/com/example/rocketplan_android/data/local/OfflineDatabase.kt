@@ -38,6 +38,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogI
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportCategoryEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
+import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
 
 @Database(
     entities = [
@@ -68,9 +72,13 @@ import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntit
         OfflineConflictResolutionEntity::class,
         OfflineRoomPhotoSnapshotEntity::class,
         ImageProcessorAssemblyEntity::class,
-        ImageProcessorPhotoEntity::class
+        ImageProcessorPhotoEntity::class,
+        OfflineSupportCategoryEntity::class,
+        OfflineSupportConversationEntity::class,
+        OfflineSupportMessageEntity::class,
+        OfflineSupportMessageAttachmentEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -199,6 +207,95 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create Support Categories table
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_support_categories (
+                        categoryId INTEGER NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT,
+                        fetchedAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+
+                // Create Support Conversations table
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_support_conversations (
+                        conversationId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        serverId INTEGER,
+                        uuid TEXT NOT NULL,
+                        userId INTEGER NOT NULL,
+                        categoryId INTEGER NOT NULL,
+                        subject TEXT NOT NULL,
+                        status TEXT NOT NULL DEFAULT 'open',
+                        unreadCount INTEGER NOT NULL DEFAULT 0,
+                        lastMessageAt INTEGER,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        lastSyncedAt INTEGER,
+                        syncStatus TEXT NOT NULL DEFAULT 'PENDING',
+                        syncVersion INTEGER NOT NULL DEFAULT 0,
+                        isDirty INTEGER NOT NULL DEFAULT 0,
+                        isDeleted INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_offline_support_conversations_uuid ON offline_support_conversations(uuid)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_support_conversations_serverId ON offline_support_conversations(serverId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_support_conversations_syncStatus ON offline_support_conversations(syncStatus)")
+
+                // Create Support Messages table
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_support_messages (
+                        messageId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        serverId INTEGER,
+                        uuid TEXT NOT NULL,
+                        conversationId INTEGER NOT NULL,
+                        conversationServerId INTEGER,
+                        senderId INTEGER NOT NULL,
+                        senderType TEXT NOT NULL,
+                        body TEXT NOT NULL,
+                        isRead INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        lastSyncedAt INTEGER,
+                        syncStatus TEXT NOT NULL DEFAULT 'PENDING',
+                        syncVersion INTEGER NOT NULL DEFAULT 0,
+                        isDirty INTEGER NOT NULL DEFAULT 0,
+                        isDeleted INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_offline_support_messages_uuid ON offline_support_messages(uuid)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_support_messages_conversationId ON offline_support_messages(conversationId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_support_messages_serverId ON offline_support_messages(serverId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_support_messages_syncStatus ON offline_support_messages(syncStatus)")
+
+                // Create Support Message Attachments table
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_support_message_attachments (
+                        attachmentId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        serverId INTEGER,
+                        messageId INTEGER NOT NULL,
+                        fileName TEXT NOT NULL,
+                        fileUrl TEXT,
+                        localPath TEXT,
+                        fileSize INTEGER NOT NULL DEFAULT 0,
+                        mimeType TEXT
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_support_message_attachments_messageId ON offline_support_message_attachments(messageId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_support_message_attachments_serverId ON offline_support_message_attachments(serverId)")
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -206,7 +303,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {

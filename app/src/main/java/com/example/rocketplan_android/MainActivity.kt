@@ -308,6 +308,11 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "onOptionsItemSelected: ${item.itemId}")
         }
         return when (item.itemId) {
+            R.id.action_support -> {
+                Log.d(TAG, "🟢 Support button clicked, navigating to support")
+                findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.supportFragment)
+                true
+            }
             R.id.action_profile -> {
                 Log.d(TAG, "🟢 Profile button clicked, showing menu")
                 if (BuildConfig.ENABLE_LOGGING) {
@@ -456,6 +461,7 @@ class MainActivity : AppCompatActivity() {
         PopupMenu(this, anchor, Gravity.END).apply {
             menuInflater.inflate(R.menu.profile_menu, menu)
             menu.findItem(R.id.action_test_flir)?.isVisible = BuildConfig.HAS_FLIR_SUPPORT
+            menu.findItem(R.id.action_test_crash)?.isVisible = BuildConfig.ENVIRONMENT == "DEV"
             Log.d(TAG, "🟣 Profile menu inflated with ${menu.size()} items")
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "Profile menu inflated with ${menu.size()} items")
@@ -516,6 +522,11 @@ class MainActivity : AppCompatActivity() {
                     R.id.action_sign_out -> {
                         performSignOut()
                         true
+                    }
+                    R.id.action_test_crash -> {
+                        Log.d(TAG, "🔥 Test Sentry crash triggered")
+                        Toast.makeText(this@MainActivity, "Triggering test crash for Sentry...", Toast.LENGTH_SHORT).show()
+                        throw RuntimeException("Test crash from RocketPlan Dev")
                     }
                     else -> false
                 }

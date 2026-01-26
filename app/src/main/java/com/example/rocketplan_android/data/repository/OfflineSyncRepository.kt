@@ -33,6 +33,7 @@ import com.example.rocketplan_android.data.repository.sync.PropertySyncService
 import com.example.rocketplan_android.data.repository.sync.ProjectSyncService
 import com.example.rocketplan_android.data.repository.sync.PendingOperationResult
 import com.example.rocketplan_android.data.repository.sync.RoomSyncService
+import com.example.rocketplan_android.data.repository.sync.SyncQueueEnqueuer
 import com.example.rocketplan_android.data.repository.sync.SyncQueueProcessor
 import com.example.rocketplan_android.data.repository.sync.WorkScopeSyncService
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
@@ -187,6 +188,9 @@ class OfflineSyncRepository(
             isNetworkAvailable = isNetworkAvailable
         )
     }
+
+    val syncQueueEnqueuer: SyncQueueEnqueuer
+        get() = syncQueueProcessor
 
     fun attachImageProcessorQueueManager(manager: ImageProcessorQueueManager) {
         imageProcessorQueueManager = manager
