@@ -692,7 +692,13 @@ data class OfflineConflictResolutionEntity(
     val resolvedAt: Date? = null,
     val resolution: String? = null,
     val resolvedBy: String? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    // Requeue tracking fields for iOS parity
+    val requeueAttempts: Int = 0,
+    val maxRequeueAttempts: Int = 3,
+    val originalOperationId: String? = null,
+    val lastRequeueAt: Date? = null,
+    val projectId: Long? = null // Cached for display purposes
 )
 
 // ============================================================================

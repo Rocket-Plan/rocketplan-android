@@ -59,6 +59,7 @@ import retrofit2.http.PUT
 import retrofit2.http.Path
 import retrofit2.http.Query
 import com.example.rocketplan_android.data.model.offline.OfflineRoomTypeCatalogResponse
+import com.example.rocketplan_android.data.model.offline.StatusResponse
 import com.example.rocketplan_android.data.model.offline.SupportCategoryDto
 import com.example.rocketplan_android.data.model.offline.SupportConversationDto
 import com.example.rocketplan_android.data.model.offline.SupportMessageDto
@@ -66,6 +67,10 @@ import com.example.rocketplan_android.data.model.offline.CreateSupportConversati
 import com.example.rocketplan_android.data.model.offline.CreateSupportMessageRequest
 
 interface OfflineSyncApi {
+
+    // Status endpoint for health checks
+    @GET("/api/status")
+    suspend fun getStatus(): StatusResponse
 
     @GET("/api/offline-room-types")
     suspend fun getOfflineRoomTypes(): OfflineRoomTypeCatalogResponse

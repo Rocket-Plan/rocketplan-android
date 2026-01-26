@@ -762,6 +762,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_moisture_logs WHERE uuid = :uuid LIMIT 1")
     suspend fun getMoistureLogByUuid(uuid: String): OfflineMoistureLogEntity?
 
+    @Query("SELECT * FROM offline_moisture_logs WHERE logId = :logId LIMIT 1")
+    suspend fun getMoistureLog(logId: Long): OfflineMoistureLogEntity?
+
     @Query("UPDATE offline_moisture_logs SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
@@ -800,6 +803,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_notes WHERE uuid = :uuid LIMIT 1")
     suspend fun getNoteByUuid(uuid: String): OfflineNoteEntity?
+
+    @Query("SELECT * FROM offline_notes WHERE noteId = :noteId LIMIT 1")
+    suspend fun getNote(noteId: Long): OfflineNoteEntity?
 
     @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND (isDirty = 1 OR syncStatus != :synced)")
     suspend fun getPendingNotes(projectId: Long, synced: SyncStatus = SyncStatus.SYNCED): List<OfflineNoteEntity>
@@ -976,6 +982,9 @@ interface OfflineDao {
         entityId: Long,
         status: SyncStatus = SyncStatus.PENDING
     ): OfflineSyncQueueEntity?
+
+    @Query("SELECT * FROM offline_sync_queue WHERE entityType = :entityType AND status = 'PENDING'")
+    suspend fun getPendingOperationsForEntityType(entityType: String): List<OfflineSyncQueueEntity>
 
     @Query("DELETE FROM offline_sync_queue WHERE operationId = :operationId")
     suspend fun deleteSyncOperation(operationId: String)

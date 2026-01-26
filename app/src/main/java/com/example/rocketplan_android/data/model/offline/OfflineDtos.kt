@@ -37,6 +37,16 @@ data class PaginationMeta(
     val total: Int?
 )
 
+/**
+ * Response from /api/status endpoint for backend health checks.
+ */
+data class StatusResponse(
+    val status: String? = null,
+    val service: String? = null,
+    val timestamp: String? = null,
+    val version: String? = null
+)
+
 data class ProjectDto(
     val id: Long,
     val uuid: String? = null,

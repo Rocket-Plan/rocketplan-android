@@ -68,6 +68,7 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
                 when (resolution) {
                     ConflictResolution.KEEP_LOCAL -> conflictRepository.resolveKeepLocal(conflictId)
                     ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflictId)
+                    ConflictResolution.DISMISS -> conflictRepository.resolveDismiss(conflictId)
                 }
             } finally {
                 _resolving.value = false
@@ -88,6 +89,7 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
                         when (resolution) {
                             ConflictResolution.KEEP_LOCAL -> conflictRepository.resolveKeepLocal(conflict.conflictId)
                             ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflict.conflictId)
+                            ConflictResolution.DISMISS -> conflictRepository.resolveDismiss(conflict.conflictId)
                         }
                     }
                 }

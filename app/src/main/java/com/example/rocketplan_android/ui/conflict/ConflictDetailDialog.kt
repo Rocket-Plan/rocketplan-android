@@ -180,6 +180,7 @@ class ConflictDetailDialog : BottomSheetDialogFragment() {
         val message = when (resolution) {
             ConflictResolution.KEEP_LOCAL -> R.string.conflict_resolved_keep_local
             ConflictResolution.KEEP_SERVER -> R.string.conflict_resolved_keep_server
+            ConflictResolution.DISMISS -> R.string.conflict_resolved_dismissed
         }
         Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         dismiss()

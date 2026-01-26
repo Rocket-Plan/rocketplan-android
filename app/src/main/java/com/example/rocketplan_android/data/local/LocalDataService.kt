@@ -438,6 +438,10 @@ class LocalDataService private constructor(
         dao.getNoteByUuid(uuid)
     }
 
+    suspend fun getNote(noteId: Long): OfflineNoteEntity? = withContext(ioDispatcher) {
+        dao.getNote(noteId)
+    }
+
     suspend fun getPendingNotes(projectId: Long): List<OfflineNoteEntity> = withContext(ioDispatcher) {
         dao.getPendingNotes(projectId)
     }
@@ -448,6 +452,10 @@ class LocalDataService private constructor(
 
     suspend fun getMoistureLogByUuid(uuid: String): OfflineMoistureLogEntity? = withContext(ioDispatcher) {
         dao.getMoistureLogByUuid(uuid)
+    }
+
+    suspend fun getMoistureLog(logId: Long): OfflineMoistureLogEntity? = withContext(ioDispatcher) {
+        dao.getMoistureLog(logId)
     }
 
     fun observeDamages(projectId: Long): Flow<List<OfflineDamageEntity>> =
@@ -671,6 +679,31 @@ class LocalDataService private constructor(
             dao.upsertRooms(existingRooms)
         }
     }
+
+    // Room ID migration methods for IdRemapService
+    suspend fun migrateNoteRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateNoteRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migrateEquipmentRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateEquipmentRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateMoistureLogRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migrateAtmosphericLogRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateAtmosphericLogRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migratePhotoRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migratePhotoRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migrateAlbumRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateAlbumRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migrateDamageRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateDamageRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migrateWorkScopeRoomIds(oldRoomId: Long, newRoomId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateWorkScopeRoomIds(oldRoomId, newRoomId) }
 
     suspend fun deletePhantomRoom() = withContext(ioDispatcher) {
         val phantomRoomId = 0L
@@ -1148,6 +1181,15 @@ class LocalDataService private constructor(
         val now = System.currentTimeMillis()
         dao.getSyncOperationsByStatus(SyncStatus.PENDING, now)
     }
+
+    /**
+     * Gets all pending operations for a specific entity type.
+     * Used for ID remapping when parent entities are synced.
+     */
+    suspend fun getPendingOperationsForEntityType(entityType: String): List<OfflineSyncQueueEntity> =
+        withContext(ioDispatcher) {
+            dao.getPendingOperationsForEntityType(entityType)
+        }
 
     /**
      * Check if there are any scheduled operations that are now due for retry.

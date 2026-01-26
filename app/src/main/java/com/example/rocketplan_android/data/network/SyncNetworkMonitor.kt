@@ -21,16 +21,19 @@ import kotlinx.coroutines.sync.withLock
 
 /**
  * Monitors network connectivity and triggers sync queue processing when network is restored.
+ * Uses dual-layer verification: network interface check + backend health check.
  */
 class SyncNetworkMonitor(
     context: Context,
     private val syncQueueManager: SyncQueueManager,
-    private val remoteLogger: RemoteLogger? = null
+    private val remoteLogger: RemoteLogger? = null,
+    private val dualLayerConnectivity: DualLayerConnectivityService? = null
 ) {
     companion object {
         private const val TAG = "SyncNetworkMonitor"
         private const val RESTORE_DEBOUNCE_MS = 2_000L
         private const val LOST_DEBOUNCE_MS = 1_000L
+        private const val HEALTH_CHECK_RETRY_MS = 10_000L
     }
 
     private val connectivityManager =
@@ -40,6 +43,7 @@ class SyncNetworkMonitor(
     private val stateMutex = Mutex()
     private var restoreJob: Job? = null
     private var lostJob: Job? = null
+    private var healthCheckRetryJob: Job? = null
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -98,6 +102,10 @@ class SyncNetworkMonitor(
                 lostJob = null
                 restoreJob?.cancel()
                 restoreJob = null
+                healthCheckRetryJob?.cancel()
+                healthCheckRetryJob = null
+                // Notify dual-layer service
+                dualLayerConnectivity?.onNetworkLost()
             }
         }
     }
@@ -128,6 +136,22 @@ class SyncNetworkMonitor(
         restoreJob = scope.launch {
             delay(RESTORE_DEBOUNCE_MS)
             try {
+                // If dual-layer connectivity is available, verify backend is reachable
+                if (dualLayerConnectivity != null) {
+                    val isFullyConnected = dualLayerConnectivity.onNetworkRestored()
+                    if (!isFullyConnected) {
+                        Log.d(TAG, "Network interface available but backend unreachable, scheduling retry")
+                        remoteLogger?.log(
+                            com.example.rocketplan_android.logging.LogLevel.WARN,
+                            TAG,
+                            "Network restored but backend unreachable",
+                            mapOf("willRetry" to "true")
+                        )
+                        scheduleHealthCheckRetry()
+                        return@launch
+                    }
+                }
+
                 remoteLogger?.flush()
                 // Reset any FAILED operations so they get retried now that network is back
                 syncQueueManager.resetFailedOperations()
@@ -147,6 +171,21 @@ class SyncNetworkMonitor(
         }
     }
 
+    /**
+     * Schedules a health check retry when backend is initially unreachable.
+     */
+    private fun scheduleHealthCheckRetry() {
+        healthCheckRetryJob?.cancel()
+        healthCheckRetryJob = scope.launch {
+            delay(HEALTH_CHECK_RETRY_MS)
+            stateMutex.withLock {
+                if (isNetworkAvailable.get()) {
+                    scheduleRefreshLocked()
+                }
+            }
+        }
+    }
+
     private fun scheduleNetworkLost() {
         scope.launch {
             stateMutex.withLock {
@@ -161,8 +200,10 @@ class SyncNetworkMonitor(
 
     fun unregister() {
         // Cancel all coroutines and clean up
+        healthCheckRetryJob?.cancel()
         scope.cancel()
         connectivityManager.unregisterNetworkCallback(networkCallback)
+        dualLayerConnectivity?.reset()
         Log.d(TAG, "Network monitor unregistered")
     }
 }

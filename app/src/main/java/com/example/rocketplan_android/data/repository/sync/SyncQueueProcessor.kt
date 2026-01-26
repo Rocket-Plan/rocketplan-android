@@ -6,6 +6,8 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncPriority
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.sync.SyncOperationOutcome
+import com.example.rocketplan_android.data.sync.SyncQueueLogger
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
@@ -81,6 +83,7 @@ class SyncQueueProcessor(
     private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
 ) : SyncQueueEnqueuer {
     private val gson = Gson()
+    private val syncQueueLogger = SyncQueueLogger(remoteLogger)
 
     // Handler context and handlers for extracted push logic
     private val handlerContext by lazy {
@@ -155,11 +158,16 @@ class SyncQueueProcessor(
 
         val createdProjects = mutableListOf<PendingProjectSyncResult>()
 
+        // Start a sync session for metrics tracking
+        val session = syncQueueLogger.startSession()
+        Log.d(TAG, "📊 Starting sync session ${session.sessionId} with ${operations.size} operations")
+
         suspend fun handleOperation(
             operation: OfflineSyncQueueEntity,
             label: String,
             block: suspend () -> OperationOutcome
         ) {
+            val startTime = System.currentTimeMillis()
             // Check if entity was deleted (e.g., by cascadeDeleteProject) to prevent race condition
             // where delete clears sync queue but concurrent processor is mid-execution
             if (operation.operationType != SyncOperationType.DELETE && isEntityDeleted(operation.entityType, operation.entityId, operation.entityUuid)) {
@@ -170,6 +178,20 @@ class SyncQueueProcessor(
 
             runCatching { block() }
                 .onSuccess { outcome ->
+                    val durationMs = System.currentTimeMillis() - startTime
+                    val metricsOutcome = when (outcome) {
+                        OperationOutcome.SUCCESS -> SyncOperationOutcome.SUCCESS
+                        OperationOutcome.SKIP -> SyncOperationOutcome.SKIP
+                        OperationOutcome.RETRY -> SyncOperationOutcome.SKIP
+                        OperationOutcome.DROP -> SyncOperationOutcome.DROP
+                        OperationOutcome.CONFLICT_PENDING -> SyncOperationOutcome.CONFLICT_PENDING
+                    }
+                    syncQueueLogger.recordOperationResult(
+                        entityType = operation.entityType,
+                        operationType = operation.operationType.name,
+                        outcome = metricsOutcome,
+                        durationMs = durationMs
+                    )
                     when (outcome) {
                         OperationOutcome.SUCCESS -> localDataService.removeSyncOperation(operation.operationId)
                         OperationOutcome.DROP -> {
@@ -255,6 +277,7 @@ class SyncQueueProcessor(
                     }
                 }
                 .onFailure { error ->
+                    val durationMs = System.currentTimeMillis() - startTime
                     Log.w(TAG, "⚠️ [$label] Sync operation failed", error)
                     val httpCode = (error as? HttpException)?.code()
                     val errorBody = if (error is HttpException) {
@@ -276,6 +299,13 @@ class SyncQueueProcessor(
                             httpCode?.let { put("httpCode", it.toString()) }
                             errorBody?.take(500)?.let { put("errorBody", it) }
                         }
+                    )
+                    // Record failure in metrics
+                    syncQueueLogger.recordOperationResult(
+                        entityType = operation.entityType,
+                        operationType = operation.operationType.name,
+                        outcome = SyncOperationOutcome.FAILURE,
+                        durationMs = durationMs
                     )
                     markSyncOperationFailure(operation, error)
                 }
@@ -371,6 +401,9 @@ class SyncQueueProcessor(
                 }
             }
         }
+
+        // End sync session and log summary
+        syncQueueLogger.endSession()
 
         PendingOperationResult(createdProjects = createdProjects)
     }

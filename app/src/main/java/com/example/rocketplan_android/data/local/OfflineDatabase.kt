@@ -78,7 +78,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAtt
         OfflineSupportMessageEntity::class,
         OfflineSupportMessageAttachmentEntity::class
     ],
-    version = 18,
+    version = 19,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -296,6 +296,17 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_18_19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add requeue tracking fields for enhanced conflict resolution (iOS parity)
+                database.execSQL("ALTER TABLE offline_conflicts ADD COLUMN requeueAttempts INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE offline_conflicts ADD COLUMN maxRequeueAttempts INTEGER NOT NULL DEFAULT 3")
+                database.execSQL("ALTER TABLE offline_conflicts ADD COLUMN originalOperationId TEXT")
+                database.execSQL("ALTER TABLE offline_conflicts ADD COLUMN lastRequeueAt INTEGER")
+                database.execSQL("ALTER TABLE offline_conflicts ADD COLUMN projectId INTEGER")
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -303,7 +314,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {

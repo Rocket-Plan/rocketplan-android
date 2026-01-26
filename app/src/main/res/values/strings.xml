@@ -626,9 +626,11 @@
     <string name="conflict_not_found">Conflict not found</string>
     <string name="conflict_resolved_keep_local">Resolved: keeping your version</string>
     <string name="conflict_resolved_keep_server">Resolved: keeping server version</string>
+    <string name="conflict_resolved_dismissed">Conflict dismissed</string>
     <string name="conflict_batch_confirm_title">Resolve All Conflicts?</string>
     <string name="conflict_batch_keep_local_message">This will keep your local changes for all conflicts and push them to the server.</string>
     <string name="conflict_batch_keep_server_message">This will discard your local changes and keep the server version for all conflicts.</string>
+    <string name="conflict_batch_dismiss_message">This will dismiss all conflicts without syncing changes.</string>
     <string name="conflict_confirm">Confirm</string>
     <string name="conflict_resolving_all">Resolving all conflicts…</string>
     <string name="conflicts_empty_title">No Conflicts</string>

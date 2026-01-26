@@ -153,6 +153,7 @@ class ConflictListFragment : Fragment() {
         val message = when (resolution) {
             ConflictResolution.KEEP_LOCAL -> getString(R.string.conflict_batch_keep_local_message)
             ConflictResolution.KEEP_SERVER -> getString(R.string.conflict_batch_keep_server_message)
+            ConflictResolution.DISMISS -> getString(R.string.conflict_batch_dismiss_message)
         }
 
         AlertDialog.Builder(requireContext())
