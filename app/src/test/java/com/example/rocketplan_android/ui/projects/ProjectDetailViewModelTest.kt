@@ -13,8 +13,10 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
+import com.example.rocketplan_android.data.local.dao.ImageProcessorDao
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.sync.SyncQueueManager
+import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.example.rocketplan_android.util.DateUtils
 import com.google.common.truth.Truth.assertThat
@@ -176,6 +178,11 @@ class ProjectDetailViewModelTest {
         every { application.syncQueueManager } returns syncQueueManager
         every { application.resources } returns resources
         every { application.packageName } returns "com.example.rocketplan_android"
+        val imageProcessorDao = mockk<ImageProcessorDao>()
+        every { imageProcessorDao.observeProcessingProgressByProject(projectId) } returns flowOf(emptyList())
+        every { application.imageProcessorDao } returns imageProcessorDao
+        val remoteLogger = mockk<RemoteLogger>(relaxed = true)
+        every { application.remoteLogger } returns remoteLogger
         every { syncQueueManager.photoSyncingProjects } returns photoSyncingProjectsFlow
         every { syncQueueManager.projectSyncingProjects } returns projectSyncingProjectsFlow
         every { syncQueueManager.prioritizeProject(projectId) } returns Unit
@@ -224,6 +231,11 @@ class ProjectDetailViewModelTest {
         every { application.syncQueueManager } returns syncQueueManager
         every { application.resources } returns resources
         every { application.packageName } returns "com.example.rocketplan_android"
+        val imageProcessorDao = mockk<ImageProcessorDao>()
+        every { imageProcessorDao.observeProcessingProgressByProject(projectId) } returns flowOf(emptyList())
+        every { application.imageProcessorDao } returns imageProcessorDao
+        val remoteLogger = mockk<RemoteLogger>(relaxed = true)
+        every { application.remoteLogger } returns remoteLogger
         every { syncQueueManager.photoSyncingProjects } returns photoSyncingProjectsFlow
         every { syncQueueManager.projectSyncingProjects } returns projectSyncingProjectsFlow
         every { syncQueueManager.prioritizeProject(projectId) } returns Unit

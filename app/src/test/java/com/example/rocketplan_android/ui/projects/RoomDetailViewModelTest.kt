@@ -112,10 +112,12 @@ class RoomDetailViewModelTest {
     @Test
     fun `ensureRoomPhotosFresh refreshes once and throttles subsequent calls`() = runTest {
         val offlineSyncRepository = mockk<OfflineSyncRepository>()
-        coEvery { offlineSyncRepository.syncRoomPhotos(any(), any(), any()) } returns
+        coEvery { offlineSyncRepository.syncRoomPhotos(any(), any(), any(), any(), any()) } returns
             SyncResult.success(SyncSegment.ROOM_PHOTOS, 0, 0)
 
         val viewModel = createViewModel(offlineSyncRepository = offlineSyncRepository)
+        // Wait for any init-triggered syncs to complete before clearing mock counts
+        advanceUntilIdle()
         clearMocks(offlineSyncRepository, answers = false)
 
         SystemClock.elapsedRealtimeValue = 0L
@@ -127,7 +129,7 @@ class RoomDetailViewModelTest {
         advanceUntilIdle()
 
         coVerify(exactly = 1) {
-            offlineSyncRepository.syncRoomPhotos(projectId, serverRoomId, any())
+            offlineSyncRepository.syncRoomPhotos(projectId, serverRoomId, any(), any(), any())
         }
     }
 
@@ -190,7 +192,7 @@ class RoomDetailViewModelTest {
         coJustRun { localDataService.clearRoomPhotoSnapshot(any()) }
         coJustRun { localDataService.refreshRoomPhotoSnapshot(any()) }
         coJustRun { localDataService.savePhotos(any()) }
-        coEvery { offlineSyncRepository.syncRoomPhotos(any(), any(), any()) } returns
+        coEvery { offlineSyncRepository.syncRoomPhotos(any(), any(), any(), any(), any()) } returns
             SyncResult.success(SyncSegment.ROOM_PHOTOS, 0, 0)
         coEvery { offlineSyncRepository.syncRoomWorkScopes(any(), any()) } returns 0
         coEvery { offlineSyncRepository.syncRoomDamages(any(), any()) } returns 0

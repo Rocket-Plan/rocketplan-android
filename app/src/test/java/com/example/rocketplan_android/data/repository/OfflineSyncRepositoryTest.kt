@@ -1316,16 +1316,13 @@ class OfflineSyncRepositoryTest {
         everyLog()
 
         val localDataService = mockk<LocalDataService>(relaxed = true)
-        coEvery { localDataService.getProject(localProjectId) } returns null
-        coEvery { localDataService.getAllProjects() } returns listOf(
-            OfflineProjectEntity(
-                projectId = localProjectId,
-                serverId = null,
-                uuid = "local-uuid",
-                title = "Local Project",
-                status = "wip",
-                companyId = companyId
-            )
+        coEvery { localDataService.getProject(localProjectId) } returns OfflineProjectEntity(
+            projectId = localProjectId,
+            serverId = null,
+            uuid = "local-uuid",
+            title = "Local Project",
+            status = "wip",
+            companyId = companyId
         )
 
         val repository = OfflineSyncRepository(
@@ -1408,7 +1405,7 @@ class OfflineSyncRepositoryTest {
     fun `deleteProject throws when local project is missing`() = runTest {
         val api = mockk<OfflineSyncApi>(relaxed = true)
         val localDataService = mockk<LocalDataService>(relaxed = true)
-        coEvery { localDataService.getAllProjects() } returns emptyList()
+        coEvery { localDataService.getProject(123L) } returns null
 
         val repository = OfflineSyncRepository(
             api = api,
