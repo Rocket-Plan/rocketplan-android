@@ -480,17 +480,26 @@ class LocalDataService private constructor(
 
         val start = System.currentTimeMillis()
         Log.d("LocalDataService", "💾 saveProjects(): upserting ${projects.size} projects")
+
+        // Filter out invalid projects with serverId=0 (indicates a bug in caller)
+        val validProjects = mutableListOf<OfflineProjectEntity>()
+
         projects.forEachIndexed { index, project ->
             val anomalies = mutableListOf<String>()
+            var shouldSave = true
+
             when (project.serverId) {
                 null -> anomalies.add("serverId=null")
                 0L -> {
-                    anomalies.add("serverId=0")
-                    Log.e("LocalDataService", "🚨 BUG FOUND! Project with serverId=0 detected!", Exception("Stack trace for project 0 creation"))
+                    anomalies.add("serverId=0 - REJECTING")
+                    shouldSave = false
+                    Log.e("LocalDataService", "🚨 BUG: Rejecting project with serverId=0! This indicates a bug in the caller.", Exception("Stack trace for project 0 rejection"))
                 }
             }
             if (project.uuid.equals("project-0", ignoreCase = true)) {
-                anomalies.add("uuid=project-0")
+                anomalies.add("uuid=project-0 - REJECTING")
+                shouldSave = false
+                Log.e("LocalDataService", "🚨 BUG: Rejecting project with uuid=project-0! This indicates a bug in the caller.")
             }
             val suffix = if (anomalies.isEmpty()) {
                 ""
@@ -501,8 +510,19 @@ class LocalDataService private constructor(
                 "LocalDataService",
                 "   [${index}] localId=${project.projectId}, serverId=${project.serverId ?: "null"}, uuid=${project.uuid}, title=${project.title}$suffix"
             )
+
+            if (shouldSave) {
+                validProjects.add(project)
+            }
         }
-        dao.upsertProjects(projects)
+
+        if (validProjects.size != projects.size) {
+            Log.w("LocalDataService", "⚠️ Filtered out ${projects.size - validProjects.size} invalid projects")
+        }
+
+        if (validProjects.isNotEmpty()) {
+            dao.upsertProjects(validProjects)
+        }
         Log.d("LocalDataService", "💾 saveProjects(): finished in ${System.currentTimeMillis() - start}ms")
     }
 
@@ -1165,8 +1185,9 @@ class LocalDataService private constructor(
 
     /**
      * Resets FAILED operations back to PENDING for retry.
-     * Clears skipCount and scheduledAt to give them a fresh start.
-     * Call this when dependencies may have resolved (e.g., parent entity synced).
+     * Clears skipCount, retryCount, and scheduledAt to give them a fresh start.
+     * Call this when dependencies may have resolved (e.g., parent entity synced,
+     * app returned to foreground, or user manually triggered sync).
      * @return The number of operations reset
      */
     suspend fun resetFailedOperationsForRetry(): Int = withContext(ioDispatcher) {
@@ -1175,11 +1196,14 @@ class LocalDataService private constructor(
 
         Log.d("LocalDataService", "♻️ Resetting ${failed.size} failed operations for retry")
         failed.forEach { op ->
+            Log.d("LocalDataService", "  ♻️ Resetting ${op.entityType}/${op.entityId} (was: ${op.errorMessage})")
             val reset = op.copy(
                 status = SyncStatus.PENDING,
                 skipCount = 0,
+                retryCount = 0,  // Also reset retry count for fresh start
                 scheduledAt = null,
-                errorMessage = null
+                errorMessage = null,
+                lastAttemptAt = null
             )
             dao.upsertSyncOperation(reset)
         }

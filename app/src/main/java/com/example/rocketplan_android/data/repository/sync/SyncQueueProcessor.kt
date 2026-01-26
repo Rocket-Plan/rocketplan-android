@@ -113,6 +113,26 @@ class SyncQueueProcessor(
         CONFLICT_PENDING
     }
 
+    /**
+     * Check if an entity has been deleted locally (isDeleted = true).
+     * If so, we should drop the sync operation to avoid race conditions where
+     * a delete clears the sync queue but a concurrent processor re-inserts operations.
+     */
+    private suspend fun isEntityDeleted(entityType: String, entityId: Long, entityUuid: String?): Boolean {
+        return when (entityType) {
+            "project" -> localDataService.getProject(entityId)?.isDeleted == true
+            "room" -> localDataService.getRoom(entityId)?.isDeleted == true
+            "location" -> localDataService.getLocation(entityId)?.isDeleted == true
+            "note" -> entityUuid?.let { localDataService.getNoteByUuid(it)?.isDeleted } == true
+            "photo" -> localDataService.getPhoto(entityId)?.isDeleted == true
+            "equipment" -> localDataService.getEquipment(entityId)?.isDeleted == true
+            "moisture_log" -> entityUuid?.let { localDataService.getMoistureLogByUuid(it)?.isDeleted } == true
+            "atmospheric_log" -> entityUuid?.let { localDataService.getAtmosphericLogByUuid(it)?.isDeleted } == true
+            // For other entity types, assume not deleted if we can't check
+            else -> false
+        }
+    }
+
     private fun HandlerOutcome.toLocal(): OperationOutcome = when (this) {
         HandlerOutcome.SUCCESS -> OperationOutcome.SUCCESS
         HandlerOutcome.SKIP -> OperationOutcome.SKIP
@@ -140,6 +160,14 @@ class SyncQueueProcessor(
             label: String,
             block: suspend () -> OperationOutcome
         ) {
+            // Check if entity was deleted (e.g., by cascadeDeleteProject) to prevent race condition
+            // where delete clears sync queue but concurrent processor is mid-execution
+            if (operation.operationType != SyncOperationType.DELETE && isEntityDeleted(operation.entityType, operation.entityId, operation.entityUuid)) {
+                Log.d(TAG, "⏭️ [$label] Entity ${operation.entityType}/${operation.entityId} is deleted locally, dropping operation")
+                localDataService.removeSyncOperation(operation.operationId)
+                return
+            }
+
             runCatching { block() }
                 .onSuccess { outcome ->
                     when (outcome) {
@@ -163,25 +191,32 @@ class SyncQueueProcessor(
                             // Track skip count to prevent infinite retry loops
                             val nextSkip = operation.skipCount + 1
                             if (nextSkip >= operation.maxSkips) {
-                                Log.w(TAG, "⚠️ [$label] Max skips reached for op=${operation.operationId}, marking as failed")
+                                // Build detailed error message about what's likely missing
+                                val dependencyHint = buildDependencyHint(operation)
+                                val errorMessage = "Sync blocked: $dependencyHint. Will auto-retry when app returns to foreground or you can manually sync the project."
+
+                                Log.w(TAG, "⚠️ [$label] Max skips reached for op=${operation.operationId}, marking as failed. $dependencyHint")
                                 remoteLogger?.log(
                                     LogLevel.ERROR,
                                     TAG,
-                                    "Sync operation exhausted max skips",
+                                    "Sync operation exhausted max skips - marking for user retry",
                                     mapOf(
                                         "operationId" to operation.operationId,
                                         "entityType" to operation.entityType,
                                         "entityId" to operation.entityId.toString(),
                                         "operationType" to operation.operationType.name,
                                         "skipCount" to nextSkip.toString(),
-                                        "maxSkips" to operation.maxSkips.toString()
+                                        "maxSkips" to operation.maxSkips.toString(),
+                                        "dependencyHint" to dependencyHint
                                     )
                                 )
+                                // Mark as FAILED but preserve the operation for manual retry
+                                // The resetFailedOperationsForRetry() will pick these up on next foreground
                                 val failed = operation.copy(
                                     skipCount = nextSkip,
                                     status = SyncStatus.FAILED,
                                     lastAttemptAt = Date(),
-                                    errorMessage = "Max skip count reached - dependencies never resolved"
+                                    errorMessage = errorMessage
                                 )
                                 localDataService.enqueueSyncOperation(failed)
                             } else {
@@ -989,6 +1024,26 @@ class SyncQueueProcessor(
         runCatching {
             gson.fromJson(String(payload, Charsets.UTF_8), PendingLockPayload::class.java).lockUpdatedAt
         }.getOrNull()
+
+    /**
+     * Build a human-readable hint about what dependency might be blocking a sync operation.
+     * This helps with debugging and provides useful error messages to users.
+     */
+    private fun buildDependencyHint(operation: OfflineSyncQueueEntity): String {
+        return when (operation.entityType) {
+            "room" -> "Room creation waiting for project/location to sync"
+            "location" -> "Location creation waiting for property to sync"
+            "property" -> "Property creation waiting for project to sync"
+            "note" -> "Note sync waiting for parent room/project to sync"
+            "photo" -> "Photo sync waiting for parent room to sync"
+            "equipment" -> "Equipment sync waiting for parent room to sync"
+            "moisture_log" -> "Moisture log sync waiting for parent room to sync"
+            "atmospheric_log" -> "Atmospheric log sync waiting for parent room to sync"
+            "support_conversation" -> "Support conversation sync waiting for server connection"
+            "support_message" -> "Support message sync waiting for conversation to sync"
+            else -> "Sync operation waiting for dependencies to resolve"
+        }
+    }
 
     private suspend fun resolveLockUpdatedAt(
         entityType: String,

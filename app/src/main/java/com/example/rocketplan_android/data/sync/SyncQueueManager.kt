@@ -453,6 +453,20 @@ class SyncQueueManager(
                     )
                 )
                 _errors.tryEmit(message)
+
+                // Cleanup any stuck state for project sync jobs to prevent memory leaks
+                // This is a defensive cleanup in case the finally block didn't run
+                if (next.job is SyncJob.SyncProjectGraph) {
+                    val projectId = (next.job as SyncJob.SyncProjectGraph).projectId
+                    mutex.withLock {
+                        activeProjectSyncJobs.remove(projectId)
+                        activeProjectModes.remove(projectId)
+                        pendingPhotoSyncs.remove(projectId)
+                        updatePhotoSyncingProjectsLocked()
+                        updateProjectSyncingProjectsLocked()
+                    }
+                    Log.d(TAG, "🧹 Cleaned up stuck state for failed project sync $projectId")
+                }
             }
         }
     }
