@@ -1,6 +1,6 @@
 package com.example.rocketplan_android.data.sync
 
-import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -69,7 +69,7 @@ enum class SyncOperationOutcome {
  * Thread-safe for concurrent operation recording.
  */
 class SyncSessionMetrics(
-    val sessionId: String = UUID.randomUUID().toString().take(8),
+    val sessionId: String = UuidUtils.generateUuidV7().take(8),
     val startedAt: Long = System.currentTimeMillis()
 ) {
     @Volatile

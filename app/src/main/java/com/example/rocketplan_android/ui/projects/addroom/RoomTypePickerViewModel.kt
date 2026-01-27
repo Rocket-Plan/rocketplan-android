@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.example.rocketplan_android.util.UuidUtils
 import java.util.Locale
-import java.util.UUID
 
 data class RoomTypeUiModel(
     val id: Long,
@@ -185,7 +185,7 @@ class RoomTypePickerViewModel(
         if (pendingRoomSignature == signature && pendingRoomIdempotencyKey != null) {
             return pendingRoomIdempotencyKey!!
         }
-        val newKey = UUID.randomUUID().toString()
+        val newKey = UuidUtils.generateUuidV7()
         pendingRoomSignature = signature
         pendingRoomIdempotencyKey = newKey
         return newKey

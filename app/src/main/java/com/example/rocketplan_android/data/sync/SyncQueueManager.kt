@@ -59,6 +59,10 @@ class SyncQueueManager(
     val isActive: StateFlow<Boolean> = _isActive
     private val _errors = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val errors: SharedFlow<String> = _errors
+
+    /** Exposes the currently executing sync job for UI status display */
+    private val _currentSyncJob = MutableStateFlow<SyncJob?>(null)
+    val currentSyncJob: StateFlow<SyncJob?> = _currentSyncJob
     private val initialSyncStarted = AtomicBoolean(false)
     private val _initialSyncCompleted = MutableStateFlow(false)
     val initialSyncCompleted: StateFlow<Boolean> = _initialSyncCompleted
@@ -432,11 +436,13 @@ class SyncQueueManager(
 
             if (next == null) {
                 _isActive.value = false
+                _currentSyncJob.value = null
                 notifier.first()
                 continue
             }
 
             _isActive.value = true
+            _currentSyncJob.value = next.job
             try {
                 execute(next.job)
             } catch (ce: CancellationException) {
@@ -467,6 +473,8 @@ class SyncQueueManager(
                     }
                     Log.d(TAG, "🧹 Cleaned up stuck state for failed project sync $projectId")
                 }
+            } finally {
+                _currentSyncJob.value = null
             }
         }
     }

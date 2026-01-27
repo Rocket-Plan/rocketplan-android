@@ -21,9 +21,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import com.example.rocketplan_android.util.UuidUtils
 import java.time.Instant
 import java.time.format.DateTimeFormatter
-import java.util.UUID
 
 enum class LogLevel {
     DEBUG,
@@ -52,7 +52,7 @@ class RemoteLogger(
         }
     }
 
-    private val sessionId: String = UUID.randomUUID().toString()
+    private val sessionId: String = UuidUtils.generateUuidV7()
     private val deviceId: String =
         Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
             ?: "unknown-device"
@@ -315,7 +315,7 @@ class RemoteLogger(
             .take(availableSlots)
             .map { chunk ->
                 RetryableLogBatch(
-                    batchId = UUID.randomUUID().toString(),
+                    batchId = UuidUtils.generateUuidV7(),
                     logIds = chunk.map { it.id },
                     attempt = 0,
                     nextAttemptAtMillis = 0

@@ -685,4 +685,10 @@
     <string name="minutes_ago">%1$d min ago</string>
     <string name="hours_ago">%1$d hr ago</string>
     <string name="days_ago">%1$d days ago</string>
+
+    <!-- Sync Status Banner -->
+    <string name="sync_banner_offline_title">You\'re offline</string>
+    <string name="sync_banner_offline_subtitle">Changes will sync when connected</string>
+    <string name="sync_banner_syncing_title">Syncing…</string>
+    <string name="sync_banner_icon_description">Sync status icon</string>
 </resources>

@@ -24,9 +24,9 @@ import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
+import com.example.rocketplan_android.util.UuidUtils
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -554,7 +554,7 @@ class RoomDetailViewModel(
             val lookupRoomId = room.serverId ?: room.roomId
             val scope = OfflineWorkScopeEntity(
                 workScopeId = -System.currentTimeMillis(),
-                uuid = UUID.randomUUID().toString(),
+                uuid = UuidUtils.generateUuidV7(),
                 projectId = projectId,
                 roomId = lookupRoomId,
                 name = name.trim(),
@@ -717,7 +717,7 @@ class RoomDetailViewModel(
                 .mapIndexed { index, option ->
                     OfflineWorkScopeEntity(
                         workScopeId = -(baseId + index),
-                        uuid = UUID.randomUUID().toString(),
+                        uuid = UuidUtils.generateUuidV7(),
                         projectId = projectId,
                         roomId = lookupRoomId,
                         name = option.title.trim(),

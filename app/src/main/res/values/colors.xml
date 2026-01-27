@@ -54,4 +54,10 @@
     <color name="divider_rp">#E8E7ED</color>
     <color name="success_rp">#007760</color>
     <color name="error_rp">#C50000</color>
+
+    <!-- Sync status banner colors -->
+    <color name="sync_banner_offline_bg">#FFF3F3</color>
+    <color name="sync_banner_offline_stroke">#E82828</color>
+    <color name="sync_banner_syncing_bg">#E7F5EF</color>
+    <color name="sync_banner_syncing_stroke">#007760</color>
 </resources>

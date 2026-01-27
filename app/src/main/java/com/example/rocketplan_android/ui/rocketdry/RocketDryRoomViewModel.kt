@@ -22,9 +22,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import com.example.rocketplan_android.util.UuidUtils
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 class RocketDryRoomViewModel(
     application: Application,
@@ -92,7 +92,7 @@ class RocketDryRoomViewModel(
             val now = Date()
             val log = OfflineAtmosphericLogEntity(
                 logId = -System.currentTimeMillis(),
-                uuid = UUID.randomUUID().toString(),
+                uuid = UuidUtils.generateUuidV7(),
                 projectId = projectId,
                 roomId = roomId,
                 date = now,
@@ -150,7 +150,7 @@ class RocketDryRoomViewModel(
         targetMoisture: Double?
     ): Boolean = withContext(Dispatchers.IO) {
         val now = Date()
-        val materialUuid = UUID.randomUUID().toString()
+        val materialUuid = UuidUtils.generateUuidV7()
         val materialName = name.trim().ifBlank {
             rocketPlanApp.getString(R.string.rocketdry_material_fallback_name)
         }
@@ -187,7 +187,7 @@ class RocketDryRoomViewModel(
         // Anchor the material to the room with a goal log so it appears immediately.
         val log = OfflineMoistureLogEntity(
             logId = -System.currentTimeMillis(),
-            uuid = UUID.randomUUID().toString(),
+            uuid = UuidUtils.generateUuidV7(),
             projectId = projectId,
             roomId = roomId,
             materialId = savedMaterial.materialId,
@@ -222,7 +222,7 @@ class RocketDryRoomViewModel(
         val now = Date()
         val log = OfflineMoistureLogEntity(
             logId = -System.currentTimeMillis(),
-            uuid = UUID.randomUUID().toString(),
+            uuid = UuidUtils.generateUuidV7(),
             projectId = projectId,
             roomId = roomId,
             materialId = material.materialId,

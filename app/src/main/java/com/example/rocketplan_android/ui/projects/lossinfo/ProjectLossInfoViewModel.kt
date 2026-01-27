@@ -39,9 +39,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import com.example.rocketplan_android.util.UuidUtils
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 import android.util.Log
 
 data class ClaimListItem(
@@ -317,7 +317,7 @@ private class ProjectLossInfoRepository(
         return OfflinePropertyEntity(
             propertyId = id,
             serverId = id,
-            uuid = uuid ?: UUID.randomUUID().toString(),
+            uuid = uuid ?: UuidUtils.generateUuidV7(),
             address = resolvedAddress,
             city = resolvedCity,
             state = resolvedState,
@@ -457,7 +457,7 @@ class ProjectLossInfoViewModel(
             _uiState.update { it.copy(savingClaimId = claimId, errorMessage = null) }
 
             val idempotencyKey = claimIdempotencyKeys.getOrPut(claimId) {
-                request.idempotencyKey ?: UUID.randomUUID().toString()
+                request.idempotencyKey ?: UuidUtils.generateUuidV7()
             }
             val requestWithKey = request.copy(idempotencyKey = idempotencyKey)
 

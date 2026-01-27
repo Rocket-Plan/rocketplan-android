@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.util.UUID
+import com.example.rocketplan_android.util.UuidUtils
 
 data class ProjectTypeSelectionViewState(
     val isLoading: Boolean = true,
@@ -182,7 +182,7 @@ class ProjectTypeSelectionViewModel(
     private fun ensurePropertyCreationIdempotencyKey(): String {
         val current = propertyCreationIdempotencyKey
         if (current != null) return current
-        val generated = UUID.randomUUID().toString()
+        val generated = UuidUtils.generateUuidV7()
         propertyCreationIdempotencyKey = generated
         return generated
     }

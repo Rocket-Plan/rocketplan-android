@@ -183,6 +183,7 @@ data class EquipmentRequest(
     val projectId: Long,
     @SerializedName("room_id")
     val roomId: Long? = null,
+    @SerializedName("name")
     val type: String,
     val brand: String? = null,
     val model: String? = null,

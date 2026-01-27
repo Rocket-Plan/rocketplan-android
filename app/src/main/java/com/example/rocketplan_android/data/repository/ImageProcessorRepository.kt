@@ -27,9 +27,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
+import com.example.rocketplan_android.util.UuidUtils
 import java.io.FileOutputStream
 import java.util.Locale
-import java.util.UUID
 
 class ImageProcessorRepository(
     private val context: Context,
@@ -59,7 +59,7 @@ class ImageProcessorRepository(
         projectId: Long,
         filesToUpload: List<FileToUpload>,
         templateId: String,
-        groupUuid: String = UUID.randomUUID().toString(),
+        groupUuid: String = UuidUtils.generateUuidV7(),
         albums: Map<String, List<String>> = emptyMap(),
         irPhotos: List<Map<String, IRPhotoData>> = emptyList(),
         order: List<String> = emptyList(),
@@ -131,7 +131,7 @@ class ImageProcessorRepository(
             )
         }
 
-        val assemblyId = UUID.randomUUID().toString().replace("-", "")
+        val assemblyId = UuidUtils.generateUuidV7().replace("-", "")
         val now = System.currentTimeMillis()
         val totalBytes = preparedFiles.sumOf { getFileSize(it.uri) }
         val status = if (waitingForSync) {
@@ -158,7 +158,7 @@ class ImageProcessorRepository(
 
         val photoEntities = preparedFiles.mapIndexed { index, file ->
             ImageProcessorPhotoEntity(
-                photoId = UUID.randomUUID().toString(),
+                photoId = UuidUtils.generateUuidV7(),
                 assemblyLocalId = localId,
                 assemblyUuid = assemblyId,
                 fileName = file.filename,

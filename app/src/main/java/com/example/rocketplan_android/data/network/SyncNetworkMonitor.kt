@@ -15,6 +15,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -44,6 +47,10 @@ class SyncNetworkMonitor(
     private var restoreJob: Job? = null
     private var lostJob: Job? = null
     private var healthCheckRetryJob: Job? = null
+
+    /** Public StateFlow for observing online/offline status */
+    private val _isOnline = MutableStateFlow(false)
+    val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
     private val networkCallback = object : ConnectivityManager.NetworkCallback() {
         override fun onAvailable(network: Network) {
@@ -78,6 +85,7 @@ class SyncNetworkMonitor(
         val initialAvailable =
             capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
         isNetworkAvailable.set(initialAvailable)
+        _isOnline.value = initialAvailable
 
         val networkRequest = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
@@ -92,6 +100,7 @@ class SyncNetworkMonitor(
                 if (!isNetworkAvailable.compareAndSet(true, false)) {
                     return@withLock
                 }
+                _isOnline.value = false
                 Log.d(TAG, "Network lost")
                 remoteLogger?.log(
                     com.example.rocketplan_android.logging.LogLevel.INFO,
@@ -114,6 +123,7 @@ class SyncNetworkMonitor(
         scope.launch {
             stateMutex.withLock {
                 if (isNetworkAvailable.compareAndSet(false, true)) {
+                    _isOnline.value = true
                     Log.d(TAG, "Network restored - triggering sync queue refresh")
                     remoteLogger?.log(
                         com.example.rocketplan_android.logging.LogLevel.INFO,

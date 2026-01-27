@@ -22,9 +22,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
+import com.example.rocketplan_android.util.UuidUtils
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
 private const val DEFAULT_LEVEL_LABEL = "General"
 private const val UNASSIGNED_LABEL = "Unassigned"
@@ -150,7 +150,7 @@ class RocketDryViewModel(
             val now = Date()
             val log = OfflineAtmosphericLogEntity(
                 logId = -System.currentTimeMillis(),
-                uuid = UUID.randomUUID().toString(),
+                uuid = UuidUtils.generateUuidV7(),
                 projectId = projectId,
                 roomId = roomId,
                 date = now,

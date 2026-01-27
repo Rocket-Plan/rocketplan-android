@@ -273,7 +273,7 @@ class AuthRepository(
      * Create and persist an OAuth state/nonce for callback validation.
      */
     fun createOAuthState(): String {
-        val state = UUID.randomUUID().toString()
+        val state = com.example.rocketplan_android.util.UuidUtils.generateUuidV7()
         secureStorage.saveOAuthState(state)
         return state
     }

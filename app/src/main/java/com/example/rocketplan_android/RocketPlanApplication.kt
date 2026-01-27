@@ -111,7 +111,9 @@ class RocketPlanApplication : Application() {
     private lateinit var imageProcessorNetworkMonitor: com.example.rocketplan_android.data.network.ImageProcessorNetworkMonitor
 
     private lateinit var imageProcessingConfigStore: ImageProcessingConfigStore
-    private lateinit var syncNetworkMonitor: SyncNetworkMonitor
+
+    lateinit var syncNetworkMonitor: SyncNetworkMonitor
+        private set
 
     override fun onCreate() {
         super.onCreate()

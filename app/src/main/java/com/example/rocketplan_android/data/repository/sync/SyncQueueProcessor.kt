@@ -44,6 +44,7 @@ import retrofit2.HttpException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.example.rocketplan_android.util.UuidUtils
 import java.util.Date
 import java.util.UUID
 import kotlin.math.min
@@ -424,7 +425,7 @@ class SyncQueueProcessor(
             idempotencyKey = idempotencyKey
         )
         val operation = OfflineSyncQueueEntity(
-            operationId = "project-${project.projectId}-${UUID.randomUUID()}",
+            operationId = "project-${project.projectId}-${UuidUtils.generateUuidV7()}",
             entityType = "project",
             entityId = project.projectId,
             entityUuid = project.uuid,
@@ -451,7 +452,7 @@ class SyncQueueProcessor(
             idempotencyKey = idempotencyKey
         )
         val operation = OfflineSyncQueueEntity(
-            operationId = "property-${property.propertyId}-${UUID.randomUUID()}",
+            operationId = "property-${property.propertyId}-${UuidUtils.generateUuidV7()}",
             entityType = "property",
             entityId = property.propertyId,
             entityUuid = property.uuid,
@@ -489,7 +490,7 @@ class SyncQueueProcessor(
             idempotencyKey = idempotencyKey
         )
         val operation = OfflineSyncQueueEntity(
-            operationId = "location-${location.locationId}-${UUID.randomUUID()}",
+            operationId = "location-${location.locationId}-${UuidUtils.generateUuidV7()}",
             entityType = "location",
             entityId = location.locationId,
             entityUuid = location.uuid,
@@ -596,7 +597,7 @@ class SyncQueueProcessor(
             idempotencyKey = idempotencyKey
         )
         val operation = OfflineSyncQueueEntity(
-            operationId = "room-${room.roomId}-${UUID.randomUUID()}",
+            operationId = "room-${room.roomId}-${UuidUtils.generateUuidV7()}",
             entityType = "room",
             entityId = room.roomId,
             entityUuid = room.uuid,
@@ -1109,7 +1110,7 @@ class SyncQueueProcessor(
     ) {
         localDataService.removeSyncOperationsForEntity(entityType, entityId)
         val operation = OfflineSyncQueueEntity(
-            operationId = "$entityType-$entityId-${UUID.randomUUID()}",
+            operationId = "$entityType-$entityId-${UuidUtils.generateUuidV7()}",
             entityType = entityType,
             entityId = entityId,
             entityUuid = entityUuid,
@@ -1133,7 +1134,7 @@ class SyncQueueProcessor(
             idempotencyKey = conversation.uuid
         )
         val operation = OfflineSyncQueueEntity(
-            operationId = "support_conversation-${conversation.conversationId}-${UUID.randomUUID()}",
+            operationId = "support_conversation-${conversation.conversationId}-${UuidUtils.generateUuidV7()}",
             entityType = "support_conversation",
             entityId = conversation.conversationId,
             entityUuid = conversation.uuid,
@@ -1156,7 +1157,7 @@ class SyncQueueProcessor(
             idempotencyKey = message.uuid
         )
         val operation = OfflineSyncQueueEntity(
-            operationId = "support_message-${message.messageId}-${UUID.randomUUID()}",
+            operationId = "support_message-${message.messageId}-${UuidUtils.generateUuidV7()}",
             entityType = "support_message",
             entityId = message.messageId,
             entityUuid = message.uuid,

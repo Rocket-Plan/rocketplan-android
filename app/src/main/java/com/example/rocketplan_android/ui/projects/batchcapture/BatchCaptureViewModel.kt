@@ -20,8 +20,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.example.rocketplan_android.util.UuidUtils
 import java.io.File
-import java.util.UUID
 
 data class BatchCaptureUiState(
     val photos: List<BatchPhotoItem> = emptyList(),
@@ -77,7 +77,7 @@ class BatchCaptureViewModel(
     val events: SharedFlow<BatchCaptureEvent> = _events.asSharedFlow()
 
     private var resolvedRoom: OfflineRoomEntity? = null
-    private val groupUuid = UUID.randomUUID().toString()
+    private val groupUuid = UuidUtils.generateUuidV7()
 
     init {
         Log.d(TAG, "BatchCaptureViewModel init: projectId=$projectId, roomId=$roomId, groupUuid=$groupUuid")
@@ -141,7 +141,7 @@ class BatchCaptureViewModel(
         }
 
         val newPhoto = BatchPhotoItem(
-            id = UUID.randomUUID().toString(),
+            id = UuidUtils.generateUuidV7(),
             file = photoFile,
             number = currentState.photos.size + 1,
             categoryAlbumId = currentState.selectedCategoryId,
@@ -254,7 +254,7 @@ class BatchCaptureViewModel(
                 val irPhotoData = currentState.photos
                     .filter { it.isIr }
                     .map { photo ->
-                        val uuid = UUID.randomUUID().toString()
+                        val uuid = UuidUtils.generateUuidV7()
                         val visualFileName = photo.visualFile?.name ?: photo.file.name
                         Log.d(TAG, "Adding IR photo: thermal=${photo.file.name}, visual=$visualFileName with uuid=$uuid")
                         mapOf(uuid to com.example.rocketplan_android.data.model.IRPhotoData(

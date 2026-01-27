@@ -40,7 +40,11 @@ import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import com.example.rocketplan_android.ui.syncstatus.SyncStatusBannerManager
+import com.example.rocketplan_android.ui.syncstatus.SyncStatusBannerState
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.card.MaterialCardView
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
@@ -69,6 +73,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var remoteLogger: RemoteLogger
     private lateinit var contentLayoutParams: CoordinatorLayout.LayoutParams
     private lateinit var scrollingContentBehavior: AppBarLayout.ScrollingViewBehavior
+    private var syncStatusBannerManager: SyncStatusBannerManager? = null
+    private var syncBannerEnabled = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
@@ -91,6 +97,13 @@ class MainActivity : AppCompatActivity() {
         roomTypeRepository = rocketPlanApp.roomTypeRepository
         remoteLogger = rocketPlanApp.remoteLogger
 
+        // Initialize sync status banner manager
+        syncStatusBannerManager = SyncStatusBannerManager(
+            syncNetworkMonitor = rocketPlanApp.syncNetworkMonitor,
+            localDataService = rocketPlanApp.localDataService,
+            syncQueueManager = rocketPlanApp.syncQueueManager
+        )
+
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
         }
@@ -104,6 +117,9 @@ class MainActivity : AppCompatActivity() {
             AppBarLayout.ScrollingViewBehavior()
         contentLayoutParams.behavior = scrollingContentBehavior
         binding.appBarMain.contentMain.root.layoutParams = contentLayoutParams
+
+        // Set up sync status banner observation
+        setupSyncStatusBanner()
 
         setSupportActionBar(binding.appBarMain.toolbar)
 
@@ -176,6 +192,16 @@ class MainActivity : AppCompatActivity() {
             binding.appBarMain.appBarLayout.isVisible = !shouldHideAppBar
             updateContentLayoutForAppBar(shouldHideAppBar)
             setFullscreen(FULLSCREEN_DESTINATIONS.contains(destination.id))
+
+            // Hide sync status banner on auth and fullscreen camera screens
+            val shouldHideSyncBanner = destination.id == R.id.emailCheckFragment ||
+                destination.id == R.id.loginFragment ||
+                destination.id == R.id.signUpFragment ||
+                destination.id == R.id.forgotPasswordFragment ||
+                destination.id == R.id.oauthWebViewFragment ||
+                destination.id == R.id.batchCaptureFragment ||
+                destination.id == R.id.flirCaptureFragment
+            updateSyncBannerVisibility(!shouldHideSyncBanner)
 
             when {
                 destination.id == R.id.emailCheckFragment ||
@@ -598,6 +624,92 @@ class MainActivity : AppCompatActivity() {
             binding.appBarMain.contentMain.root.layoutParams = contentLayoutParams
             binding.appBarMain.contentMain.root.requestLayout()
         }
+    }
+
+    private fun setupSyncStatusBanner() {
+        val bannerBinding = binding.appBarMain.syncStatusBannerInclude
+        val bannerCard = bannerBinding.syncStatusBanner
+        val iconView = bannerBinding.syncStatusIcon
+        val titleView = bannerBinding.syncStatusTitle
+        val subtitleView = bannerBinding.syncStatusSubtitle
+
+        lifecycleScope.launch {
+            syncStatusBannerManager?.bannerState?.collectLatest { state ->
+                // Don't show banner if disabled for current screen
+                if (!syncBannerEnabled) {
+                    bannerCard.visibility = View.GONE
+                    return@collectLatest
+                }
+
+                when (state) {
+                    is SyncStatusBannerState.Hidden -> {
+                        bannerCard.visibility = View.GONE
+                    }
+                    is SyncStatusBannerState.Offline -> {
+                        bannerCard.visibility = View.VISIBLE
+                        bannerCard.setCardBackgroundColor(getColor(R.color.sync_banner_offline_bg))
+                        bannerCard.strokeColor = getColor(R.color.sync_banner_offline_stroke)
+                        iconView.setBackgroundResource(R.drawable.bg_icon_circle_red)
+                        iconView.setImageResource(R.drawable.ic_cloud_off)
+                        iconView.setColorFilter(getColor(R.color.sync_banner_offline_stroke))
+                        titleView.text = getString(R.string.sync_banner_offline_title)
+                        subtitleView.text = getString(R.string.sync_banner_offline_subtitle)
+                    }
+                    is SyncStatusBannerState.Syncing -> {
+                        bannerCard.visibility = View.VISIBLE
+                        bannerCard.setCardBackgroundColor(getColor(R.color.sync_banner_syncing_bg))
+                        bannerCard.strokeColor = getColor(R.color.sync_banner_syncing_stroke)
+                        iconView.setBackgroundResource(R.drawable.bg_icon_circle_green)
+                        iconView.setImageResource(R.drawable.ic_sync)
+                        iconView.setColorFilter(getColor(R.color.sync_banner_syncing_stroke))
+                        titleView.text = getString(R.string.sync_banner_syncing_title)
+                        subtitleView.text = formatSyncingItems(state.items)
+                    }
+                    is SyncStatusBannerState.Refreshing -> {
+                        bannerCard.visibility = View.VISIBLE
+                        bannerCard.setCardBackgroundColor(getColor(R.color.sync_banner_syncing_bg))
+                        bannerCard.strokeColor = getColor(R.color.sync_banner_syncing_stroke)
+                        iconView.setBackgroundResource(R.drawable.bg_icon_circle_green)
+                        iconView.setImageResource(R.drawable.ic_sync)
+                        iconView.setColorFilter(getColor(R.color.sync_banner_syncing_stroke))
+                        titleView.text = getString(R.string.sync_banner_syncing_title)
+                        subtitleView.text = state.description
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Controls whether the sync status banner can be shown.
+     * Used to hide banner on auth screens and fullscreen camera screens.
+     */
+    private fun updateSyncBannerVisibility(enabled: Boolean) {
+        syncBannerEnabled = enabled
+        if (!enabled) {
+            binding.appBarMain.syncStatusBannerInclude.syncStatusBanner.visibility = View.GONE
+        }
+        // If enabling, the banner visibility will be updated by the state flow
+    }
+
+    private fun formatSyncingItems(items: List<com.example.rocketplan_android.ui.syncstatus.SyncProgressItem>): String {
+        if (items.isEmpty()) return ""
+
+        val parts = items.take(3).map { item ->
+            if (item.projectName != null) {
+                "${item.displayName} (${item.projectName})"
+            } else {
+                item.displayName
+            }
+        }
+
+        return parts.joinToString(", ")
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        syncStatusBannerManager?.destroy()
+        syncStatusBannerManager = null
     }
 
 }

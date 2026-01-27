@@ -3,10 +3,10 @@ package com.example.rocketplan_android.logging
 import android.content.Context
 import android.util.Log
 import com.example.rocketplan_android.data.model.RemoteLogEntry
+import com.example.rocketplan_android.util.UuidUtils
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -25,7 +25,7 @@ class PendingRemoteLogStore(context: Context) {
 
     suspend fun enqueue(entry: RemoteLogEntry): PendingRemoteLog = mutex.withLock {
         val current = loadInternal()
-        val queued = PendingRemoteLog(UUID.randomUUID().toString(), entry)
+        val queued = PendingRemoteLog(UuidUtils.generateUuidV7(), entry)
         current.add(queued)
         if (current.size > MAX_BUFFER_SIZE) {
             val overflow = current.size - MAX_BUFFER_SIZE
