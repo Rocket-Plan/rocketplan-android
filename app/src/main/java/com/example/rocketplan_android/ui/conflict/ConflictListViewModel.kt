@@ -4,9 +4,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.api.OfflineSyncApi
+import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.repository.ConflictItem
 import com.example.rocketplan_android.data.repository.ConflictRepository
 import com.example.rocketplan_android.data.repository.ConflictResolution
+import com.example.rocketplan_android.data.repository.sync.FreshTimestampService
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +34,7 @@ sealed class ConflictListUiState {
 class ConflictListViewModel(application: Application) : AndroidViewModel(application) {
 
     private val conflictRepository: ConflictRepository
+    private val freshTimestampService: FreshTimestampService
 
     private val _uiState = MutableStateFlow<ConflictListUiState>(ConflictListUiState.Loading)
     val uiState: StateFlow<ConflictListUiState> = _uiState.asStateFlow()
@@ -40,9 +44,12 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
 
     init {
         val app = application as RocketPlanApplication
+        val api = RetrofitClient.createService<OfflineSyncApi>()
+        freshTimestampService = FreshTimestampService(api)
         conflictRepository = ConflictRepository(
             localDataService = app.localDataService,
-            gson = Gson()
+            gson = Gson(),
+            freshTimestampService = freshTimestampService
         )
         observeConflicts()
     }
@@ -60,13 +67,21 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
 
     /**
      * Resolves a single conflict.
+     * For KEEP_LOCAL, uses fresh timestamp fetching to prevent immediate re-conflict.
      */
     fun resolveConflict(conflictId: String, resolution: ConflictResolution) {
         viewModelScope.launch {
             _resolving.value = true
             try {
                 when (resolution) {
-                    ConflictResolution.KEEP_LOCAL -> conflictRepository.resolveKeepLocal(conflictId)
+                    ConflictResolution.KEEP_LOCAL -> {
+                        // Use enhanced resolution with fresh timestamp fetching
+                        val success = conflictRepository.resolveKeepLocalWithFreshTimestamp(conflictId)
+                        if (!success) {
+                            // Max requeue attempts exceeded - fall back to basic resolution
+                            conflictRepository.resolveKeepLocal(conflictId)
+                        }
+                    }
                     ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflictId)
                     ConflictResolution.DISMISS -> conflictRepository.resolveDismiss(conflictId)
                 }
@@ -78,6 +93,7 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
 
     /**
      * Resolves all conflicts with the same strategy.
+     * For KEEP_LOCAL, uses fresh timestamp fetching to prevent immediate re-conflict.
      */
     fun resolveAll(resolution: ConflictResolution) {
         viewModelScope.launch {
@@ -87,7 +103,14 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
                 if (currentState is ConflictListUiState.Success) {
                     currentState.conflicts.forEach { conflict ->
                         when (resolution) {
-                            ConflictResolution.KEEP_LOCAL -> conflictRepository.resolveKeepLocal(conflict.conflictId)
+                            ConflictResolution.KEEP_LOCAL -> {
+                                // Use enhanced resolution with fresh timestamp fetching
+                                val success = conflictRepository.resolveKeepLocalWithFreshTimestamp(conflict.conflictId)
+                                if (!success) {
+                                    // Max requeue attempts exceeded - fall back to basic resolution
+                                    conflictRepository.resolveKeepLocal(conflict.conflictId)
+                                }
+                            }
                             ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflict.conflictId)
                             ConflictResolution.DISMISS -> conflictRepository.resolveDismiss(conflict.conflictId)
                         }

@@ -48,8 +48,9 @@ class FreshTimestampService(
                     "location" -> fetchLocationTimestamp(serverId)
                     "equipment" -> fetchEquipmentTimestamp(serverId)
                     "note" -> fetchNoteTimestamp(serverId)
-                    "atmosphericLog" -> fetchAtmosphericLogTimestamp(serverId)
-                    "moistureLog" -> fetchMoistureLogTimestamp(serverId)
+                    // Support both snake_case (processor) and camelCase entity types
+                    "atmospheric_log", "atmosphericLog" -> fetchAtmosphericLogTimestamp(serverId)
+                    "moisture_log", "moistureLog" -> fetchMoistureLogTimestamp(serverId)
                     else -> {
                         Log.w(TAG, "Unsupported entity type for fresh timestamp: $entityType")
                         null
