@@ -295,6 +295,11 @@
     <string name="rocketdry_equipment_by_room">By room</string>
     <string name="rocketdry_no_equipment">No equipment added</string>
     <string name="rocketdry_open">Open</string>
+    <string name="total_location_equipment_title">Total Location Equipment</string>
+    <string name="total_equipment_location_total">Location Total</string>
+    <string name="total_equipment_breakdown_per_room">Breakdown per Room</string>
+    <string name="total_equipment_no_room_equipment">No equipment assigned to rooms</string>
+    <string name="room_icon">Room icon</string>
     <string name="rocketdry_add">Add</string>
     <string name="rocketdry_remove">Remove</string>
     <string name="equipment_room_add_cta">Add Equipment</string>

@@ -239,6 +239,20 @@
         <action
             android:id="@+id/action_rocketDryFragment_to_roomTypePickerFragment"
             app:destination="@id/roomTypePickerFragment" />
+        <action
+            android:id="@+id/action_rocketDryFragment_to_totalEquipmentFragment"
+            app:destination="@id/totalEquipmentFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/totalEquipmentFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.TotalEquipmentFragment"
+        android:label="@string/total_location_equipment_title"
+        tools:layout="@layout/fragment_total_equipment">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
     </fragment>
 
     <fragment

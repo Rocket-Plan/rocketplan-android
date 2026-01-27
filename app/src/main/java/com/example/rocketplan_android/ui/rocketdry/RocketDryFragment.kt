@@ -153,8 +153,8 @@ class RocketDryFragment : Fragment() {
         }
 
         equipmentTotalsOpenButton.setOnClickListener {
-            Log.d(TAG, "📦 Equipment totals Open tapped")
-            showEquipmentTotalsDialog()
+            Log.d(TAG, "📦 Equipment totals Open tapped - navigating to TotalEquipmentFragment")
+            navigateToTotalEquipment()
         }
 
         roomCard.setOnClickListener {
@@ -374,32 +374,12 @@ class RocketDryFragment : Fragment() {
         }
     }
 
-    private fun showEquipmentTotalsDialog() {
-        val state = latestReadyState
-        if (state == null) {
-            Toast.makeText(requireContext(), R.string.loading_project, Toast.LENGTH_SHORT).show()
-            return
-        }
-        val dialogView = layoutInflater.inflate(R.layout.dialog_equipment_totals, null)
-        val recycler = dialogView.findViewById<RecyclerView>(R.id.equipmentTotalsRecyclerView)
-        val emptyState = dialogView.findViewById<TextView>(R.id.equipmentTotalsEmptyState)
-        recycler.layoutManager = LinearLayoutManager(context)
-        val adapter = EquipmentSummaryAdapter()
-        recycler.adapter = adapter
-
-        val items = state.equipmentByType
-        val hasItems = items.isNotEmpty()
-        recycler.isVisible = hasItems
-        emptyState.isVisible = !hasItems
-        if (hasItems) {
-            adapter.submitItems(items)
-        }
-
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.rocketdry_equipment_overview)
-            .setView(dialogView)
-            .setPositiveButton(R.string.close, null)
-            .show()
+    private fun navigateToTotalEquipment() {
+        val action = RocketDryFragmentDirections
+            .actionRocketDryFragmentToTotalEquipmentFragment(
+                projectId = args.projectId
+            )
+        findNavController().navigate(action)
     }
 
     private fun showAddExternalLogDialog() {
