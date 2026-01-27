@@ -358,6 +358,8 @@ class RoomPushHandler(
                             "⚠️ [handlePendingRoomUpdate] Retry still got 409; recording conflict for user resolution"
                         )
                         // Record conflict for user resolution instead of silent server restore
+                        // Note: Server doesn't return is_source in room detail response, only is_accessible.
+                        // We omit isSource from remote snapshot since we can't accurately represent it.
                         val conflict = OfflineConflictResolutionEntity(
                             conflictId = UuidUtils.generateUuidV7(),
                             entityType = "room",
@@ -372,11 +374,12 @@ class RoomPushHandler(
                             remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
                                 "title" to (freshRoom.name ?: freshRoom.title),
                                 "roomTypeId" to freshRoom.roomType?.id,
-                                "isSource" to freshRoom.isAccessible,
                                 "levelId" to freshRoom.level?.id
+                                // isSource omitted - server doesn't return this field
                             )).toByteArray(Charsets.UTF_8),
                             conflictType = "UPDATE_CONFLICT",
-                            detectedAt = ctx.now()
+                            detectedAt = ctx.now(),
+                            originalOperationId = operation.operationId
                         )
                         ctx.recordConflict(conflict)
                         return OperationOutcome.CONFLICT_PENDING

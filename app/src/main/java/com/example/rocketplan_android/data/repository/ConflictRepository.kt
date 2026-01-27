@@ -99,9 +99,17 @@ class ConflictRepository(
      * This method rebuilds the proper sync payload from the local entity
      * and uses a generated timestamp. For fetching fresh timestamps from
      * the server, use resolveKeepLocalWithFreshTimestamp() instead.
+     *
+     * @return True if resolution succeeded, false if the entity type doesn't support KEEP_LOCAL
      */
-    suspend fun resolveKeepLocal(conflictId: String) = withContext(ioDispatcher) {
-        val conflict = localDataService.getConflict(conflictId) ?: return@withContext
+    suspend fun resolveKeepLocal(conflictId: String): Boolean = withContext(ioDispatcher) {
+        val conflict = localDataService.getConflict(conflictId) ?: return@withContext false
+
+        // Check if this entity type supports KEEP_LOCAL resolution
+        if (!supportsKeepLocal(conflict.entityType)) {
+            Log.w(TAG, "Entity type ${conflict.entityType} does not support KEEP_LOCAL resolution")
+            return@withContext false
+        }
 
         // Generate current timestamp for the lock field
         val timestamp = formatTimestamp(Date())
@@ -116,8 +124,21 @@ class ConflictRepository(
         // Re-enqueue with properly rebuilt payload from entity
         reEnqueueEntityWithTimestamp(conflict, timestamp)
 
+        // Clean up the original operation that caused the conflict
+        cleanupOriginalOperation(conflict)
+
         // Delete the conflict record after successful resolution
         localDataService.resolveConflict(conflictId)
+        true
+    }
+
+    /**
+     * Checks if an entity type supports KEEP_LOCAL resolution.
+     * Some entity types (like property) require full mutation requests that
+     * can't be reconstructed from conflict data.
+     */
+    fun supportsKeepLocal(entityType: String): Boolean {
+        return entityType != "property"
     }
 
     /**
@@ -145,6 +166,10 @@ class ConflictRepository(
             resolution = "KEEP_SERVER"
         )
         localDataService.upsertConflict(resolved)
+
+        // Clean up the original operation that caused the conflict
+        cleanupOriginalOperation(conflict)
+
         localDataService.resolveConflict(conflictId)
     }
 
@@ -154,9 +179,17 @@ class ConflictRepository(
      * current timestamp for the entity.
      *
      * @param conflictId The conflict to resolve
-     * @return True if resolution succeeded, false if max requeue attempts exceeded or error
+     * @return True if resolution succeeded, false if max requeue attempts exceeded,
+     *         entity type doesn't support KEEP_LOCAL, or error
      */
     suspend fun resolveKeepLocalWithFreshTimestamp(conflictId: String): Boolean = withContext(ioDispatcher) {
+        // Check entity type supports KEEP_LOCAL before incrementing attempts
+        val conflictCheck = localDataService.getConflict(conflictId) ?: return@withContext false
+        if (!supportsKeepLocal(conflictCheck.entityType)) {
+            Log.w(TAG, "Entity type ${conflictCheck.entityType} does not support KEEP_LOCAL resolution")
+            return@withContext false
+        }
+
         // First increment and check requeue attempts atomically
         val canProceed = incrementRequeueAttempt(conflictId)
         if (!canProceed) {
@@ -195,6 +228,9 @@ class ConflictRepository(
         // Re-enqueue with properly rebuilt payload from entity
         reEnqueueEntityWithTimestamp(conflict, timestamp)
 
+        // Clean up the original operation that caused the conflict
+        cleanupOriginalOperation(conflict)
+
         // Delete the conflict record after successful resolution
         localDataService.resolveConflict(conflictId)
         true
@@ -219,6 +255,10 @@ class ConflictRepository(
             notes = (conflict.notes ?: "") + "\nDismissed by user at ${Date()}"
         )
         localDataService.upsertConflict(resolved)
+
+        // Clean up the original operation that caused the conflict
+        cleanupOriginalOperation(conflict)
+
         localDataService.resolveConflict(conflictId)
     }
 
@@ -266,6 +306,23 @@ class ConflictRepository(
         ).apply {
             timeZone = java.util.TimeZone.getTimeZone("UTC")
         }.format(date)
+    }
+
+    /**
+     * Cleans up the original sync operation that caused the conflict.
+     * This removes the stale CONFLICT-status operation from the queue since
+     * we've either re-queued it (KEEP_LOCAL) or abandoned it (KEEP_SERVER/DISMISS).
+     */
+    private suspend fun cleanupOriginalOperation(conflict: OfflineConflictResolutionEntity) {
+        val originalOpId = conflict.originalOperationId
+        if (originalOpId != null) {
+            Log.d(TAG, "Cleaning up original operation $originalOpId for conflict ${conflict.conflictId}")
+            localDataService.removeSyncOperation(originalOpId)
+        } else {
+            // Fallback: try to remove any CONFLICT-status ops for this entity
+            Log.d(TAG, "No originalOperationId set; cleaning up CONFLICT ops for ${conflict.entityType}:${conflict.entityId}")
+            localDataService.removeSyncOperationsForEntity(conflict.entityType, conflict.entityId)
+        }
     }
 
     /**
@@ -369,6 +426,7 @@ class ConflictRepository(
         localDataService.saveLocations(listOf(updated))
 
         // Build proper PendingLocationUpdatePayload
+        // Note: floorNumber may be null if not captured in conflict snapshot (entity doesn't store it)
         val payload = mapOf(
             "locationId" to location.locationId,
             "locationUuid" to location.uuid,

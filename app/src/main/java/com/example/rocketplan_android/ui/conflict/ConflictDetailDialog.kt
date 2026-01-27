@@ -114,6 +114,14 @@ class ConflictDetailDialog : BottomSheetDialogFragment() {
             conflict.entityType.replaceFirstChar { it.uppercase() }
         )
 
+        // Disable Keep Local for entity types that don't support it (e.g., property)
+        val supportsKeepLocal = viewModel.supportsKeepLocal(conflict.entityType)
+        keepLocalButton.isEnabled = supportsKeepLocal
+        if (!supportsKeepLocal) {
+            keepLocalButton.alpha = 0.5f
+            keepLocalButton.text = getString(R.string.conflict_keep_local_unavailable)
+        }
+
         // Display local version fields
         localVersionContainer.removeAllViews()
         conflict.localVersion.forEach { (key, value) ->

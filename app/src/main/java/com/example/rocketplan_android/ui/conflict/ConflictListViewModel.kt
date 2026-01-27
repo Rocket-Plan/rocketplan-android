@@ -45,7 +45,10 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
     init {
         val app = application as RocketPlanApplication
         val api = RetrofitClient.createService<OfflineSyncApi>()
-        freshTimestampService = FreshTimestampService(api)
+        freshTimestampService = FreshTimestampService(
+            api = api,
+            localDataService = app.localDataService
+        )
         conflictRepository = ConflictRepository(
             localDataService = app.localDataService,
             gson = Gson(),
@@ -132,5 +135,13 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
      */
     suspend fun getConflict(conflictId: String): ConflictItem? {
         return conflictRepository.getConflict(conflictId)
+    }
+
+    /**
+     * Checks if an entity type supports KEEP_LOCAL resolution.
+     * Some entity types (like property) can't be re-synced via conflict resolution.
+     */
+    fun supportsKeepLocal(entityType: String): Boolean {
+        return conflictRepository.supportsKeepLocal(entityType)
     }
 }

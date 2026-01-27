@@ -29,6 +29,7 @@ data class FreshTimestampResult(
  */
 class FreshTimestampService(
     private val api: OfflineSyncApi,
+    private val localDataService: com.example.rocketplan_android.data.local.LocalDataService? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     /**
@@ -144,12 +145,55 @@ class FreshTimestampService(
     }
 
     private suspend fun fetchLocationTimestamp(serverId: Long): String? {
-        // The API doesn't have a direct location detail endpoint, but we can update
-        // the location and get the response. However, this is risky as it might cause
-        // changes. For now, we'll return null and log a warning - the caller should
-        // handle this gracefully by using a current timestamp.
-        Log.w(TAG, "Location timestamp fetch not available via API (no direct endpoint)")
-        return null
+        // Location doesn't have a direct GET endpoint, but we can fetch via the
+        // property locations endpoint if we can determine the property.
+        // This requires LocalDataService to look up the location → project → property chain.
+        if (localDataService == null) {
+            Log.w(TAG, "Location timestamp fetch requires LocalDataService (not provided)")
+            return null
+        }
+
+        return try {
+            // Find the location to get its project
+            val location = localDataService.getLocationByServerId(serverId)
+            if (location == null) {
+                Log.w(TAG, "Location $serverId not found in local database")
+                return null
+            }
+
+            // Get the project to find the property
+            val project = localDataService.getProject(location.projectId)
+            if (project == null) {
+                Log.w(TAG, "Project ${location.projectId} not found for location $serverId")
+                return null
+            }
+
+            val propertyId = project.propertyId
+            if (propertyId == null) {
+                Log.w(TAG, "Project ${location.projectId} has no property")
+                return null
+            }
+
+            val property = localDataService.getProperty(propertyId)
+            val propertyServerId = property?.serverId
+            if (propertyServerId == null) {
+                Log.w(TAG, "Property $propertyId not synced (no server ID)")
+                return null
+            }
+
+            // Fetch all locations for the property and find ours
+            val locations = api.getPropertyLocations(propertyServerId).data
+            val freshLocation = locations.firstOrNull { it.id == serverId }
+            if (freshLocation == null) {
+                Log.w(TAG, "Location $serverId not found in property $propertyServerId locations")
+                return null
+            }
+
+            freshLocation.updatedAt
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to fetch location timestamp for $serverId", e)
+            null
+        }
     }
 
     private suspend fun fetchEquipmentTimestamp(serverId: Long): String? {

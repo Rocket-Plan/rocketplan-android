@@ -161,6 +161,8 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                             "⚠️ [handlePendingLocationUpdate] Retry still got 409; recording conflict for user resolution"
                         )
                         // Record conflict for user resolution instead of silent server restore
+                        // Note: floorNumber is included in local version from payload but server DTO
+                        // doesn't return it, so we can only show what the user tried to set
                         val conflict = OfflineConflictResolutionEntity(
                             conflictId = UuidUtils.generateUuidV7(),
                             entityType = "location",
@@ -169,6 +171,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                             localVersion = ctx.gson.toJson(mapOf<String, Any?>(
                                 "name" to payload.name,
                                 "title" to location.title,
+                                "floorNumber" to payload.floorNumber,
                                 "isAccessible" to payload.isAccessible
                             )).toByteArray(Charsets.UTF_8),
                             remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
@@ -177,7 +180,8 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                                 "isAccessible" to freshLocation.isAccessible
                             )).toByteArray(Charsets.UTF_8),
                             conflictType = "UPDATE_CONFLICT",
-                            detectedAt = ctx.now()
+                            detectedAt = ctx.now(),
+                            originalOperationId = operation.operationId
                         )
                         ctx.recordConflict(conflict)
                         return OperationOutcome.CONFLICT_PENDING

@@ -37,6 +37,7 @@ class ConflictListFragment : Fragment() {
     private lateinit var batchActionsCard: MaterialCardView
     private lateinit var keepAllLocalButton: MaterialButton
     private lateinit var keepAllServerButton: MaterialButton
+    private lateinit var dismissAllButton: MaterialButton
     private lateinit var conflictRecyclerView: RecyclerView
     private lateinit var emptyState: LinearLayout
     private lateinit var loadingState: FrameLayout
@@ -58,6 +59,7 @@ class ConflictListFragment : Fragment() {
         batchActionsCard = view.findViewById(R.id.batchActionsCard)
         keepAllLocalButton = view.findViewById(R.id.keepAllLocalButton)
         keepAllServerButton = view.findViewById(R.id.keepAllServerButton)
+        dismissAllButton = view.findViewById(R.id.dismissAllButton)
         conflictRecyclerView = view.findViewById(R.id.conflictRecyclerView)
         emptyState = view.findViewById(R.id.emptyState)
         loadingState = view.findViewById(R.id.loadingState)
@@ -89,6 +91,10 @@ class ConflictListFragment : Fragment() {
 
         keepAllServerButton.setOnClickListener {
             showBatchResolutionConfirmation(ConflictResolution.KEEP_SERVER)
+        }
+
+        dismissAllButton.setOnClickListener {
+            showBatchResolutionConfirmation(ConflictResolution.DISMISS)
         }
     }
 
@@ -137,6 +143,7 @@ class ConflictListFragment : Fragment() {
                 viewModel.resolving.collectLatest { resolving ->
                     keepAllLocalButton.isEnabled = !resolving
                     keepAllServerButton.isEnabled = !resolving
+                    dismissAllButton.isEnabled = !resolving
                 }
             }
         }

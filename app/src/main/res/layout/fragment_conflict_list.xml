@@ -44,30 +44,47 @@
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
+                android:orientation="vertical"
                 android:padding="12dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/keepAllLocalButton"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/conflict_keep_all_local"
-                    android:textAllCaps="false"
-                    app:strokeColor="@color/main_purple" />
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/keepAllLocalButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/conflict_keep_all_local"
+                        android:textAllCaps="false"
+                        app:strokeColor="@color/main_purple" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/keepAllServerButton"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:text="@string/conflict_keep_all_server"
+                        android:textAllCaps="false"
+                        app:strokeColor="@color/main_purple" />
+
+                </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/keepAllServerButton"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
+                    android:id="@+id/dismissAllButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="@string/conflict_keep_all_server"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/conflict_dismiss_all"
                     android:textAllCaps="false"
-                    app:strokeColor="@color/main_purple" />
+                    android:textColor="@color/light_text_rp" />
 
             </LinearLayout>
 

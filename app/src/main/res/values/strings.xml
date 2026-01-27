@@ -612,10 +612,12 @@
     <string name="conflict_banner_review">Review</string>
     <string name="conflict_banner_icon_description">Conflict warning icon</string>
     <string name="conflict_keep_local">Keep Mine</string>
+    <string name="conflict_keep_local_unavailable">Keep Mine (N/A)</string>
     <string name="conflict_keep_server">Keep Server</string>
     <string name="conflict_dismiss">Dismiss (Ignore This Conflict)</string>
     <string name="conflict_keep_all_local">Keep All Mine</string>
     <string name="conflict_keep_all_server">Keep All Server</string>
+    <string name="conflict_dismiss_all">Dismiss All</string>
     <string name="conflict_your_version">Your Version</string>
     <string name="conflict_server_version">Server Version</string>
     <string name="conflict_entity_icon_description">Conflict entity type icon</string>
