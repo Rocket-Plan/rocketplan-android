@@ -429,27 +429,17 @@ class ConflictRepository(
     }
 
     private suspend fun reEnqueueProperty(conflict: OfflineConflictResolutionEntity, lockTimestamp: String) {
-        val property = localDataService.getProperty(conflict.entityId)
-
-        val payload = mapOf(
-            "propertyId" to conflict.entityId,
-            "propertyUuid" to conflict.entityUuid,
-            "lockUpdatedAt" to lockTimestamp
-        )
-
-        localDataService.enqueueSyncOperation(
-            OfflineSyncQueueEntity(
-                operationId = UuidUtils.generateUuidV7(),
-                entityType = "property",
-                entityId = conflict.entityId,
-                entityUuid = conflict.entityUuid,
-                operationType = SyncOperationType.UPDATE,
-                payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
-                createdAt = Date(),
-                scheduledAt = Date(),
-                status = SyncStatus.PENDING
-            )
-        )
+        // Property updates require a full PropertyMutationRequest with fields like
+        // propertyTypeId, isCommercial, yearBuilt, etc. These are not stored in the
+        // local entity or conflict data. Properties are essentially immutable after
+        // creation, so conflict resolution for properties should prefer KEEP_SERVER
+        // or DISMISS rather than KEEP_LOCAL.
+        //
+        // Log a warning but don't enqueue an invalid operation that would be dropped.
+        Log.w(TAG, "Property conflicts cannot be re-synced via KEEP_LOCAL - " +
+            "property updates require full PropertyMutationRequest. " +
+            "Property ${conflict.entityId} conflict marked resolved but not re-synced. " +
+            "User should choose KEEP_SERVER or DISMISS for property conflicts.")
     }
 
     private suspend fun reEnqueueNote(conflict: OfflineConflictResolutionEntity, lockTimestamp: String) {

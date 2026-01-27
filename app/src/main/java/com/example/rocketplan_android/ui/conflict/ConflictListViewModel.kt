@@ -78,8 +78,11 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
                         // Use enhanced resolution with fresh timestamp fetching
                         val success = conflictRepository.resolveKeepLocalWithFreshTimestamp(conflictId)
                         if (!success) {
-                            // Max requeue attempts exceeded - fall back to basic resolution
-                            conflictRepository.resolveKeepLocal(conflictId)
+                            // Max requeue attempts exceeded - auto-dismiss to prevent infinite loops
+                            // The conflict has been retried too many times and keeps failing
+                            android.util.Log.w("ConflictListViewModel",
+                                "Conflict $conflictId exceeded max requeue attempts, auto-dismissing")
+                            conflictRepository.resolveDismiss(conflictId)
                         }
                     }
                     ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflictId)
@@ -107,8 +110,10 @@ class ConflictListViewModel(application: Application) : AndroidViewModel(applica
                                 // Use enhanced resolution with fresh timestamp fetching
                                 val success = conflictRepository.resolveKeepLocalWithFreshTimestamp(conflict.conflictId)
                                 if (!success) {
-                                    // Max requeue attempts exceeded - fall back to basic resolution
-                                    conflictRepository.resolveKeepLocal(conflict.conflictId)
+                                    // Max requeue attempts exceeded - auto-dismiss to prevent infinite loops
+                                    android.util.Log.w("ConflictListViewModel",
+                                        "Conflict ${conflict.conflictId} exceeded max requeue attempts, auto-dismissing")
+                                    conflictRepository.resolveDismiss(conflict.conflictId)
                                 }
                             }
                             ConflictResolution.KEEP_SERVER -> conflictRepository.resolveKeepServer(conflict.conflictId)

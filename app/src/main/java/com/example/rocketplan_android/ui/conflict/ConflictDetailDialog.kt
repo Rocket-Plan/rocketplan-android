@@ -43,6 +43,7 @@ class ConflictDetailDialog : BottomSheetDialogFragment() {
     private lateinit var changedFieldsInfo: TextView
     private lateinit var keepLocalButton: MaterialButton
     private lateinit var keepServerButton: MaterialButton
+    private lateinit var dismissButton: MaterialButton
 
     private var conflictId: String? = null
     private var currentConflict: ConflictItem? = null
@@ -67,6 +68,7 @@ class ConflictDetailDialog : BottomSheetDialogFragment() {
         changedFieldsInfo = view.findViewById(R.id.changedFieldsInfo)
         keepLocalButton = view.findViewById(R.id.keepLocalButton)
         keepServerButton = view.findViewById(R.id.keepServerButton)
+        dismissButton = view.findViewById(R.id.dismissButton)
 
         setupButtons()
         loadConflictDetails()
@@ -79,6 +81,10 @@ class ConflictDetailDialog : BottomSheetDialogFragment() {
 
         keepServerButton.setOnClickListener {
             resolveConflict(ConflictResolution.KEEP_SERVER)
+        }
+
+        dismissButton.setOnClickListener {
+            resolveConflict(ConflictResolution.DISMISS)
         }
     }
 
@@ -174,6 +180,7 @@ class ConflictDetailDialog : BottomSheetDialogFragment() {
 
         keepLocalButton.isEnabled = false
         keepServerButton.isEnabled = false
+        dismissButton.isEnabled = false
 
         viewModel.resolveConflict(id, resolution)
 
