@@ -600,13 +600,23 @@ class SyncQueueManager(
                     lastSynced == null || lastSynced < recentCutoff
                 }
 
-                eligible.forEachIndexed { index, project ->
+                // Sort by most recent (updatedAt descending) to prioritize recent projects
+                val sortedByRecency = eligible.sortedByDescending { it.updatedAt?.time ?: 0L }
+
+                // Only do full content sync (photos/metadata) for the N most recent projects
+                val topNForFullSync = sortedByRecency.take(MAX_FULL_SYNC_PROJECTS).map { it.projectId }.toSet()
+
+                Log.d(TAG, "📊 Queuing ${eligible.size} projects: ${topNForFullSync.size} for full sync, ${eligible.size - topNForFullSync.size} essentials-only")
+
+                sortedByRecency.forEachIndexed { index, project ->
+                    val skipContent = !topNForFullSync.contains(project.projectId)
                     enqueue(
                         SyncJob.SyncProjectGraph(
                             projectId = project.projectId,
                             prio = 2 + index,
                             skipPhotos = true,
-                            mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY
+                            mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY,
+                            skipContentSync = skipContent
                         )
                     )
                     remoteLogger.log(
@@ -617,7 +627,8 @@ class SyncQueueManager(
                             "projectId" to project.projectId.toString(),
                             "prio" to (2 + index).toString(),
                             "lastSyncedAt" to (project.lastSyncedAt?.time?.toString() ?: "null"),
-                            "recentCutoff" to recentCutoff.toString()
+                            "recentCutoff" to recentCutoff.toString(),
+                            "skipContentSync" to skipContent.toString()
                         )
                     )
                 }
@@ -749,35 +760,40 @@ class SyncQueueManager(
                 // Wait for completion
                 syncJob.join()
 
-                // If fast sync succeeded, queue photo sync (unless already pending)
+                // If fast sync succeeded, queue photo sync (unless skipContentSync or already pending)
                 if (syncSucceeded && mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
-                    val shouldEnqueuePhotos = mutex.withLock {
-                        if (pendingPhotoSyncs.contains(job.projectId)) {
-                            Log.d(TAG, "⏭️ Photo sync already pending for project ${job.projectId}, skipping duplicate")
-                            false
-                        } else {
-                            // Drop any queued FAST job so the full photo run can start immediately.
-                            taskIndex[job.key]?.let { existing ->
-                                Log.d(TAG, "♻️ Replacing queued FAST job with FULL sync for project ${job.projectId}")
-                                queue.remove(existing)
-                                taskIndex.remove(existing.key)
+                    // Skip content sync for older projects (not in top N most recent)
+                    if (job.skipContentSync) {
+                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, skipping content sync (not in top $MAX_FULL_SYNC_PROJECTS)")
+                    } else {
+                        val shouldEnqueuePhotos = mutex.withLock {
+                            if (pendingPhotoSyncs.contains(job.projectId)) {
+                                Log.d(TAG, "⏭️ Photo sync already pending for project ${job.projectId}, skipping duplicate")
+                                false
+                            } else {
+                                // Drop any queued FAST job so the full photo run can start immediately.
+                                taskIndex[job.key]?.let { existing ->
+                                    Log.d(TAG, "♻️ Replacing queued FAST job with FULL sync for project ${job.projectId}")
+                                    queue.remove(existing)
+                                    taskIndex.remove(existing.key)
+                                }
+                                pendingPhotoSyncs.add(job.projectId)
+                                updatePhotoSyncingProjectsLocked()
+                                true
                             }
-                            pendingPhotoSyncs.add(job.projectId)
-                            updatePhotoSyncingProjectsLocked()
-                            true
                         }
-                    }
-                    if (shouldEnqueuePhotos) {
-                        val followUpPrio = job.prio + 1
-                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority $followUpPrio")
-                        enqueue(
-                            SyncJob.SyncProjectGraph(
-                                projectId = job.projectId,
-                                prio = followUpPrio,
-                                skipPhotos = false,
-                                mode = SyncJob.ProjectSyncMode.CONTENT_ONLY
+                        if (shouldEnqueuePhotos) {
+                            val followUpPrio = job.prio + 1
+                            Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority $followUpPrio")
+                            enqueue(
+                                SyncJob.SyncProjectGraph(
+                                    projectId = job.projectId,
+                                    prio = followUpPrio,
+                                    skipPhotos = false,
+                                    mode = SyncJob.ProjectSyncMode.CONTENT_ONLY
+                                )
                             )
-                        )
+                        }
                     }
                 }
 
@@ -854,6 +870,9 @@ class SyncQueueManager(
         private const val RECENT_SYNC_THRESHOLD_MS = 5 * 60 * 1000L
         // Interval to check for backoff-scheduled operations that are now due
         private const val SCHEDULED_RETRY_CHECK_INTERVAL_MS = 30_000L
+        // Only do full content sync (photos/metadata) for this many most recent projects
+        // Other projects get essentials-only (fast sync) for navigation
+        private const val MAX_FULL_SYNC_PROJECTS = 10
     }
 
     private suspend fun focusProjectSync(projectId: Long) {
@@ -905,7 +924,8 @@ class SyncQueueManager(
             return
         }
         Log.d(TAG, "🚀 Foreground sync for project $projectId (FAST mode - rooms only)")
-        enqueue(SyncJob.SyncProjectGraph(projectId = projectId, prio = FOREGROUND_PRIORITY, skipPhotos = true))
+        // Foreground projects always get full sync (skipContentSync=false)
+        enqueue(SyncJob.SyncProjectGraph(projectId = projectId, prio = FOREGROUND_PRIORITY, skipPhotos = true, skipContentSync = false))
     }
 
     private fun updatePhotoSyncingProjectsLocked() {

@@ -24,6 +24,8 @@ sealed class SyncJob(
         val projectId: Long,
         val prio: Int = 3,
         val skipPhotos: Boolean = false,
-        val mode: ProjectSyncMode = if (skipPhotos) ProjectSyncMode.ESSENTIALS_ONLY else ProjectSyncMode.FULL
+        val mode: ProjectSyncMode = if (skipPhotos) ProjectSyncMode.ESSENTIALS_ONLY else ProjectSyncMode.FULL,
+        /** If true, skip CONTENT_ONLY (photos/metadata) sync after ESSENTIALS_ONLY completes */
+        val skipContentSync: Boolean = false
     ) : SyncJob(priority = prio, key = "project_$projectId")
 }
