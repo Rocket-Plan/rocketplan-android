@@ -1,7 +1,5 @@
 package com.example.rocketplan_android.ui.auth
 
-import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -15,11 +13,13 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.databinding.FragmentEmailCheckBinding
+import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -40,8 +40,12 @@ class EmailCheckFragment : Fragment() {
     private val binding get() = _binding!!
 
     private val viewModel: EmailCheckViewModel by viewModels()
+    private val googleSignInViewModel: GoogleSignInViewModel by viewModels()
     private val authRepository by lazy {
         (requireActivity().application as RocketPlanApplication).authRepository
+    }
+    private val syncQueueManager by lazy {
+        (requireActivity().application as RocketPlanApplication).syncQueueManager
     }
 
     override fun onCreateView(
@@ -58,6 +62,7 @@ class EmailCheckFragment : Fragment() {
         setupInputListeners()
         setupSocialButtons()
         setupObservers()
+        setupGoogleSignInObservers()
     }
 
     private fun setupInputListeners() {
@@ -96,7 +101,7 @@ class EmailCheckFragment : Fragment() {
         }
         binding.googleButton.setOnClickListener {
             hideKeyboard()
-            launchOAuth(PROVIDER_GOOGLE)
+            signInWithGoogle()
         }
         binding.appleButton.setOnClickListener {
             hideKeyboard()
@@ -149,6 +154,71 @@ class EmailCheckFragment : Fragment() {
         }
     }
 
+    private fun setupGoogleSignInObservers() {
+        googleSignInViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.continueButton.isEnabled = !isLoading
+            binding.emailInput.isEnabled = !isLoading
+            binding.facebookButton.isEnabled = !isLoading
+            binding.googleButton.isEnabled = !isLoading
+            binding.appleButton.isEnabled = !isLoading
+        }
+
+        googleSignInViewModel.errorMessage.observe(viewLifecycleOwner) { error ->
+            if (!error.isNullOrBlank()) {
+                binding.errorText.text = error
+                binding.errorText.visibility = View.VISIBLE
+                googleSignInViewModel.clearError()
+            }
+        }
+
+        googleSignInViewModel.signInSuccess.observe(viewLifecycleOwner) { success ->
+            if (success == true) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    syncQueueManager.ensureInitialSync()
+                }
+                val action = EmailCheckFragmentDirections.actionEmailCheckFragmentToNavHome()
+                findNavController().navigate(action)
+                googleSignInViewModel.onSignInSuccessHandled()
+            }
+        }
+
+        googleSignInViewModel.shouldFallbackToWebView.observe(viewLifecycleOwner) { shouldFallback ->
+            if (shouldFallback == true) {
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "Falling back to WebView OAuth for Google Sign-In")
+                }
+                launchOAuth(PROVIDER_GOOGLE)
+                googleSignInViewModel.onFallbackHandled()
+            }
+        }
+    }
+
+    /**
+     * Attempt native Google Sign-In via Credential Manager.
+     * Falls back to WebView OAuth if unavailable.
+     */
+    private fun signInWithGoogle() {
+        if (BuildConfig.HAS_FLIR_SUPPORT) {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Skipping Google Sign-In on FLIR build")
+            }
+            return
+        }
+
+        if (googleSignInViewModel.isNativeSignInAvailable()) {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Using native Google Sign-In via Credential Manager")
+            }
+            googleSignInViewModel.signIn()
+        } else {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Native Google Sign-In not available, using WebView OAuth")
+            }
+            launchOAuth(PROVIDER_GOOGLE)
+        }
+    }
+
     private fun launchOAuth(provider: String) {
         if (BuildConfig.HAS_FLIR_SUPPORT) {
             if (BuildConfig.ENABLE_LOGGING) {
@@ -174,24 +244,18 @@ class EmailCheckFragment : Fragment() {
         }
 
         runCatching {
-            // Google requires external browser - WebView is blocked with disallowed_useragent
-            if (provider == PROVIDER_GOOGLE) {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(oauthUrl))
-                startActivity(intent)
-            } else {
-                // Facebook and Apple can use WebView
-                val title = when (provider) {
-                    PROVIDER_APPLE -> getString(R.string.apple_sign_in_title)
-                    PROVIDER_FACEBOOK -> getString(R.string.facebook_sign_in_title)
-                    else -> getString(R.string.oauth_sign_in_title, provider.replaceFirstChar { it.uppercase() })
-                }
-                val action =
-                    EmailCheckFragmentDirections.actionEmailCheckFragmentToOauthWebViewFragment(
-                        url = oauthUrl,
-                        title = title
-                    )
-                findNavController().navigate(action)
+            val title = when (provider) {
+                PROVIDER_GOOGLE -> getString(R.string.google_sign_in_title)
+                PROVIDER_APPLE -> getString(R.string.apple_sign_in_title)
+                PROVIDER_FACEBOOK -> getString(R.string.facebook_sign_in_title)
+                else -> getString(R.string.oauth_sign_in_title, provider.replaceFirstChar { it.uppercase() })
             }
+            val action =
+                EmailCheckFragmentDirections.actionEmailCheckFragmentToOauthWebViewFragment(
+                    url = oauthUrl,
+                    title = title
+                )
+            findNavController().navigate(action)
         }.onFailure { throwable ->
             Log.e(TAG, "Failed to launch $provider OAuth flow", throwable)
             Toast.makeText(

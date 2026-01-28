@@ -7,6 +7,7 @@ import com.example.rocketplan_android.data.model.ApiError
 import com.example.rocketplan_android.data.model.ApiErrorException
 import com.example.rocketplan_android.data.model.CheckEmailRequest
 import com.example.rocketplan_android.data.model.CheckEmailResponse
+import com.example.rocketplan_android.data.model.GoogleAuthRequest
 import com.example.rocketplan_android.data.model.ResetPasswordRequest
 import com.example.rocketplan_android.data.model.ResetPasswordResponse
 import com.example.rocketplan_android.data.model.LoginRequest
@@ -195,9 +196,56 @@ class AuthRepository(
         }
     }
 
-    // Note: Google OAuth Sign-In is now handled via Chrome Custom Tabs + deep link callback
+    /**
+     * Sign in with Google ID token from Credential Manager
+     * Sends the Google ID token to backend for verification
+     * Backend returns app JWT on success
+     */
+    suspend fun signInWithGoogle(idToken: String): Result<AuthSession> {
+        return try {
+            val response = authService.authenticateWithGoogle(GoogleAuthRequest(idToken))
+
+            if (response.isSuccessful && response.body() != null) {
+                val authResponse = response.body()!!
+
+                // Save token
+                saveAuthToken(authResponse.token)
+
+                // Clear Remember Me related preferences for OAuth sign-in
+                secureStorage.setRememberMe(false)
+                secureStorage.clearEncryptedPassword()
+
+                val userContextResult = refreshUserContext()
+                if (userContextResult.isFailure) {
+                    return Result.failure(userContextResult.exceptionOrNull()!!)
+                }
+                val currentUser = userContextResult.getOrNull()!!
+
+                // Save email from user context
+                secureStorage.saveUserEmail(currentUser.email)
+
+                Result.success(
+                    AuthSession(
+                        token = authResponse.token,
+                        user = currentUser
+                    )
+                )
+            } else {
+                val errorBody = response.errorBody()?.string()
+                val apiError = when (response.code()) {
+                    401, 403 -> ApiError.forAuthScenario("invalid_credentials")
+                    else -> ApiError.fromHttpResponse(response.code(), errorBody)
+                }
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    // Note: Google OAuth Sign-In via WebView is still supported as fallback
     // See MainActivity.handleOAuthCallback() for OAuth token handling
-    // No repository method needed as the backend returns JWT token directly via deep link
 
     // ==================== Token Management ====================
 

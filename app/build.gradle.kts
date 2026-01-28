@@ -64,6 +64,8 @@ android {
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
             buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnDev\"")
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnDev.isNotBlank()}")
+            // Google Web Client ID for Credential Manager (from Google Cloud Console)
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.dev", "")}\"")
 
             // Custom resources for dev
             resValue("string", "app_name", "RocketPlan Dev")
@@ -81,6 +83,8 @@ android {
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
             buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnStaging\"")
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnStaging.isNotBlank()}")
+            // Google Web Client ID for Credential Manager (from Google Cloud Console)
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.staging", "")}\"")
 
             // Custom resources for staging
             resValue("string", "app_name", "RocketPlan Staging")
@@ -96,6 +100,8 @@ android {
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
             buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnProd\"")
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnProd.isNotBlank()}")
+            // Google Web Client ID for Credential Manager (from Google Cloud Console)
+            buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.prod", "")}\"")
 
             // Custom resources for production
             resValue("string", "app_name", "RocketPlan")
@@ -264,6 +270,11 @@ dependencies {
 
     // Chrome Custom Tabs for OAuth flow
     implementation(libs.androidx.browser)
+
+    // Credential Manager for native Google Sign-In
+    implementation(libs.credentials)
+    implementation(libs.credentials.play.services)
+    implementation(libs.googleid)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)

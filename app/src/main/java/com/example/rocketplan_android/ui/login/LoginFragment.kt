@@ -24,6 +24,7 @@ import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.databinding.FragmentLoginBinding
+import com.example.rocketplan_android.ui.auth.GoogleSignInViewModel
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
@@ -46,8 +47,12 @@ class LoginFragment : Fragment() {
     private val args: LoginFragmentArgs by navArgs()
 
     private val viewModel: LoginViewModel by viewModels()
+    private val googleSignInViewModel: GoogleSignInViewModel by viewModels()
     private val authRepository by lazy {
         (requireActivity().application as RocketPlanApplication).authRepository
+    }
+    private val syncQueueManager by lazy {
+        (requireActivity().application as RocketPlanApplication).syncQueueManager
     }
 
     override fun onCreateView(
@@ -68,6 +73,7 @@ class LoginFragment : Fragment() {
         setupInputFields()
         setupButtons()
         observeViewModel()
+        setupGoogleSignInObservers()
 
         val emailArg = args.email
         if (!emailArg.isNullOrBlank()) {
@@ -202,21 +208,60 @@ class LoginFragment : Fragment() {
         viewModel.signInSuccess.observe(viewLifecycleOwner) { success ->
             if (success == true) {
                 viewLifecycleOwner.lifecycleScope.launch {
-                    (requireActivity().application as RocketPlanApplication)
-                        .syncQueueManager
-                        .ensureInitialSync()
+                    syncQueueManager.ensureInitialSync()
                 }
                 val action = LoginFragmentDirections.actionLoginFragmentToNavHome()
                 findNavController().navigate(action)
                 viewModel.onSignInSuccessHandled()
             }
         }
+    }
 
+    private fun setupGoogleSignInObservers() {
+        googleSignInViewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            // Combine with login viewmodel loading state
+            val loginLoading = viewModel.isLoading.value == true
+            val anyLoading = isLoading || loginLoading
+            binding.loadingIndicator.visibility = if (anyLoading) View.VISIBLE else View.GONE
+            binding.signInButton.isEnabled = !anyLoading && (viewModel.emailError.value == null && viewModel.passwordError.value == null)
+            binding.emailInputLayout.isEnabled = !anyLoading
+            binding.passwordInputLayout.isEnabled = !anyLoading
+            binding.googleSignInButton.isEnabled = allowThirdPartyAuth && !anyLoading
+        }
+
+        googleSignInViewModel.errorMessage.observe(viewLifecycleOwner) { error ->
+            if (!error.isNullOrBlank()) {
+                binding.errorText.text = error
+                binding.errorText.visibility = View.VISIBLE
+                googleSignInViewModel.clearError()
+            }
+        }
+
+        googleSignInViewModel.signInSuccess.observe(viewLifecycleOwner) { success ->
+            if (success == true) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    syncQueueManager.ensureInitialSync()
+                }
+                val action = LoginFragmentDirections.actionLoginFragmentToNavHome()
+                findNavController().navigate(action)
+                googleSignInViewModel.onSignInSuccessHandled()
+            }
+        }
+
+        googleSignInViewModel.shouldFallbackToWebView.observe(viewLifecycleOwner) { shouldFallback ->
+            if (shouldFallback == true) {
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "Falling back to WebView OAuth for Google Sign-In")
+                }
+                launchGoogleOAuthWebView()
+                googleSignInViewModel.onFallbackHandled()
+            }
+        }
     }
 
     /**
-     * Initiate Google Sign-In flow using OAuth via Chrome Custom Tabs
-     * Matches iOS implementation using backend-driven OAuth
+     * Initiate Google Sign-In flow.
+     * Tries native Credential Manager first, falls back to WebView OAuth.
      */
     private fun signInWithGoogle() {
         if (!allowThirdPartyAuth) {
@@ -226,8 +271,25 @@ class LoginFragment : Fragment() {
             return
         }
 
+        if (googleSignInViewModel.isNativeSignInAvailable()) {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Using native Google Sign-In via Credential Manager")
+            }
+            googleSignInViewModel.signIn()
+        } else {
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "Native Google Sign-In not available, using WebView OAuth")
+            }
+            launchGoogleOAuthWebView()
+        }
+    }
+
+    /**
+     * Launch Google OAuth flow via WebView (fallback method)
+     */
+    private fun launchGoogleOAuthWebView() {
         if (BuildConfig.ENABLE_LOGGING) {
-            Log.d(TAG, "Starting Google OAuth flow...")
+            Log.d(TAG, "Starting Google OAuth WebView flow...")
         }
 
         val schema = when (BuildConfig.ENVIRONMENT) {

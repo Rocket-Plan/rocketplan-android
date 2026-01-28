@@ -23,6 +23,12 @@
         <action
             android:id="@+id/action_emailCheckFragment_to_oauthWebViewFragment"
             app:destination="@id/oauthWebViewFragment" />
+
+        <action
+            android:id="@+id/action_emailCheckFragment_to_nav_home"
+            app:destination="@id/nav_projects"
+            app:popUpTo="@id/emailCheckFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <!-- Login Fragment -->

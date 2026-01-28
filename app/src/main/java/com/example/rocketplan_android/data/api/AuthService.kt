@@ -3,6 +3,8 @@ package com.example.rocketplan_android.data.api
 import com.example.rocketplan_android.data.model.CheckEmailRequest
 import com.example.rocketplan_android.data.model.CheckEmailResponse
 import com.example.rocketplan_android.data.model.CurrentUserEnvelope
+import com.example.rocketplan_android.data.model.GoogleAuthRequest
+import com.example.rocketplan_android.data.model.GoogleAuthResponse
 import com.example.rocketplan_android.data.model.ResetPasswordRequest
 import com.example.rocketplan_android.data.model.ResetPasswordResponse
 import com.example.rocketplan_android.data.model.LoginRequest
@@ -41,6 +43,14 @@ interface AuthService {
      */
     @POST("api/auth/register")
     suspend fun register(@Body request: RegisterRequest): Response<LoginResponse>
+
+    /**
+     * Authenticate with Google ID token
+     * Endpoint: POST /api/auth/google
+     * Backend verifies the Google ID token and returns app JWT
+     */
+    @POST("api/auth/google")
+    suspend fun authenticateWithGoogle(@Body request: GoogleAuthRequest): Response<GoogleAuthResponse>
 
     /**
      * Request password reset
