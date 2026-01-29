@@ -11,6 +11,7 @@ import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
+import com.example.rocketplan_android.data.model.offline.UpdatedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
 import com.example.rocketplan_android.data.model.CreateLocationRequest
@@ -508,6 +509,14 @@ interface OfflineSyncApi {
         @Query("since") since: String,
         @Query("types[]") types: List<String>? = null
     ): Response<DeletedRecordsResponse>
+
+    @GET("/api/sync/updated")
+    suspend fun getUpdatedRecords(
+        @Query("since") since: String,
+        @Query("types[]") types: List<String>? = null,
+        @Query("limit") limit: Int? = null,
+        @Query("project_id") projectId: Long? = null
+    ): Response<UpdatedRecordsResponse>
 
     // ============================================================================
     // Support

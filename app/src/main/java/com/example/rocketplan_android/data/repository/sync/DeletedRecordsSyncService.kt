@@ -6,6 +6,8 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.util.DateUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +23,7 @@ class DeletedRecordsSyncService(
     private val localDataService: LocalDataService,
     private val syncCheckpointStore: SyncCheckpointStore,
     private val photoCacheManager: PhotoCacheManager? = null,
+    private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     suspend fun syncDeletedRecords(types: List<String> = DEFAULT_TYPES): Result<Unit> = withContext(ioDispatcher) {
@@ -92,10 +95,37 @@ class DeletedRecordsSyncService(
         } else {
             Log.w(TAG, "⚠️ [syncDeletedRecords] Missing Date header; checkpoint not advanced")
         }
+        val summary = buildMap {
+            put("projects", body.projects.size)
+            put("properties", body.properties.size)
+            put("rooms", body.rooms.size)
+            put("locations", body.locations.size)
+            put("photos", body.photos.size)
+            put("notes", body.notes.size)
+            put("equipment", body.equipment.size)
+            put("damageMaterials", body.damageMaterials.size)
+            put("damageMaterialRoomLogs", body.damageMaterialRoomLogs.size)
+            put("moistureLogs", body.moistureLogs.size)
+            put("atmosphericLogs", body.atmosphericLogs.size)
+            put("workScopeActions", body.workScopeActions.size)
+        }
+        val totalDeleted = summary.values.sum()
         Log.d(
             TAG,
-            "✅ [syncDeletedRecords] Applied deletions projects=${body.projects.size}, rooms=${body.rooms.size}, " +
-                "photos=${body.photos.size}, notes=${body.notes.size}"
+            "✅ [syncDeletedRecords] Applied deletions projects=${body.projects.size}, properties=${body.properties.size}, " +
+                "rooms=${body.rooms.size}, photos=${body.photos.size}, notes=${body.notes.size}, total=$totalDeleted"
+        )
+        remoteLogger?.log(
+            LogLevel.INFO,
+            TAG,
+            "Deleted records sync completed",
+            buildMap {
+                put("since", sinceParam)
+                put("totalDeleted", totalDeleted.toString())
+                summary.forEach { (key, value) ->
+                    if (value > 0) put(key, value.toString())
+                }
+            }
         )
         Result.success(Unit)
     }
@@ -112,6 +142,7 @@ class DeletedRecordsSyncService(
 
         // Apply remaining deletions for entities the server explicitly listed
         // (these may be redundant for project children but are idempotent)
+        localDataService.markPropertiesDeleted(response.properties)
         localDataService.markRoomsDeleted(response.rooms)
         localDataService.markLocationsDeleted(response.locations)
         localDataService.markPhotosDeleted(response.photos)
@@ -119,20 +150,24 @@ class DeletedRecordsSyncService(
         localDataService.markEquipmentDeleted(response.equipment)
         localDataService.markDamagesDeleted(response.damageMaterials)
         localDataService.markAtmosphericLogsDeleted(response.atmosphericLogs)
-        localDataService.markMoistureLogsDeleted(response.moistureLogs)
+        // Handle both moisture_logs and damage_material_room_logs (same entity type)
+        val allMoistureLogs = (response.moistureLogs + response.damageMaterialRoomLogs).distinct()
+        localDataService.markMoistureLogsDeleted(allMoistureLogs)
         localDataService.markWorkScopesDeleted(response.workScopeActions)
     }
 
     companion object {
-        // Note: moisture_logs and atmospheric_logs are not supported by the backend API
+        // Note: atmospheric_logs are not supported by the backend API
         val DEFAULT_TYPES = listOf(
             "projects",
+            "properties",
             "photos",
             "notes",
             "rooms",
             "locations",
             "equipment",
             "damage_materials",
+            "damage_material_room_logs",
             "work_scope_actions"
         )
         private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)

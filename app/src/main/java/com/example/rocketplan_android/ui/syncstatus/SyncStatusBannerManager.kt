@@ -5,7 +5,6 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.network.SyncNetworkMonitor
-import com.example.rocketplan_android.data.sync.SyncJob
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,14 +45,14 @@ class SyncStatusBannerManager(
     @OptIn(FlowPreview::class)
     private fun observeState() {
         scope.launch(Dispatchers.IO) {
-            // Combine network state, pending operations, and current sync job
+            // Combine network state, pending operations, and current sync progress
             combine(
                 syncNetworkMonitor.isOnline,
                 localDataService.observeSyncOperations(SyncStatus.PENDING),
                 localDataService.observeSyncOperations(SyncStatus.SYNCING),
-                syncQueueManager.currentSyncJob
-            ) { isOnline, pendingOps, syncingOps, currentJob ->
-                BannerInputs(isOnline, pendingOps, syncingOps, currentJob)
+                syncQueueManager.currentSyncProgress
+            ) { isOnline, pendingOps, syncingOps, currentProgress ->
+                BannerInputs(isOnline, pendingOps, syncingOps, currentProgress)
             }
                 .debounce(300) // Debounce to avoid rapid updates
                 .distinctUntilChanged()
@@ -69,11 +68,11 @@ class SyncStatusBannerManager(
         val isOnline: Boolean,
         val pendingOps: List<OfflineSyncQueueEntity>,
         val syncingOps: List<OfflineSyncQueueEntity>,
-        val currentSyncJob: SyncJob?
+        val currentSyncProgress: SyncQueueManager.SyncProgress?
     )
 
     private fun computeBannerState(inputs: BannerInputs): SyncStatusBannerState {
-        val (isOnline, pendingOps, syncingOps, currentJob) = inputs
+        val (isOnline, pendingOps, syncingOps, currentProgress) = inputs
 
         // If offline, show offline banner
         if (!isOnline) {
@@ -83,18 +82,17 @@ class SyncStatusBannerManager(
         // Combine pending and syncing operations (outgoing changes)
         val allActiveOps = pendingOps + syncingOps
 
-        // If there's a current refresh job (incoming sync from server), show it
-        if (currentJob != null) {
-            val description = getSyncJobDescription(currentJob)
-            if (description != null) {
-                // If we also have pending operations, mention them too
-                return if (allActiveOps.isNotEmpty()) {
-                    val items = aggregateByTypeCounts(allActiveOps)
-                    val pendingText = items.joinToString(", ") { it.displayName }
-                    SyncStatusBannerState.Refreshing("$description, uploading $pendingText")
-                } else {
-                    SyncStatusBannerState.Refreshing(description)
-                }
+        // If there's current sync progress (incoming sync from server), show it
+        if (currentProgress != null) {
+            // Use the detailed description from SyncProgress
+            val description = currentProgress.phaseDescription
+            // If we also have pending operations, mention them too
+            return if (allActiveOps.isNotEmpty()) {
+                val items = aggregateByTypeCounts(allActiveOps)
+                val pendingText = items.joinToString(", ") { it.displayName }
+                SyncStatusBannerState.Refreshing("$description, uploading $pendingText")
+            } else {
+                SyncStatusBannerState.Refreshing(description)
             }
         }
 
@@ -106,27 +104,6 @@ class SyncStatusBannerManager(
 
         // Nothing active, hide banner
         return SyncStatusBannerState.Hidden
-    }
-
-    /**
-     * Returns a human-readable description for the current sync job.
-     */
-    private fun getSyncJobDescription(job: SyncJob): String? {
-        return when (job) {
-            is SyncJob.EnsureUserContext -> "Loading user..."
-            is SyncJob.SyncProjects -> "Syncing projects..."
-            is SyncJob.SyncDeletedRecords -> "Syncing deletions..."
-            is SyncJob.ProcessPendingOperations -> null // Don't show for this, handled by pending ops
-            is SyncJob.SyncProjectGraph -> {
-                when (job.mode) {
-                    SyncJob.ProjectSyncMode.FULL -> "Syncing project..."
-                    SyncJob.ProjectSyncMode.ESSENTIALS_ONLY -> "Syncing rooms..."
-                    SyncJob.ProjectSyncMode.CONTENT_ONLY -> "Syncing content..."
-                    SyncJob.ProjectSyncMode.PHOTOS_ONLY -> "Syncing photos..."
-                    SyncJob.ProjectSyncMode.METADATA_ONLY -> "Syncing metadata..."
-                }
-            }
-        }
     }
 
     /**

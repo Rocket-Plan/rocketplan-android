@@ -367,7 +367,7 @@ class RemoteLogger(
     companion object {
         private const val TAG = "RemoteLogger"
         private const val PERIODIC_FLUSH_INTERVAL_MS = 5 * 1000L
-        private const val MAX_BATCH_SIZE = 50
+        private const val MAX_BATCH_SIZE = 100
         private const val MAX_RETRY_QUEUE_SIZE = 10
         private const val MAX_RETRY_ATTEMPTS = 11
         private const val INITIAL_BACKOFF_SECONDS = 5L

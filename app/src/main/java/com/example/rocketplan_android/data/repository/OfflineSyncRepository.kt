@@ -170,6 +170,7 @@ class OfflineSyncRepository(
             localDataService = localDataService,
             syncCheckpointStore = syncCheckpointStore,
             photoCacheManager = photoCacheManager,
+            remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher
         )
     }
@@ -815,7 +816,6 @@ class OfflineSyncRepository(
                 }
             }
             results += result
-            logSegmentTelemetry(result, projectId, source)
             coroutineContext.ensureActive()
         }
 
@@ -824,29 +824,38 @@ class OfflineSyncRepository(
             "API",
             "✅ [syncProjectSegments] Completed ${segments.joinToString { it.name }} for project $projectId in ${duration}ms"
         )
+
+        // Log consolidated telemetry for all segments
+        logSegmentsTelemetry(results, projectId, duration, source)
+
         return results
     }
 
-    private fun logSegmentTelemetry(result: SyncResult, projectId: Long, source: String?) {
-        val status = when (result) {
-            is SyncResult.Success -> "success"
-            is SyncResult.Failure -> "failure"
-            is SyncResult.Incomplete -> "incomplete"
-        }
+    private fun logSegmentsTelemetry(results: List<SyncResult>, projectId: Long, totalDurationMs: Long, source: String?) {
+        val successCount = results.count { it.success }
+        val failureCount = results.count { it is SyncResult.Failure }
+        val incompleteCount = results.count { it is SyncResult.Incomplete }
+        val totalItems = results.sumOf { it.itemsSynced }
+
+        // Only log if there were failures/incomplete, or log a single success summary
+        val hasIssues = failureCount > 0 || incompleteCount > 0
         remoteLogger?.log(
-            level = if (result.success) LogLevel.INFO else LogLevel.WARN,
+            level = if (hasIssues) LogLevel.WARN else LogLevel.INFO,
             tag = "SyncTelemetry",
-            message = "Segment ${result.segment.name} $status",
+            message = if (hasIssues) "Project sync completed with issues" else "Project sync completed",
             metadata = buildMap {
-                put("segment", result.segment.name)
-                put("status", status)
                 put("projectId", projectId.toString())
-                put("itemsSynced", result.itemsSynced.toString())
-                put("durationMs", result.durationMs.toString())
+                put("segments", results.map { it.segment.name }.joinToString(","))
+                put("successCount", successCount.toString())
+                put("failureCount", failureCount.toString())
+                put("incompleteCount", incompleteCount.toString())
+                put("totalItemsSynced", totalItems.toString())
+                put("totalDurationMs", totalDurationMs.toString())
                 source?.let { put("source", it) }
-                result.error?.let { put("error", it.message ?: it.javaClass.simpleName) }
-                if (result is SyncResult.Incomplete) {
-                    put("incompleteReason", result.reason.name)
+                // Include failure details if any
+                results.filterIsInstance<SyncResult.Failure>().firstOrNull()?.let { failure ->
+                    put("firstFailureSegment", failure.segment.name)
+                    failure.error?.let { put("firstFailureError", it.message ?: it.javaClass.simpleName) }
                 }
             }
         )
@@ -1037,6 +1046,92 @@ class OfflineSyncRepository(
     suspend fun syncDeletedRecords(
         types: List<String> = DeletedRecordsSyncService.DEFAULT_TYPES
     ): Result<Unit> = deletedRecordsSyncService.syncDeletedRecords(types)
+
+    /**
+     * Checks if a project has any updates on the server since the given timestamp.
+     * Uses the /api/sync/updated endpoint with project_id filter to efficiently check
+     * without fetching full data.
+     *
+     * @param projectServerId The server ID of the project to check
+     * @param since ISO date string - check for updates at or after this time
+     * @return true if the project or related records have updates, false otherwise
+     */
+    suspend fun hasProjectUpdates(projectServerId: Long, since: String): Boolean {
+        return try {
+            val response = api.getUpdatedRecords(
+                since = since,
+                projectId = projectServerId,
+                limit = 100
+            )
+            if (!response.isSuccessful) {
+                Log.w("OfflineSyncRepository", "Failed to check for updates: ${response.code()}")
+                remoteLogger?.log(
+                    LogLevel.WARN,
+                    "OfflineSyncRepository",
+                    "Updated records check failed",
+                    mapOf(
+                        "projectServerId" to projectServerId.toString(),
+                        "since" to since,
+                        "httpCode" to response.code().toString()
+                    )
+                )
+                // If check fails, assume there might be updates to be safe
+                return true
+            }
+            val body = response.body() ?: return true
+
+            // With project_id filter, any results mean this project has updates
+            val hasUpdates = body.hasAnyUpdates()
+            if (hasUpdates) {
+                Log.d("OfflineSyncRepository", "Project $projectServerId has updates since $since")
+                // Log detailed counts for debugging sync behavior
+                val summary = buildMap {
+                    if (body.projects.isNotEmpty()) put("projects", body.projects.size)
+                    if (body.properties.isNotEmpty()) put("properties", body.properties.size)
+                    if (body.photos.isNotEmpty()) put("photos", body.photos.size)
+                    if (body.notes.isNotEmpty()) put("notes", body.notes.size)
+                    if (body.rooms.isNotEmpty()) put("rooms", body.rooms.size)
+                    if (body.locations.isNotEmpty()) put("locations", body.locations.size)
+                    if (body.equipment.isNotEmpty()) put("equipment", body.equipment.size)
+                    if (body.damageMaterials.isNotEmpty()) put("damageMaterials", body.damageMaterials.size)
+                    if (body.damageMaterialRoomLogs.isNotEmpty()) put("damageMaterialRoomLogs", body.damageMaterialRoomLogs.size)
+                    if (body.atmosphericLogs.isNotEmpty()) put("atmosphericLogs", body.atmosphericLogs.size)
+                    if (body.workScopeActions.isNotEmpty()) put("workScopeActions", body.workScopeActions.size)
+                    if (body.claims.isNotEmpty()) put("claims", body.claims.size)
+                    if (body.timecards.isNotEmpty()) put("timecards", body.timecards.size)
+                    if (body.supportConversations.isNotEmpty()) put("supportConversations", body.supportConversations.size)
+                    if (body.supportMessages.isNotEmpty()) put("supportMessages", body.supportMessages.size)
+                }
+                remoteLogger?.log(
+                    LogLevel.INFO,
+                    "OfflineSyncRepository",
+                    "Project has updates",
+                    buildMap {
+                        put("projectServerId", projectServerId.toString())
+                        put("since", since)
+                        summary.forEach { (key, value) -> put(key, value.toString()) }
+                    }
+                )
+            } else {
+                Log.d("OfflineSyncRepository", "No updates for project $projectServerId since $since")
+            }
+            hasUpdates
+        } catch (e: Exception) {
+            Log.e("OfflineSyncRepository", "Error checking for updates", e)
+            remoteLogger?.log(
+                LogLevel.ERROR,
+                "OfflineSyncRepository",
+                "Updated records check exception",
+                mapOf(
+                    "projectServerId" to projectServerId.toString(),
+                    "since" to since,
+                    "error" to (e.message ?: e.javaClass.simpleName)
+                )
+            )
+            // If check fails, assume there might be updates to be safe
+            true
+        }
+    }
 
     // ============================================================================
     // Photo Sync Operations - Delegated to PhotoSyncService

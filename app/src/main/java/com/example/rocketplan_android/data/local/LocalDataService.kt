@@ -1010,6 +1010,12 @@ class LocalDataService private constructor(
         }
     }
 
+    /** Hard-deletes properties by server IDs. Properties don't use soft-delete. */
+    suspend fun markPropertiesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.deletePropertiesByServerIds(serverIds)
+    }
+
     suspend fun markLocationsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
         dao.markLocationsDeleted(serverIds)

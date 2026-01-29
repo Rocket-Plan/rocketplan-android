@@ -892,6 +892,9 @@ interface OfflineDao {
     @Query("DELETE FROM offline_properties WHERE propertyId = :propertyId")
     suspend fun deleteProperty(propertyId: Long)
 
+    @Query("DELETE FROM offline_properties WHERE serverId IN (:serverIds)")
+    suspend fun deletePropertiesByServerIds(serverIds: List<Long>)
+
     @Query("SELECT * FROM offline_users WHERE companyId = :companyId")
     fun observeUsersForCompany(companyId: Long): Flow<List<OfflineUserEntity>>
 

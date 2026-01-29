@@ -10,6 +10,7 @@ import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.repository.SyncSegment
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.realtime.ProjectRealtimeManager
 import com.example.rocketplan_android.realtime.PhotoSyncRealtimeManager
 import com.example.rocketplan_android.work.PhotoCacheScheduler
@@ -63,6 +64,15 @@ class SyncQueueManager(
     /** Exposes the currently executing sync job for UI status display */
     private val _currentSyncJob = MutableStateFlow<SyncJob?>(null)
     val currentSyncJob: StateFlow<SyncJob?> = _currentSyncJob
+
+    /** Detailed sync progress for UI display - includes project UID and phase */
+    data class SyncProgress(
+        val job: SyncJob,
+        val projectUid: String?,
+        val phaseDescription: String
+    )
+    private val _currentSyncProgress = MutableStateFlow<SyncProgress?>(null)
+    val currentSyncProgress: StateFlow<SyncProgress?> = _currentSyncProgress
     private val initialSyncStarted = AtomicBoolean(false)
     private val _initialSyncCompleted = MutableStateFlow(false)
     val initialSyncCompleted: StateFlow<Boolean> = _initialSyncCompleted
@@ -475,11 +485,21 @@ class SyncQueueManager(
                 }
             } finally {
                 _currentSyncJob.value = null
+                _currentSyncProgress.value = null
             }
         }
     }
 
     private suspend fun execute(job: SyncJob) {
+        // Update progress with generic descriptions for non-project jobs
+        when (job) {
+            is SyncJob.EnsureUserContext -> _currentSyncProgress.value = SyncProgress(job, null, "Loading user data...")
+            is SyncJob.SyncProjects -> _currentSyncProgress.value = SyncProgress(job, null, "Loading project list...")
+            is SyncJob.SyncDeletedRecords -> _currentSyncProgress.value = SyncProgress(job, null, "Checking for deletions...")
+            is SyncJob.ProcessPendingOperations -> _currentSyncProgress.value = null // Don't show for pending ops
+            is SyncJob.SyncProjectGraph -> {} // Handled below with project lookup
+        }
+
         when (job) {
             SyncJob.EnsureUserContext -> {
                 authRepository.ensureUserContext()
@@ -619,16 +639,18 @@ class SyncQueueManager(
                             skipContentSync = skipContent
                         )
                     )
+                }
+
+                // Log batch summary instead of per-project
+                if (sortedByRecency.isNotEmpty()) {
                     remoteLogger.log(
                         LogLevel.INFO,
                         TAG,
-                        "Queued project for background sync",
+                        "Queued projects for background sync",
                         mapOf(
-                            "projectId" to project.projectId.toString(),
-                            "prio" to (2 + index).toString(),
-                            "lastSyncedAt" to (project.lastSyncedAt?.time?.toString() ?: "null"),
-                            "recentCutoff" to recentCutoff.toString(),
-                            "skipContentSync" to skipContent.toString()
+                            "totalQueued" to sortedByRecency.size.toString(),
+                            "fullSyncCount" to topNForFullSync.size.toString(),
+                            "essentialsOnlyCount" to (sortedByRecency.size - topNForFullSync.size).toString()
                         )
                     )
                 }
@@ -674,6 +696,23 @@ class SyncQueueManager(
                 }
 
                 val mode = job.mode
+
+                // Look up project UID once for detailed progress display
+                val project = localDataService.getProject(job.projectId)
+                val projectUid = project?.uid
+                val phaseDescription = when (mode) {
+                    SyncJob.ProjectSyncMode.FULL -> "full sync"
+                    SyncJob.ProjectSyncMode.ESSENTIALS_ONLY -> "rooms"
+                    SyncJob.ProjectSyncMode.CONTENT_ONLY -> "contents"
+                    SyncJob.ProjectSyncMode.PHOTOS_ONLY -> "photos"
+                    SyncJob.ProjectSyncMode.METADATA_ONLY -> "metadata"
+                }
+                val displayText = if (projectUid != null) {
+                    "$projectUid - $phaseDescription"
+                } else {
+                    "Project ${job.projectId} - $phaseDescription"
+                }
+                _currentSyncProgress.value = SyncProgress(job, projectUid, displayText)
                 var syncSucceeded = false
                 val syncJob = scope.launch {
                     try {
@@ -881,6 +920,18 @@ class SyncQueueManager(
             Log.d(TAG, "⏭️ Skipping foreground sync for unsynced project $projectId (no serverId yet)")
             return
         }
+
+        // Check if project has updates since last sync
+        val lastSyncedAt = project.lastSyncedAt
+        if (lastSyncedAt != null && isNetworkAvailable()) {
+            val sinceIso = DateUtils.formatApiDate(lastSyncedAt)
+            val hasUpdates = syncRepository.hasProjectUpdates(project.serverId, sinceIso)
+            if (!hasUpdates) {
+                Log.d(TAG, "⏭️ No updates for project $projectId since $sinceIso, skipping sync")
+                return
+            }
+        }
+
         try {
             val result = syncRepository.syncDeletedRecords()
             result.exceptionOrNull()?.let { error ->

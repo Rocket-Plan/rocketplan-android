@@ -187,15 +187,18 @@ class PhotoSyncService(
     }
 
     private fun logSegmentTelemetry(result: SyncResult, projectId: Long, roomId: Long?, source: String?) {
+        // Only log failures to reduce verbosity - successes are the common case
+        if (result.success) return
+
         val status = when (result) {
             is SyncResult.Success -> "success"
             is SyncResult.Failure -> "failure"
             is SyncResult.Incomplete -> "incomplete"
         }
         remoteLogger?.log(
-            level = if (result.success) LogLevel.INFO else LogLevel.WARN,
+            level = LogLevel.WARN,
             tag = "SyncTelemetry",
-            message = "Segment ${result.segment.name} $status",
+            message = "Room photo sync $status",
             metadata = buildMap {
                 put("segment", result.segment.name)
                 put("status", status)
