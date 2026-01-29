@@ -51,12 +51,21 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private val bottomNavDestinations: Set<Int> = setOf(
-            R.id.nav_map,
-            R.id.nav_projects,
-            R.id.nav_notifications,
-            R.id.nav_people
-        )
+        private val bottomNavDestinations: Set<Int> = if (BuildConfig.HAS_FLIR_SUPPORT) {
+            // FLIR builds don't have map feature
+            setOf(
+                R.id.nav_projects,
+                R.id.nav_notifications,
+                R.id.nav_people
+            )
+        } else {
+            setOf(
+                R.id.nav_map,
+                R.id.nav_projects,
+                R.id.nav_notifications,
+                R.id.nav_people
+            )
+        }
         private val FULLSCREEN_DESTINATIONS = setOf(
             R.id.batchCaptureFragment,
             R.id.flirCaptureFragment
