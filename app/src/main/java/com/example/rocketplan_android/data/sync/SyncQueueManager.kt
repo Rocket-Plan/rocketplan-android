@@ -922,14 +922,18 @@ class SyncQueueManager(
         }
 
         // Check if project has updates since last sync
+        // But always sync if essentials (locations) haven't been fetched yet
         val lastSyncedAt = project.lastSyncedAt
-        if (lastSyncedAt != null && isNetworkAvailable()) {
+        val hasLocations = localDataService.getLocations(projectId).isNotEmpty()
+        if (lastSyncedAt != null && hasLocations && isNetworkAvailable()) {
             val sinceIso = DateUtils.formatApiDate(lastSyncedAt)
             val hasUpdates = syncRepository.hasProjectUpdates(project.serverId, sinceIso)
             if (!hasUpdates) {
                 Log.d(TAG, "⏭️ No updates for project $projectId since $sinceIso, skipping sync")
                 return
             }
+        } else if (!hasLocations) {
+            Log.d(TAG, "🔄 Project $projectId has no locations, forcing essentials sync")
         }
 
         try {

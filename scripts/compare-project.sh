@@ -1,16 +1,22 @@
 #!/bin/bash
 #
-# Compare project data between FLIR device and QA database
-# Usage: ./compare-project.sh <project_number>
-# Example: ./compare-project.sh RP-25-1001
+# Compare project data between device and QA database
+# Usage: ./compare-project.sh <project_number> [device]
+# Example: ./compare-project.sh RP-25-1001 flir
+#         ./compare-project.sh RP-25-1001 tablet
 #
 
 set -e
 
 PROJECT_NUMBER="${1:-RP-25-1001}"
+DEVICE_TYPE="${2:-flir}"
 TEMP_DIR="/tmp/rocketplan_compare"
 DEVICE_DB="$TEMP_DIR/rocketplan_offline.db"
-APP_PACKAGE="com.example.rocketplan_android.dev"
+APP_PACKAGE="com.rocketplantech.rocketplan.dev"
+
+# Device serials
+FLIR_SERIAL="b7045238"
+TABLET_SERIAL="30407ef"
 
 # Colors for output
 RED='\033[0;31m'
@@ -19,9 +25,27 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Select device based on argument
+case "$DEVICE_TYPE" in
+    flir|FLIR|f)
+        DEVICE_SERIAL="$FLIR_SERIAL"
+        DEVICE_LABEL="FLIR ixx"
+        ;;
+    tablet|TABLET|t)
+        DEVICE_SERIAL="$TABLET_SERIAL"
+        DEVICE_LABEL="Tablet (9024O)"
+        ;;
+    *)
+        echo -e "${RED}ERROR: Unknown device type '$DEVICE_TYPE'${NC}"
+        echo "Usage: $0 <project_number> [flir|tablet]"
+        exit 1
+        ;;
+esac
+
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}  Project Comparison Tool${NC}"
 echo -e "${BLUE}  Project: ${PROJECT_NUMBER}${NC}"
+echo -e "${BLUE}  Device:  ${DEVICE_LABEL} (${DEVICE_SERIAL})${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
 
@@ -30,19 +54,22 @@ mkdir -p "$TEMP_DIR"
 
 # Check device connection
 echo -e "${YELLOW}[1/5] Checking device connection...${NC}"
-if ! adb devices | grep -q "device$"; then
-    echo -e "${RED}ERROR: No device connected${NC}"
+if ! adb devices | grep -q "$DEVICE_SERIAL.*device$"; then
+    echo -e "${RED}ERROR: Device $DEVICE_LABEL ($DEVICE_SERIAL) not connected${NC}"
+    echo ""
+    echo "Connected devices:"
+    adb devices
     exit 1
 fi
-DEVICE_NAME=$(adb shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+DEVICE_NAME=$(adb -s "$DEVICE_SERIAL" shell getprop ro.product.model 2>/dev/null | tr -d '\r')
 echo -e "${GREEN}Connected to: $DEVICE_NAME${NC}"
 echo ""
 
 # Pull database from device
 echo -e "${YELLOW}[2/5] Pulling database from device...${NC}"
-adb exec-out run-as "$APP_PACKAGE" cat databases/rocketplan_offline.db > "$DEVICE_DB" 2>/dev/null
+adb -s "$DEVICE_SERIAL" exec-out run-as "$APP_PACKAGE" cat databases/rocketplan_offline.db > "$DEVICE_DB" 2>/dev/null
 if [ ! -s "$DEVICE_DB" ]; then
-    echo -e "${RED}ERROR: Failed to pull database${NC}"
+    echo -e "${RED}ERROR: Failed to pull database. Is the app installed?${NC}"
     exit 1
 fi
 echo -e "${GREEN}Database pulled successfully ($(du -h "$DEVICE_DB" | cut -f1))${NC}"

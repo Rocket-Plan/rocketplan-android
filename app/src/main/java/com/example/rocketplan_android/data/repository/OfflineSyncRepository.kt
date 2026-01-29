@@ -513,20 +513,21 @@ class OfflineSyncRepository(
                 .getOrNull()?.data ?: emptyList()
 
             Log.d("API", "✅ [FAST] Received ${levels.size} levels + ${nested.size} nested locations for property $propertyId")
-            levels + nested
+            levels to nested
         }
 
-        val locationIds = mutableSetOf<Long>()
-        if (propertyLocations.isNotEmpty()) {
+        val (levels, nestedLocations) = propertyLocations
+        val allLocations = levels + nestedLocations
+        if (allLocations.isNotEmpty()) {
             localDataService.saveLocations(
-                propertyLocations.map { it.toEntity(defaultProjectId = projectId) }
+                allLocations.map { it.toEntity(defaultProjectId = projectId) }
             )
-            locationIds += propertyLocations.map { it.id }
-            itemCount += propertyLocations.size
+            itemCount += allLocations.size
         }
         ensureActive()
 
-        // 3. Rooms for each location
+        // 3. Rooms for each location (only nested locations have rooms, not levels)
+        val locationIds = nestedLocations.map { it.id }
         locationIds.distinct().forEach { locationId ->
             val rooms = roomSyncService.fetchRoomsForLocation(locationId)
             if (rooms.isNotEmpty()) {
@@ -568,7 +569,7 @@ class OfflineSyncRepository(
         val duration = System.currentTimeMillis() - startTime
         val syncMode = if (usedIncrementalSync) "incremental" else "full"
         Log.d("API", "✅ [syncProjectEssentials] Synced $itemCount items in ${duration}ms ($syncMode)")
-        Log.d("API", "   Navigation chain: Property → ${locationIds.size} Levels → Rooms → Albums")
+        Log.d("API", "   Navigation chain: Property → ${levels.size} Levels + ${nestedLocations.size} Locations → Rooms → Albums")
         SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, itemCount, duration)
     }
 

@@ -10,12 +10,6 @@
         android:id="@+id/action_reload_image_processor_config"
         android:title="@string/action_reload_image_processor_config" />
     <item
-        android:id="@+id/action_test_flir"
-        android:title="@string/flir_test_title" />
-    <item
-        android:id="@+id/action_test_crash"
-        android:title="@string/action_test_crash" />
-    <item
         android:id="@+id/action_company_info"
         android:title="@string/action_company_info" />
     <item
