@@ -31,7 +31,7 @@
             android:layout_marginTop="24dp"
             android:text="@string/about_title"
             android:textColor="@color/black"
-            android:textSize="24sp"
+            android:textSize="22sp"
             android:textStyle="bold" />
 
         <TextView
@@ -42,7 +42,7 @@
             android:lineSpacingMultiplier="1.2"
             android:text="@string/about_description"
             android:textColor="@color/light_text_rp"
-            android:textSize="15sp" />
+            android:textSize="13sp" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -62,7 +62,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/about_version_label"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="12sp"
+                    android:textSize="10sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -71,7 +71,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textColor="@color/black"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     tools:text="v1.0.0" />
 
@@ -86,7 +86,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/about_environment_label"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="12sp"
+                    android:textSize="10sp"
                     android:textStyle="bold" />
 
                 <TextView
@@ -95,7 +95,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textColor="@color/black"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     tools:text="STAGING" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
@@ -107,7 +107,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
             android:text="@string/about_view_terms"
-            android:textSize="16sp"
+            android:textSize="14sp"
             app:cornerRadius="12dp" />
 
         <com.google.android.material.button.MaterialButton
@@ -117,7 +117,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:text="@string/about_visit_site"
-            android:textSize="16sp"
+            android:textSize="14sp"
             app:cornerRadius="12dp" />
     </LinearLayout>
 </ScrollView>

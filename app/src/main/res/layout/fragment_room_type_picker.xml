@@ -15,7 +15,7 @@
         android:paddingTop="24dp"
         android:text="@string/select_room_type_title"
         android:textColor="@color/black"
-        android:textSize="24sp"
+        android:textSize="22sp"
         android:textStyle="bold" />
 
     <com.google.android.material.textfield.TextInputLayout
@@ -67,7 +67,7 @@
             android:visibility="gone"
             android:text="@string/room_type_error_generic"
             android:textColor="@color/warning_red"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textAlignment="center"
             tools:visibility="gone" />
 
@@ -88,7 +88,7 @@
             android:layout_gravity="center"
             android:text="@string/room_type_empty_state"
             android:textColor="@color/light_text_rp"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:visibility="gone" />
     </FrameLayout>
 

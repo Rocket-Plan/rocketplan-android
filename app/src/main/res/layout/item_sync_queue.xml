@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textColor="@color/black"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 tools:text="Room • Create" />
 
@@ -37,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:paddingStart="8dp"
                 android:textColor="@color/main_purple"
-                android:textSize="13sp"
+                android:textSize="11sp"
                 android:textStyle="bold"
                 tools:text="Pending" />
         </LinearLayout>
@@ -48,7 +48,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="12sp"
+            android:textSize="10sp"
             tools:text="Last attempt • Apr 12, 3:42 PM" />
 
         <TextView
@@ -57,7 +57,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:textColor="@color/warning_red"
-            android:textSize="12sp"
+            android:textSize="10sp"
             android:visibility="gone"
             tools:text="409 conflict while creating room" />
     </LinearLayout>

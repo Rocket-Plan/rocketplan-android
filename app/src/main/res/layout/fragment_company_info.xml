@@ -28,7 +28,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/company_info_title"
                 android:textColor="@color/black"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -37,7 +37,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/company_info_subtitle"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
 
             <LinearLayout
                 android:id="@+id/loadingContainer"
@@ -60,7 +60,7 @@
                     android:layout_marginStart="12dp"
                     android:text="@string/company_info_loading"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="14sp" />
+                    android:textSize="12sp" />
             </LinearLayout>
 
             <LinearLayout
@@ -113,7 +113,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="@string/company_info_company_label"
                                 android:textColor="@color/light_text_rp"
-                                android:textSize="12sp"
+                                android:textSize="10sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -122,7 +122,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:textColor="@color/black"
-                                android:textSize="18sp"
+                                android:textSize="16sp"
                                 android:textStyle="bold"
                                 tools:text="RocketPlan" />
 
@@ -132,7 +132,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:textColor="@color/light_text_rp"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 tools:text="#12345" />
                         </LinearLayout>
                     </LinearLayout>
@@ -156,7 +156,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/company_info_member_label"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="12sp"
+                            android:textSize="10sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -165,7 +165,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:textColor="@color/black"
-                            android:textSize="18sp"
+                            android:textSize="16sp"
                             android:textStyle="bold"
                             tools:text="Jamie Brown" />
 
@@ -176,7 +176,7 @@
                             android:layout_marginTop="12dp"
                             android:text="@string/company_info_email_label"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="12sp"
+                            android:textSize="10sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -185,7 +185,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             tools:text="jamie@rocketplan.com" />
 
                         <TextView
@@ -195,7 +195,7 @@
                             android:layout_marginTop="12dp"
                             android:text="@string/company_info_environment_label"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="12sp"
+                            android:textSize="10sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -204,7 +204,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             tools:text="Dev • v1.0.0" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -237,7 +237,7 @@
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     tools:text="@string/company_info_generic_error" />
 
                 <com.google.android.material.button.MaterialButton

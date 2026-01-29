@@ -42,7 +42,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/total_location_equipment_title"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:textStyle="bold" />
 
             <View
@@ -73,7 +73,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/total_equipment_location_total"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="16sp" />
+                        android:textSize="14sp" />
 
                     <androidx.recyclerview.widget.RecyclerView
                         android:id="@+id/locationTotalRecyclerView"
@@ -93,7 +93,7 @@
                         android:paddingVertical="16dp"
                         android:text="@string/rocketdry_no_equipment"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="15sp"
+                        android:textSize="13sp"
                         android:visibility="gone" />
 
                 </LinearLayout>
@@ -108,7 +108,7 @@
                 android:layout_marginTop="28dp"
                 android:text="@string/total_equipment_breakdown_per_room"
                 android:textColor="@color/light_text_rp"
-                android:textSize="18sp" />
+                android:textSize="16sp" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/roomBreakdownRecyclerView"
@@ -128,7 +128,7 @@
                 android:paddingVertical="24dp"
                 android:text="@string/total_equipment_no_room_equipment"
                 android:textColor="@color/light_text_rp"
-                android:textSize="15sp"
+                android:textSize="13sp"
                 android:visibility="gone" />
 
         </LinearLayout>

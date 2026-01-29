@@ -29,7 +29,7 @@
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
                 android:textColor="@color/black"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 tools:text="Entry note copy goes here." />
 
             <ImageButton
@@ -56,7 +56,7 @@
                 android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:textColor="@color/light_text_rp"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 tools:text="Living Room • 05/08/2024" />
 
             <TextView
@@ -64,7 +64,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/light_text_rp"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 tools:text="Pending" />
         </LinearLayout>
     </LinearLayout>

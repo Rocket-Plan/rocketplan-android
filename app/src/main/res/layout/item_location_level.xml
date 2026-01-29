@@ -16,7 +16,7 @@
         android:gravity="center"
         android:text="@string/main_level"
         android:textColor="@color/main_purple"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
     <!-- Locations RecyclerView for this level -->

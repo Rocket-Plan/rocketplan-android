@@ -42,7 +42,7 @@
                 android:layout_marginTop="12dp"
                 android:text="@string/brand_rocketplan"
                 android:textColor="@color/main_purple"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:textStyle="bold" />
 
             <ImageView
@@ -62,7 +62,7 @@
                 android:gravity="center"
                 android:text="@string/title_sign_up_or_sign_in"
                 android:textColor="@color/black"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -74,7 +74,7 @@
                 android:lineSpacingMultiplier="1.2"
                 android:text="@string/message_sign_up_intro"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/emailInputLayout"
@@ -105,7 +105,7 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/label_or"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
 
             <LinearLayout
@@ -180,7 +180,7 @@
                 android:layout_marginTop="16dp"
                 android:gravity="center"
                 android:textColor="@color/warning_red"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:visibility="gone"
                 tools:text="Unable to verify email"
                 tools:visibility="visible" />
@@ -196,7 +196,7 @@
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="32dp"
         android:text="@string/action_continue"
-        android:textSize="16sp"
+        android:textSize="14sp"
         app:backgroundTint="@color/main_purple"
         app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"

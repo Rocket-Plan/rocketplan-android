@@ -12,7 +12,7 @@
         android:layout_height="wrap_content"
         android:text="@string/rocketdry_goal_add_title"
         android:textColor="@color/dark_text_rp"
-        android:textSize="20sp"
+        android:textSize="18sp"
         android:textStyle="bold" />
 
     <com.google.android.material.textfield.TextInputLayout

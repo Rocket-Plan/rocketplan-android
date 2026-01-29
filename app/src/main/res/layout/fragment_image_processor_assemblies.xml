@@ -22,7 +22,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/image_processor_assemblies_title"
                 android:textColor="@color/black"
-                android:textSize="24sp"
+                android:textSize="22sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -32,7 +32,7 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/image_processor_assemblies_description"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/deleteAllButton"
@@ -74,7 +74,7 @@
                 android:gravity="center"
                 android:text="@string/image_processor_assemblies_empty"
                 android:textColor="@color/light_text_rp"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

@@ -41,7 +41,7 @@
                 android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 tools:text="Drywall" />
 
@@ -51,7 +51,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="@color/main_purple"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 tools:text="Target 12%" />
 
             <TextView
@@ -60,7 +60,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="@color/light_text_rp"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 tools:text="Updated Mar 6, 3:30pm" />
         </LinearLayout>
 
@@ -71,7 +71,7 @@
             android:paddingStart="8dp"
             android:paddingEnd="8dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="12sp"
+            android:textSize="10sp"
             tools:text="2 logs" />
     </LinearLayout>
 

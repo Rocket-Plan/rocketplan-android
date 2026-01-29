@@ -44,7 +44,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/title_sign_up"
                 android:textColor="@color/black"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -93,7 +93,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/message_password_requirement"
                 android:textColor="@android:color/darker_gray"
-                android:textSize="13sp" />
+                android:textSize="11sp" />
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/confirmPasswordInputLayout"
@@ -121,7 +121,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:textColor="@color/dark_green"
-                android:textSize="13sp"
+                android:textSize="11sp"
                 android:visibility="gone"
                 tools:text="@string/message_passwords_match"
                 tools:visibility="visible" />
@@ -132,7 +132,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:textColor="@color/warning_red"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:visibility="gone"
                 tools:text="Sign up failed" />
 
@@ -144,7 +144,7 @@
                 android:lineSpacingMultiplier="1.2"
                 android:text="@string/message_sign_up_agreement"
                 android:textColor="@android:color/darker_gray"
-                android:textSize="13sp" />
+                android:textSize="11sp" />
         </LinearLayout>
     </ScrollView>
 
@@ -156,7 +156,7 @@
         android:layout_marginHorizontal="24dp"
         android:layout_marginBottom="32dp"
         android:text="@string/action_create_account"
-        android:textSize="16sp"
+        android:textSize="14sp"
         app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

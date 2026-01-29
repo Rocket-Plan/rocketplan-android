@@ -41,7 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:textColor="@color/dark_text_rp"
-            android:textSize="22sp"
+            android:textSize="20sp"
             android:textStyle="bold"
             tools:text="8" />
 
@@ -51,7 +51,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="15sp"
+            android:textSize="13sp"
             tools:text="Dehumidifiers" />
     </LinearLayout>
 

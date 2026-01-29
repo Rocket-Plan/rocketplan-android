@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:text="@string/rocketdry_equipment_by_type"
         android:textColor="@color/dark_text_rp"
-        android:textSize="16sp"
+        android:textSize="14sp"
         android:textStyle="bold" />
 
     <TextView
@@ -25,7 +25,7 @@
         android:gravity="center_horizontal"
         android:text="@string/rocketdry_no_equipment"
         android:textColor="@color/light_text_rp"
-        android:textSize="15sp"
+        android:textSize="13sp"
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView

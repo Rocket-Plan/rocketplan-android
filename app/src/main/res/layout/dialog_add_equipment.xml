@@ -36,7 +36,7 @@
             android:layout_weight="1"
             android:text="@string/equipment_room_units"
             android:textColor="@color/dark_text_rp"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <ImageButton
@@ -55,7 +55,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="12dp"
             android:textColor="@color/dark_text_rp"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             android:text="1" />
 
@@ -82,7 +82,7 @@
             android:layout_height="wrap_content"
             android:text="@string/equipment_room_day_in"
             android:textColor="@color/dark_text_rp"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
@@ -110,7 +110,7 @@
             android:layout_height="wrap_content"
             android:text="@string/equipment_room_day_out"
             android:textColor="@color/dark_text_rp"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton

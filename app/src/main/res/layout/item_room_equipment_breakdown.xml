@@ -17,8 +17,8 @@
 
         <ImageView
             android:id="@+id/roomIcon"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="@dimen/icon_size_tab"
+            android:layout_height="@dimen/icon_size_tab"
             android:contentDescription="@string/room_icon"
             tools:src="@drawable/icon_room_living" />
 
@@ -28,7 +28,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:textColor="@color/dark_text_rp"
-            android:textSize="20sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             tools:text="Den 4" />
 

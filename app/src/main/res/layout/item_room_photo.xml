@@ -38,7 +38,7 @@
             android:maxLines="1"
             android:ellipsize="end"
             android:textColor="@android:color/white"
-            android:textSize="12sp"
+            android:textSize="10sp"
             tools:text="10/25/2025" />
 
         <LinearLayout
@@ -57,8 +57,8 @@
             android:visibility="gone">
 
             <ImageView
-                android:layout_width="16dp"
-                android:layout_height="16dp"
+                android:layout_width="@dimen/icon_size_chevron"
+                android:layout_height="@dimen/icon_size_chevron"
                 android:layout_marginEnd="6dp"
                 android:contentDescription="@string/notes_for_project"
                 app:srcCompat="@drawable/icon_has_notes" />
@@ -68,7 +68,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 android:textStyle="bold"
                 tools:text="2" />
         </LinearLayout>

@@ -57,7 +57,7 @@
                 android:shadowDy="1"
                 android:shadowRadius="1"
                 android:textColor="@android:color/white"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 tools:text="0/5" />
 
@@ -72,7 +72,7 @@
                 android:shadowRadius="1"
                 android:text="@string/processing"
                 android:textColor="#E6FFFFFF"
-                android:textSize="12sp" />
+                android:textSize="10sp" />
 
         </LinearLayout>
 

@@ -28,7 +28,7 @@
             android:id="@+id/scopeTitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textColor="?android:attr/textColorPrimary"
             android:textStyle="bold"
             android:maxLines="2"
@@ -39,7 +39,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textColor="?android:attr/textColorSecondary"
             android:maxLines="2"
             android:ellipsize="end" />
@@ -60,7 +60,7 @@
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:text="-"
-            android:textSize="20sp" />
+            android:textSize="18sp" />
 
         <TextView
             android:id="@+id/scopeQuantityValue"
@@ -69,7 +69,7 @@
             android:layout_marginHorizontal="6dp"
             android:gravity="center"
             android:text="1"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textColor="?android:attr/textColorPrimary" />
 
         <com.google.android.material.button.MaterialButton
@@ -80,7 +80,7 @@
             android:minWidth="0dp"
             android:minHeight="0dp"
             android:text="+"
-            android:textSize="20sp" />
+            android:textSize="18sp" />
     </LinearLayout>
 
 </LinearLayout>

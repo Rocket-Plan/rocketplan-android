@@ -37,7 +37,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="6dp"
             android:textColor="@color/dark_text_rp"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
             tools:text="Basement" />
 
@@ -46,7 +46,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/light_text_rp"
-            android:textSize="15sp"
+            android:textSize="13sp"
             tools:text="2 Dehumidifiers, 3 Air Movers" />
     </LinearLayout>
 

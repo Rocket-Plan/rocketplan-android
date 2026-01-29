@@ -26,7 +26,7 @@
             android:padding="48dp"
             android:text="@string/support_empty"
             android:textColor="@color/light_text_rp"
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:visibility="gone" />
 
         <ProgressBar

@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="8dp"
             android:textColor="@color/dark_text_rp"
-            android:textSize="14sp"
+            android:textSize="12sp"
             tools:text="35 King William St" />
 
         <!-- Title -->
@@ -31,7 +31,7 @@
             android:layout_marginBottom="32dp"
             android:text="@string/project_type_title"
             android:textColor="@color/dark_text_rp"
-            android:textSize="32sp"
+            android:textSize="30sp"
             android:textStyle="bold" />
 
         <ProgressBar
@@ -49,7 +49,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             android:textColor="@color/warning_red"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:visibility="gone" />
 
         <!-- Single Unit Card -->
@@ -85,7 +85,7 @@
                     android:layout_weight="1"
                     android:text="@string/project_type_single_unit"
                     android:textColor="@color/dark_text_rp"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <ImageView
@@ -130,7 +130,7 @@
                     android:layout_weight="1"
                     android:text="@string/project_type_multi_unit"
                     android:textColor="@color/dark_text_rp"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <ImageView
@@ -175,7 +175,7 @@
                     android:layout_weight="1"
                     android:text="@string/project_type_exterior"
                     android:textColor="@color/dark_text_rp"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <ImageView
@@ -219,7 +219,7 @@
                     android:layout_weight="1"
                     android:text="@string/project_type_commercial"
                     android:textColor="@color/dark_text_rp"
-                    android:textSize="20sp"
+                    android:textSize="18sp"
                     android:textStyle="bold" />
 
                 <ImageView

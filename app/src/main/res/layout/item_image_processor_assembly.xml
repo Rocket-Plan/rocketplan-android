@@ -27,7 +27,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold"
                 tools:text="Assembly 12ab34" />
 
@@ -43,7 +43,7 @@
                 android:text="Uploaded"
                 android:textAllCaps="true"
                 android:textColor="@color/white"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -53,7 +53,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="13sp"
+            android:textSize="11sp"
             tools:text="Project #123 • Room #5" />
 
         <TextView
@@ -62,7 +62,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="13sp"
+            android:textSize="11sp"
             tools:text="Files: 12 • 45.2 MB" />
 
         <LinearLayout
@@ -78,7 +78,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="13sp"
+                android:textSize="11sp"
                 tools:text="Uploaded 3 / 8 files" />
 
             <TextView
@@ -86,7 +86,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/light_text_rp"
-                android:textSize="12sp"
+                android:textSize="10sp"
                 tools:text="38%" />
         </LinearLayout>
 
@@ -105,7 +105,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="12sp"
+            android:textSize="10sp"
             tools:text="Created Jan 5, 3:45 PM" />
 
         <TextView
@@ -114,7 +114,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="12sp"
+            android:textSize="10sp"
             tools:text="Updated 5 minutes ago" />
 
         <TextView
@@ -125,7 +125,7 @@
             android:background="@color/error_fill"
             android:padding="8dp"
             android:textColor="@color/dark_red"
-            android:textSize="12sp"
+            android:textSize="10sp"
             android:visibility="gone"
             tools:text="Failed: network unreachable"
             tools:visibility="visible" />

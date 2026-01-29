@@ -97,7 +97,7 @@
             android:maxLines="1"
             android:text="@string/batch_capture_title"
             android:textColor="@android:color/white"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold" />
 
         <ImageButton
@@ -130,7 +130,7 @@
             android:paddingHorizontal="12dp"
             android:paddingVertical="6dp"
             android:textColor="@android:color/white"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             tools:text="0/50" />
     </LinearLayout>
@@ -240,7 +240,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="@android:color/white"
-                    android:textSize="12sp"
+                    android:textSize="10sp"
                     tools:text="@string/flir_status_discovering" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
@@ -431,7 +431,7 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/batch_capture_processing"
                 android:textColor="@android:color/white"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
         </LinearLayout>
     </FrameLayout>
 

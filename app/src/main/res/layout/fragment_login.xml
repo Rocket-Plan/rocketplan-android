@@ -43,7 +43,7 @@
                 android:layout_marginTop="32dp"
                 android:text="@string/title_sign_in"
                 android:textColor="@color/black"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -112,7 +112,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/action_forgot_password"
                 android:textColor="@color/main_purple"
-                android:textSize="14sp" />
+                android:textSize="12sp" />
 
             <TextView
                 android:id="@+id/errorText"
@@ -120,7 +120,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:textColor="@color/warning_red"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:visibility="gone"
                 tools:text="Sign in failed" />
 
@@ -140,7 +140,7 @@
                 android:layout_marginTop="32dp"
                 android:text="OR"
                 android:textColor="@android:color/darker_gray"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textStyle="bold"
                 android:visibility="gone"
                 tools:visibility="visible" />
@@ -176,7 +176,7 @@
         android:layout_marginHorizontal="24dp"
         android:layout_marginBottom="32dp"
         android:text="@string/action_sign_in"
-        android:textSize="16sp"
+        android:textSize="14sp"
         app:cornerRadius="12dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"

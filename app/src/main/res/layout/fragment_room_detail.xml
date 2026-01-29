@@ -49,7 +49,7 @@
                         android:layout_weight="1"
                         android:text="@string/photos"
                         android:textAllCaps="false"
-                        android:textSize="16sp" />
+                        android:textSize="14sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/roomDamagesTabButton"
@@ -59,7 +59,7 @@
                         android:layout_weight="1"
                         android:text="@string/damages"
                         android:textAllCaps="false"
-                        android:textSize="16sp" />
+                        android:textSize="14sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/roomScopeTabButton"
@@ -69,7 +69,7 @@
                         android:layout_weight="1"
                         android:text="@string/scope_sheet"
                         android:textAllCaps="false"
-                        android:textSize="16sp"
+                        android:textSize="14sp"
                         android:visibility="gone" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
             </com.google.android.material.card.MaterialCardView>
@@ -102,7 +102,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/black"
-                        android:textSize="28sp"
+                        android:textSize="26sp"
                         android:textStyle="bold"
                         tools:text="Basement Damages" />
                 </LinearLayout>
@@ -160,7 +160,7 @@
                 android:layout_weight="1"
                 android:text="@string/add_note_with_plus"
                 android:textColor="@color/black"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -168,7 +168,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 tools:text="No Notes" />
 
                 <ImageView
@@ -226,7 +226,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/add_photo"
                             android:textColor="@color/black"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -235,7 +235,7 @@
                             android:layout_marginTop="4dp"
                             android:text="@string/add_photo_card_subtitle"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="14sp" />
+                            android:textSize="12sp" />
                     </LinearLayout>
                 </LinearLayout>
             </FrameLayout>
@@ -285,7 +285,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/add_scope_of_work_items"
                             android:textColor="@color/black"
-                            android:textSize="16sp"
+                            android:textSize="14sp"
                             android:textStyle="bold" />
 
                         <TextView
@@ -294,7 +294,7 @@
                             android:layout_marginTop="4dp"
                             android:text="@string/add_scope_of_work_subtitle"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="14sp"
+                            android:textSize="12sp"
                             android:visibility="gone" />
                     </LinearLayout>
                 </LinearLayout>
@@ -348,7 +348,7 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/scope_picker_empty_message"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="14sp"
+                    android:textSize="12sp"
                     android:visibility="gone" />
 
                 <LinearLayout
@@ -394,7 +394,7 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/albums"
                 android:textColor="@color/black"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -421,7 +421,7 @@
                     android:layout_weight="1"
                     android:text="@string/damage_assessment"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textStyle="bold"
                     android:visibility="gone" />
 
@@ -520,7 +520,7 @@
                                 android:layout_height="wrap_content"
                                 android:textColor="@android:color/white"
                                 android:textStyle="bold"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 tools:text="@string/processing_photos" />
 
                             <TextView
@@ -529,7 +529,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
                                 android:textColor="@android:color/white"
-                                android:textSize="12sp"
+                                android:textSize="10sp"
                                 tools:text="0/1" />
                         </LinearLayout>
                     </LinearLayout>
@@ -574,7 +574,7 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="20sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         tools:text="No damages yet. Add a new damage." />
 

@@ -11,7 +11,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@color/black"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:textStyle="bold"
         android:layout_marginBottom="8dp" />
 
@@ -35,7 +35,7 @@
             android:paddingStart="0dp"
             android:paddingEnd="0dp"
             android:textColor="@color/black"
-            android:textSize="16sp" />
+            android:textSize="14sp" />
 
     </com.google.android.material.textfield.TextInputLayout>
 
@@ -52,7 +52,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@color/warning_red"
-        android:textSize="12sp"
+        android:textSize="10sp"
         android:layout_marginTop="8dp"
         android:visibility="gone" />
 

@@ -16,7 +16,7 @@
         android:layout_marginTop="16dp"
         android:visibility="gone"
         android:textColor="@android:color/white"
-        android:textSize="14sp"
+        android:textSize="12sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
@@ -63,7 +63,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
             android:textColor="@android:color/white"
-            android:textSize="14sp"
+            android:textSize="12sp"
             tools:text="0 snapshots" />
 
         <LinearLayout
@@ -91,7 +91,7 @@
                 android:layout_weight="1"
                 android:gravity="center"
                 android:textColor="@android:color/white"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 tools:text="Stream 1/2 (thermal)" />
 
             <com.google.android.material.button.MaterialButton
@@ -184,7 +184,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:textColor="@android:color/white"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 tools:text="Uploading 1 photo..." />
         </LinearLayout>
     </FrameLayout>

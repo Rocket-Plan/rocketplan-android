@@ -16,7 +16,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Image Processor Configuration"
-            android:textSize="24sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:textColor="@color/black"
             android:layout_marginBottom="24dp" />
@@ -26,7 +26,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Loading..."
-            android:textSize="16sp"
+            android:textSize="14sp"
             android:textStyle="bold"
             android:layout_marginBottom="24dp"
             android:textColor="@color/light_text_rp" />
@@ -48,7 +48,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Service"
-                    android:textSize="12sp"
+                    android:textSize="10sp"
                     android:textColor="@color/light_text_rp"
                     android:textStyle="bold"
                     android:layout_marginBottom="4dp" />
@@ -58,7 +58,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textColor="@color/black"
                     android:textIsSelectable="true" />
             </LinearLayout>
@@ -81,7 +81,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="URL"
-                    android:textSize="12sp"
+                    android:textSize="10sp"
                     android:textColor="@color/light_text_rp"
                     android:textStyle="bold"
                     android:layout_marginBottom="4dp" />
@@ -91,7 +91,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textColor="@color/black"
                     android:textIsSelectable="true" />
             </LinearLayout>
@@ -114,7 +114,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="API Key"
-                    android:textSize="12sp"
+                    android:textSize="10sp"
                     android:textColor="@color/light_text_rp"
                     android:textStyle="bold"
                     android:layout_marginBottom="4dp" />
@@ -124,7 +124,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textSize="16sp"
+                    android:textSize="14sp"
                     android:textColor="@color/black"
                     android:fontFamily="monospace"
                     android:textIsSelectable="true" />

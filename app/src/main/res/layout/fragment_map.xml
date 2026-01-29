@@ -28,7 +28,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/bottom_nav_map"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textStyle="bold" />
 
             <View
@@ -45,7 +45,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:text="@string/map_view_all"
                 android:textColor="@color/main_purple"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textStyle="bold" />
         </LinearLayout>
 
@@ -115,7 +115,7 @@
                 android:text="@string/map_empty_my_projects"
                 android:textAlignment="center"
                 android:textColor="@color/light_text_rp"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:visibility="gone"
                 tools:visibility="visible" />
 

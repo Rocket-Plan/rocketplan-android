@@ -61,7 +61,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:textColor="@color/team_member_tag_dark"
-                                android:textSize="12sp"
+                                android:textSize="10sp"
                                 android:textStyle="bold"
                                 tools:text="WIP" />
 
@@ -95,7 +95,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
                         android:textColor="@color/black"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         tools:text="201 Faker Road" />
 
@@ -105,7 +105,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:textColor="@color/main_purple"
-                        android:textSize="14sp"
+                        android:textSize="12sp"
                         android:textStyle="bold"
                         tools:text="Add Alias" />
 
@@ -115,7 +115,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="14sp"
+                        android:textSize="12sp"
                         tools:text="RP-25-1156" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -127,7 +127,7 @@
                 android:layout_marginTop="24dp"
                 android:gravity="center"
                 android:textColor="@color/light_text_rp"
-                android:textSize="16sp"
+                android:textSize="14sp"
                 android:visibility="gone"
                 tools:text="@string/loading_project" />
 
@@ -185,7 +185,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="@string/add_project_info_title"
                                 android:textColor="@color/black"
-                                android:textSize="16sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -194,7 +194,7 @@
                                 android:layout_marginTop="4dp"
                                 android:text="@string/add_project_info_subtitle"
                                 android:textColor="@color/light_text_rp"
-                                android:textSize="14sp" />
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -245,7 +245,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="@string/rocket_scan_title"
                                 android:textColor="@color/black"
-                                android:textSize="16sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -254,7 +254,7 @@
                                 android:layout_marginTop="4dp"
                                 android:text="@string/rocket_scan_subtitle"
                                 android:textColor="@color/light_text_rp"
-                                android:textSize="14sp" />
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -304,7 +304,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="@string/all_project_notes_title"
                                 android:textColor="@color/black"
-                                android:textSize="16sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -313,7 +313,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="4dp"
                                 android:textColor="@color/light_text_rp"
-                                android:textSize="14sp"
+                                android:textSize="12sp"
                                 tools:text="@string/project_notes_subtitle" />
                         </LinearLayout>
                     </LinearLayout>
@@ -366,7 +366,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="RocketDry"
                                 android:textColor="@color/black"
-                                android:textSize="16sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -375,7 +375,7 @@
                                 android:layout_marginTop="4dp"
                                 android:text="Log and manage your drying progress."
                                 android:textColor="@color/light_text_rp"
-                                android:textSize="14sp" />
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
@@ -426,7 +426,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="Crew"
                                 android:textColor="@color/black"
-                                android:textSize="16sp"
+                                android:textSize="14sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -435,7 +435,7 @@
                                 android:layout_marginTop="4dp"
                                 android:text="Add and dispatch crew members"
                                 android:textColor="@color/light_text_rp"
-                                android:textSize="14sp" />
+                                android:textSize="12sp" />
                         </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>

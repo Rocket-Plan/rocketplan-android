@@ -38,7 +38,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="No Projects Yet"
-                android:textSize="20sp"
+                android:textSize="18sp"
                 android:textColor="@color/light_text_rp"
                 android:textStyle="bold" />
 
@@ -47,7 +47,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="Tap the + button to create a new project"
-                android:textSize="14sp"
+                android:textSize="12sp"
                 android:textColor="@color/placeholder"
                 android:gravity="center" />
 

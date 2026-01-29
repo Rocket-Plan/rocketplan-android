@@ -23,7 +23,7 @@
         android:paddingHorizontal="16dp"
         android:paddingVertical="8dp"
         android:textColor="@android:color/white"
-        android:textSize="14sp"
+        android:textSize="12sp"
         tools:text="1 / 10" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton

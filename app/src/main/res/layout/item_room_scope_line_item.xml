@@ -13,7 +13,7 @@
         android:ellipsize="end"
         android:maxLines="2"
         android:textColor="@color/dark_text_rp"
-        android:textSize="15sp"
+        android:textSize="13sp"
         android:textStyle="bold"
         tools:text="WTRESRVD – Emergency service call - during business hours" />
 
@@ -25,7 +25,7 @@
         android:ellipsize="end"
         android:maxLines="1"
         android:textColor="@color/light_text_rp"
-        android:textSize="13sp"
+        android:textSize="11sp"
         tools:text="Work Scope 2884" />
 
     <LinearLayout
@@ -41,7 +41,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textColor="@color/light_text_rp"
-            android:textSize="13sp"
+            android:textSize="11sp"
             tools:text="1 EA • $245.00" />
 
         <TextView
@@ -50,7 +50,7 @@
             android:layout_height="wrap_content"
             android:gravity="end"
             android:textColor="@color/main_purple"
-            android:textSize="14sp"
+            android:textSize="12sp"
             android:textStyle="bold"
             tools:text="$245.00" />
     </LinearLayout>

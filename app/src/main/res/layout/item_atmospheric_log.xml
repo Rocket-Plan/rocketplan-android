@@ -31,7 +31,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:textColor="@color/black"
-                android:textSize="18sp"
+                android:textSize="16sp"
                 android:textStyle="bold"
                 tools:text="Oct 21, 4:19pm" />
 
@@ -66,7 +66,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/r_humidity_short"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="12sp" />
+                    android:textSize="10sp" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -80,7 +80,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/black"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         tools:text="6" />
 
@@ -90,7 +90,7 @@
                         android:layout_marginStart="2dp"
                         android:text="@string/percent"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="12sp" />
+                        android:textSize="10sp" />
 
                 </LinearLayout>
 
@@ -108,7 +108,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/temperature_short"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="12sp" />
+                    android:textSize="10sp" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -122,7 +122,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/black"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         tools:text="6" />
 
@@ -132,7 +132,7 @@
                         android:layout_marginStart="2dp"
                         android:text="@string/fahrenheit"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="12sp" />
+                        android:textSize="10sp" />
 
                 </LinearLayout>
 
@@ -150,7 +150,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/pressure"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="12sp" />
+                    android:textSize="10sp" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -164,7 +164,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/black"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         tools:text="6" />
 
@@ -174,7 +174,7 @@
                         android:layout_marginStart="2dp"
                         android:text="@string/kpa"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="12sp" />
+                        android:textSize="10sp" />
 
                 </LinearLayout>
 
@@ -192,7 +192,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/wind_speed_short"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="12sp" />
+                    android:textSize="10sp" />
 
                 <LinearLayout
                     android:layout_width="wrap_content"
@@ -206,7 +206,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/black"
-                        android:textSize="24sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
                         tools:text="6" />
 
@@ -216,7 +216,7 @@
                         android:layout_marginStart="2dp"
                         android:text="@string/mph"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="12sp" />
+                        android:textSize="10sp" />
 
                 </LinearLayout>
 
