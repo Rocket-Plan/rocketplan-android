@@ -197,14 +197,17 @@ class BatchCaptureViewModel(
             return
         }
 
-        val room = resolvedRoom
-        if (room == null) {
-            Log.e(TAG, "Cannot commit: room not resolved")
-            _events.tryEmit(BatchCaptureEvent.Error("Room not available"))
-            return
-        }
-
         viewModelScope.launch(Dispatchers.IO) {
+            // Try cached room first, then fetch directly if not resolved
+            val room = resolvedRoom ?: run {
+                Log.w(TAG, "Room not cached, fetching directly for roomId=$roomId")
+                localDataService.getRoom(roomId) ?: localDataService.getRoomByServerId(roomId)
+            }
+            if (room == null) {
+                Log.e(TAG, "Cannot commit: room not found in database (roomId=$roomId)")
+                _events.tryEmit(BatchCaptureEvent.Error("Room not available"))
+                return@launch
+            }
             try {
                 Log.d(TAG, "Committing ${currentState.photos.size} photos for room ${room.roomId}")
                 val lookupRoomId = room.serverId ?: room.roomId
