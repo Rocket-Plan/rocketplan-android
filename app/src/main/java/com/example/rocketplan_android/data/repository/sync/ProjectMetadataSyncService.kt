@@ -15,10 +15,9 @@ import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.coroutineContext
+import java.util.concurrent.atomic.AtomicInteger
 
 private const val NOTES_PAGE_LIMIT = 30
 
@@ -28,7 +27,7 @@ private fun projectAtmosLogsKey(projectId: Long) = "project_atmos_logs_$projectI
 
 /**
  * Syncs project metadata: notes, equipment, damages, logs, and work scopes.
- * Extracted from OfflineSyncRepository to keep metadata sync cohesive.
+ * Uses DependencySyncQueue for iOS-style parallel execution with dependencies.
  */
 class ProjectMetadataSyncService(
     private val api: OfflineSyncApi,
@@ -40,6 +39,22 @@ class ProjectMetadataSyncService(
 ) {
     private val gson = Gson()
 
+    /**
+     * Sync project metadata using dependency queue for maximum parallelism.
+     *
+     * Dependency graph (iOS-style):
+     * ```
+     * [notes] ─────────────────────────────────────┐
+     * [equipment] ─────────────────────────────────┤
+     * [atmospheric_logs] ──────────────────────────┤
+     * [project_damages] ──┬── (if failed) ─────────┤
+     *                     │                        │
+     *                     ▼                        │
+     *              [room_damages_1..N] ────────────┤
+     *              [room_moisture_1..N] ───────────┤
+     *              [room_workscopes_1..N] ─────────┘
+     * ```
+     */
     suspend fun syncProjectMetadata(projectId: Long): SyncResult = withContext(ioDispatcher) {
         val serverProjectId = resolveServerProjectId(projectId)
             ?: return@withContext SyncResult.failure(
@@ -48,116 +63,128 @@ class ProjectMetadataSyncService(
                 0
             )
         val startTime = System.currentTimeMillis()
-        Log.d(TAG, "[syncProjectMetadata] Starting for project $projectId (server=$serverProjectId)")
-        var itemCount = 0
+        Log.d(TAG, "[syncProjectMetadata] Starting dependency-based sync for project $projectId (server=$serverProjectId)")
 
-        val notesCheckpointKey = projectNotesKey(projectId)
-        val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
-        Log.d(
-            TAG,
-            "[syncProjectMetadata] Fetching notes with pagination (limit=$NOTES_PAGE_LIMIT) since ${notesSince ?: "beginning"}"
-        )
-        runCatching {
-            fetchAllPages { page ->
-                api.getProjectNotes(
-                    projectId = serverProjectId,
-                    page = page,
-                    limit = NOTES_PAGE_LIMIT,
-                    updatedSince = notesSince
-                )
-            }
-        }
-            .onSuccess { notes ->
+        val itemCount = AtomicInteger(0)
+        val queue = DependencySyncQueue(tag = "MetadataSync[$projectId]")
+
+        // Track if project-level damages succeeded (for fallback logic)
+        var projectDamagesHaveRoomIds = false
+
+        // === PHASE 1: Independent project-level syncs (no dependencies) ===
+
+        // Notes (paginated, independent)
+        queue.addItem("notes") {
+            val notesCheckpointKey = projectNotesKey(projectId)
+            val notesSince = syncCheckpointStore.updatedSinceParam(notesCheckpointKey)
+            runCatching {
+                fetchAllPages { page ->
+                    api.getProjectNotes(serverProjectId, page, NOTES_PAGE_LIMIT, notesSince)
+                }
+            }.onSuccess { notes ->
                 localDataService.saveNotes(notes.mapNotNull { it.toEntity() })
-                itemCount += notes.size
-                Log.d(TAG, "[syncProjectMetadata] Saved ${notes.size} notes (paginated)")
+                itemCount.addAndGet(notes.size)
                 notes.latestTimestamp { it.updatedAt }
                     ?.let { syncCheckpointStore.updateCheckpoint(notesCheckpointKey, it) }
-            }
-            .onFailure { Log.e(TAG, "[syncProjectMetadata] Failed to fetch notes", it) }
-        ensureActive()
-
-        runCatching { api.getProjectEquipment(serverProjectId) }
-            .onSuccess { response ->
-                val equipment = response.data
-                localDataService.saveEquipment(equipment.map { it.toEntity() })
-                itemCount += equipment.size
-                Log.d(TAG, "[syncProjectMetadata] Saved ${equipment.size} equipment (single response)")
-            }
-            .onFailure { Log.e(TAG, "[syncProjectMetadata] Failed to fetch equipment", it) }
-        ensureActive()
-
-        val damagesCheckpointKey = projectDamagesKey(projectId)
-        val damagesSince = syncCheckpointStore.updatedSinceParam(damagesCheckpointKey)
-        val projectDamagesFetched = runCatching { api.getProjectDamageMaterials(serverProjectId, updatedSince = damagesSince) }
-            .onSuccess { response ->
-                val damages = response.data
-                Log.d(TAG, "[syncProjectMetadata] Raw damages from API: ${damages.size}, roomIds=${damages.take(5).map { it.roomId }}")
-                val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId) }
-                val (scopedDamages, unscopedDamages) = entities.partition { it.roomId != null }
-                if (unscopedDamages.isNotEmpty()) {
-                    Log.w(
-                        TAG,
-                        "[syncProjectMetadata] Dropping ${unscopedDamages.size} damages with no roomId (projectId=$projectId)"
-                    )
-                }
-                localDataService.saveDamages(scopedDamages)
-                val materialEntities = damages.map { it.toMaterialEntity() }
-                if (materialEntities.isNotEmpty()) {
-                    localDataService.saveMaterials(materialEntities)
-                }
-                itemCount += scopedDamages.size
-                Log.d(TAG, "[syncProjectMetadata] Saved ${scopedDamages.size} damages (from ${damages.size} API results)")
-                damages.latestTimestamp { it.updatedAt }
-                    ?.let { syncCheckpointStore.updateCheckpoint(damagesCheckpointKey, it) }
-            }
-            .onFailure { error ->
-                Log.e(TAG, "[syncProjectMetadata] Failed to fetch damages", error)
-            }
-            .isSuccess
-        ensureActive()
-
-        if (!projectDamagesFetched) {
-            Log.w(TAG, "[syncProjectMetadata] Project damage fetch failed; falling back to per-room damage sync")
-        }
-        val damagesFromProject = localDataService.observeDamages(projectId).first().takeIf { it.isNotEmpty() }
-        val hasRoomScopedDamages = damagesFromProject?.any { it.roomId != null } == true
-        if (!hasRoomScopedDamages) {
-            if (projectDamagesFetched) {
-                Log.w(
-                    TAG,
-                    "[syncProjectMetadata] Project damages missing roomIds; falling back to per-room damage sync (projectId=$projectId)"
-                )
-            }
-            val damageCount = syncDamagesForProject(projectId)
-            itemCount += damageCount
+            }.isSuccess
         }
 
-        val moistureCount = syncMoistureLogsForProject(projectId)
-        itemCount += moistureCount
-        ensureActive()
+        // Equipment (single request, independent)
+        queue.addItem("equipment") {
+            runCatching { api.getProjectEquipment(serverProjectId) }
+                .onSuccess { response ->
+                    localDataService.saveEquipment(response.data.map { it.toEntity() })
+                    itemCount.addAndGet(response.data.size)
+                }.isSuccess
+        }
 
-        val workScopeCount = workScopeSyncService.syncWorkScopesForProject(projectId)
-        itemCount += workScopeCount
-        ensureActive()
+        // Atmospheric logs (independent)
+        queue.addItem("atmospheric_logs") {
+            val atmosCheckpointKey = projectAtmosLogsKey(projectId)
+            val atmosSince = syncCheckpointStore.updatedSinceParam(atmosCheckpointKey)
+            runCatching { api.getProjectAtmosphericLogs(serverProjectId, atmosSince) }
+                .onSuccess { response ->
+                    localDataService.saveAtmosphericLogs(response.data.map { it.toEntity(defaultRoomId = null) })
+                    itemCount.addAndGet(response.data.size)
+                    response.data.latestTimestamp { it.updatedAt }
+                        ?.let { syncCheckpointStore.updateCheckpoint(atmosCheckpointKey, it) }
+                }.isSuccess
+        }
 
-        val atmosCheckpointKey = projectAtmosLogsKey(projectId)
-        val atmosSince = syncCheckpointStore.updatedSinceParam(atmosCheckpointKey)
-        runCatching { api.getProjectAtmosphericLogs(serverProjectId, updatedSince = atmosSince) }
-            .onSuccess { response ->
-                val logs = response.data
-                localDataService.saveAtmosphericLogs(logs.map { it.toEntity(defaultRoomId = null) })
-                itemCount += logs.size
-                Log.d(TAG, "[syncProjectMetadata] Saved ${logs.size} atmospheric logs")
-                logs.latestTimestamp { it.updatedAt }
-                    ?.let { syncCheckpointStore.updateCheckpoint(atmosCheckpointKey, it) }
+        // Project-level damages (try first, may need per-room fallback)
+        val projectDamagesId = queue.addItem("project_damages") {
+            val damagesCheckpointKey = projectDamagesKey(projectId)
+            val damagesSince = syncCheckpointStore.updatedSinceParam(damagesCheckpointKey)
+            runCatching { api.getProjectDamageMaterials(serverProjectId, damagesSince) }
+                .onSuccess { response ->
+                    val damages = response.data
+                    val entities = damages.mapNotNull { it.toEntity(defaultProjectId = projectId) }
+                    val (scopedDamages, unscopedDamages) = entities.partition { it.roomId != null }
+
+                    if (scopedDamages.isNotEmpty()) {
+                        localDataService.saveDamages(scopedDamages)
+                        localDataService.saveMaterials(damages.map { it.toMaterialEntity() })
+                        itemCount.addAndGet(scopedDamages.size)
+                        projectDamagesHaveRoomIds = true
+                        damages.latestTimestamp { it.updatedAt }
+                            ?.let { syncCheckpointStore.updateCheckpoint(damagesCheckpointKey, it) }
+                    }
+
+                    if (unscopedDamages.isNotEmpty()) {
+                        Log.w(TAG, "[project_damages] ${unscopedDamages.size} damages missing roomId")
+                    }
+                }.isSuccess
+        }
+
+        // Process phase 1 first to determine if we need per-room fallback
+        queue.processAll()
+
+        // === PHASE 2: Per-room syncs (only if project damages didn't have roomIds) ===
+
+        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
+        if (roomIds.isNotEmpty()) {
+            val queue2 = DependencySyncQueue(tag = "MetadataSync[$projectId]/rooms")
+
+            // Check if we need per-room damage fallback
+            val needsPerRoomDamages = !projectDamagesHaveRoomIds &&
+                localDataService.observeDamages(projectId).first().none { it.roomId != null }
+
+            if (needsPerRoomDamages) {
+                Log.d(TAG, "[syncProjectMetadata] Using per-room damage sync for ${roomIds.size} rooms")
             }
-            .onFailure { Log.e(TAG, "[syncProjectMetadata] Failed to fetch atmospheric logs", it) }
-        ensureActive()
+
+            // Queue per-room syncs (all run in parallel - no dependencies between rooms)
+            for (roomId in roomIds) {
+                // Per-room damages (only if project-level didn't work)
+                if (needsPerRoomDamages) {
+                    queue2.addItem("room_damages_$roomId") {
+                        val count = syncRoomDamages(projectId, roomId)
+                        itemCount.addAndGet(count)
+                        true
+                    }
+                }
+
+                // Per-room moisture logs
+                queue2.addItem("room_moisture_$roomId") {
+                    val count = syncRoomMoistureLogs(projectId, roomId)
+                    itemCount.addAndGet(count)
+                    true
+                }
+
+                // Per-room work scopes
+                queue2.addItem("room_workscopes_$roomId") {
+                    val count = workScopeSyncService.syncRoomWorkScopes(projectId, roomId)
+                    itemCount.addAndGet(count)
+                    true
+                }
+            }
+
+            queue2.processAll()
+        }
 
         val duration = System.currentTimeMillis() - startTime
-        Log.d(TAG, "[syncProjectMetadata] Synced $itemCount items in ${duration}ms")
-        SyncResult.success(SyncSegment.PROJECT_METADATA, itemCount, duration)
+        Log.d(TAG, "[syncProjectMetadata] Synced ${itemCount.get()} items in ${duration}ms (dependency-based)")
+        SyncResult.success(SyncSegment.PROJECT_METADATA, itemCount.get(), duration)
     }
 
     suspend fun syncRoomDamages(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
@@ -228,46 +255,6 @@ class ProjectMetadataSyncService(
             "[syncRoomMoistureLogs] Saved ${entities.size} moisture logs for roomId=$roomId (projectId=$projectId) in ${duration}ms"
         )
         entities.size
-    }
-
-    private suspend fun syncDamagesForProject(projectId: Long): Int {
-        val start = System.currentTimeMillis()
-        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
-        if (roomIds.isEmpty()) {
-            Log.d(TAG, "[syncDamages] No server room IDs for project $projectId; skipping damage sync")
-            return 0
-        }
-        var total = 0
-        roomIds.forEach { roomId ->
-            coroutineContext.ensureActive()
-            total += syncRoomDamages(projectId, roomId)
-        }
-        val duration = System.currentTimeMillis() - start
-        Log.d(
-            TAG,
-            "[syncDamages] Synced $total damages across ${roomIds.size} rooms for project $projectId in ${duration}ms"
-        )
-        return total
-    }
-
-    private suspend fun syncMoistureLogsForProject(projectId: Long): Int {
-        val start = System.currentTimeMillis()
-        val roomIds = localDataService.getServerRoomIdsForProject(projectId).distinct()
-        if (roomIds.isEmpty()) {
-            Log.d(TAG, "[syncMoistureLogs] No server room IDs for project $projectId; skipping moisture log sync")
-            return 0
-        }
-        var total = 0
-        roomIds.forEach { roomId ->
-            coroutineContext.ensureActive()
-            total += syncRoomMoistureLogs(projectId, roomId)
-        }
-        val duration = System.currentTimeMillis() - start
-        Log.d(
-            TAG,
-            "[syncMoistureLogs] Synced $total moisture logs across ${roomIds.size} rooms for project $projectId in ${duration}ms"
-        )
-        return total
     }
 
     private suspend fun <T> fetchAllPages(

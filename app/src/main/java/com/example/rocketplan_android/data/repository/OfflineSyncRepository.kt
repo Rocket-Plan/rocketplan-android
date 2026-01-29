@@ -46,6 +46,9 @@ import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
@@ -486,33 +489,40 @@ class OfflineSyncRepository(
         itemCount++
         ensureActive()
 
-        // 2. Levels (Locations from property)
+        // 2. Levels + Locations from property (fetched in parallel - matches iOS DispatchGroup pattern)
         var usedIncrementalSync = false
         val propertyLocations = run {
             val propertyId = property.id
             val existingLocationData = localDataService.getLatestLocationUpdate(projectId = projectId)
-            val levels = runCatching { api.getPropertyLevels(propertyId) }
-                .onFailure { if (it is CancellationException) throw it }
-                .getOrNull()?.data ?: emptyList()
-
             val updatedSinceParam = existingLocationData?.let { DateUtils.formatApiDate(it) }
             if (updatedSinceParam != null) {
-                Log.d("API", "🔄 [FAST] Requesting locations for property $propertyId since $updatedSinceParam (incremental)")
+                Log.d("API", "🔄 [FAST] Requesting levels+locations for property $propertyId since $updatedSinceParam (incremental)")
                 usedIncrementalSync = true
             } else {
-                Log.d("API", "🔄 [FAST] Requesting locations for property $propertyId (full sync - first run)")
+                Log.d("API", "🔄 [FAST] Requesting levels+locations for property $propertyId (full sync - first run)")
             }
 
-            val nested = runCatching {
-                api.getPropertyLocations(
-                    propertyId,
-                    updatedSince = updatedSinceParam
-                )
+            // Fetch levels and locations in parallel (both depend on property, not each other)
+            val (levels, nested) = coroutineScope {
+                val levelsDeferred = async {
+                    runCatching { api.getPropertyLevels(propertyId) }
+                        .onFailure { if (it is CancellationException) throw it }
+                        .getOrNull()?.data ?: emptyList()
+                }
+                val locationsDeferred = async {
+                    runCatching {
+                        api.getPropertyLocations(
+                            propertyId,
+                            updatedSince = updatedSinceParam
+                        )
+                    }
+                        .onFailure { if (it is CancellationException) throw it }
+                        .getOrNull()?.data ?: emptyList()
+                }
+                levelsDeferred.await() to locationsDeferred.await()
             }
-                .onFailure { if (it is CancellationException) throw it }
-                .getOrNull()?.data ?: emptyList()
 
-            Log.d("API", "✅ [FAST] Received ${levels.size} levels + ${nested.size} nested locations for property $propertyId")
+            Log.d("API", "✅ [FAST] Received ${levels.size} levels + ${nested.size} nested locations for property $propertyId (parallel)")
             levels to nested
         }
 
@@ -527,9 +537,18 @@ class OfflineSyncRepository(
         ensureActive()
 
         // 3. Rooms for each location (only nested locations have rooms, not levels)
-        val locationIds = nestedLocations.map { it.id }
-        locationIds.distinct().forEach { locationId ->
-            val rooms = roomSyncService.fetchRoomsForLocation(locationId)
+        // Fetch rooms in parallel for all locations (matching iOS DispatchGroup pattern)
+        val locationIds = nestedLocations.map { it.id }.distinct()
+        val roomResults = coroutineScope {
+            locationIds.map { locationId ->
+                async {
+                    val rooms = roomSyncService.fetchRoomsForLocation(locationId)
+                    locationId to rooms
+                }
+            }.awaitAll()
+        }
+        // Process and save rooms (must be sequential for DB consistency)
+        for ((locationId, rooms) in roomResults) {
             if (rooms.isNotEmpty()) {
                 val resolvedRooms = rooms.map { room ->
                     val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
@@ -542,8 +561,8 @@ class OfflineSyncRepository(
                 localDataService.saveRooms(resolvedRooms)
                 itemCount += rooms.size
             }
-            ensureActive()
         }
+        ensureActive()
 
         // 4. Relink room-scoped data (ensures foreign keys are correct)
         runCatching { localDataService.relinkRoomScopedData() }
@@ -1197,38 +1216,45 @@ class OfflineSyncRepository(
             return@withContext 0
         }
 
-        Log.d("API", "📷 [syncMismatched] Syncing ${roomsToSync.size} rooms with photo count mismatches")
-        var syncedCount = 0
-        for (room in roomsToSync) {
-            ensureActive()
-            val roomServerId = room.serverId ?: continue
-            try {
-                // Get server IDs of photos pending local deletion for this room.
-                // These will be filtered out during sync to prevent resurrection,
-                // while still allowing new photos from other clients to be fetched.
-                val pendingDeletionServerIds = localDataService.getPendingPhotoServerIdsForRoom(roomServerId)
-                if (pendingDeletionServerIds.isNotEmpty()) {
-                    Log.d("API", "📷 [syncMismatched] Room ${room.title} has ${pendingDeletionServerIds.size} photos pending deletion - will filter during sync")
-                }
+        Log.d("API", "📷 [syncMismatched] Syncing ${roomsToSync.size} rooms with photo count mismatches (parallel)")
 
-                // Use ignoreCheckpoint=true to fetch all photos, not just since last checkpoint.
-                // This handles cases where local photos were lost due to partial sync or DB reset.
-                val result = photoSyncService.syncRoomPhotos(
-                    projectId = projectId,
-                    roomId = roomServerId,
-                    ignoreCheckpoint = true,
-                    source = "mismatch-sync",
-                    excludedPhotoServerIds = pendingDeletionServerIds
-                )
-                if (result.success) {
-                    syncedCount++
-                    Log.d("API", "📷 [syncMismatched] Synced room ${room.title} (${room.serverId})")
+        // Sync all mismatched rooms in parallel (matching iOS DispatchGroup pattern)
+        val results = coroutineScope {
+            roomsToSync.mapNotNull { room ->
+                val roomServerId = room.serverId ?: return@mapNotNull null
+                async {
+                    try {
+                        // Get server IDs of photos pending local deletion for this room.
+                        // These will be filtered out during sync to prevent resurrection,
+                        // while still allowing new photos from other clients to be fetched.
+                        val pendingDeletionServerIds = localDataService.getPendingPhotoServerIdsForRoom(roomServerId)
+                        if (pendingDeletionServerIds.isNotEmpty()) {
+                            Log.d("API", "📷 [syncMismatched] Room ${room.title} has ${pendingDeletionServerIds.size} photos pending deletion - will filter during sync")
+                        }
+
+                        // Use ignoreCheckpoint=true to fetch all photos, not just since last checkpoint.
+                        // This handles cases where local photos were lost due to partial sync or DB reset.
+                        val result = photoSyncService.syncRoomPhotos(
+                            projectId = projectId,
+                            roomId = roomServerId,
+                            ignoreCheckpoint = true,
+                            source = "mismatch-sync",
+                            excludedPhotoServerIds = pendingDeletionServerIds
+                        )
+                        if (result.success) {
+                            Log.d("API", "📷 [syncMismatched] Synced room ${room.title} (${room.serverId})")
+                        }
+                        result.success
+                    } catch (e: Exception) {
+                        Log.w("API", "📷 [syncMismatched] Failed to sync room ${room.title}", e)
+                        false
+                    }
                 }
-            } catch (e: Exception) {
-                Log.w("API", "📷 [syncMismatched] Failed to sync room ${room.title}", e)
-            }
+            }.awaitAll()
         }
-        Log.d("API", "📷 [syncMismatched] Completed: synced $syncedCount/${roomsToSync.size} rooms")
+
+        val syncedCount = results.count { it }
+        Log.d("API", "📷 [syncMismatched] Completed: synced $syncedCount/${roomsToSync.size} rooms (parallel)")
         syncedCount
     }
 

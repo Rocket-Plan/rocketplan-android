@@ -29,6 +29,9 @@ import com.google.gson.JsonObject
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -70,7 +73,8 @@ class PhotoSyncService(
 
     /**
      * Syncs photos for all rooms in a project.
-     * Fetches room list from database and syncs photos for each.
+     * Fetches room list from database and syncs photos for each room in parallel.
+     * Matches iOS DispatchGroup pattern for concurrent room photo fetching.
      */
     suspend fun syncAllRoomPhotos(projectId: Long): SyncResult = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
@@ -83,20 +87,28 @@ class PhotoSyncService(
             return@withContext SyncResult.success(SyncSegment.ALL_ROOM_PHOTOS, 0, 0)
         }
 
+        val roomIds = rooms.mapNotNull { it.serverId }
+        Log.d(TAG, "📸 [syncAllRoomPhotos] Fetching photos for ${roomIds.size} rooms (parallel)")
+
+        // Fetch photos for all rooms in parallel (matching iOS DispatchGroup pattern)
+        val results = coroutineScope {
+            roomIds.map { roomId ->
+                async {
+                    roomId to syncRoomPhotos(projectId, roomId)
+                }
+            }.awaitAll()
+        }
+
+        // Aggregate results
         var totalPhotos = 0
         var failedRooms = 0
-        val roomIds = rooms.mapNotNull { it.serverId }
-
-        Log.d(TAG, "📸 [syncAllRoomPhotos] Fetching photos for ${roomIds.size} rooms")
-        for (roomId in roomIds) {
-            val result = syncRoomPhotos(projectId, roomId)
+        for ((roomId, result) in results) {
             if (result.success) {
                 totalPhotos += result.itemsSynced
             } else {
                 failedRooms++
                 Log.w(TAG, "⚠️ [syncAllRoomPhotos] Failed room $roomId", result.error)
             }
-            ensureActive()
         }
 
         if (totalPhotos > 0) {
@@ -104,7 +116,7 @@ class PhotoSyncService(
         }
 
         val duration = System.currentTimeMillis() - startTime
-        Log.d(TAG, "✅ [syncAllRoomPhotos] Synced $totalPhotos photos from ${roomIds.size - failedRooms}/${roomIds.size} rooms in ${duration}ms")
+        Log.d(TAG, "✅ [syncAllRoomPhotos] Synced $totalPhotos photos from ${roomIds.size - failedRooms}/${roomIds.size} rooms in ${duration}ms (parallel)")
         SyncResult.success(SyncSegment.ALL_ROOM_PHOTOS, totalPhotos, duration)
     }
 

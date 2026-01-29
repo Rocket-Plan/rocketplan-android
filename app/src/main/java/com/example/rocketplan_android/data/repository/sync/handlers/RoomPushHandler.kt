@@ -4,7 +4,9 @@ import android.util.Log
 import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
+import com.example.rocketplan_android.data.model.CreateLocationRequest
 import com.example.rocketplan_android.data.model.CreateRoomRequest
 import com.example.rocketplan_android.data.model.UpdateRoomRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
@@ -95,9 +97,34 @@ class RoomPushHandler(
             }
         }
 
-        // Handle Single Unit properties where level == location
-        if (levelServerId != null && locationServerId == null && payload.levelUuid == payload.locationUuid) {
-            locationServerId = levelServerId
+        // Handle Single Unit properties where level == location (no nested locations)
+        // When levelUuid == locationUuid, the app is using a level as if it were a location.
+        // We need to find or create a real location first, then create the room under it.
+        if (levelServerId != null && payload.levelUuid == payload.locationUuid) {
+            Log.d(
+                SYNC_TAG,
+                "🏗️ [handlePendingRoomCreation] Single-unit property detected (levelUuid == locationUuid); " +
+                    "finding or creating location for property $propertyServerId"
+            )
+            val resolvedLocation = getOrCreateLocationForProperty(
+                propertyServerId = propertyServerId,
+                projectTitle = project.title,
+                projectId = payload.projectId
+            )
+            if (resolvedLocation != null) {
+                locationServerId = resolvedLocation.serverId
+                location = resolvedLocation
+                Log.d(
+                    SYNC_TAG,
+                    "✅ [handlePendingRoomCreation] Using location ${resolvedLocation.serverId} for property $propertyServerId"
+                )
+            } else {
+                Log.w(
+                    SYNC_TAG,
+                    "⚠️ [handlePendingRoomCreation] Failed to get/create location for property $propertyServerId; will retry"
+                )
+                return OperationOutcome.SKIP
+            }
         }
 
         if (levelServerId == null || locationServerId == null) {
@@ -494,4 +521,103 @@ class RoomPushHandler(
                 PendingLockPayload::class.java
             ).lockUpdatedAt
         }.getOrNull()
+
+    /**
+     * Gets an existing location for a property, or creates one if none exists.
+     * This mirrors the iOS approach in ThisPropertyIsViewModel.createLocation().
+     *
+     * For single-unit properties, the server expects rooms to be created under a location,
+     * not directly under a level. This function ensures a location exists before room creation.
+     *
+     * @param propertyServerId The server ID of the property
+     * @param projectTitle The project title - used for naming if creating (matches iOS behavior)
+     * @param projectId The local project ID for saving the location
+     * @return The existing or newly created location entity with server ID, or null if failed
+     */
+    private suspend fun getOrCreateLocationForProperty(
+        propertyServerId: Long,
+        projectTitle: String,
+        projectId: Long
+    ): OfflineLocationEntity? {
+        // First, check if locations already exist for this property (like iOS does)
+        // iOS fails safe here - if we can't check, we don't create (to avoid duplicates)
+        val locationsResult = runCatching {
+            ctx.api.getPropertyLocations(propertyServerId)
+        }
+            .onFailure { error ->
+                if (error is CancellationException) throw error
+                Log.w(
+                    SYNC_TAG,
+                    "⚠️ [getOrCreateLocationForProperty] Failed to fetch existing locations for property $propertyServerId; " +
+                        "failing safe to avoid duplicates (will retry)",
+                    error
+                )
+            }
+
+        // Fail safe: if we couldn't check for existing locations, don't create (matches iOS behavior)
+        if (locationsResult.isFailure) {
+            return null
+        }
+
+        val existingLocations = locationsResult.getOrNull()?.data
+
+        // If a location exists, use it (save locally and return)
+        if (!existingLocations.isNullOrEmpty()) {
+            val existingDto = existingLocations.first()
+            Log.d(
+                SYNC_TAG,
+                "✅ [getOrCreateLocationForProperty] Found existing location ${existingDto.id} for property $propertyServerId"
+            )
+            val entity = existingDto.toEntity(defaultProjectId = projectId).copy(
+                syncStatus = SyncStatus.SYNCED,
+                isDirty = false,
+                lastSyncedAt = ctx.now()
+            )
+            ctx.localDataService.saveLocations(listOf(entity))
+            return entity
+        }
+
+        // No existing locations - create a new one
+        Log.d(
+            SYNC_TAG,
+            "✨ [getOrCreateLocationForProperty] No existing locations found - creating new for property $propertyServerId"
+        )
+
+        // Use project title for location name (matches iOS behavior in createNewLocation)
+        val locationName = projectTitle.takeIf { it.isNotBlank() } ?: "Unit"
+        val locationUuid = UuidUtils.generateUuidV7()
+
+        val request = CreateLocationRequest(
+            name = locationName,
+            uuid = locationUuid,
+            floorNumber = 1,
+            locationTypeId = 1, // Default to "unit" type
+            isCommon = true,
+            isAccessible = true,
+            isCommercial = false,
+            idempotencyKey = locationUuid
+        )
+
+        val dto = runCatching { ctx.api.createLocation(propertyServerId, request) }
+            .onFailure { error ->
+                if (error is CancellationException) throw error
+                Log.e(
+                    SYNC_TAG,
+                    "❌ [getOrCreateLocationForProperty] Failed to create location for property $propertyServerId",
+                    error
+                )
+            }
+            .getOrNull() ?: return null
+
+        // Save the created location locally
+        val entity = dto.toEntity(defaultProjectId = projectId).copy(
+            uuid = locationUuid,
+            syncStatus = SyncStatus.SYNCED,
+            isDirty = false,
+            lastSyncedAt = ctx.now()
+        )
+        ctx.localDataService.saveLocations(listOf(entity))
+
+        return entity
+    }
 }

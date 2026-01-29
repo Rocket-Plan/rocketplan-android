@@ -135,6 +135,16 @@ class ImageProcessorQueueManager(
         }
     }
 
+    /**
+     * Promote WAITING_FOR_ROOM assemblies to QUEUED once their project has synced.
+     *
+     * IMPORTANT: We do NOT POST the assembly to the backend here. We just transition
+     * the status from WAITING_FOR_ROOM to QUEUED. The actual backend POST happens in
+     * uploadAssembly() which immediately uploads photos after the POST.
+     *
+     * This prevents a race condition where the backend receives the assembly creation
+     * but photos haven't been uploaded yet, causing the backend to process 0 files.
+     */
     private suspend fun registerWaitingAssemblies(): Boolean {
         val waitingAssemblies = dao.getAssembliesByStatus(listOf(AssemblyStatus.WAITING_FOR_ROOM.value))
         if (waitingAssemblies.isEmpty()) return false
@@ -195,72 +205,24 @@ class ImageProcessorQueueManager(
                 continue
             }
 
-            val photos = dao.getPhotosByAssemblyUuid(assembly.assemblyId)
-            val request = ImageProcessorAssemblyRequest(
-                assemblyId = assembly.assemblyId,
-                totalFiles = assembly.totalFiles,
-                roomId = roomServerId,
-                projectId = projectServerId,
-                groupUuid = assembly.groupUuid,
-                bytesReceived = assembly.bytesReceived,
-                photoNames = photos.map { it.fileName },
-                albums = resolvedUploadData.albums,
-                irPhotos = resolvedUploadData.irPhotos ?: emptyList(),
-                order = resolvedUploadData.order,
-                notes = resolvedUploadData.notes,
-                entityType = resolvedUploadData.entityType,
-                entityId = resolvedUploadData.entityId
+            // Promote to QUEUED - the queue manager will handle the backend POST + photo upload together
+            // This prevents the race condition where backend processes 0 files before upload starts
+            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.QUEUED, null)
+            Log.d(
+                TAG,
+                "✅ Promoted waiting assembly ${assembly.assemblyId} to QUEUED (roomId=${roomServerId ?: "none"})"
             )
-
-            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATING, null)
-
-            val response = runCatching {
-                if (roomServerId != null) {
-                    api.createRoomAssembly(roomServerId, request)
-                } else {
-                    api.createEntityAssembly(request)
-                }
-            }.getOrElse { error ->
-                Log.e(TAG, "❌ Failed to register waiting assembly ${assembly.assemblyId}", error)
-                remoteLogger?.log(
-                    level = LogLevel.ERROR,
-                    tag = TAG,
-                    message = "Failed to register waiting assembly",
-                    metadata = mapOf(
-                        "assembly_id" to assembly.assemblyId,
-                        "reason" to (error.message ?: "unknown")
-                    )
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Promoted waiting assembly to QUEUED after project sync",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "project_id_server" to projectServerId.toString(),
+                    "room_id_server" to (roomServerId?.toString() ?: "null")
                 )
-                null
-            } ?: continue
-
-            val body = response.body()
-            if (response.isSuccessful && body?.success == true) {
-                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATED, null)
-                realtimeManager?.trackAssembly(assembly.assemblyId)
-                Log.d(
-                    TAG,
-                    "✅ Registered waiting assembly ${assembly.assemblyId} (roomId=${roomServerId ?: "none"})"
-                )
-                remoteLogger?.log(
-                    level = LogLevel.INFO,
-                    tag = TAG,
-                    message = "Registered waiting assembly after room sync",
-                    metadata = mapOf(
-                        "assembly_id" to assembly.assemblyId,
-                        "project_id_server" to projectServerId.toString(),
-                        "room_id_server" to (roomServerId?.toString() ?: "null")
-                    )
-                )
-                promoted = true
-            } else {
-                val errorMessage = body?.message ?: response.errorBody()?.string() ?: "Unknown error"
-                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.WAITING_FOR_ROOM, errorMessage)
-                Log.w(
-                    TAG,
-                    "⚠️ Waiting assembly ${assembly.assemblyId} still pending: $errorMessage (code=${response.code()})"
-                )
-            }
+            )
+            promoted = true
         }
 
         return promoted
@@ -307,16 +269,23 @@ class ImageProcessorQueueManager(
     }
 
     /**
-     * Retry creating a QUEUED assembly on the server.
-     * Called when an assembly's initial creation failed due to network issues.
+     * Create or retry creating a QUEUED assembly on the server.
+     * Called when:
+     * - Assembly's initial creation failed due to network issues (source: "network_retry")
+     * - Assembly was promoted from WAITING_FOR_ROOM after project sync (source: "promoted_from_waiting")
+     *
+     * This ensures the backend POST and photo upload happen together, preventing
+     * the race condition where backend processes 0 files before photos are uploaded.
+     *
      * Returns true if creation succeeded, false if it failed (assembly stays QUEUED).
      */
     private suspend fun retryAssemblyCreation(
         assembly: ImageProcessorAssemblyEntity,
         uploadData: StoredUploadData,
-        photos: List<ImageProcessorPhotoEntity>
+        photos: List<ImageProcessorPhotoEntity>,
+        source: String = "unknown"
     ): Boolean {
-        Log.d(TAG, "🔄 Retrying assembly creation for ${assembly.assemblyId}")
+        Log.d(TAG, "🔄 Creating assembly on backend for ${assembly.assemblyId} (source=$source)")
 
         val projectServerId = offlineDao.getProject(assembly.projectId)?.serverId
         if (projectServerId == null) {
@@ -372,9 +341,10 @@ class ImageProcessorQueueManager(
             remoteLogger?.log(
                 level = LogLevel.WARN,
                 tag = TAG,
-                message = "Assembly creation retry failed",
+                message = "Assembly backend creation failed",
                 metadata = mapOf(
                     "assembly_id" to assembly.assemblyId,
+                    "source" to source,
                     "is_network_error" to isNetworkError.toString(),
                     "error" to (error.message ?: "unknown")
                 )
@@ -386,13 +356,14 @@ class ImageProcessorQueueManager(
         if (response.isSuccessful && body?.success == true) {
             updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.CREATED, null)
             realtimeManager?.trackAssembly(assembly.assemblyId)
-            Log.d(TAG, "✅ Assembly ${assembly.assemblyId} creation retry succeeded")
+            Log.d(TAG, "✅ Assembly ${assembly.assemblyId} backend creation succeeded (source=$source)")
             remoteLogger?.log(
                 level = LogLevel.INFO,
                 tag = TAG,
-                message = "Assembly creation retry succeeded",
+                message = "Assembly backend creation succeeded",
                 metadata = mapOf(
                     "assembly_id" to assembly.assemblyId,
+                    "source" to source,
                     "project_id_server" to projectServerId.toString(),
                     "room_id_server" to (roomServerId?.toString() ?: "null")
                 )
@@ -402,13 +373,14 @@ class ImageProcessorQueueManager(
             val errorMessage = body?.message ?: response.errorBody()?.string() ?: "Unknown error"
             // Non-network error - mark as FAILED
             updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.FAILED, errorMessage)
-            Log.w(TAG, "❌ Assembly ${assembly.assemblyId} creation retry failed: $errorMessage")
+            Log.w(TAG, "❌ Assembly ${assembly.assemblyId} backend creation failed: $errorMessage (source=$source)")
             remoteLogger?.log(
                 level = LogLevel.ERROR,
                 tag = TAG,
-                message = "Assembly creation retry failed with server error",
+                message = "Assembly backend creation failed with server error",
                 metadata = mapOf(
                     "assembly_id" to assembly.assemblyId,
+                    "source" to source,
                     "error" to errorMessage,
                     "code" to response.code().toString()
                 )
@@ -839,12 +811,15 @@ class ImageProcessorQueueManager(
                 )
             }
 
-            // If assembly is QUEUED, the backend POST failed - retry it now
+            // If assembly is QUEUED, it needs backend creation:
+            // - Promoted from WAITING_FOR_ROOM after project sync (first creation)
+            // - Network failed during previous creation attempt (retry)
             if (assembly.status == AssemblyStatus.QUEUED.value) {
-                val retryResult = retryAssemblyCreation(assembly, resolvedUploadData, photos)
+                val source = if (assembly.failsCount > 0) "retry_after_failure" else "first_creation"
+                val retryResult = retryAssemblyCreation(assembly, resolvedUploadData, photos, source)
                 if (!retryResult) {
-                    // Retry failed, keep as QUEUED for next attempt
-                    Log.d(TAG, "⏸️ Assembly ${assembly.assemblyId} creation retry failed, will retry later")
+                    // Creation failed, keep as QUEUED for next attempt
+                    Log.d(TAG, "⏸️ Assembly ${assembly.assemblyId} backend creation failed (source=$source), will retry later")
                     onAssemblyCompleted(assembly.assemblyId, success = false, errorMessage = "Assembly creation failed")
                     return
                 }

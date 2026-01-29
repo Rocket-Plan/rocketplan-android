@@ -9,9 +9,10 @@ import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
-import kotlin.coroutines.coroutineContext
 
 /**
  * Handles work scope sync and catalog operations.
@@ -29,16 +30,17 @@ class WorkScopeSyncService(
             return@withContext 0
         }
 
-        var total = 0
-        roomIds.forEach { roomId ->
-            coroutineContext.ensureActive()
-            total += syncRoomWorkScopes(projectId, roomId)
+        // Fetch work scopes for all rooms in parallel (matching iOS DispatchGroup pattern)
+        val total = coroutineScope {
+            roomIds.map { roomId ->
+                async { syncRoomWorkScopes(projectId, roomId) }
+            }.awaitAll().sum()
         }
 
         val duration = System.currentTimeMillis() - start
         Log.d(
             TAG,
-            "[syncWorkScopes] Synced $total work scope items across ${roomIds.size} rooms for project $projectId in ${duration}ms"
+            "[syncWorkScopes] Synced $total work scope items across ${roomIds.size} rooms for project $projectId in ${duration}ms (parallel)"
         )
         total
     }
