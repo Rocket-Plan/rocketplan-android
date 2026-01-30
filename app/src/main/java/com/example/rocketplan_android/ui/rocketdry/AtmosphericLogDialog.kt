@@ -1,8 +1,11 @@
 package com.example.rocketplan_android.ui.rocketdry
 
+import android.net.Uri
 import android.view.View
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -15,7 +18,15 @@ import com.google.android.material.textfield.TextInputLayout
 import java.text.DecimalFormat
 
 /**
+ * Callback interface for photo capture in the dialog.
+ */
+interface AtmosphericLogPhotoCallback {
+    fun onTakePhotoRequested(callback: (Uri?) -> Unit)
+}
+
+/**
  * Displays the multi-step atmospheric log input wizard and invokes [onSave] when finished.
+ * Now includes an optional photo capture step (step 5).
  */
 @Suppress("DEPRECATION") // SOFT_INPUT_ADJUST_RESIZE still needed for dialog keyboard behavior
 fun Fragment.showAtmosphericLogDialog(
@@ -23,7 +34,8 @@ fun Fragment.showAtmosphericLogDialog(
     areaLabel: String? = null,
     onAreaClicked: ((updateLabel: (String) -> Unit) -> Unit)? = null,
     onRenameAreaClicked: ((updateLabel: (String) -> Unit) -> Unit)? = null,
-    onSave: (humidity: Double, temperature: Double, pressure: Double, windSpeed: Double) -> Unit
+    photoCallback: AtmosphericLogPhotoCallback? = null,
+    onSave: (humidity: Double, temperature: Double, pressure: Double, windSpeed: Double, photoLocalPath: String?) -> Unit
 ) {
     data class InputStep(
         val labelRes: Int,
@@ -41,11 +53,27 @@ fun Fragment.showAtmosphericLogDialog(
     val areaName = dialogView.findViewById<TextView>(R.id.areaName)
     val changeAreaButton = dialogView.findViewById<MaterialButton>(R.id.changeAreaButton)
     val renameAreaButton = dialogView.findViewById<MaterialButton>(R.id.renameAreaButton)
+    val inputStepContainer = dialogView.findViewById<LinearLayout>(R.id.inputStepContainer)
     val stepInputLayout = dialogView.findViewById<TextInputLayout>(R.id.stepInputLayout)
     val stepInput = dialogView.findViewById<TextInputEditText>(R.id.stepInput)
     val previousStepButton = dialogView.findViewById<MaterialButton>(R.id.previousStepButton)
     val cancelWizardButton = dialogView.findViewById<MaterialButton>(R.id.cancelWizardButton)
     val nextStepButton = dialogView.findViewById<MaterialButton>(R.id.nextStepButton)
+
+    // Photo step views
+    val photoCaptureStep = dialogView.findViewById<View>(R.id.photoCaptureStep)
+    val photoPreview = dialogView.findViewById<ImageView>(R.id.photoPreview)
+    val photoPlaceholder = dialogView.findViewById<ImageView>(R.id.photoPlaceholder)
+    val preCaptureButtons = dialogView.findViewById<LinearLayout>(R.id.preCaptureButtons)
+    val postCaptureButtons = dialogView.findViewById<LinearLayout>(R.id.postCaptureButtons)
+    val saveWithoutPhotoButton = dialogView.findViewById<MaterialButton>(R.id.saveWithoutPhotoButton)
+    val takePhotoButton = dialogView.findViewById<MaterialButton>(R.id.takePhotoButton)
+    val recapturePhotoButton = dialogView.findViewById<MaterialButton>(R.id.recapturePhotoButton)
+    val saveWithPhotoButton = dialogView.findViewById<MaterialButton>(R.id.saveWithPhotoButton)
+    val photoStepHumidity = dialogView.findViewById<TextView>(R.id.photoStepHumidity)
+    val photoStepTemperature = dialogView.findViewById<TextView>(R.id.photoStepTemperature)
+    val photoStepPressure = dialogView.findViewById<TextView>(R.id.photoStepPressure)
+    val photoStepWindSpeed = dialogView.findViewById<TextView>(R.id.photoStepWindSpeed)
 
     val dialog = MaterialAlertDialogBuilder(requireContext())
         .setView(dialogView)
@@ -83,9 +111,10 @@ fun Fragment.showAtmosphericLogDialog(
     var temperature: Double? = null
     var pressure: Double? = null
     var windSpeed: Double? = null
+    var capturedPhotoPath: String? = null
 
     val numberFormatter = DecimalFormat("#.##")
-    val steps = listOf(
+    val inputSteps = listOf(
         InputStep(
             labelRes = R.string.rocketdry_relative_humidity_label,
             unit = getString(R.string.percent),
@@ -112,6 +141,11 @@ fun Fragment.showAtmosphericLogDialog(
         )
     )
 
+    // Total steps: 4 input steps + 1 photo step (if photoCallback provided)
+    val hasPhotoStep = photoCallback != null
+    val totalSteps = if (hasPhotoStep) inputSteps.size + 1 else inputSteps.size
+    val photoStepIndex = inputSteps.size // Step 5 (index 4)
+
     var currentStep = 0
 
     fun formatPreview(value: Double?, unit: String): String {
@@ -119,8 +153,72 @@ fun Fragment.showAtmosphericLogDialog(
         return if (unit.isBlank()) formattedValue else "$formattedValue $unit"
     }
 
+    fun showPhotoStep() {
+        inputStepContainer.isVisible = false
+        stepLabel.isVisible = false
+        stepPreview.isVisible = false
+        photoCaptureStep.isVisible = true
+        nextStepButton.isVisible = false
+        cancelWizardButton.isVisible = false
+
+        // Hide area container and navigation on photo step
+        areaContainer.isVisible = false
+        stepPosition.isVisible = false
+        previousStepButton.isVisible = false
+
+        // Hide keyboard
+        stepInput.clearFocus()
+        val imm = requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        imm.hideSoftInputFromWindow(stepInput.windowToken, 0)
+
+        // Populate metrics summary
+        val humidityVal = humidity?.let { numberFormatter.format(it) } ?: "0"
+        val temperatureVal = temperature?.let { numberFormatter.format(it) } ?: "0"
+        val pressureVal = pressure?.let { numberFormatter.format(it) } ?: "0"
+        val windSpeedVal = windSpeed?.let { numberFormatter.format(it) } ?: "0"
+
+        photoStepHumidity.text = getString(R.string.atmospheric_humidity_format, humidityVal)
+        photoStepTemperature.text = getString(R.string.atmospheric_temperature_format, temperatureVal)
+        photoStepPressure.text = getString(R.string.atmospheric_pressure_format, pressureVal)
+        photoStepWindSpeed.text = getString(R.string.atmospheric_wind_speed_format, windSpeedVal)
+
+        // Show appropriate buttons based on whether photo was captured
+        if (capturedPhotoPath != null) {
+            preCaptureButtons.isVisible = false
+            postCaptureButtons.isVisible = true
+            photoPreview.isVisible = true
+            photoPlaceholder.isVisible = false
+        } else {
+            preCaptureButtons.isVisible = true
+            postCaptureButtons.isVisible = false
+            photoPreview.isVisible = false
+            photoPlaceholder.isVisible = true
+        }
+    }
+
+    fun showInputStep() {
+        inputStepContainer.isVisible = true
+        stepLabel.isVisible = true
+        stepPreview.isVisible = true
+        stepPosition.isVisible = true
+        photoCaptureStep.isVisible = false
+        nextStepButton.isVisible = true
+        cancelWizardButton.isVisible = true
+        previousStepButton.isVisible = true
+        if (hasAreaUi) {
+            areaContainer.isVisible = true
+        }
+    }
+
     fun bindStep() {
-        val step = steps[currentStep]
+        if (currentStep == photoStepIndex && hasPhotoStep) {
+            showPhotoStep()
+            return
+        }
+
+        showInputStep()
+
+        val step = inputSteps[currentStep]
         val currentValue = step.getter()
         stepLabel.text = getString(step.labelRes)
         stepInputLayout.hint = getString(step.labelRes)
@@ -128,19 +226,29 @@ fun Fragment.showAtmosphericLogDialog(
         stepPosition.text = getString(
             R.string.rocketdry_step_indicator,
             currentStep + 1,
-            steps.size
+            totalSteps
         )
         stepInputLayout.error = null
         val textValue = currentValue?.let { numberFormatter.format(it) } ?: ""
         stepInput.setText(textValue)
         stepInput.setSelection(stepInput.text?.length ?: 0)
-        stepInput.imeOptions = if (currentStep == steps.lastIndex) {
+
+        // Determine if this is the last input step before photo step
+        val isLastInputStep = if (hasPhotoStep) {
+            currentStep == inputSteps.lastIndex
+        } else {
+            currentStep == inputSteps.lastIndex
+        }
+
+        stepInput.imeOptions = if (isLastInputStep && !hasPhotoStep) {
             EditorInfo.IME_ACTION_DONE
         } else {
             EditorInfo.IME_ACTION_NEXT
         }
         previousStepButton.isEnabled = currentStep > 0
-        nextStepButton.text = if (currentStep == steps.lastIndex) {
+
+        // Show "Next" for all input steps (photo step or save handled separately)
+        nextStepButton.text = if (currentStep == inputSteps.lastIndex && !hasPhotoStep) {
             getString(R.string.save)
         } else {
             getString(R.string.rocketdry_next)
@@ -148,15 +256,44 @@ fun Fragment.showAtmosphericLogDialog(
     }
 
     fun persistCurrentValue(): Boolean {
+        if (currentStep >= inputSteps.size) return true
         val value = stepInput.text?.toString()?.toDoubleOrNull()
         stepInputLayout.error = null
-        steps[currentStep].setter(value)
+        inputSteps[currentStep].setter(value)
         return true
+    }
+
+    fun saveLog(photoPath: String?) {
+        onSave(
+            humidity ?: 0.0,
+            temperature ?: 0.0,
+            pressure ?: 0.0,
+            windSpeed ?: 0.0,
+            photoPath
+        )
+        dialog.dismiss()
+    }
+
+    fun handleTakePhoto() {
+        // Hide dialog while camera is open
+        dialog.hide()
+        photoCallback?.onTakePhotoRequested { uri ->
+            // Show dialog again when returning from camera
+            dialog.show()
+            if (uri != null) {
+                capturedPhotoPath = uri.path
+                photoPreview.setImageURI(uri)
+                photoPreview.isVisible = true
+                photoPlaceholder.isVisible = false
+                preCaptureButtons.isVisible = false
+                postCaptureButtons.isVisible = true
+            }
+        }
     }
 
     stepInput.doAfterTextChanged {
         stepInputLayout.error = null
-        steps.getOrNull(currentStep)?.let { step ->
+        inputSteps.getOrNull(currentStep)?.let { step ->
             stepPreview.text = formatPreview(it?.toString()?.toDoubleOrNull(), step.unit)
         }
     }
@@ -173,8 +310,10 @@ fun Fragment.showAtmosphericLogDialog(
     previousStepButton.setOnClickListener {
         if (currentStep == 0) return@setOnClickListener
         stepInputLayout.error = null
-        stepInput.text?.toString()?.toDoubleOrNull()?.let { value ->
-            steps[currentStep].setter(value)
+        if (currentStep < inputSteps.size) {
+            stepInput.text?.toString()?.toDoubleOrNull()?.let { value ->
+                inputSteps[currentStep].setter(value)
+            }
         }
         currentStep -= 1
         bindStep()
@@ -188,21 +327,68 @@ fun Fragment.showAtmosphericLogDialog(
         val isValid = persistCurrentValue()
         if (!isValid) return@setOnClickListener
 
-        if (currentStep == steps.lastIndex) {
-            onSave(
-                humidity ?: 0.0,
-                temperature ?: 0.0,
-                pressure ?: 0.0,
-                windSpeed ?: 0.0
-            )
-            dialog.dismiss()
+        if (currentStep == inputSteps.lastIndex) {
+            if (hasPhotoStep) {
+                // Go to photo step
+                currentStep = photoStepIndex
+                bindStep()
+            } else {
+                // No photo step, save directly
+                saveLog(null)
+            }
         } else {
             currentStep += 1
             bindStep()
         }
     }
 
+    // Photo step button handlers
+    saveWithoutPhotoButton.setOnClickListener {
+        saveLog(null)
+    }
+
+    takePhotoButton.setOnClickListener {
+        handleTakePhoto()
+    }
+
+    // Make photo placeholder clickable to launch camera
+    photoPlaceholder.setOnClickListener {
+        handleTakePhoto()
+    }
+
+    recapturePhotoButton.setOnClickListener {
+        capturedPhotoPath = null
+        handleTakePhoto()
+    }
+
+    saveWithPhotoButton.setOnClickListener {
+        saveLog(capturedPhotoPath)
+    }
+
     bindStep()
     dialog.show()
     stepInput.requestFocus()
+}
+
+/**
+ * Legacy overload for backward compatibility (without photo support).
+ */
+@Suppress("DEPRECATION")
+fun Fragment.showAtmosphericLogDialog(
+    title: String,
+    areaLabel: String? = null,
+    onAreaClicked: ((updateLabel: (String) -> Unit) -> Unit)? = null,
+    onRenameAreaClicked: ((updateLabel: (String) -> Unit) -> Unit)? = null,
+    onSave: (humidity: Double, temperature: Double, pressure: Double, windSpeed: Double) -> Unit
+) {
+    showAtmosphericLogDialog(
+        title = title,
+        areaLabel = areaLabel,
+        onAreaClicked = onAreaClicked,
+        onRenameAreaClicked = onRenameAreaClicked,
+        photoCallback = null,
+        onSave = { humidity, temperature, pressure, windSpeed, _ ->
+            onSave(humidity, temperature, pressure, windSpeed)
+        }
+    )
 }

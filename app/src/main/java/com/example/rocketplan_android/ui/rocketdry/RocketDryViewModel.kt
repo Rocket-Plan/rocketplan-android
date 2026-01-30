@@ -144,10 +144,12 @@ class RocketDryViewModel(
         temperature: Double,
         pressure: Double,
         windSpeed: Double,
-        roomId: Long?
+        roomId: Long?,
+        photoLocalPath: String? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val now = Date()
+            val hasPhoto = !photoLocalPath.isNullOrBlank()
             val log = OfflineAtmosphericLogEntity(
                 logId = -System.currentTimeMillis(),
                 uuid = UuidUtils.generateUuidV7(),
@@ -159,6 +161,8 @@ class RocketDryViewModel(
                 pressure = pressure,
                 windSpeed = windSpeed,
                 isExternal = true,
+                photoLocalPath = if (hasPhoto) photoLocalPath else null,
+                photoUploadStatus = if (hasPhoto) "pending" else "none",
                 createdAt = now,
                 updatedAt = now,
                 syncStatus = SyncStatus.PENDING,
@@ -203,6 +207,38 @@ class RocketDryViewModel(
         }
     }
 
+    fun deleteAtmosphericLog(logId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            android.util.Log.d("RocketDryVM", "🗑️ Deleting atmospheric log: logId=$logId")
+            runCatching {
+                val log = localDataService.getAtmosphericLog(logId)
+                if (log != null) {
+                    val deletedLog = log.copy(
+                        isDeleted = true,
+                        updatedAt = Date(),
+                        syncStatus = SyncStatus.PENDING,
+                        isDirty = true
+                    )
+                    localDataService.saveAtmosphericLogs(listOf(deletedLog))
+                    offlineSyncRepository.enqueueAtmosphericLogSync(deletedLog)
+                    android.util.Log.d("RocketDryVM", "✅ Atmospheric log deleted: logId=$logId")
+                } else {
+                    android.util.Log.w("RocketDryVM", "⚠️ Atmospheric log not found: logId=$logId")
+                }
+            }.onFailure {
+                android.util.Log.e("RocketDryVM", "❌ Failed to delete atmospheric log: logId=$logId", it)
+            }
+        }
+    }
+
+    fun getAtmosphericLog(logId: Long): AtmosphericLogItem? {
+        val state = _uiState.value
+        if (state is RocketDryUiState.Ready) {
+            return state.atmosphericLogs.firstOrNull { it.logId == logId }
+        }
+        return null
+    }
+
     private fun buildProjectAddress(project: OfflineProjectEntity): String {
         val address = project.addressLine1?.takeIf { it.isNotBlank() }
         val title = project.title.takeIf { it.isNotBlank() }
@@ -241,13 +277,19 @@ class RocketDryViewModel(
         rooms: Map<Long, OfflineRoomEntity>
     ): AtmosphericLogItem =
         AtmosphericLogItem(
+            logId = logId,
             roomId = roomId,
             roomName = roomId?.let { rooms[it]?.title },
             dateTime = formatDateTime(date),
             humidity = relativeHumidity,
             temperature = temperature,
             pressure = pressure ?: 0.0,
-            windSpeed = windSpeed ?: 0.0
+            windSpeed = windSpeed ?: 0.0,
+            isExternal = isExternal,
+            photoUrl = photoUrl,
+            photoLocalPath = photoLocalPath,
+            createdAt = formatDateTime(createdAt),
+            updatedAt = formatDateTime(updatedAt)
         )
 
     private fun buildAtmosphericAreas(

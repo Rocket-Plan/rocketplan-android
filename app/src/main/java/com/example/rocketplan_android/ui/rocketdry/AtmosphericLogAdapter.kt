@@ -10,7 +10,8 @@ import com.example.rocketplan_android.R
 import kotlin.math.roundToInt
 
 class AtmosphericLogAdapter(
-    private val onAddLogClicked: () -> Unit
+    private val onAddLogClicked: () -> Unit,
+    private val onItemClicked: ((AtmosphericLogItem) -> Unit)? = null
 ) : RecyclerView.Adapter<AtmosphericLogAdapter.ViewHolder>() {
 
     private val logs: MutableList<AtmosphericLogItem> = mutableListOf()
@@ -18,7 +19,7 @@ class AtmosphericLogAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_atmospheric_log, parent, false)
-        return ViewHolder(view, onAddLogClicked)
+        return ViewHolder(view, onAddLogClicked, onItemClicked)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -35,7 +36,8 @@ class AtmosphericLogAdapter(
 
     class ViewHolder(
         itemView: View,
-        private val onAddLogClicked: () -> Unit
+        private val onAddLogClicked: () -> Unit,
+        private val onItemClicked: ((AtmosphericLogItem) -> Unit)?
     ) : RecyclerView.ViewHolder(itemView) {
         private val logDateTime: TextView = itemView.findViewById(R.id.logDateTime)
         private val humidityValue: TextView = itemView.findViewById(R.id.humidityValue)
@@ -52,6 +54,11 @@ class AtmosphericLogAdapter(
             windSpeedValue.text = log.windSpeed.roundToInt().toString()
 
             addLogButton.setOnClickListener { onAddLogClicked() }
+
+            // Make the entire card clickable
+            itemView.setOnClickListener {
+                onItemClicked?.invoke(log)
+            }
         }
     }
 }

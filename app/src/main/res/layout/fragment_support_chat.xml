@@ -41,8 +41,8 @@
 
         <ImageButton
             android:id="@+id/sendButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/icon_size_card_large"
+            android:layout_height="@dimen/icon_size_card_large"
             android:layout_marginStart="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/support_send"

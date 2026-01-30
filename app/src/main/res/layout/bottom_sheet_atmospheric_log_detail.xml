@@ -1,0 +1,368 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bottom_sheet"
+    android:orientation="vertical"
+    android:paddingBottom="24dp">
+
+    <!-- Handle -->
+    <View
+        android:layout_width="@dimen/icon_size_action"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_handle" />
+
+    <!-- Header with Photo -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <!-- Photo thumbnail -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="@dimen/icon_size_thumbnail"
+            android:layout_height="@dimen/icon_size_thumbnail"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/light_border"
+            app:strokeWidth="1dp">
+
+            <ImageView
+                android:id="@+id/photoThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                tools:visibility="visible"
+                tools:src="@color/light_border" />
+
+            <ImageView
+                android:id="@+id/photoPlaceholder"
+                android:layout_width="@dimen/icon_size_tab"
+                android:layout_height="@dimen/icon_size_tab"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_camera"
+                app:tint="@color/light_text_rp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Title and DateTime -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/logTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/atmospheric_log_detail_title"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_title_large"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/logDateTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="Jan 30, 7:40am" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/light_border" />
+
+    <!-- Metrics Grid -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:baselineAligned="false"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <!-- R. Humidity -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/r_humidity_short"
+                android:textColor="@color/black"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/humidityValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_title_large"
+                    android:textStyle="bold"
+                    tools:text="65" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:text="@string/percent"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_body_small" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Temperature -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/temperature_short"
+                android:textColor="@color/black"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/temperatureValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_title_large"
+                    android:textStyle="bold"
+                    tools:text="72" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:text="@string/fahrenheit"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_body_small" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Pressure -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pressure"
+                android:textColor="@color/black"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/pressureValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_title_large"
+                    android:textStyle="bold"
+                    tools:text="101" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:text="@string/kpa"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_body_small" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Wind Speed -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wind_speed_short"
+                android:textColor="@color/black"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:gravity="bottom"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/windSpeedValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_title_large"
+                    android:textStyle="bold"
+                    tools:text="5" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="2dp"
+                    android:text="@string/mph"
+                    android:textColor="@color/black"
+                    android:textSize="@dimen/text_size_body_small" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/light_border" />
+
+    <!-- Metadata Section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Recorded On -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/atmospheric_log_recorded_on"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/recordedOnValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_small"
+                tools:text="Jan 30, 7:40am" />
+
+        </LinearLayout>
+
+        <!-- Edited On (only shown if different from recorded) -->
+        <LinearLayout
+            android:id="@+id/editedOnContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/atmospheric_log_edited_on"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/editedOnValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_small"
+                tools:text="Jan 30, 8:15am" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/light_border" />
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/editRecordButton"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/atmospheric_log_edit"
+            android:textAllCaps="false"
+            app:strokeColor="@color/main_purple" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/deleteRecordButton"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/atmospheric_log_delete"
+            android:textAllCaps="false"
+            android:textColor="@color/warning_red"
+            app:strokeColor="@color/warning_red" />
+
+    </LinearLayout>
+
+</LinearLayout>

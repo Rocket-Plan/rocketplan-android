@@ -28,7 +28,7 @@
             android:imeOptions="actionDone"
             android:inputType="textCapWords"
             android:maxLines="1"
-            android:textSize="14sp" />
+            android:textSize="@dimen/text_size_body_large" />
 
     </com.google.android.material.textfield.TextInputLayout>
 

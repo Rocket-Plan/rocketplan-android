@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginBottom="12dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/light_border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp">
+
+        <!-- Photo thumbnail -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="@dimen/icon_size_section"
+            android:layout_height="@dimen/icon_size_section"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/light_border"
+            app:strokeWidth="1dp">
+
+            <ImageView
+                android:id="@+id/photoThumbnail"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:visibility="gone"
+                tools:visibility="visible"
+                tools:src="@color/light_border" />
+
+            <ImageView
+                android:id="@+id/photoPlaceholder"
+                android:layout_width="@dimen/icon_size_nav"
+                android:layout_height="@dimen/icon_size_nav"
+                android:layout_gravity="center"
+                android:src="@drawable/ic_camera"
+                app:tint="@color/light_text_rp" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Content -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Header: #1, Jan 30, 7:40am -->
+            <TextView
+                android:id="@+id/logHeader"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                android:textStyle="bold"
+                tools:text="#1, Jan 30, 7:40am" />
+
+            <!-- Metrics row -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:orientation="horizontal">
+
+                <!-- Humidity -->
+                <TextView
+                    android:id="@+id/humidityValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="@dimen/text_size_body_small"
+                    tools:text="65%" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="12dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="@color/light_border" />
+
+                <!-- Temperature -->
+                <TextView
+                    android:id="@+id/temperatureValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="@dimen/text_size_body_small"
+                    tools:text="72°F" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="12dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="@color/light_border" />
+
+                <!-- Pressure -->
+                <TextView
+                    android:id="@+id/pressureValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="@dimen/text_size_body_small"
+                    tools:text="101 kPa" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="12dp"
+                    android:layout_gravity="center_vertical"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="@color/light_border" />
+
+                <!-- Wind Speed -->
+                <TextView
+                    android:id="@+id/windSpeedValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/light_text_rp"
+                    android:textSize="@dimen/text_size_body_small"
+                    tools:text="5 mph" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Chevron -->
+        <ImageView
+            android:layout_width="@dimen/icon_size_nav"
+            android:layout_height="@dimen/icon_size_nav"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/icon_chevron_right"
+            app:tint="@color/light_text_rp" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

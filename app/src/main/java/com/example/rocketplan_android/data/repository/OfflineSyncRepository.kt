@@ -75,6 +75,7 @@ class OfflineSyncRepository(
     private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
 ) {
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
+    private var imageProcessorRepository: ImageProcessorRepository? = null
 
     // Lazily initialized services for delegation
     private val photoSyncService by lazy {
@@ -187,6 +188,7 @@ class OfflineSyncRepository(
                 propertySyncService.persistProperty(projectId, property, propertyTypeValue, existing, forcePropertyIdUpdate = forcePropertyIdUpdate)
             },
             imageProcessorQueueManagerProvider = { imageProcessorQueueManager },
+            imageProcessorRepositoryProvider = { imageProcessorRepository },
             remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher,
             isNetworkAvailable = isNetworkAvailable
@@ -209,6 +211,14 @@ class OfflineSyncRepository(
     fun detachImageProcessorQueueManager() {
         imageProcessorQueueManager?.onAssemblyUploadCompleted = null
         imageProcessorQueueManager = null
+    }
+
+    fun attachImageProcessorRepository(repository: ImageProcessorRepository) {
+        imageProcessorRepository = repository
+    }
+
+    fun detachImageProcessorRepository() {
+        imageProcessorRepository = null
     }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {

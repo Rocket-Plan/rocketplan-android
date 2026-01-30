@@ -1,13 +1,19 @@
 package com.example.rocketplan_android.ui.rocketdry
 
 data class AtmosphericLogItem(
+    val logId: Long,
     val roomId: Long?,
     val roomName: String?,
     val dateTime: String,
     val humidity: Double,
     val temperature: Double,
     val pressure: Double,
-    val windSpeed: Double
+    val windSpeed: Double,
+    val isExternal: Boolean = false,
+    val photoUrl: String? = null,
+    val photoLocalPath: String? = null,
+    val createdAt: String? = null,
+    val updatedAt: String? = null
 )
 
 data class AtmosphericLogArea(

@@ -5,18 +5,28 @@
          - 28/32dp: list and tab icons (iOS row icons and tab bar)
          - 40/44dp: action buttons & minimum tap targets (iOS CircleButton and 44pt nav bar height)
          - 48/56dp: larger row heroes (iOS section tiles and large create buttons)
-         - 65dp: hero tiles (iOS property type selector) -->
+         - 64/72/80dp: thumbnails and larger images -->
     <dimen name="icon_size_chevron">16dp</dimen>
     <dimen name="icon_size_inline">20dp</dimen>
+    <dimen name="icon_size_inline_large">22dp</dimen>
     <dimen name="icon_size_nav">24dp</dimen>
     <dimen name="icon_size_list">28dp</dimen>
-    <dimen name="icon_size_list_large">34dp</dimen>
     <dimen name="icon_size_tab">32dp</dimen>
+    <dimen name="icon_size_list_large">34dp</dimen>
     <dimen name="icon_size_action">40dp</dimen>
     <dimen name="icon_touch_target">44dp</dimen>
-    <dimen name="icon_size_list_container">57dp</dimen>
     <dimen name="icon_size_card_large">48dp</dimen>
     <dimen name="icon_size_card_room">53dp</dimen>
     <dimen name="icon_size_section">56dp</dimen>
     <dimen name="icon_size_tile">56dp</dimen>
+    <dimen name="icon_size_list_container">57dp</dimen>
+    <dimen name="icon_size_thumbnail">64dp</dimen>
+    <dimen name="icon_size_thumbnail_large">72dp</dimen>
+    <dimen name="icon_size_thumbnail_xlarge">80dp</dimen>
+    <dimen name="icon_size_hero">200dp</dimen>
+    <dimen name="image_size_placeholder">220dp</dimen>
+
+    <!-- Component sizes -->
+    <dimen name="button_height_small">32dp</dimen>
+    <dimen name="card_min_width_equipment">320dp</dimen>
 </resources>

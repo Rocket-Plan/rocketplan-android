@@ -19,7 +19,7 @@
             android:layout_marginBottom="2dp"
             android:text="@string/support_admin_label"
             android:textColor="@color/primary_rp"
-            android:textSize="10sp"
+            android:textSize="@dimen/text_size_caption"
             android:textStyle="bold" />
 
         <TextView
@@ -29,7 +29,7 @@
             android:background="@drawable/chat_bubble_admin"
             android:padding="12dp"
             android:textColor="@color/text_primary_rp"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_body_small"
             tools:text="This is a response from the support team" />
 
         <TextView
@@ -38,7 +38,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:textColor="@color/light_text_rp"
-            android:textSize="9sp"
+            android:textSize="@dimen/text_size_tiny"
             tools:text="2:35 PM" />
     </LinearLayout>
 

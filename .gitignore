@@ -47,3 +47,6 @@ vendor/bundle
 
 # Deploy artifacts
 /deploy/
+
+# Google Play API key (sensitive)
+fastlane/play-store-key.json

@@ -38,7 +38,7 @@
             android:maxLines="1"
             android:ellipsize="end"
             android:textColor="@android:color/white"
-            android:textSize="10sp"
+            android:textSize="@dimen/text_size_caption"
             tools:text="10/25/2025" />
 
         <LinearLayout
@@ -68,7 +68,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
-                android:textSize="10sp"
+                android:textSize="@dimen/text_size_caption"
                 android:textStyle="bold"
                 tools:text="2" />
         </LinearLayout>

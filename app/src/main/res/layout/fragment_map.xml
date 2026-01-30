@@ -28,7 +28,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/bottom_nav_map"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="18sp"
+                android:textSize="@dimen/text_size_title_large"
                 android:textStyle="bold" />
 
             <View
@@ -45,14 +45,14 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:text="@string/map_view_all"
                 android:textColor="@color/main_purple"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_body_small"
                 android:textStyle="bold" />
         </LinearLayout>
 
         <FrameLayout
             android:id="@+id/mapContainer"
             android:layout_width="match_parent"
-            android:layout_height="200dp"
+            android:layout_height="@dimen/icon_size_hero"
             android:background="@color/white">
 
             <FrameLayout
@@ -62,8 +62,8 @@
 
             <ImageButton
                 android:id="@+id/currentLocationButton"
-                android:layout_width="44dp"
-                android:layout_height="44dp"
+                android:layout_width="@dimen/icon_touch_target"
+                android:layout_height="@dimen/icon_touch_target"
                 android:layout_gravity="end|bottom"
                 android:layout_margin="12dp"
                 android:background="@drawable/bg_circle_semi_transparent"
@@ -115,7 +115,7 @@
                 android:text="@string/map_empty_my_projects"
                 android:textAlignment="center"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_size_body_large"
                 android:visibility="gone"
                 tools:visibility="visible" />
 

@@ -24,8 +24,8 @@
 
         <ImageView
             android:id="@+id/syncStatusIcon"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="@dimen/icon_size_tab"
+            android:layout_height="@dimen/icon_size_tab"
             android:contentDescription="@string/sync_banner_icon_description"
             android:padding="6dp"
             tools:background="@drawable/bg_icon_circle_red"

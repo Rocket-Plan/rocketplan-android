@@ -19,8 +19,8 @@
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleLarge"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="@dimen/icon_size_card_large"
+        android:layout_height="@dimen/icon_size_card_large"
         android:layout_gravity="center" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

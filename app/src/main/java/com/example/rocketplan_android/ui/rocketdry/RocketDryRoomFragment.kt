@@ -87,7 +87,7 @@ class RocketDryRoomFragment : Fragment() {
     }
 
     private fun setupRecycler() {
-        atmosphericLogAdapter = AtmosphericLogAdapter { openAtmosphericLogDialog() }
+        atmosphericLogAdapter = AtmosphericLogAdapter(onAddLogClicked = { openAtmosphericLogDialog() })
         atmosphericLogsRecyclerView.layoutManager = LinearLayoutManager(context)
         atmosphericLogsRecyclerView.adapter = atmosphericLogAdapter
 

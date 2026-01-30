@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Icon sizing for tablets (7"+) - scaled ~20% from phone sizes
+         to maintain visual consistency with increased text sizes -->
+    <dimen name="icon_size_chevron">20dp</dimen>
+    <dimen name="icon_size_inline">24dp</dimen>
+    <dimen name="icon_size_nav">28dp</dimen>
+    <dimen name="icon_size_list">34dp</dimen>
+    <dimen name="icon_size_list_large">40dp</dimen>
+    <dimen name="icon_size_tab">40dp</dimen>
+    <dimen name="icon_size_action">48dp</dimen>
+    <dimen name="icon_touch_target">52dp</dimen>
+    <dimen name="icon_size_list_container">68dp</dimen>
+    <dimen name="icon_size_card_large">58dp</dimen>
+    <dimen name="icon_size_card_room">64dp</dimen>
+    <dimen name="icon_size_section">68dp</dimen>
+    <dimen name="icon_size_tile">68dp</dimen>
+
+    <!-- Component sizes -->
+    <dimen name="button_height_small">40dp</dimen>
+    <dimen name="card_min_width_equipment">400dp</dimen>
+</resources>

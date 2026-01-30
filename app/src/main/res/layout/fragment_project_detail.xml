@@ -54,7 +54,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/black"
-                    android:textSize="26sp"
+                    android:textSize="@dimen/text_size_display_small"
                     android:textStyle="bold"
                     tools:text="201 Faker Road" />
             </LinearLayout>
@@ -79,7 +79,7 @@
                     android:id="@+id/photosTabButton"
                     style="@style/Widget.RocketPlan.SegmentedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:layout_weight="1"
                     android:text="@string/photos"
                     android:textAllCaps="false"
@@ -89,7 +89,7 @@
                     android:id="@+id/damagesTabButton"
                     style="@style/Widget.RocketPlan.SegmentedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:layout_weight="1"
                     android:text="@string/damages"
                     android:textAllCaps="false"
@@ -99,7 +99,7 @@
                     android:id="@+id/sketchTabButton"
                     style="@style/Widget.RocketPlan.SegmentedButton"
                     android:layout_width="0dp"
-                    android:layout_height="48dp"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:layout_weight="1"
                     android:text="@string/sketch"
                     android:textAllCaps="false"
@@ -187,8 +187,8 @@
                             android:padding="16dp">
 
                             <ImageView
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
+                                android:layout_width="@dimen/icon_size_action"
+                                android:layout_height="@dimen/icon_size_action"
                                 android:contentDescription="@string/add_room"
                                 android:src="@drawable/img_add_room" />
 
@@ -257,7 +257,7 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/albums"
                 android:textColor="@color/black"
-                android:textSize="18sp"
+                android:textSize="@dimen/text_size_title_large"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -295,7 +295,7 @@
                 android:gravity="center"
                 android:text="@string/no_rooms_placeholder"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_size_body_large"
                 android:visibility="gone" />
 
             <TextView
@@ -305,7 +305,7 @@
                 android:layout_marginTop="40dp"
                 android:gravity="center"
                 android:textColor="@color/light_text_rp"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_size_body_large"
                 android:visibility="gone"
                 tools:text="Damages coming soon" />
 

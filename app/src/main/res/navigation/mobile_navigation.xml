@@ -248,6 +248,12 @@
         <action
             android:id="@+id/action_rocketDryFragment_to_totalEquipmentFragment"
             app:destination="@id/totalEquipmentFragment" />
+        <action
+            android:id="@+id/action_rocketDryFragment_to_externalAtmosphericLogsFragment"
+            app:destination="@id/externalAtmosphericLogsFragment" />
+        <action
+            android:id="@+id/action_rocketDryFragment_to_singlePhotoCaptureFragment"
+            app:destination="@id/singlePhotoCaptureFragment" />
     </fragment>
 
     <fragment
@@ -260,6 +266,27 @@
             android:name="projectId"
             app:argType="long" />
     </fragment>
+
+    <fragment
+        android:id="@+id/externalAtmosphericLogsFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.ExternalAtmosphericLogsFragment"
+        android:label="@string/external_atmospheric_logs_title"
+        tools:layout="@layout/fragment_external_atmospheric_logs">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/action_externalAtmosphericLogsFragment_to_singlePhotoCaptureFragment"
+            app:destination="@id/singlePhotoCaptureFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/singlePhotoCaptureFragment"
+        android:name="com.example.rocketplan_android.ui.common.SinglePhotoCaptureFragment"
+        android:label="@string/atmospheric_take_photo"
+        tools:layout="@layout/fragment_single_photo_capture" />
 
     <fragment
         android:id="@+id/rocketDryRoomFragment"

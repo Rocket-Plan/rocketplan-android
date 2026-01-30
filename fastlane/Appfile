@@ -1,2 +1,2 @@
-json_key_file("") # Path to the json secret file - leave empty for now
+json_key_file("fastlane/play-store-key.json") # Path to the json secret file
 package_name("com.rocketplantech.rocketplan")

@@ -234,6 +234,34 @@
     <string name="rocketdry_wind_speed_label">Wind speed (mph)</string>
     <string name="rocketdry_add_external_log_error">Enter a value for each field.</string>
     <string name="add_log">Add Log</string>
+
+    <!-- Atmospheric Log Photo Capture -->
+    <string name="atmospheric_photo_step_title">Add Photo (Optional)</string>
+    <string name="atmospheric_save_without_photo">Save Without</string>
+    <string name="atmospheric_take_photo">Take Photo</string>
+    <string name="atmospheric_recapture">Recapture</string>
+    <string name="atmospheric_photo_saved">Atmospheric log saved with photo</string>
+    <string name="atmospheric_photo_recommendation">Save this record with a photo of your meter. We recommend having a photo record for your reports.</string>
+    <string name="atmospheric_humidity_format">%1$s%%</string>
+    <string name="atmospheric_temperature_format">%1$s°F</string>
+    <string name="atmospheric_pressure_format">%1$s kPA</string>
+    <string name="atmospheric_wind_speed_format">%1$s mph</string>
+
+    <!-- Atmospheric Log Detail -->
+    <string name="atmospheric_log_detail_title">Atmospheric Log</string>
+    <string name="atmospheric_log_recorded_by">Recorded By</string>
+    <string name="atmospheric_log_recorded_on">Recorded On</string>
+    <string name="atmospheric_log_edited_on">Edited On</string>
+    <string name="atmospheric_log_edit">Edit Record</string>
+    <string name="atmospheric_log_delete">Delete Record</string>
+    <string name="atmospheric_log_delete_title">Delete atmospheric log?</string>
+    <string name="atmospheric_log_delete_message">This log will be permanently deleted.</string>
+    <string name="atmospheric_log_deleted">Atmospheric log deleted</string>
+
+    <!-- External Atmospheric Logs List -->
+    <string name="external_atmospheric_logs_title">External Logs</string>
+    <string name="external_atmospheric_logs_empty">No external atmospheric logs yet.</string>
+    <string name="external_atmospheric_log_number">#%1$d, %2$s</string>
     <string name="rocketdry_room_atmospheric_log_title">Room Atmospheric Log</string>
     <string name="rocketdry_room_log_title">%1$s · %2$s</string>
     <string name="rocketdry_atmospheric_log_added">Atmospheric log added for %1$s</string>

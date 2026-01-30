@@ -2,20 +2,21 @@
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
-    app:cardBackgroundColor="@color/light_purple"
+    app:cardBackgroundColor="@color/white"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/light_border"
+    app:strokeColor="@color/light_purple"
     app:strokeWidth="1dp">
 
     <LinearLayout
-        android:layout_width="match_parent"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:minWidth="@dimen/card_min_width_equipment"
         android:orientation="vertical"
-        android:padding="12dp">
+        android:padding="16dp">
 
         <!-- Header row: Icon, Type, Delete button -->
         <LinearLayout
@@ -31,7 +32,7 @@
                 android:background="@drawable/bg_icon_circle_purple"
                 android:contentDescription="@string/equipment_room_add_cta"
                 android:padding="8dp"
-                android:src="@drawable/image_equipment" />
+android:src="@drawable/image_equipment" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -59,149 +60,187 @@
 
             <ImageButton
                 android:id="@+id/deleteEquipmentButton"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:background="@drawable/bg_circle_semi_transparent"
+                android:layout_width="@dimen/icon_size_list"
+                android:layout_height="@dimen/icon_size_list"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/equipment_room_delete"
-                android:padding="8dp"
+                android:padding="4dp"
                 android:src="@drawable/icon_trash"
-                android:tint="@color/secondary_purple" />
+                app:tint="@color/light_text_rp" />
         </LinearLayout>
 
-        <!-- Units row -->
+        <!-- Content: Two columns - Units on left, Dates on right -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="12dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/equipment_room_units"
-                android:textColor="@color/secondary_purple"
-                android:textSize="@dimen/text_size_body_small"
-                android:textStyle="bold" />
-
+            <!-- Left column: Units -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageButton
-                    android:id="@+id/quantityMinusButton"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:background="@drawable/bg_icon_circle_light"
-                    android:contentDescription="@string/rocketdry_remove"
-                    android:padding="6dp"
-                    android:src="@drawable/icon_xmark"
-                    android:tint="@color/main_purple" />
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/equipmentQuantity"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="10dp"
-                    android:textColor="@color/dark_text_rp"
-                    android:textSize="@dimen/text_size_card_title"
-                    android:textStyle="bold"
-                    tools:text="1" />
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/equipment_room_units"
+                    android:textColor="@color/main_purple"
+                    android:textSize="@dimen/text_size_body_small"
+                    android:textStyle="bold" />
 
-                <ImageButton
-                    android:id="@+id/quantityPlusButton"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:background="@drawable/bg_icon_circle_purple"
-                    android:contentDescription="@string/rocketdry_add"
-                    android:padding="6dp"
-                    android:src="@drawable/icon_circle_plus"
-                    android:tint="@color/white" />
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageButton
+                        android:id="@+id/quantityMinusButton"
+                        android:layout_width="@dimen/icon_size_tab"
+                        android:layout_height="@dimen/icon_size_tab"
+                        android:background="@drawable/bg_icon_circle_light"
+                        android:contentDescription="@string/rocketdry_remove"
+                        android:padding="8dp"
+                        android:src="@drawable/icon_xmark"
+                        app:tint="@color/main_purple" />
+
+                    <TextView
+                        android:id="@+id/equipmentQuantity"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="12dp"
+                        android:textColor="@color/dark_text_rp"
+                        android:textSize="@dimen/text_size_card_title"
+                        android:textStyle="bold"
+                        tools:text="1" />
+
+                    <ImageButton
+                        android:id="@+id/quantityPlusButton"
+                        android:layout_width="@dimen/icon_size_tab"
+                        android:layout_height="@dimen/icon_size_tab"
+                        android:background="@drawable/bg_icon_circle_light"
+                        android:contentDescription="@string/rocketdry_add"
+                        android:padding="8dp"
+                        android:src="@drawable/icon_circle_plus"
+                        app:tint="@color/main_purple" />
+                </LinearLayout>
             </LinearLayout>
-        </LinearLayout>
 
-        <!-- Dates row: Day IN and Day OUT on same line -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/equipment_room_day_in"
-                android:textColor="@color/main_purple"
-                android:textSize="@dimen/text_size_caption"
-                android:textStyle="bold" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/startDateButton"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+            <!-- Spacer -->
+            <View
                 android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:minWidth="0dp"
-                android:paddingHorizontal="8dp"
-                android:textColor="@color/main_purple"
-                android:textSize="@dimen/text_size_caption"
-                app:backgroundTint="@color/white"
-                app:cornerRadius="8dp"
-                tools:text="27-09-2025" />
+                android:layout_height="1dp"
+                android:layout_weight="1" />
 
-            <TextView
+            <!-- Right column: Dates stacked vertically -->
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/equipment_room_day_out"
-                android:textColor="@color/main_purple"
-                android:textSize="@dimen/text_size_caption"
-                android:textStyle="bold" />
+                android:gravity="end"
+                android:orientation="vertical">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/endDateButton"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
-                android:layout_width="0dp"
-                android:layout_height="32dp"
-                android:layout_marginStart="4dp"
-                android:layout_weight="1"
-                android:ellipsize="end"
-                android:gravity="center"
-                android:maxLines="1"
-                android:minWidth="0dp"
-                android:paddingHorizontal="8dp"
-                android:textColor="@color/main_purple"
-                android:textSize="@dimen/text_size_caption"
-                app:backgroundTint="@color/white"
-                app:cornerRadius="8dp"
-                tools:text="28-09-2025" />
+                <!-- Day IN row -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="@string/equipment_room_days"
-                android:textColor="@color/main_purple"
-                android:textSize="@dimen/text_size_caption"
-                android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/equipment_room_day_in"
+                        android:textColor="@color/main_purple"
+                        android:textSize="@dimen/text_size_body_small"
+                        android:textStyle="bold" />
 
-            <TextView
-                android:id="@+id/equipmentDayCount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textColor="@color/dark_text_rp"
-                android:textSize="@dimen/text_size_body_small"
-                android:textStyle="bold"
-                tools:text="3" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/startDateButton"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_height_small"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="100dp"
+                        android:paddingHorizontal="12dp"
+                        android:textColor="@color/main_purple"
+                        android:textSize="@dimen/text_size_caption"
+                        app:backgroundTint="@color/light_purple"
+                        app:cornerRadius="16dp"
+                        tools:text="30-01-2026" />
+                </LinearLayout>
+
+                <!-- Day OUT row -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="X"
+                        android:textColor="@color/dark_text_rp"
+                        android:textSize="@dimen/text_size_body_small"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/equipment_room_day_out"
+                        android:textColor="@color/main_purple"
+                        android:textSize="@dimen/text_size_body_small"
+                        android:textStyle="bold" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/endDateButton"
+                        style="@style/Widget.MaterialComponents.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="@dimen/button_height_small"
+                        android:layout_marginStart="8dp"
+                        android:minWidth="100dp"
+                        android:paddingHorizontal="12dp"
+                        android:textColor="@color/main_purple"
+                        android:textSize="@dimen/text_size_caption"
+                        app:backgroundTint="@color/light_purple"
+                        app:cornerRadius="16dp"
+                        tools:text="31-01-2026" />
+                </LinearLayout>
+
+                <!-- Days row -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/equipment_room_days"
+                        android:textColor="@color/main_purple"
+                        android:textSize="@dimen/text_size_body_small"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/equipmentDayCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:textColor="@color/main_purple"
+                        android:textSize="@dimen/text_size_body_small"
+                        android:textStyle="bold"
+                        tools:text="2" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
     </LinearLayout>
 

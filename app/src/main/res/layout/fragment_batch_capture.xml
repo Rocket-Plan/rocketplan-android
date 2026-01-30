@@ -97,7 +97,7 @@
             android:maxLines="1"
             android:text="@string/batch_capture_title"
             android:textColor="@android:color/white"
-            android:textSize="16sp"
+            android:textSize="@dimen/text_size_title"
             android:textStyle="bold" />
 
         <ImageButton
@@ -130,7 +130,7 @@
             android:paddingHorizontal="12dp"
             android:paddingVertical="6dp"
             android:textColor="@android:color/white"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_body_small"
             android:textStyle="bold"
             tools:text="0/50" />
     </LinearLayout>
@@ -225,8 +225,8 @@
 
                 <ProgressBar
                     android:id="@+id/flirInitSpinner"
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
+                    android:layout_width="@dimen/icon_size_chevron"
+                    android:layout_height="@dimen/icon_size_chevron"
                     android:layout_marginEnd="8dp"
                     android:indeterminateTint="@android:color/white"
                     android:visibility="gone"
@@ -240,7 +240,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textColor="@android:color/white"
-                    android:textSize="10sp"
+                    android:textSize="@dimen/text_size_caption"
                     tools:text="@string/flir_status_discovering" />
 
                 <com.google.android.material.switchmaterial.SwitchMaterial
@@ -299,7 +299,7 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/thumbnailStrip"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="@dimen/icon_size_section"
             android:layout_marginBottom="12dp"
             android:clipToPadding="false"
             android:orientation="horizontal"
@@ -333,14 +333,14 @@
             <!-- Gallery / Last Photo Preview -->
             <FrameLayout
                 android:id="@+id/lastPhotoContainer"
-                android:layout_width="56dp"
-                android:layout_height="56dp"
+                android:layout_width="@dimen/icon_size_section"
+                android:layout_height="@dimen/icon_size_section"
                 android:layout_weight="1">
 
                 <ImageView
                     android:id="@+id/lastPhotoPreview"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="@dimen/icon_size_card_large"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:layout_gravity="center"
                     android:background="@drawable/bg_thumbnail_border"
                     android:scaleType="centerCrop"
@@ -371,13 +371,13 @@
 
             <!-- Camera Switch Button -->
             <FrameLayout
-                android:layout_width="56dp"
-                android:layout_height="56dp"
+                android:layout_width="@dimen/icon_size_section"
+                android:layout_height="@dimen/icon_size_section"
                 android:layout_weight="1">
 
                 <View
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
+                    android:layout_width="@dimen/icon_size_card_large"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:layout_gravity="center"
                     android:visibility="gone" />
             </FrameLayout>
@@ -388,7 +388,7 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/doneButton"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="@dimen/icon_size_card_large"
             android:layout_marginTop="12dp"
             android:layout_marginHorizontal="16dp"
             android:backgroundTint="@color/main_purple"
@@ -431,7 +431,7 @@
                 android:layout_marginTop="16dp"
                 android:text="@string/batch_capture_processing"
                 android:textColor="@android:color/white"
-                android:textSize="12sp" />
+                android:textSize="@dimen/text_size_body_small" />
         </LinearLayout>
     </FrameLayout>
 

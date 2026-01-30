@@ -21,10 +21,11 @@
         <!-- Equipment Icon -->
         <ImageView
             android:id="@+id/equipmentTypeIcon"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
+            android:layout_width="@dimen/icon_size_card_large"
+            android:layout_height="@dimen/icon_size_card_large"
+            android:background="@drawable/bg_icon_circle_purple"
             android:contentDescription="@string/equipment"
-            android:padding="8dp"
+            android:padding="10dp"
             tools:src="@drawable/image_equipment" />
 
         <!-- Type Label and Name -->
@@ -40,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/equipment_room_type_label"
                 android:textColor="@color/light_text_rp"
-                android:textSize="11sp" />
+                android:textSize="@dimen/text_size_caption_large" />
 
             <TextView
                 android:id="@+id/equipmentTypeName"
@@ -48,7 +49,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="15sp"
+                android:textSize="@dimen/text_size_title_small"
                 android:textStyle="bold"
                 tools:text="Air Mover" />
 
@@ -61,7 +62,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
             android:textColor="@color/dark_text_rp"
-            android:textSize="18sp"
+            android:textSize="@dimen/text_size_title_large"
             android:textStyle="bold"
             tools:text="4" />
 

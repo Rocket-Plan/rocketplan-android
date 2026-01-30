@@ -29,8 +29,8 @@
 
         <ImageView
             android:id="@+id/conflictIcon"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
+            android:layout_width="@dimen/icon_size_tab"
+            android:layout_height="@dimen/icon_size_tab"
             android:background="@drawable/bg_icon_circle_yellow"
             android:contentDescription="@string/conflict_banner_icon_description"
             android:padding="6dp"
@@ -50,7 +50,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/conflict_banner_title"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_body_small"
                 android:textStyle="bold" />
 
             <TextView
@@ -59,7 +59,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="@color/light_text_rp"
-                android:textSize="10sp"
+                android:textSize="@dimen/text_size_caption"
                 tools:text="1 conflict needs resolution" />
 
         </LinearLayout>
@@ -75,7 +75,7 @@
             android:text="@string/conflict_banner_review"
             android:textAllCaps="false"
             android:textColor="@color/secondary_yellow"
-            android:textSize="10sp"
+            android:textSize="@dimen/text_size_caption"
             android:textStyle="bold" />
 
     </LinearLayout>

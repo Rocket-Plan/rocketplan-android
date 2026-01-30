@@ -35,14 +35,14 @@
         <!-- Photo number badge -->
         <TextView
             android:id="@+id/photoNumberBadge"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="@dimen/icon_size_nav"
+            android:layout_height="@dimen/icon_size_nav"
             android:layout_gravity="bottom|start"
             android:layout_margin="4dp"
             android:background="@drawable/bg_circle_purple"
             android:gravity="center"
             android:textColor="@android:color/white"
-            android:textSize="10sp"
+            android:textSize="@dimen/text_size_caption"
             android:textStyle="bold"
             tools:text="1" />
     </FrameLayout>

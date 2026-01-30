@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/photoCaptureStep"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:visibility="gone"
+    tools:visibility="visible">
+
+    <!-- Photo preview area -->
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="180dp"
+        android:layout_marginHorizontal="16dp"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/light_border"
+        app:strokeWidth="1dp">
+
+        <ImageView
+            android:id="@+id/photoPreview"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:src="@color/light_border" />
+
+        <ImageView
+            android:id="@+id/photoPlaceholder"
+            android:layout_width="@dimen/icon_size_card_large"
+            android:layout_height="@dimen/icon_size_card_large"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_camera"
+            app:tint="@color/light_text_rp" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Metrics summary row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginHorizontal="16dp"
+        android:baselineAligned="false"
+        android:orientation="horizontal">
+
+        <!-- R. Humidity -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/r_humidity_short"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_caption" />
+
+            <TextView
+                android:id="@+id/photoStepHumidity"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_title_large"
+                android:textStyle="bold"
+                tools:text="65%" />
+
+        </LinearLayout>
+
+        <!-- Temperature -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/temperature_short"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_caption" />
+
+            <TextView
+                android:id="@+id/photoStepTemperature"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_title_large"
+                android:textStyle="bold"
+                tools:text="72°F" />
+
+        </LinearLayout>
+
+        <!-- Pressure -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/pressure"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_caption" />
+
+            <TextView
+                android:id="@+id/photoStepPressure"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_title_large"
+                android:textStyle="bold"
+                tools:text="101 kPA" />
+
+        </LinearLayout>
+
+        <!-- Wind Speed -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/wind_speed_short"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_caption" />
+
+            <TextView
+                android:id="@+id/photoStepWindSpeed"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_title_large"
+                android:textStyle="bold"
+                tools:text="5 mph" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Photo recommendation message -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginHorizontal="16dp"
+        android:gravity="center"
+        android:text="@string/atmospheric_photo_recommendation"
+        android:textColor="@color/light_text_rp"
+        android:textSize="@dimen/text_size_body_large" />
+
+    <!-- Pre-capture buttons -->
+    <LinearLayout
+        android:id="@+id/preCaptureButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginHorizontal="16dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/saveWithoutPhotoButton"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/icon_size_card_large"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="@string/atmospheric_save_without_photo"
+            android:textAllCaps="false"
+            android:textColor="@color/main_purple"
+            app:strokeColor="@color/main_purple" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/takePhotoButton"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/icon_size_card_large"
+            android:layout_weight="1"
+            android:text="@string/atmospheric_take_photo"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/main_purple" />
+
+    </LinearLayout>
+
+    <!-- Post-capture buttons -->
+    <LinearLayout
+        android:id="@+id/postCaptureButtons"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginHorizontal="16dp"
+        android:gravity="center"
+        android:orientation="horizontal"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/recapturePhotoButton"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/icon_size_card_large"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:text="@string/atmospheric_recapture"
+            android:textAllCaps="false"
+            android:textColor="@color/main_purple"
+            app:strokeColor="@color/main_purple" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/saveWithPhotoButton"
+            android:layout_width="0dp"
+            android:layout_height="@dimen/icon_size_card_large"
+            android:layout_weight="1"
+            android:text="@string/save"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/main_purple" />
+
+    </LinearLayout>
+
+</LinearLayout>

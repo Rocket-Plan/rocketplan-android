@@ -72,7 +72,7 @@ class SyncStatusBannerManager(
     )
 
     private fun computeBannerState(inputs: BannerInputs): SyncStatusBannerState {
-        val (isOnline, pendingOps, syncingOps, currentProgress) = inputs
+        val (isOnline, pendingOps, syncingOps, _) = inputs
 
         // If offline, show offline banner
         if (!isOnline) {
@@ -82,27 +82,14 @@ class SyncStatusBannerManager(
         // Combine pending and syncing operations (outgoing changes)
         val allActiveOps = pendingOps + syncingOps
 
-        // If there's current sync progress (incoming sync from server), show it
-        if (currentProgress != null) {
-            // Use the detailed description from SyncProgress
-            val description = currentProgress.phaseDescription
-            // If we also have pending operations, mention them too
-            return if (allActiveOps.isNotEmpty()) {
-                val items = aggregateByTypeCounts(allActiveOps)
-                val pendingText = items.joinToString(", ") { it.displayName }
-                SyncStatusBannerState.Refreshing("$description, uploading $pendingText")
-            } else {
-                SyncStatusBannerState.Refreshing(description)
-            }
-        }
-
-        // If we have pending operations but no active sync job, show syncing state
+        // Only show banner when there are pending operations to upload (phase 2)
+        // Don't show during skeleton sync (phase 1) when there's nothing to upload
         if (allActiveOps.isNotEmpty()) {
             val items = aggregateByTypeCounts(allActiveOps)
             return SyncStatusBannerState.Syncing(items)
         }
 
-        // Nothing active, hide banner
+        // Nothing to upload, hide banner
         return SyncStatusBannerState.Hidden
     }
 

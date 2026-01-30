@@ -7,12 +7,6 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <include
-        android:id="@+id/syncStatusBannerInclude"
-        layout="@layout/layout_sync_status_banner"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
-
     <androidx.coordinatorlayout.widget.CoordinatorLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -38,5 +32,11 @@
             layout="@layout/content_main" />
 
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+    <include
+        android:id="@+id/syncStatusBannerInclude"
+        layout="@layout/layout_sync_status_banner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
 </LinearLayout>

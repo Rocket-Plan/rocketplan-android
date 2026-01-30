@@ -294,13 +294,19 @@ class RocketDryRoomViewModel(
 
     private fun OfflineAtmosphericLogEntity.toUiItem(roomName: String): AtmosphericLogItem =
         AtmosphericLogItem(
+            logId = logId,
             roomId = roomId,
             roomName = roomName,
             dateTime = formatDateTime(date),
             humidity = relativeHumidity,
             temperature = temperature,
             pressure = pressure ?: 0.0,
-            windSpeed = windSpeed ?: 0.0
+            windSpeed = windSpeed ?: 0.0,
+            isExternal = isExternal,
+            photoUrl = photoUrl,
+            photoLocalPath = photoLocalPath,
+            createdAt = formatDateTime(createdAt),
+            updatedAt = formatDateTime(updatedAt)
         )
 
     private fun buildMaterialGoals(

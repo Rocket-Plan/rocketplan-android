@@ -244,6 +244,7 @@ class RocketPlanApplication : Application() {
             realtimeManager = imageProcessorRealtimeManager
         )
         offlineSyncRepository.attachImageProcessorQueueManager(imageProcessorQueueManager)
+        offlineSyncRepository.attachImageProcessorRepository(imageProcessorRepository)
 
         // Schedule periodic retry worker (every 15 minutes)
         val retryConstraints = Constraints.Builder()

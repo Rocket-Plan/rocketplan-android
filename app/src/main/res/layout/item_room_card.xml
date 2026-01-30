@@ -11,7 +11,7 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="200dp">
+        android:layout_height="@dimen/icon_size_hero">
 
         <ImageView
             android:id="@+id/roomThumbnail"
@@ -77,8 +77,8 @@
             <ProgressBar
                 android:id="@+id/loadingSpinner"
                 style="@android:style/Widget.DeviceDefault.Light.ProgressBar.Large"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
+                android:layout_width="@dimen/icon_size_card_large"
+                android:layout_height="@dimen/icon_size_card_large"
                 android:indeterminate="true" />
 
             <TextView

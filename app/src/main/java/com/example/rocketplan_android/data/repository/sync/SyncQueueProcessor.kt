@@ -25,6 +25,7 @@ import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+import com.example.rocketplan_android.data.repository.ImageProcessorRepository
 import com.example.rocketplan_android.data.repository.SyncResult
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
@@ -79,6 +80,7 @@ class SyncQueueProcessor(
         forcePropertyIdUpdate: Boolean
     ) -> OfflinePropertyEntity,
     private val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
+    private val imageProcessorRepositoryProvider: () -> ImageProcessorRepository?,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
@@ -95,7 +97,8 @@ class SyncQueueProcessor(
             remoteLogger = remoteLogger,
             syncProjectEssentials = syncProjectEssentials,
             persistProperty = persistProperty,
-            imageProcessorQueueManagerProvider = imageProcessorQueueManagerProvider
+            imageProcessorQueueManagerProvider = imageProcessorQueueManagerProvider,
+            imageProcessorRepositoryProvider = imageProcessorRepositoryProvider
         )
     }
     private val projectHandler by lazy { ProjectPushHandler(handlerContext) }

@@ -17,7 +17,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:textColor="@color/light_text_rp"
-            android:textSize="12sp"
+            android:textSize="@dimen/text_size_body_small"
             tools:text="Notes for all rooms" />
 
         <androidx.recyclerview.widget.RecyclerView
@@ -36,7 +36,7 @@
             android:padding="24dp"
             android:text="@string/no_notes_yet"
             android:textColor="@color/light_text_rp"
-            android:textSize="14sp"
+            android:textSize="@dimen/text_size_body_large"
             android:visibility="gone" />
     </LinearLayout>
 

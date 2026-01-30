@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.ui.rocketdry
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -22,6 +23,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.ui.common.SinglePhotoCaptureFragment
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
 import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
@@ -31,6 +33,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -80,6 +83,9 @@ class RocketDryFragment : Fragment() {
     private var latestAtmosphericSelection: Long? = null
     private var latestReadyState: RocketDryUiState.Ready? = null
 
+    // Photo capture callback - stored while navigating to camera
+    private var pendingPhotoCallback: ((Uri?) -> Unit)? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -96,6 +102,27 @@ class RocketDryFragment : Fragment() {
         setupClickListeners()
         setupRecyclerViews()
         observeViewModel()
+        observePhotoResult()
+    }
+
+    private fun observePhotoResult() {
+        findNavController().currentBackStackEntry?.savedStateHandle
+            ?.getLiveData<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
+            ?.observe(viewLifecycleOwner) { photoPath ->
+                if (!photoPath.isNullOrBlank()) {
+                    Log.d(TAG, "📸 Received photo from camera: $photoPath")
+                    val file = File(photoPath)
+                    if (file.exists()) {
+                        pendingPhotoCallback?.invoke(Uri.fromFile(file))
+                    } else {
+                        pendingPhotoCallback?.invoke(null)
+                    }
+                    pendingPhotoCallback = null
+                    // Clear the result to avoid re-processing
+                    findNavController().currentBackStackEntry?.savedStateHandle
+                        ?.remove<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
+                }
+            }
     }
 
     private fun initializeViews(view: View) {
@@ -216,7 +243,10 @@ class RocketDryFragment : Fragment() {
 
     private fun setupRecyclerViews() {
         // Atmospheric Logs RecyclerView
-        atmosphericLogAdapter = AtmosphericLogAdapter { showAddExternalLogDialog() }
+        atmosphericLogAdapter = AtmosphericLogAdapter(
+            onAddLogClicked = { showAddExternalLogDialog() },
+            onItemClicked = { log -> showAtmosphericLogDetail(log) }
+        )
         atmosphericLogsRecyclerView.layoutManager = LinearLayoutManager(context)
         atmosphericLogsRecyclerView.adapter = atmosphericLogAdapter
 
@@ -368,7 +398,13 @@ class RocketDryFragment : Fragment() {
                     TAG,
                     "✅ Atmospheric area selected roomId=$roomId label='${chip?.text}'"
                 )
-                viewModel.selectAtmosphericRoom(roomId)
+
+                // Navigate to external logs list when External chip is clicked
+                if (roomId == null) {
+                    navigateToExternalLogs()
+                } else {
+                    viewModel.selectAtmosphericRoom(roomId)
+                }
             }
             lastRenderedAtmosphericAreas = areas
         } else {
@@ -382,6 +418,15 @@ class RocketDryFragment : Fragment() {
     private fun navigateToTotalEquipment() {
         val action = RocketDryFragmentDirections
             .actionRocketDryFragmentToTotalEquipmentFragment(
+                projectId = args.projectId
+            )
+        findNavController().navigate(action)
+    }
+
+    private fun navigateToExternalLogs() {
+        Log.d(TAG, "➡️ Navigating to external atmospheric logs")
+        val action = RocketDryFragmentDirections
+            .actionRocketDryFragmentToExternalAtmosphericLogsFragment(
                 projectId = args.projectId
             )
         findNavController().navigate(action)
@@ -401,6 +446,13 @@ class RocketDryFragment : Fragment() {
             TAG,
             "🧪 Launching external atmospheric log dialog at '$title' (selectedRoomId=$latestAtmosphericSelection)"
         )
+
+        val photoCallback = object : AtmosphericLogPhotoCallback {
+            override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
+                launchCamera(callback)
+            }
+        }
+
         showAtmosphericLogDialog(
             title = title,
             areaLabel = currentAreaLabel,
@@ -423,18 +475,20 @@ class RocketDryFragment : Fragment() {
                     Log.d(TAG, "✏️ Atmospheric area renamed to '$updatedLabel'")
                     updateLabel(updatedLabel)
                 }
-            }
-        ) { humidity, temperature, pressure, windSpeed ->
+            },
+            photoCallback = photoCallback
+        ) { humidity, temperature, pressure, windSpeed, photoLocalPath ->
             Log.d(
                 TAG,
-                "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed roomId=$latestAtmosphericSelection"
+                "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed roomId=$latestAtmosphericSelection photo=$photoLocalPath"
             )
             viewModel.addExternalAtmosphericLog(
                 humidity = humidity,
                 temperature = temperature,
                 pressure = pressure,
                 windSpeed = windSpeed,
-                roomId = latestAtmosphericSelection
+                roomId = latestAtmosphericSelection,
+                photoLocalPath = photoLocalPath
             )
         }
     }
@@ -516,6 +570,32 @@ class RocketDryFragment : Fragment() {
         return formatted
             .replace("AM", "am")
             .replace("PM", "pm")
+    }
+
+    private fun showAtmosphericLogDetail(log: AtmosphericLogItem) {
+        Log.d(TAG, "📋 Showing atmospheric log detail for logId=${log.logId}")
+        val bottomSheet = AtmosphericLogDetailBottomSheet.newInstance(log)
+        bottomSheet.callback = object : AtmosphericLogDetailBottomSheet.Callback {
+            override fun onEditRequested(logId: Long) {
+                Log.d(TAG, "✏️ Edit requested for logId=$logId (not implemented yet)")
+                Toast.makeText(requireContext(), "Edit coming soon", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onDeleteRequested(logId: Long) {
+                Log.d(TAG, "🗑️ Delete requested for logId=$logId")
+                viewModel.deleteAtmosphericLog(logId)
+                Toast.makeText(requireContext(), R.string.atmospheric_log_deleted, Toast.LENGTH_SHORT).show()
+            }
+        }
+        bottomSheet.show(childFragmentManager, AtmosphericLogDetailBottomSheet.TAG)
+    }
+
+    private fun launchCamera(callback: (Uri?) -> Unit) {
+        pendingPhotoCallback = callback
+        Log.d(TAG, "📷 Navigating to camera screen")
+        findNavController().navigate(
+            RocketDryFragmentDirections.actionRocketDryFragmentToSinglePhotoCaptureFragment()
+        )
     }
 }
 

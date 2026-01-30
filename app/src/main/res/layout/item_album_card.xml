@@ -11,7 +11,7 @@
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="200dp">
+        android:layout_height="@dimen/icon_size_hero">
 
         <ImageView
             android:id="@+id/albumThumbnail"
@@ -38,7 +38,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
-                android:textSize="16sp"
+                android:textSize="@dimen/text_size_title"
                 android:textStyle="bold"
                 tools:text="Before Photos" />
 
@@ -48,7 +48,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textColor="@android:color/white"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_body_small"
                 tools:text="12 Photos" />
         </LinearLayout>
     </FrameLayout>

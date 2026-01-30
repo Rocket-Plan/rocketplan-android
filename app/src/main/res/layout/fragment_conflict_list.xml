@@ -115,8 +115,8 @@
             tools:visibility="gone">
 
             <ImageView
-                android:layout_width="80dp"
-                android:layout_height="80dp"
+                android:layout_width="@dimen/icon_size_thumbnail_xlarge"
+                android:layout_height="@dimen/icon_size_thumbnail_xlarge"
                 android:src="@android:drawable/ic_dialog_info"
                 android:contentDescription="@null"
                 app:tint="@color/placeholder" />
@@ -128,7 +128,7 @@
                 android:gravity="center"
                 android:text="@string/conflicts_empty_title"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="16sp"
+                android:textSize="@dimen/text_size_title"
                 android:textStyle="bold" />
 
             <TextView
@@ -138,7 +138,7 @@
                 android:gravity="center"
                 android:text="@string/conflicts_empty_message"
                 android:textColor="@color/light_text_rp"
-                android:textSize="12sp" />
+                android:textSize="@dimen/text_size_body_small" />
 
         </LinearLayout>
 

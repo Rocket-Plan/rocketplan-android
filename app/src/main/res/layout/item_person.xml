@@ -34,7 +34,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/black"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_size_body_large"
                     android:textStyle="bold"
                     tools:text="John Doe" />
 
@@ -48,7 +48,7 @@
                     android:paddingVertical="2dp"
                     android:text="@string/admin_badge"
                     android:textColor="@android:color/white"
-                    android:textSize="10sp"
+                    android:textSize="@dimen/text_size_caption"
                     android:visibility="gone"
                     tools:visibility="visible" />
 
@@ -62,7 +62,7 @@
                     android:paddingVertical="2dp"
                     android:text="@string/you_badge"
                     android:textColor="@color/main_purple"
-                    android:textSize="10sp"
+                    android:textSize="@dimen/text_size_caption"
                     android:visibility="gone"
                     tools:visibility="visible" />
             </LinearLayout>
@@ -73,7 +73,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textColor="@color/light_text_rp"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_body_small"
                 tools:text="john.doe@example.com" />
         </LinearLayout>
 

@@ -13,7 +13,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="@color/dark_text_rp"
-        android:textSize="14sp"
+        android:textSize="@dimen/text_size_body_large"
         tools:text="123 Main Street" />
 
     <TextView
@@ -22,7 +22,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
         android:textColor="@color/light_text_rp"
-        android:textSize="12sp"
+        android:textSize="@dimen/text_size_body_small"
         android:visibility="gone"
         tools:text="Denver, CO, USA"
         tools:visibility="visible" />

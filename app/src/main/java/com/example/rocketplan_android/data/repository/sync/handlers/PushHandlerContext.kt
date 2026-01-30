@@ -6,6 +6,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutio
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
+import com.example.rocketplan_android.data.repository.ImageProcessorRepository
 import com.example.rocketplan_android.data.repository.SyncResult
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.google.gson.Gson
@@ -28,7 +29,8 @@ class PushHandlerContext(
         existing: OfflinePropertyEntity?,
         forcePropertyIdUpdate: Boolean
     ) -> OfflinePropertyEntity,
-    val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?
+    val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
+    val imageProcessorRepositoryProvider: () -> ImageProcessorRepository?
 ) {
     fun now(): Date = Date()
 

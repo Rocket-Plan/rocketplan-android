@@ -45,7 +45,7 @@
                         android:id="@+id/roomPhotosTabButton"
                         style="@style/Widget.RocketPlan.SegmentedButton"
                         android:layout_width="0dp"
-                        android:layout_height="48dp"
+                        android:layout_height="@dimen/icon_size_card_large"
                         android:layout_weight="1"
                         android:text="@string/photos"
                         android:textAllCaps="false"
@@ -55,7 +55,7 @@
                         android:id="@+id/roomDamagesTabButton"
                         style="@style/Widget.RocketPlan.SegmentedButton"
                         android:layout_width="0dp"
-                        android:layout_height="48dp"
+                        android:layout_height="@dimen/icon_size_card_large"
                         android:layout_weight="1"
                         android:text="@string/damages"
                         android:textAllCaps="false"
@@ -65,11 +65,11 @@
                         android:id="@+id/roomScopeTabButton"
                         style="@style/Widget.RocketPlan.SegmentedButton"
                         android:layout_width="0dp"
-                        android:layout_height="48dp"
+                        android:layout_height="@dimen/icon_size_card_large"
                         android:layout_weight="1"
                         android:text="@string/scope_sheet"
                         android:textAllCaps="false"
-                        android:textSize="14sp"
+                        android:textSize="@dimen/text_size_body_large"
                         android:visibility="gone" />
                 </com.google.android.material.button.MaterialButtonToggleGroup>
             </com.google.android.material.card.MaterialCardView>
@@ -102,7 +102,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="@color/black"
-                        android:textSize="26sp"
+                        android:textSize="@dimen/text_size_display_small"
                         android:textStyle="bold"
                         tools:text="Basement Damages" />
                 </LinearLayout>
@@ -168,7 +168,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/light_text_rp"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_body_small"
                 tools:text="No Notes" />
 
                 <ImageView
@@ -200,8 +200,8 @@
                     android:orientation="horizontal">
 
                     <FrameLayout
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
+                        android:layout_width="@dimen/icon_size_card_large"
+                        android:layout_height="@dimen/icon_size_card_large"
                         android:background="@drawable/bg_icon_circle_purple">
 
                         <ImageView
@@ -264,8 +264,8 @@
                     android:background="@drawable/bg_icon_circle_light">
 
                         <ImageView
-                            android:layout_width="22dp"
-                        android:layout_height="22dp"
+                            android:layout_width="@dimen/icon_size_inline_large"
+                        android:layout_height="@dimen/icon_size_inline_large"
                         android:layout_gravity="center"
                         android:contentDescription="@string/add_scope_of_work_items"
                         android:scaleType="centerInside"
@@ -285,7 +285,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/add_scope_of_work_items"
                             android:textColor="@color/black"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/text_size_body_large"
                             android:textStyle="bold" />
 
                         <TextView
@@ -294,7 +294,7 @@
                             android:layout_marginTop="4dp"
                             android:text="@string/add_scope_of_work_subtitle"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="12sp"
+                            android:textSize="@dimen/text_size_body_small"
                             android:visibility="gone" />
                     </LinearLayout>
                 </LinearLayout>
@@ -348,7 +348,7 @@
                     android:layout_marginTop="12dp"
                     android:text="@string/scope_picker_empty_message"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="12sp"
+                    android:textSize="@dimen/text_size_body_small"
                     android:visibility="gone" />
 
                 <LinearLayout
@@ -394,7 +394,7 @@
                 android:layout_marginTop="24dp"
                 android:text="@string/albums"
                 android:textColor="@color/black"
-                android:textSize="18sp"
+                android:textSize="@dimen/text_size_title_large"
                 android:textStyle="bold"
                 android:visibility="gone" />
 
@@ -421,7 +421,7 @@
                     android:layout_weight="1"
                     android:text="@string/damage_assessment"
                     android:textColor="@color/light_text_rp"
-                    android:textSize="14sp"
+                    android:textSize="@dimen/text_size_body_large"
                     android:textStyle="bold"
                     android:visibility="gone" />
 
@@ -502,8 +502,8 @@
                         <com.google.android.material.progressindicator.CircularProgressIndicator
                             android:id="@+id/inFlightSpinner"
                             style="@style/Widget.Material3.CircularProgressIndicator.Medium"
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
+                            android:layout_width="@dimen/icon_size_tab"
+                            android:layout_height="@dimen/icon_size_tab"
                             android:indeterminate="true"
                             app:indicatorColor="@android:color/white" />
 
@@ -520,7 +520,7 @@
                                 android:layout_height="wrap_content"
                                 android:textColor="@android:color/white"
                                 android:textStyle="bold"
-                                android:textSize="12sp"
+                                android:textSize="@dimen/text_size_body_small"
                                 tools:text="@string/processing_photos" />
 
                             <TextView
@@ -529,7 +529,7 @@
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
                                 android:textColor="@android:color/white"
-                                android:textSize="10sp"
+                                android:textSize="@dimen/text_size_caption"
                                 tools:text="0/1" />
                         </LinearLayout>
                     </LinearLayout>
@@ -574,14 +574,14 @@
                         android:layout_height="wrap_content"
                         android:gravity="center"
                         android:textColor="@color/light_text_rp"
-                        android:textSize="18sp"
+                        android:textSize="@dimen/text_size_title_large"
                         android:textStyle="bold"
                         tools:text="No damages yet. Add a new damage." />
 
                     <ImageView
                         android:id="@+id/photosPlaceholderImage"
-                        android:layout_width="220dp"
-                        android:layout_height="220dp"
+                        android:layout_width="@dimen/image_size_placeholder"
+                        android:layout_height="@dimen/image_size_placeholder"
                         android:layout_marginTop="16dp"
                         android:contentDescription="@string/rocket_scan"
                         android:scaleType="fitCenter"

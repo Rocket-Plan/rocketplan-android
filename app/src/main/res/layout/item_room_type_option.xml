@@ -12,8 +12,8 @@
 
     <ImageView
         android:id="@+id/roomTypeIcon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
+        android:layout_width="@dimen/icon_size_card_large"
+        android:layout_height="@dimen/icon_size_card_large"
         android:background="@drawable/bg_icon_circle_purple"
         android:contentDescription="@string/add_room"
         android:padding="12dp"
@@ -26,6 +26,6 @@
         android:layout_marginStart="16dp"
         android:layout_weight="1"
         android:textColor="@color/black"
-        android:textSize="14sp"
+        android:textSize="@dimen/text_size_body_large"
         android:textStyle="bold" />
 </LinearLayout>

@@ -115,7 +115,8 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
                 else -> throw error
             }
         }.onFailure { error ->
-            Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Failed to push equipment ${equipment.uuid}", error)
+            val errorBody = (error as? retrofit2.HttpException)?.response()?.errorBody()?.string()
+            Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Failed to push equipment ${equipment.uuid}: $errorBody", error)
         }.getOrNull()
 
         return synced

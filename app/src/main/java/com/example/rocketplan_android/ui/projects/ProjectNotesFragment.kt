@@ -37,10 +37,14 @@ class ProjectNotesFragment : Fragment() {
     private lateinit var subtitle: TextView
     private val adapter = ProjectNotesAdapter(
         onDeleteClicked = { note ->
-            confirmDeleteNote(note)
+            if (note.canDelete) {
+                confirmDeleteNote(note)
+            }
         },
         onNoteClicked = { note ->
-            showEditNoteDialog(note)
+            if (note.canEdit) {
+                showEditNoteDialog(note)
+            }
         }
     )
 
