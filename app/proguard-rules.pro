@@ -95,3 +95,8 @@
 -keep class okhttp3.** { *; }
 -dontwarn okhttp3.**
 -dontwarn okio.**
+
+# Google Places SDK - gRPC dependencies
+-dontwarn io.grpc.internal.**
+-dontwarn io.grpc.**
+-keep class io.grpc.** { *; }

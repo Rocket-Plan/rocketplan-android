@@ -40,7 +40,7 @@ android {
         applicationId = "com.rocketplantech.rocketplan"
         minSdk = 24
         targetSdk = 35
-        val buildNumber = 10
+        val buildNumber = 11
         versionCode = buildNumber
         versionName = "1.29 ($buildNumber)"
 
@@ -56,7 +56,6 @@ android {
         // Environment flavors
         create("dev") {
             dimension = "environment"
-            applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
 
             // Dev environment BuildConfig fields
@@ -75,7 +74,6 @@ android {
 
         create("staging") {
             dimension = "environment"
-            applicationIdSuffix = ".staging"
             versionNameSuffix = "-staging"
 
             // Staging/Test environment BuildConfig fields

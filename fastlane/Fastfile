@@ -53,6 +53,29 @@ platform :android do
     build_debug
   end
 
+  desc "Build dev release AAB"
+  lane :build_dev_release do
+    gradle(
+      task: "bundleDevStandardRelease"
+    )
+  end
+
+  desc "Deploy dev build to Play Store internal track"
+  lane :deploy_dev do
+    bump
+    build_dev_release
+    upload_dev
+  end
+
+  desc "Upload dev AAB to Play Store internal track (skip build)"
+  lane :upload_dev do
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+      aab: "app/build/outputs/bundle/devStandardRelease/app-dev-standard-release.aab"
+    )
+  end
+
   desc "Deploy to Play Store internal track"
   lane :deploy_internal do
     bump
@@ -60,6 +83,24 @@ platform :android do
     upload_to_play_store(
       track: "internal",
       release_status: "draft"
+    )
+  end
+
+  desc "Build staging release AAB"
+  lane :build_staging_release do
+    gradle(
+      task: "bundleStagingStandardRelease"
+    )
+  end
+
+  desc "Deploy staging build to Play Store closed testing track"
+  lane :deploy_staging do
+    bump
+    build_staging_release
+    upload_to_play_store(
+      track: "alpha",
+      release_status: "completed",
+      aab: "app/build/outputs/bundle/stagingStandardRelease/app-staging-standard-release.aab"
     )
   end
 
