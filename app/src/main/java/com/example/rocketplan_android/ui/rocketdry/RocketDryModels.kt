@@ -72,9 +72,8 @@ sealed class RocketDryUiState {
     object Loading : RocketDryUiState()
     data class Ready(
         val projectAddress: String,
-        val atmosphericLogs: List<AtmosphericLogItem>,
-        val atmosphericAreas: List<AtmosphericLogArea>,
-        val selectedAtmosphericRoomId: Long?,
+        val latestExternalLog: AtmosphericLogItem?,
+        val externalLogCount: Int,
         val locationLevels: List<LocationLevel>,
         val equipmentTotals: EquipmentTotals,
         val equipmentByType: List<EquipmentTypeSummary>,

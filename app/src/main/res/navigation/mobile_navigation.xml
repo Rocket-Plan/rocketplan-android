@@ -301,6 +301,10 @@
         <argument
             android:name="roomId"
             app:argType="long" />
+
+        <action
+            android:id="@+id/action_rocketDryRoomFragment_to_singlePhotoCaptureFragment"
+            app:destination="@id/singlePhotoCaptureFragment" />
     </fragment>
 
     <fragment

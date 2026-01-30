@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.rocketdry
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -13,6 +14,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.model.FileToUpload
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import com.example.rocketplan_android.util.parseTargetMoisture
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +37,7 @@ class RocketDryRoomViewModel(
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val imageProcessorRepository = rocketPlanApp.imageProcessorRepository
 
     private val _uiState = MutableStateFlow<RocketDryRoomUiState>(RocketDryRoomUiState.Loading)
     val uiState: StateFlow<RocketDryRoomUiState> = _uiState
@@ -86,13 +89,51 @@ class RocketDryRoomViewModel(
         humidity: Double,
         temperature: Double,
         pressure: Double,
-        windSpeed: Double
+        windSpeed: Double,
+        photoLocalPath: String? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
             val now = Date()
+            val hasPhoto = !photoLocalPath.isNullOrBlank()
+            val logUuid = UuidUtils.generateUuidV7()
+
+            // Create assembly at photo capture time (before log syncs)
+            // The assembly will be promoted when the log gets a serverId
+            var photoAssemblyId: String? = null
+            if (hasPhoto && photoLocalPath != null) {
+                val filename = "atmos_${logUuid}_${System.currentTimeMillis()}.jpg"
+                val fileToUpload = FileToUpload(
+                    uri = Uri.parse(photoLocalPath),
+                    filename = filename,
+                    deleteOnCompletion = false
+                )
+                val assemblyResult = imageProcessorRepository.createAssembly(
+                    roomId = roomId, // Room-level atmospheric log
+                    projectId = projectId,
+                    filesToUpload = listOf(fileToUpload),
+                    templateId = "atmospheric_log",
+                    entityType = "atmospheric_log",
+                    entityId = null, // No serverId yet - will be populated after sync
+                    entityUuid = logUuid
+                )
+                assemblyResult.onSuccess { assemblyId ->
+                    photoAssemblyId = assemblyId
+                    android.util.Log.d(
+                        "RocketDryRoomVM",
+                        "📸 Created WAITING_FOR_ENTITY assembly for room atmospheric log photo: assemblyId=$assemblyId logUuid=$logUuid"
+                    )
+                }.onFailure { error ->
+                    android.util.Log.e(
+                        "RocketDryRoomVM",
+                        "❌ Failed to create assembly for room atmospheric log photo: logUuid=$logUuid",
+                        error
+                    )
+                }
+            }
+
             val log = OfflineAtmosphericLogEntity(
                 logId = -System.currentTimeMillis(),
-                uuid = UuidUtils.generateUuidV7(),
+                uuid = logUuid,
                 projectId = projectId,
                 roomId = roomId,
                 date = now,
@@ -101,6 +142,9 @@ class RocketDryRoomViewModel(
                 pressure = pressure,
                 windSpeed = windSpeed,
                 isExternal = false,
+                photoLocalPath = if (hasPhoto) photoLocalPath else null,
+                photoUploadStatus = if (photoAssemblyId != null) "queued" else "none",
+                photoAssemblyId = photoAssemblyId,
                 createdAt = now,
                 updatedAt = now,
                 syncStatus = SyncStatus.PENDING,
@@ -108,7 +152,7 @@ class RocketDryRoomViewModel(
             )
             android.util.Log.d(
                 "RocketDryRoomVM",
-                "🌡️ Adding atmospheric log: uuid=${log.uuid}, projectId=$projectId, roomId=$roomId, humidity=$humidity"
+                "🌡️ Adding atmospheric log: uuid=${log.uuid}, projectId=$projectId, roomId=$roomId, humidity=$humidity, assemblyId=$photoAssemblyId"
             )
             runCatching { localDataService.saveAtmosphericLogs(listOf(log)) }
                 .onSuccess {

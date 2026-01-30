@@ -29,6 +29,17 @@ sealed class ExternalAtmosphericLogsUiState {
     ) : ExternalAtmosphericLogsUiState()
 }
 
+/**
+ * Holds dialog values while navigating to camera for photo capture.
+ * Used to restore dialog state when returning from camera.
+ */
+data class PendingLogCapture(
+    val humidity: Double?,
+    val temperature: Double?,
+    val pressure: Double?,
+    val windSpeed: Double?
+)
+
 class ExternalAtmosphericLogsViewModel(
     application: Application,
     private val projectId: Long
@@ -41,6 +52,26 @@ class ExternalAtmosphericLogsViewModel(
 
     private val _uiState = MutableStateFlow<ExternalAtmosphericLogsUiState>(ExternalAtmosphericLogsUiState.Loading)
     val uiState: StateFlow<ExternalAtmosphericLogsUiState> = _uiState
+
+    // Holds dialog values while navigating to camera
+    private val _pendingLogCapture = MutableStateFlow<PendingLogCapture?>(null)
+    val pendingLogCapture: StateFlow<PendingLogCapture?> = _pendingLogCapture
+
+    /**
+     * Save current dialog values before navigating to camera.
+     */
+    fun savePendingCapture(humidity: Double?, temperature: Double?, pressure: Double?, windSpeed: Double?) {
+        _pendingLogCapture.value = PendingLogCapture(humidity, temperature, pressure, windSpeed)
+        android.util.Log.d("ExternalAtmosLogsVM", "📷 Saved pending capture: h=$humidity t=$temperature p=$pressure w=$windSpeed")
+    }
+
+    /**
+     * Clear pending capture after dialog is shown or cancelled.
+     */
+    fun clearPendingCapture() {
+        _pendingLogCapture.value = null
+        android.util.Log.d("ExternalAtmosLogsVM", "📷 Cleared pending capture")
+    }
 
     init {
         viewModelScope.launch {
@@ -55,8 +86,20 @@ class ExternalAtmosphericLogsViewModel(
                     _uiState.value = ExternalAtmosphericLogsUiState.Loading
                 } else {
                     // Filter for external logs only (roomId == null)
-                    val externalLogs = logs
-                        .filter { it.roomId == null && it.isExternal && !it.isDeleted }
+                    val filtered = logs.filter { it.roomId == null && it.isExternal && !it.isDeleted }
+
+                    // Debug logging to diagnose photo issues
+                    filtered.forEach { log ->
+                        android.util.Log.d(
+                            "ExternalAtmosLogsVM",
+                            "📊 Log data: logId=${log.logId}, serverId=${log.serverId}, " +
+                            "photoUrl=${log.photoUrl}, photoLocalPath=${log.photoLocalPath}, " +
+                            "assemblyId=${log.photoAssemblyId}, uploadStatus=${log.photoUploadStatus}, " +
+                            "syncStatus=${log.syncStatus}"
+                        )
+                    }
+
+                    val externalLogs = filtered
                         .sortedByDescending { it.date.time }
                         .mapIndexed { index, log -> log.toUiItem(index + 1) }
 

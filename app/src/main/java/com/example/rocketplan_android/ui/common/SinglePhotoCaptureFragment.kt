@@ -269,7 +269,8 @@ class SinglePhotoCaptureFragment : Fragment() {
 
     private fun createTempPhotoFile(): File? {
         val context = context ?: return null
-        val storageDir = File(context.cacheDir, "captured_photos")
+        // Use filesDir instead of cacheDir so photos persist
+        val storageDir = File(context.filesDir, "captured_photos")
         if (!storageDir.exists() && !storageDir.mkdirs()) {
             Toast.makeText(context, getString(R.string.camera_file_error), Toast.LENGTH_SHORT).show()
             return null

@@ -73,6 +73,8 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
 
         val synced = log.copy(
             serverId = dto.id,
+            // Copy photoUrl from server response if available (e.g., after photo processing completed)
+            photoUrl = dto.photoUrl ?: log.photoUrl,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             lastSyncedAt = ctx.now()

@@ -9,10 +9,7 @@ import android.widget.ImageButton
 import android.widget.TextView
 import android.widget.Toast
 import android.util.Log
-import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
-import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -25,13 +22,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.ui.common.SinglePhotoCaptureFragment
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
-import com.google.android.material.chip.Chip
-import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.button.MaterialButtonToggleGroup
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
+import com.google.android.material.card.MaterialCardView
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -42,6 +35,7 @@ class RocketDryFragment : Fragment() {
 
     companion object {
         private const val TAG = "RocketDryFragment"
+        private const val KEY_CURRENT_TAB = "current_tab"
     }
 
     private val args: RocketDryFragmentArgs by navArgs()
@@ -67,20 +61,21 @@ class RocketDryFragment : Fragment() {
     private lateinit var roomCard: View
     private lateinit var exteriorSpaceCard: View
     private lateinit var addExternalLogButton: ImageButton
-    private lateinit var atmosphericRoomFilterContainer: View
-    private lateinit var atmosphericRoomFilterGroup: ChipGroup
-    private lateinit var atmosphericEmptyStateCard: View
+    private lateinit var externalLogEmptyCard: MaterialCardView
+    private lateinit var externalLogSummaryCard: MaterialCardView
+    private lateinit var externalLogDateTime: TextView
+    private lateinit var externalLogAddButton: ImageButton
+    private lateinit var externalLogHumidity: TextView
+    private lateinit var externalLogTemperature: TextView
+    private lateinit var externalLogPressure: TextView
+    private lateinit var externalLogWindSpeed: TextView
     private lateinit var startAtmosphericLogButton: MaterialButton
-    private lateinit var atmosphericLogsRecyclerView: RecyclerView
     private lateinit var locationsRecyclerView: RecyclerView
 
-    private lateinit var atmosphericLogAdapter: AtmosphericLogAdapter
     private lateinit var locationLevelAdapter: LocationLevelAdapter
     private lateinit var equipmentLevelAdapter: EquipmentLevelAdapter
     private var suppressToggleChanges = false
     private lateinit var currentTab: RocketDryTab
-    private var lastRenderedAtmosphericAreas: List<AtmosphericLogArea> = emptyList()
-    private var latestAtmosphericSelection: Long? = null
     private var latestReadyState: RocketDryUiState.Ready? = null
 
     // Photo capture callback - stored while navigating to camera
@@ -98,11 +93,24 @@ class RocketDryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initializeViews(view)
-        selectInitialTab()
+        // Restore tab from savedInstanceState if available, otherwise use initial
+        val savedTab = savedInstanceState?.getString(KEY_CURRENT_TAB)
+        val tabToSelect = when {
+            savedTab != null -> if (savedTab == "MOISTURE") RocketDryTab.MOISTURE else RocketDryTab.EQUIPMENT
+            else -> initialTab
+        }
+        selectTab(tabToSelect)
         setupClickListeners()
         setupRecyclerViews()
         observeViewModel()
         observePhotoResult()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (::currentTab.isInitialized) {
+            outState.putString(KEY_CURRENT_TAB, currentTab.name)
+        }
     }
 
     private fun observePhotoResult() {
@@ -141,25 +149,29 @@ class RocketDryFragment : Fragment() {
         roomCard = view.findViewById(R.id.roomCard)
         exteriorSpaceCard = view.findViewById(R.id.exteriorSpaceCard)
         addExternalLogButton = view.findViewById(R.id.addExternalLogButton)
-        atmosphericRoomFilterContainer = view.findViewById(R.id.atmosphericRoomFilterContainer)
-        atmosphericRoomFilterGroup = view.findViewById(R.id.atmosphericRoomFilterGroup)
-        atmosphericEmptyStateCard = view.findViewById(R.id.atmosphericEmptyStateCard)
+        externalLogEmptyCard = view.findViewById(R.id.externalLogEmptyCard)
+        externalLogSummaryCard = view.findViewById(R.id.externalLogSummaryCard)
+        externalLogDateTime = view.findViewById(R.id.externalLogDateTime)
+        externalLogAddButton = view.findViewById(R.id.externalLogAddButton)
+        externalLogHumidity = view.findViewById(R.id.externalLogHumidity)
+        externalLogTemperature = view.findViewById(R.id.externalLogTemperature)
+        externalLogPressure = view.findViewById(R.id.externalLogPressure)
+        externalLogWindSpeed = view.findViewById(R.id.externalLogWindSpeed)
         startAtmosphericLogButton = view.findViewById(R.id.startAtmosphericLogButton)
-        atmosphericLogsRecyclerView = view.findViewById(R.id.atmosphericLogsRecyclerView)
         locationsRecyclerView = view.findViewById(R.id.locationsRecyclerView)
     }
 
-    private fun selectInitialTab() {
+    private fun selectTab(tab: RocketDryTab) {
         suppressToggleChanges = true
         toggleGroup.check(
-            when (initialTab) {
+            when (tab) {
                 RocketDryTab.EQUIPMENT -> R.id.equipmentButton
                 RocketDryTab.MOISTURE -> R.id.moistureButton
             }
         )
-        currentTab = initialTab
-        updateToggleStyles(initialTab)
-        showTab(initialTab)
+        currentTab = tab
+        updateToggleStyles(tab)
+        showTab(tab)
         toggleGroup.post { suppressToggleChanges = false }
     }
 
@@ -205,17 +217,27 @@ class RocketDryFragment : Fragment() {
         }
 
         addExternalLogButton.setOnClickListener {
-            Log.d(TAG, "➕ Add external atmospheric log tapped (button)")
+            Log.d(TAG, "➕ Add external atmospheric log tapped (header button)")
             showAddExternalLogDialog()
         }
 
-        atmosphericEmptyStateCard.setOnClickListener {
+        externalLogEmptyCard.setOnClickListener {
             Log.d(TAG, "➕ Add external atmospheric log tapped (empty state card)")
             showAddExternalLogDialog()
         }
 
         startAtmosphericLogButton.setOnClickListener {
             Log.d(TAG, "➕ Add external atmospheric log tapped (start button)")
+            showAddExternalLogDialog()
+        }
+
+        externalLogSummaryCard.setOnClickListener {
+            Log.d(TAG, "📋 External log summary card tapped - navigating to list")
+            navigateToExternalLogs()
+        }
+
+        externalLogAddButton.setOnClickListener {
+            Log.d(TAG, "➕ Add external atmospheric log tapped (card add button)")
             showAddExternalLogDialog()
         }
     }
@@ -242,14 +264,6 @@ class RocketDryFragment : Fragment() {
     }
 
     private fun setupRecyclerViews() {
-        // Atmospheric Logs RecyclerView
-        atmosphericLogAdapter = AtmosphericLogAdapter(
-            onAddLogClicked = { showAddExternalLogDialog() },
-            onItemClicked = { log -> showAtmosphericLogDetail(log) }
-        )
-        atmosphericLogsRecyclerView.layoutManager = LinearLayoutManager(context)
-        atmosphericLogsRecyclerView.adapter = atmosphericLogAdapter
-
         // Equipment by level RecyclerView
         equipmentLevelAdapter = EquipmentLevelAdapter { room ->
             onEquipmentRoomSelected(room)
@@ -305,8 +319,8 @@ class RocketDryFragment : Fragment() {
 
     private fun showLoadingState() {
         projectAddress.text = getString(R.string.loading_project)
-        renderAtmosphericAreaFilters(emptyList(), null)
-        updateAtmosphericLogs(emptyList())
+        externalLogEmptyCard.isVisible = false
+        externalLogSummaryCard.isVisible = false
         locationLevelAdapter.submitLevels(emptyList())
         equipmentLevelAdapter.submitLevels(emptyList())
         equipmentTotalCount.text = getString(R.string.loading_project)
@@ -318,12 +332,11 @@ class RocketDryFragment : Fragment() {
     private fun renderState(state: RocketDryUiState.Ready) {
         latestReadyState = state
         projectAddress.text = state.projectAddress
-        Log.d(TAG, "📍 renderState: locationLevels=${state.locationLevels.size}, equipmentLevels=${state.equipmentLevels.size}")
+        Log.d(TAG, "📍 renderState: locationLevels=${state.locationLevels.size}, equipmentLevels=${state.equipmentLevels.size}, latestExternalLog=${state.latestExternalLog != null}")
         state.locationLevels.forEach { level ->
             Log.d(TAG, "📍 Level '${level.levelName}': ${level.locations.size} rooms")
         }
-        renderAtmosphericAreaFilters(state.atmosphericAreas, state.selectedAtmosphericRoomId)
-        updateAtmosphericLogs(state.atmosphericLogs)
+        renderExternalLogSummary(state.latestExternalLog, state.externalLogCount)
         locationLevelAdapter.submitLevels(state.locationLevels)
         equipmentLevelAdapter.submitLevels(state.equipmentLevels)
         equipmentTotalCount.text = resources.getQuantityString(
@@ -340,79 +353,79 @@ class RocketDryFragment : Fragment() {
         showTab(currentTab)
     }
 
-    private fun updateAtmosphericLogs(logs: List<AtmosphericLogItem>) {
-        atmosphericLogAdapter.submitLogs(logs)
-        val hasLogs = logs.isNotEmpty()
-        atmosphericLogsRecyclerView.isVisible = hasLogs
-        atmosphericEmptyStateCard.isVisible = !hasLogs
+    private fun renderExternalLogSummary(latestLog: AtmosphericLogItem?, logCount: Int) {
+        val hasLogs = latestLog != null
+        externalLogEmptyCard.isVisible = !hasLogs
+        externalLogSummaryCard.isVisible = hasLogs
+
+        if (latestLog != null) {
+            // Format: "#1, Jan 30, 12:44pm" where 1 is the count (showing most recent)
+            val headerText = if (logCount > 0) {
+                "#$logCount, ${latestLog.dateTime.substringAfter(", ").ifEmpty { latestLog.dateTime }}"
+            } else {
+                latestLog.dateTime
+            }
+            externalLogDateTime.text = headerText
+            externalLogHumidity.text = latestLog.humidity.toInt().toString()
+            externalLogTemperature.text = latestLog.temperature.toInt().toString()
+            externalLogPressure.text = latestLog.pressure.toInt().toString()
+            externalLogWindSpeed.text = latestLog.windSpeed.toInt().toString()
+        }
     }
 
-    private fun renderAtmosphericAreaFilters(
-        areas: List<AtmosphericLogArea>,
-        selectedRoomId: Long?
-    ) {
-        latestAtmosphericSelection = selectedRoomId
-        val selectedArea = areas.firstOrNull { it.roomId == selectedRoomId }
-        val headerText = when {
-            selectedArea?.roomId != null ->
-                getString(R.string.rocketdry_atmospheric_log_for_area, selectedArea.label)
-            else -> getString(R.string.external_atmospheric_log)
+    private fun showAddExternalLogDialog() {
+        val now = Date()
+        val title = getString(
+            R.string.rocketdry_external_log_title,
+            formatLogDate(now)
+        )
+
+        val photoCallback = object : AtmosphericLogPhotoCallback {
+            override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
+                launchCamera(callback)
+            }
         }
-        atmosphericSectionTitle.text = headerText
-        atmosphericRoomFilterContainer.isVisible = areas.isNotEmpty()
-        if (areas.isEmpty()) {
-            atmosphericRoomFilterGroup.setOnCheckedStateChangeListener(null)
-            atmosphericRoomFilterGroup.removeAllViews()
-            lastRenderedAtmosphericAreas = emptyList()
+
+        showAtmosphericLogDialog(
+            title = title,
+            areaLabel = getString(R.string.rocketdry_atmos_room_external),
+            photoCallback = photoCallback
+        ) { humidity, temperature, pressure, windSpeed, photoLocalPath ->
+            Log.d(TAG, "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$photoLocalPath")
+            viewModel.addExternalAtmosphericLog(
+                humidity = humidity,
+                temperature = temperature,
+                pressure = pressure,
+                windSpeed = windSpeed,
+                photoLocalPath = photoLocalPath
+            )
+        }
+    }
+
+    private fun formatLogDate(date: Date): String {
+        val formatter = SimpleDateFormat("MMM d, h:mma", Locale.getDefault())
+        val formatted = formatter.format(date)
+        return formatted
+            .replace("AM", "am")
+            .replace("PM", "pm")
+    }
+
+    private fun launchCamera(callback: (Uri?) -> Unit) {
+        // Prevent double navigation if already navigating to camera
+        val currentDestId = findNavController().currentDestination?.id
+        if (currentDestId != R.id.rocketDryFragment) {
+            Log.d(TAG, "📷 Already navigated away, skipping camera launch")
             return
         }
-
-        val hasChanged = areas != lastRenderedAtmosphericAreas
-        if (hasChanged) {
-            atmosphericRoomFilterGroup.setOnCheckedStateChangeListener(null)
-            atmosphericRoomFilterGroup.removeAllViews()
-
-            val context = atmosphericRoomFilterGroup.context
-            areas.forEach { area ->
-                val chip = Chip(context).apply {
-                    id = View.generateViewId()
-                    tag = area.roomId
-                    text = getString(R.string.rocketdry_atmospheric_area_chip, area.label, area.logCount)
-                    isCheckable = true
-                    isChecked = area.roomId == selectedRoomId
-                    isClickable = true
-                    isFocusable = true
-                    chipBackgroundColor = ContextCompat.getColorStateList(context, R.color.chip_background_selector)
-                    setTextColor(ContextCompat.getColorStateList(context, R.color.chip_text_selector))
-                    isCheckedIconVisible = false
-                    rippleColor = ContextCompat.getColorStateList(context, android.R.color.transparent)
-                }
-                atmosphericRoomFilterGroup.addView(chip)
-            }
-
-            atmosphericRoomFilterGroup.setOnCheckedStateChangeListener { group, checkedIds ->
-                val checkedChipId = checkedIds.firstOrNull()
-                val chip = checkedChipId?.let { id -> group.findViewById<Chip>(id) }
-                val roomId = chip?.tag as? Long
-                Log.d(
-                    TAG,
-                    "✅ Atmospheric area selected roomId=$roomId label='${chip?.text}'"
-                )
-
-                // Navigate to external logs list when External chip is clicked
-                if (roomId == null) {
-                    navigateToExternalLogs()
-                } else {
-                    viewModel.selectAtmosphericRoom(roomId)
-                }
-            }
-            lastRenderedAtmosphericAreas = areas
-        } else {
-            for (index in 0 until atmosphericRoomFilterGroup.childCount) {
-                val chip = atmosphericRoomFilterGroup.getChildAt(index) as? Chip ?: continue
-                chip.isChecked = chip.tag as? Long == selectedRoomId
-            }
-        }
+        // Clear any old photo result before navigating to prevent stale data triggering callback
+        findNavController().currentBackStackEntry?.savedStateHandle
+            ?.remove<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
+        pendingPhotoCallback = callback
+        Log.d(TAG, "📷 Navigating to camera screen")
+        findNavController().navigate(
+            RocketDryFragmentDirections
+                .actionRocketDryFragmentToSinglePhotoCaptureFragment()
+        )
     }
 
     private fun navigateToTotalEquipment() {
@@ -432,171 +445,6 @@ class RocketDryFragment : Fragment() {
         findNavController().navigate(action)
     }
 
-    private fun showAddExternalLogDialog() {
-        val now = Date()
-        val title = getString(
-            R.string.rocketdry_external_log_title,
-            formatLogDate(now)
-        )
-        val currentAreaLabel = lastRenderedAtmosphericAreas
-            .firstOrNull { it.roomId == latestAtmosphericSelection }
-            ?.label
-            ?: getString(R.string.rocketdry_atmos_room_external)
-        Log.d(
-            TAG,
-            "🧪 Launching external atmospheric log dialog at '$title' (selectedRoomId=$latestAtmosphericSelection)"
-        )
-
-        val photoCallback = object : AtmosphericLogPhotoCallback {
-            override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
-                launchCamera(callback)
-            }
-        }
-
-        showAtmosphericLogDialog(
-            title = title,
-            areaLabel = currentAreaLabel,
-            onAreaClicked = { updateLabel ->
-                showAtmosphericAreaPicker { area ->
-                    updateLabel(area.label)
-                }
-            },
-            onRenameAreaClicked = onRename@{ updateLabel ->
-                val selectedRoomId = latestAtmosphericSelection
-                if (selectedRoomId == null) {
-                    Toast.makeText(
-                        requireContext(),
-                        R.string.rocketdry_select_area_first,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    return@onRename
-                }
-                showRenameAreaDialog(selectedRoomId) { updatedLabel ->
-                    Log.d(TAG, "✏️ Atmospheric area renamed to '$updatedLabel'")
-                    updateLabel(updatedLabel)
-                }
-            },
-            photoCallback = photoCallback
-        ) { humidity, temperature, pressure, windSpeed, photoLocalPath ->
-            Log.d(
-                TAG,
-                "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed roomId=$latestAtmosphericSelection photo=$photoLocalPath"
-            )
-            viewModel.addExternalAtmosphericLog(
-                humidity = humidity,
-                temperature = temperature,
-                pressure = pressure,
-                windSpeed = windSpeed,
-                roomId = latestAtmosphericSelection,
-                photoLocalPath = photoLocalPath
-            )
-        }
-    }
-
-    private fun showAtmosphericAreaPicker(onSelected: (AtmosphericLogArea) -> Unit) {
-        val areas = lastRenderedAtmosphericAreas.takeIf { it.isNotEmpty() } ?: listOf(
-            AtmosphericLogArea(
-                roomId = null,
-                label = getString(R.string.rocketdry_atmos_room_external),
-                logCount = 0
-            )
-        )
-        val labels = areas.map { it.label }.toTypedArray()
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.rocketdry_select_area_title)
-            .setItems(labels) { dialog, index ->
-                val selected = areas.getOrNull(index) ?: return@setItems
-                latestAtmosphericSelection = selected.roomId
-                viewModel.selectAtmosphericRoom(selected.roomId)
-                onSelected(selected)
-                dialog.dismiss()
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun showRenameAreaDialog(
-        roomId: Long,
-        onRenamed: (String) -> Unit
-    ) {
-        val currentArea = lastRenderedAtmosphericAreas.firstOrNull { it.roomId == roomId }
-            ?: return
-        val dialogView = layoutInflater.inflate(R.layout.dialog_rename_area, null)
-        val inputLayout = dialogView.findViewById<TextInputLayout>(R.id.areaNameInputLayout)
-        val input = dialogView.findViewById<TextInputEditText>(R.id.areaNameInput)
-        input.setText(currentArea.label)
-        input.setSelection(input.text?.length ?: 0)
-        input.doAfterTextChanged {
-            inputLayout.error = null
-        }
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.rocketdry_rename_area_title)
-            .setView(dialogView)
-            .setPositiveButton(R.string.save, null)
-            .setNegativeButton(R.string.cancel, null)
-            .create()
-
-        dialog.setOnShowListener {
-            val saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
-            saveButton.setOnClickListener {
-                val newName = input.text?.toString()?.trim().orEmpty()
-                if (newName.isBlank()) {
-                    inputLayout.error = getString(R.string.rocketdry_rename_area_error)
-                    return@setOnClickListener
-                }
-                viewLifecycleOwner.lifecycleScope.launch {
-                    val success = viewModel.renameAtmosphericArea(roomId, newName)
-                    if (success) {
-                        onRenamed(newName)
-                        Toast.makeText(
-                            requireContext(),
-                            R.string.rocketdry_area_renamed,
-                            Toast.LENGTH_SHORT
-                        ).show()
-                        dialog.dismiss()
-                    } else {
-                        inputLayout.error = getString(R.string.rocketdry_rename_area_error)
-                    }
-                }
-            }
-        }
-        dialog.show()
-    }
-
-    private fun formatLogDate(date: Date): String {
-        val formatter = SimpleDateFormat("MMM d, h:mma", Locale.getDefault())
-        val formatted = formatter.format(date)
-        return formatted
-            .replace("AM", "am")
-            .replace("PM", "pm")
-    }
-
-    private fun showAtmosphericLogDetail(log: AtmosphericLogItem) {
-        Log.d(TAG, "📋 Showing atmospheric log detail for logId=${log.logId}")
-        val bottomSheet = AtmosphericLogDetailBottomSheet.newInstance(log)
-        bottomSheet.callback = object : AtmosphericLogDetailBottomSheet.Callback {
-            override fun onEditRequested(logId: Long) {
-                Log.d(TAG, "✏️ Edit requested for logId=$logId (not implemented yet)")
-                Toast.makeText(requireContext(), "Edit coming soon", Toast.LENGTH_SHORT).show()
-            }
-
-            override fun onDeleteRequested(logId: Long) {
-                Log.d(TAG, "🗑️ Delete requested for logId=$logId")
-                viewModel.deleteAtmosphericLog(logId)
-                Toast.makeText(requireContext(), R.string.atmospheric_log_deleted, Toast.LENGTH_SHORT).show()
-            }
-        }
-        bottomSheet.show(childFragmentManager, AtmosphericLogDetailBottomSheet.TAG)
-    }
-
-    private fun launchCamera(callback: (Uri?) -> Unit) {
-        pendingPhotoCallback = callback
-        Log.d(TAG, "📷 Navigating to camera screen")
-        findNavController().navigate(
-            RocketDryFragmentDirections.actionRocketDryFragmentToSinglePhotoCaptureFragment()
-        )
-    }
 }
 
 private enum class RocketDryTab {

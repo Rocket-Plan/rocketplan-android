@@ -46,9 +46,6 @@ class ExternalAtmosphericLogsFragment : Fragment() {
 
     private lateinit var adapter: ExternalAtmosphericLogAdapter
 
-    // Photo capture callback - stored while navigating to camera
-    private var pendingPhotoCallback: ((Uri?) -> Unit)? = null
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -75,15 +72,21 @@ class ExternalAtmosphericLogsFragment : Fragment() {
                 if (!photoPath.isNullOrBlank()) {
                     Log.d(TAG, "📸 Received photo from camera: $photoPath")
                     val file = File(photoPath)
-                    if (file.exists()) {
-                        pendingPhotoCallback?.invoke(Uri.fromFile(file))
-                    } else {
-                        pendingPhotoCallback?.invoke(null)
-                    }
-                    pendingPhotoCallback = null
+                    val validPath = if (file.exists()) photoPath else null
+
                     // Clear the result to avoid re-processing
                     findNavController().currentBackStackEntry?.savedStateHandle
                         ?.remove<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
+
+                    // Check if we have pending dialog values from before camera navigation
+                    val pending = viewModel.pendingLogCapture.value
+                    if (pending != null) {
+                        Log.d(TAG, "📸 Restoring dialog with pending values and photo")
+                        viewModel.clearPendingCapture()
+                        showAddLogDialogWithPhoto(pending, validPath)
+                    } else {
+                        Log.w(TAG, "📸 No pending capture found, photo may be lost")
+                    }
                 }
             }
     }
@@ -164,16 +167,27 @@ class ExternalAtmosphericLogsFragment : Fragment() {
             formatLogDate(now)
         )
 
-        val photoCallback = object : AtmosphericLogPhotoCallback {
-            override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
-                launchCamera(callback)
-            }
-        }
+        // Track current values in the dialog for camera navigation
+        var currentHumidity: Double? = null
+        var currentTemperature: Double? = null
+        var currentPressure: Double? = null
+        var currentWindSpeed: Double? = null
 
-        showAtmosphericLogDialog(
+        showAtmosphericLogDialogWithValueTracking(
             title = title,
             areaLabel = getString(R.string.rocketdry_atmos_room_external),
-            photoCallback = photoCallback
+            photoCallback = object : AtmosphericLogPhotoCallback {
+                override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
+                    // Don't use the callback - instead save values and navigate
+                    launchCamera(currentHumidity, currentTemperature, currentPressure, currentWindSpeed)
+                }
+            },
+            onValuesChanged = { h, t, p, w ->
+                currentHumidity = h
+                currentTemperature = t
+                currentPressure = p
+                currentWindSpeed = w
+            }
         ) { humidity, temperature, pressure, windSpeed, photoLocalPath ->
             Log.d(TAG, "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$photoLocalPath")
             viewModel.addExternalAtmosphericLog(
@@ -194,12 +208,54 @@ class ExternalAtmosphericLogsFragment : Fragment() {
             .replace("PM", "pm")
     }
 
-    private fun launchCamera(callback: (Uri?) -> Unit) {
-        pendingPhotoCallback = callback
+    private fun launchCamera(humidity: Double?, temperature: Double?, pressure: Double?, windSpeed: Double?) {
+        // Save dialog values to ViewModel before navigation
+        viewModel.savePendingCapture(humidity, temperature, pressure, windSpeed)
         Log.d(TAG, "📷 Navigating to camera screen")
         findNavController().navigate(
             ExternalAtmosphericLogsFragmentDirections
                 .actionExternalAtmosphericLogsFragmentToSinglePhotoCaptureFragment()
         )
+    }
+
+    /**
+     * Show the add log dialog pre-populated with values and photo from camera capture.
+     */
+    private fun showAddLogDialogWithPhoto(pending: PendingLogCapture, photoPath: String?) {
+        val now = Date()
+        val title = getString(
+            R.string.rocketdry_external_log_title,
+            formatLogDate(now)
+        )
+
+        showAtmosphericLogDialogWithValues(
+            title = title,
+            areaLabel = getString(R.string.rocketdry_atmos_room_external),
+            initialHumidity = pending.humidity,
+            initialTemperature = pending.temperature,
+            initialPressure = pending.pressure,
+            initialWindSpeed = pending.windSpeed,
+            initialPhotoPath = photoPath,
+            photoCallback = object : AtmosphericLogPhotoCallback {
+                override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
+                    // This shouldn't be called since we already have a photo,
+                    // but handle it just in case user wants to retake
+                    val currentHumidity = pending.humidity
+                    val currentTemperature = pending.temperature
+                    val currentPressure = pending.pressure
+                    val currentWindSpeed = pending.windSpeed
+                    launchCamera(currentHumidity, currentTemperature, currentPressure, currentWindSpeed)
+                }
+            }
+        ) { humidity, temperature, pressure, windSpeed, finalPhotoPath ->
+            Log.d(TAG, "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$finalPhotoPath")
+            viewModel.addExternalAtmosphericLog(
+                humidity = humidity,
+                temperature = temperature,
+                pressure = pressure,
+                windSpeed = windSpeed,
+                photoLocalPath = finalPhotoPath
+            )
+        }
     }
 }

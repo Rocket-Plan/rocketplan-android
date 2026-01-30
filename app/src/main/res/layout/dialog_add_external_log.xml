@@ -87,56 +87,11 @@
 
     </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/previousStepButton"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/rocketdry_back"
-        android:textAllCaps="false"
-        android:textColor="@color/main_purple"
-        app:icon="@drawable/chevron_left"
-        app:iconGravity="textStart"
-        app:iconPadding="6dp"
-        app:iconTint="@color/main_purple" />
-
-        <TextView
-            android:id="@+id/stepPosition"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginEnd="12dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:textColor="@color/light_text_rp"
-            android:textSize="@dimen/text_size_body_small"
-            tools:text="Step 1 of 4" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/nextStepButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/rocketdry_next"
-        android:textAllCaps="false"
-        android:textColor="@color/white"
-        app:backgroundTint="@color/main_purple"
-        app:icon="@drawable/icon_chevron_right"
-        app:iconGravity="textEnd"
-        app:iconPadding="6dp"
-        app:iconTint="@color/white" />
-    </LinearLayout>
-
     <TextView
         android:id="@+id/stepLabel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:gravity="center_horizontal"
         android:textColor="@color/icon_colour"
         android:textSize="@dimen/text_size_title"
@@ -210,5 +165,52 @@
         android:text="@string/cancel"
         android:textAllCaps="false"
         android:textColor="@color/light_text_rp" />
+
+    <!-- Navigation buttons at the bottom -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/previousStepButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/rocketdry_back"
+            android:textAllCaps="false"
+            android:textColor="@color/main_purple"
+            app:icon="@drawable/chevron_left"
+            app:iconGravity="textStart"
+            app:iconPadding="6dp"
+            app:iconTint="@color/main_purple" />
+
+        <TextView
+            android:id="@+id/stepPosition"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textColor="@color/light_text_rp"
+            android:textSize="@dimen/text_size_body_small"
+            tools:text="Step 1 of 5" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/nextStepButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/rocketdry_next"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            app:backgroundTint="@color/main_purple"
+            app:icon="@drawable/icon_chevron_right"
+            app:iconGravity="textEnd"
+            app:iconPadding="6dp"
+            app:iconTint="@color/white" />
+    </LinearLayout>
 
 </LinearLayout>

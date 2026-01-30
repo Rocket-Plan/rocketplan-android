@@ -206,10 +206,17 @@ class OfflineSyncRepository(
             Log.d(TAG, "📸 Assembly upload completed, refreshing photos for room $roomId")
             photoSyncService.refreshRoomPhotos(projectId, roomId)
         }
+
+        // Set callback to refresh atmospheric log after photo upload completes
+        manager.onAtmosphericLogPhotoCompleted = { entityUuid, projectId ->
+            Log.d(TAG, "📸 Atmospheric log photo completed, refreshing log: uuid=$entityUuid projectId=$projectId")
+            refreshAtmosphericLogPhotoUrl(entityUuid, projectId)
+        }
     }
 
     fun detachImageProcessorQueueManager() {
         imageProcessorQueueManager?.onAssemblyUploadCompleted = null
+        imageProcessorQueueManager?.onAtmosphericLogPhotoCompleted = null
         imageProcessorQueueManager = null
     }
 
@@ -219,6 +226,51 @@ class OfflineSyncRepository(
 
     fun detachImageProcessorRepository() {
         imageProcessorRepository = null
+    }
+
+    /**
+     * Refresh the photoUrl for an atmospheric log after its photo upload completes.
+     * Fetches the log from the server and updates the local entry with the photoUrl.
+     */
+    private suspend fun refreshAtmosphericLogPhotoUrl(entityUuid: String, projectId: Long?) {
+        try {
+            // Get the local log first
+            val localLog = localDataService.getAtmosphericLogByUuid(entityUuid)
+            if (localLog == null) {
+                Log.w(TAG, "⚠️ Atmospheric log not found for uuid=$entityUuid")
+                return
+            }
+
+            // Get the server project ID
+            val serverProjectId = if (projectId != null) {
+                resolveServerProjectId(projectId)
+            } else {
+                resolveServerProjectId(localLog.projectId)
+            }
+
+            if (serverProjectId == null) {
+                Log.w(TAG, "⚠️ Cannot refresh atmospheric log: no server project ID for projectId=${projectId ?: localLog.projectId}")
+                return
+            }
+
+            // Fetch atmospheric logs from server
+            val response = api.getProjectAtmosphericLogs(serverProjectId, null)
+            val serverLog = response.data.find { it.uuid == entityUuid }
+
+            if (serverLog != null && !serverLog.photoUrl.isNullOrBlank()) {
+                // Update local log with photoUrl from server
+                val updatedLog = localLog.copy(
+                    photoUrl = serverLog.photoUrl,
+                    photoUploadStatus = "completed"
+                )
+                localDataService.saveAtmosphericLogs(listOf(updatedLog))
+                Log.d(TAG, "✅ Updated atmospheric log photoUrl: uuid=$entityUuid url=${serverLog.photoUrl}")
+            } else {
+                Log.d(TAG, "ℹ️ Server log not found or has no photoUrl: uuid=$entityUuid")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to refresh atmospheric log photo URL: uuid=$entityUuid", e)
+        }
     }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {

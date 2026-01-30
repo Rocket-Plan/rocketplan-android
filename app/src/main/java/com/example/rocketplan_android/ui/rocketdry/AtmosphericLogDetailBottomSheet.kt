@@ -150,10 +150,13 @@ class AtmosphericLogDetailBottomSheet : BottomSheetDialogFragment() {
     }
 
     private fun loadPhoto() {
+        android.util.Log.d(TAG, "📷 loadPhoto: localPath=$photoLocalPath, url=$photoUrl")
+
         // Try local path first, then URL
         val localPath = photoLocalPath
         if (!localPath.isNullOrBlank()) {
             val file = File(localPath)
+            android.util.Log.d(TAG, "📷 Checking local file: exists=${file.exists()}, path=$localPath")
             if (file.exists()) {
                 photoThumbnail.load(file) {
                     crossfade(true)
@@ -166,12 +169,14 @@ class AtmosphericLogDetailBottomSheet : BottomSheetDialogFragment() {
 
         val url = photoUrl
         if (!url.isNullOrBlank()) {
+            android.util.Log.d(TAG, "📷 Loading from URL: $url")
             photoThumbnail.load(url) {
                 crossfade(true)
             }
             photoThumbnail.isVisible = true
             photoPlaceholder.isVisible = false
         } else {
+            android.util.Log.d(TAG, "📷 No photo available, showing placeholder")
             photoThumbnail.isVisible = false
             photoPlaceholder.isVisible = true
         }

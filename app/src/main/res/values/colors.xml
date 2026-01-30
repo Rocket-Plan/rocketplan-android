@@ -11,6 +11,7 @@
 
     <!-- Primary Colors -->
     <color name="main_purple">#9A00FF</color>
+    <color name="main_purple_20">#339A00FF</color>
     <color name="light_purple">#F4E5FF</color>
     <color name="secondary_purple">#6D00E6</color>
     <color name="button_gradient_top_purple">#9601FF</color>

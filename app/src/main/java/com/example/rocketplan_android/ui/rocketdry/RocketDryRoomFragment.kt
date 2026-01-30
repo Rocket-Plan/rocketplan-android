@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.ui.rocketdry
 
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,16 +17,19 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.ui.common.SinglePhotoCaptureFragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -60,6 +64,9 @@ class RocketDryRoomFragment : Fragment() {
     private var latestRoomName: String = ""
     private var materialOptions: List<String> = emptyList()
 
+    // Photo capture callback - stored while navigating to camera
+    private var pendingPhotoCallback: ((Uri?) -> Unit)? = null
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -74,6 +81,7 @@ class RocketDryRoomFragment : Fragment() {
         setupRecycler()
         setupClickListeners()
         observeViewModel()
+        observePhotoResult()
     }
 
     private fun initializeViews(view: View) {
@@ -114,6 +122,26 @@ class RocketDryRoomFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun observePhotoResult() {
+        findNavController().currentBackStackEntry?.savedStateHandle
+            ?.getLiveData<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
+            ?.observe(viewLifecycleOwner) { photoPath ->
+                if (!photoPath.isNullOrBlank()) {
+                    Log.d(TAG, "📸 Received photo from camera: $photoPath")
+                    val file = File(photoPath)
+                    if (file.exists()) {
+                        pendingPhotoCallback?.invoke(Uri.fromFile(file))
+                    } else {
+                        pendingPhotoCallback?.invoke(null)
+                    }
+                    pendingPhotoCallback = null
+                    // Clear the result to avoid re-processing
+                    findNavController().currentBackStackEntry?.savedStateHandle
+                        ?.remove<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
+                }
+            }
     }
 
     private fun render(state: RocketDryRoomUiState) {
@@ -163,18 +191,44 @@ class RocketDryRoomFragment : Fragment() {
             roomName,
             formatLogDate(Date())
         )
-        showAtmosphericLogDialog(title) { humidity, temperature, pressure, windSpeed ->
+
+        val photoCallback = object : AtmosphericLogPhotoCallback {
+            override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
+                launchCamera(callback)
+            }
+        }
+
+        showAtmosphericLogDialog(
+            title = title,
+            areaLabel = roomName,
+            photoCallback = photoCallback
+        ) { humidity, temperature, pressure, windSpeed, photoLocalPath ->
             Log.d(
                 TAG,
-                "📩 Room atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed room='${latestRoomName}' roomId=${args.roomId}"
+                "📩 Room atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$photoLocalPath room='${latestRoomName}' roomId=${args.roomId}"
             )
-            viewModel.addRoomAtmosphericLog(humidity, temperature, pressure, windSpeed)
+            viewModel.addRoomAtmosphericLog(
+                humidity = humidity,
+                temperature = temperature,
+                pressure = pressure,
+                windSpeed = windSpeed,
+                photoLocalPath = photoLocalPath
+            )
             Toast.makeText(
                 requireContext(),
                 getString(R.string.rocketdry_atmospheric_log_added, roomName),
                 Toast.LENGTH_SHORT
             ).show()
         }
+    }
+
+    private fun launchCamera(callback: (Uri?) -> Unit) {
+        pendingPhotoCallback = callback
+        Log.d(TAG, "📷 Navigating to camera screen")
+        findNavController().navigate(
+            RocketDryRoomFragmentDirections
+                .actionRocketDryRoomFragmentToSinglePhotoCaptureFragment()
+        )
     }
 
     @Suppress("DEPRECATION") // SOFT_INPUT_ADJUST_RESIZE still needed for dialog keyboard behavior

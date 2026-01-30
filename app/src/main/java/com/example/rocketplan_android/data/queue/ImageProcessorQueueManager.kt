@@ -87,6 +87,12 @@ class ImageProcessorQueueManager(
     var onAssemblyUploadCompleted: (suspend (projectId: Long, roomId: Long) -> Unit)? = null
 
     /**
+     * Callback invoked when an atmospheric log photo assembly completes.
+     * Used to trigger re-sync of the atmospheric log to get the photoUrl from server.
+     */
+    var onAtmosphericLogPhotoCompleted: (suspend (entityUuid: String, projectId: Long?) -> Unit)? = null
+
+    /**
      * Shutdown the queue manager, canceling all pending work and releasing resources.
      * Call this when the app is terminating or the manager is no longer needed.
      */
@@ -1301,6 +1307,16 @@ class ImageProcessorQueueManager(
                     onAssemblyUploadCompleted?.invoke(projectId, roomId)
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to trigger photo sync callback", e)
+                }
+            }
+
+            // For atmospheric log photos, trigger re-sync to get photoUrl from server
+            if (assembly?.entityType == "atmospheric_log" && assembly.entityUuid != null) {
+                Log.d(TAG, "📸 Atmospheric log photo upload completed, triggering re-sync for uuid=${assembly.entityUuid}")
+                try {
+                    onAtmosphericLogPhotoCompleted?.invoke(assembly.entityUuid, projectId)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to trigger atmospheric log photo callback", e)
                 }
             }
         } else {

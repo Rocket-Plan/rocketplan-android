@@ -1,6 +1,5 @@
 package com.example.rocketplan_android.ui.rocketdry
 
-import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -8,6 +7,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import com.example.rocketplan_android.R
 import java.io.File
 import kotlin.math.roundToInt
@@ -65,20 +65,35 @@ class ExternalAtmosphericLogAdapter(
 
         private fun loadPhoto(log: AtmosphericLogItem) {
             val localPath = log.photoLocalPath
-            if (!localPath.isNullOrBlank()) {
-                val file = File(localPath)
-                if (file.exists()) {
-                    photoThumbnail.setImageURI(Uri.fromFile(file))
+            val photoUrl = log.photoUrl
+
+            android.util.Log.d("ExternalAtmosAdapter", "📷 loadPhoto logId=${log.logId}: localPath=$localPath, url=$photoUrl")
+
+            when {
+                !localPath.isNullOrBlank() && File(localPath).exists() -> {
+                    android.util.Log.d("ExternalAtmosAdapter", "📷 Loading from local file: $localPath")
                     photoThumbnail.isVisible = true
                     photoPlaceholder.isVisible = false
-                    return
+                    photoThumbnail.load(File(localPath)) {
+                        crossfade(true)
+                        size(200, 200)
+                    }
+                }
+                !photoUrl.isNullOrBlank() -> {
+                    android.util.Log.d("ExternalAtmosAdapter", "📷 Loading from URL: $photoUrl")
+                    photoThumbnail.isVisible = true
+                    photoPlaceholder.isVisible = false
+                    photoThumbnail.load(photoUrl) {
+                        crossfade(true)
+                        size(200, 200)
+                    }
+                }
+                else -> {
+                    android.util.Log.d("ExternalAtmosAdapter", "📷 No photo, showing placeholder")
+                    photoThumbnail.isVisible = false
+                    photoPlaceholder.isVisible = true
                 }
             }
-
-            // TODO: Load from URL using Glide/Coil if photoUrl is available
-
-            photoThumbnail.isVisible = false
-            photoPlaceholder.isVisible = true
         }
     }
 }

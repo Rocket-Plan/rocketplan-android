@@ -119,6 +119,12 @@ class MainActivity : AppCompatActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        // Keep screen on to prevent dimming during use
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        // Keep screen on to prevent dimming during use
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         contentLayoutParams =
             binding.appBarMain.contentMain.root.layoutParams as CoordinatorLayout.LayoutParams
         scrollingContentBehavior =

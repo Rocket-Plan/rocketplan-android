@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.rocketdry
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -14,7 +15,9 @@ import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.model.FileToUpload
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
+import com.example.rocketplan_android.util.UuidUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,9 +25,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
-import com.example.rocketplan_android.util.UuidUtils
-import com.example.rocketplan_android.data.model.FileToUpload
-import android.net.Uri
 import java.util.Date
 import java.util.Locale
 
@@ -43,7 +43,6 @@ class RocketDryViewModel(
 
     private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
     val uiState: StateFlow<RocketDryUiState> = _uiState
-    private val selectedAtmosphericRoomId = MutableStateFlow<Long?>(null)
 
     init {
         viewModelScope.launch {
@@ -55,8 +54,6 @@ class RocketDryViewModel(
                 localDataService.observeMoistureLogsForProject(projectId)
             ) { projects, atmosphericLogs, rooms, locations, moistureLogs ->
                 Data(projects, atmosphericLogs, rooms, locations, moistureLogs)
-            }.combine(selectedAtmosphericRoomId) { data, selectedRoomId ->
-                data.copy(selectedAtmosphericRoomId = selectedRoomId)
             }.combine(localDataService.observeEquipmentForProject(projectId)) { data, equipment ->
                 val project = data.projects.firstOrNull { it.projectId == projectId }
                 android.util.Log.d("RocketDryVM", "🌡️ projectId=$projectId, atmosphericLogs.size=${data.atmosphericLogs.size}, projectIds=${data.atmosphericLogs.map { it.projectId }.distinct()}")
@@ -68,22 +65,18 @@ class RocketDryViewModel(
                     val locationLevels = buildLocationLevels(data.rooms, locationLookup, moistureByRoom)
                     val equipmentByRoom = equipment.groupBy { it.roomId }
                     val roomsById = data.rooms.associateBy { it.roomId }
-                    val atmosphericLogItems = data.atmosphericLogs.map { it.toUiItem(roomsById) }
-                    val logsByRoom = atmosphericLogItems.groupBy { it.roomId }
-                    val areaOptions = buildAtmosphericAreas(logsByRoom, roomsById)
-                    val resolvedSelection = resolveAtmosphericSelection(
-                        requestedRoomId = data.selectedAtmosphericRoomId,
-                        areaOptions = areaOptions
-                    )
-                    if (resolvedSelection != data.selectedAtmosphericRoomId) {
-                        selectedAtmosphericRoomId.value = resolvedSelection
-                    }
-                    val atmosphericLogsToShow = logsByRoom[resolvedSelection].orEmpty()
+
+                    // Filter for external logs only (roomId == null, isExternal = true)
+                    val externalLogs = data.atmosphericLogs
+                        .filter { it.roomId == null && it.isExternal && !it.isDeleted }
+                        .sortedByDescending { it.date.time }
+                    val latestExternalLog = externalLogs.firstOrNull()?.toUiItem(roomsById)
+                    val externalLogCount = externalLogs.size
+
                     RocketDryUiState.Ready(
                         projectAddress = buildProjectAddress(project),
-                        atmosphericLogs = atmosphericLogsToShow,
-                        atmosphericAreas = areaOptions,
-                        selectedAtmosphericRoomId = resolvedSelection,
+                        latestExternalLog = latestExternalLog,
+                        externalLogCount = externalLogCount,
                         locationLevels = locationLevels,
                         equipmentTotals = buildEquipmentTotals(equipment),
                         equipmentByType = buildEquipmentTypeSummaries(equipment),
@@ -128,26 +121,11 @@ class RocketDryViewModel(
             true
         }
 
-    private data class Data(
-        val projects: List<OfflineProjectEntity>,
-        val atmosphericLogs: List<OfflineAtmosphericLogEntity>,
-        val rooms: List<OfflineRoomEntity>,
-        val locations: List<OfflineLocationEntity>,
-        val moistureLogs: List<OfflineMoistureLogEntity>,
-        val selectedAtmosphericRoomId: Long? = null
-    )
-
-    fun selectAtmosphericRoom(roomId: Long?) {
-        android.util.Log.d("RocketDryVM", "🎛 selectAtmosphericRoom roomId=$roomId")
-        selectedAtmosphericRoomId.value = roomId
-    }
-
     fun addExternalAtmosphericLog(
         humidity: Double,
         temperature: Double,
         pressure: Double,
         windSpeed: Double,
-        roomId: Long?,
         photoLocalPath: String? = null
     ) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -156,7 +134,6 @@ class RocketDryViewModel(
             val logUuid = UuidUtils.generateUuidV7()
 
             // Create assembly at photo capture time (before log syncs)
-            // The assembly will be promoted when the log gets a serverId
             var photoAssemblyId: String? = null
             if (hasPhoto && photoLocalPath != null) {
                 val filename = "atmos_${logUuid}_${System.currentTimeMillis()}.jpg"
@@ -166,12 +143,12 @@ class RocketDryViewModel(
                     deleteOnCompletion = false
                 )
                 val assemblyResult = imageProcessorRepository.createAssembly(
-                    roomId = null, // External atmospheric logs are project-level
+                    roomId = null,
                     projectId = projectId,
                     filesToUpload = listOf(fileToUpload),
                     templateId = "atmospheric_log",
                     entityType = "atmospheric_log",
-                    entityId = null, // No serverId yet - will be populated after sync
+                    entityId = null,
                     entityUuid = logUuid
                 )
                 assemblyResult.onSuccess { assemblyId ->
@@ -193,7 +170,7 @@ class RocketDryViewModel(
                 logId = -System.currentTimeMillis(),
                 uuid = logUuid,
                 projectId = projectId,
-                roomId = roomId,
+                roomId = null,
                 date = now,
                 relativeHumidity = humidity,
                 temperature = temperature,
@@ -210,7 +187,7 @@ class RocketDryViewModel(
             )
             android.util.Log.d(
                 "RocketDryVM",
-                "🧪 Saving external atmospheric log: uuid=${log.uuid} projectId=$projectId roomId=$roomId rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed assemblyId=$photoAssemblyId"
+                "🧪 Saving external atmospheric log: uuid=${log.uuid} projectId=$projectId assemblyId=$photoAssemblyId"
             )
             runCatching { localDataService.saveAtmosphericLogs(listOf(log)) }
                 .onSuccess {
@@ -218,23 +195,11 @@ class RocketDryViewModel(
                         "RocketDryVM",
                         "✅ External atmospheric log saved: uuid=${log.uuid}"
                     )
-                    // Enqueue for sync to server
                     runCatching {
-                        // Re-fetch the saved log to get the generated logId
                         val savedLog = localDataService.getAtmosphericLogByUuid(log.uuid)
                         if (savedLog != null) {
                             offlineSyncRepository.enqueueAtmosphericLogSync(savedLog)
-                            android.util.Log.d(
-                                "RocketDryVM",
-                                "📤 External atmospheric log enqueued for sync: uuid=${log.uuid}"
-                            )
                         }
-                    }.onFailure {
-                        android.util.Log.e(
-                            "RocketDryVM",
-                            "⚠️ Failed to enqueue atmospheric log for sync uuid=${log.uuid}",
-                            it
-                        )
                     }
                 }
                 .onFailure {
@@ -247,37 +212,13 @@ class RocketDryViewModel(
         }
     }
 
-    fun deleteAtmosphericLog(logId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            android.util.Log.d("RocketDryVM", "🗑️ Deleting atmospheric log: logId=$logId")
-            runCatching {
-                val log = localDataService.getAtmosphericLog(logId)
-                if (log != null) {
-                    val deletedLog = log.copy(
-                        isDeleted = true,
-                        updatedAt = Date(),
-                        syncStatus = SyncStatus.PENDING,
-                        isDirty = true
-                    )
-                    localDataService.saveAtmosphericLogs(listOf(deletedLog))
-                    offlineSyncRepository.enqueueAtmosphericLogSync(deletedLog)
-                    android.util.Log.d("RocketDryVM", "✅ Atmospheric log deleted: logId=$logId")
-                } else {
-                    android.util.Log.w("RocketDryVM", "⚠️ Atmospheric log not found: logId=$logId")
-                }
-            }.onFailure {
-                android.util.Log.e("RocketDryVM", "❌ Failed to delete atmospheric log: logId=$logId", it)
-            }
-        }
-    }
-
-    fun getAtmosphericLog(logId: Long): AtmosphericLogItem? {
-        val state = _uiState.value
-        if (state is RocketDryUiState.Ready) {
-            return state.atmosphericLogs.firstOrNull { it.logId == logId }
-        }
-        return null
-    }
+    private data class Data(
+        val projects: List<OfflineProjectEntity>,
+        val atmosphericLogs: List<OfflineAtmosphericLogEntity>,
+        val rooms: List<OfflineRoomEntity>,
+        val locations: List<OfflineLocationEntity>,
+        val moistureLogs: List<OfflineMoistureLogEntity>
+    )
 
     private fun buildProjectAddress(project: OfflineProjectEntity): String {
         val address = project.addressLine1?.takeIf { it.isNotBlank() }
@@ -331,54 +272,6 @@ class RocketDryViewModel(
             createdAt = formatDateTime(createdAt),
             updatedAt = formatDateTime(updatedAt)
         )
-
-    private fun buildAtmosphericAreas(
-        logsByRoom: Map<Long?, List<AtmosphericLogItem>>,
-        rooms: Map<Long, OfflineRoomEntity>
-    ): List<AtmosphericLogArea> {
-        // Only include rooms that actually have atmospheric logs
-        val roomIdsWithLogs = logsByRoom.keys.filterNotNull().toSet()
-
-        val areas = roomIdsWithLogs.map { roomId ->
-            val roomLabel = rooms[roomId]?.title?.takeIf { it.isNotBlank() }
-            val label = roomLabel ?: rocketPlanApp.getString(R.string.rocketdry_atmos_room_unknown)
-            AtmosphericLogArea(
-                roomId = roomId,
-                label = label,
-                logCount = logsByRoom[roomId]?.size ?: 0
-            )
-        }.toMutableList()
-
-        val externalCount = logsByRoom[null]?.size ?: 0
-        areas.add(
-            AtmosphericLogArea(
-                roomId = null,
-                label = rocketPlanApp.getString(R.string.rocketdry_atmos_room_external),
-                logCount = externalCount
-            )
-        )
-
-        return areas.sortedBy { it.label.lowercase(Locale.getDefault()) }
-    }
-
-    private fun resolveAtmosphericSelection(
-        requestedRoomId: Long?,
-        areaOptions: List<AtmosphericLogArea>
-    ): Long? {
-        if (areaOptions.isEmpty()) return requestedRoomId
-        if (requestedRoomId != null && areaOptions.any { it.roomId == requestedRoomId }) {
-            return requestedRoomId
-        }
-
-        val hasAnyLogs = areaOptions.any { it.logCount > 0 }
-        if (!hasAnyLogs) {
-            return areaOptions.firstOrNull { it.roomId == null }?.roomId
-                ?: requestedRoomId
-        }
-
-        val areaWithLogs = areaOptions.firstOrNull { it.logCount > 0 }
-        return areaWithLogs?.roomId ?: areaOptions.first().roomId
-    }
 
     private fun buildEquipmentTotals(equipment: List<OfflineEquipmentEntity>): EquipmentTotals {
         val total = equipment.sumOf { it.quantity }
