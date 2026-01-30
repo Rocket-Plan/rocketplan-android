@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.ui.auth
 
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -8,6 +9,8 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -240,22 +243,16 @@ class EmailCheckFragment : Fragment() {
         val oauthUrl = "$baseUrl/oauth2/redirect/$provider?schema=$schema&state=$encodedState"
 
         if (BuildConfig.ENABLE_LOGGING) {
-            Log.d(TAG, "Starting $provider OAuth flow: $oauthUrl")
+            Log.d(TAG, "Starting $provider OAuth flow with Custom Tabs: $oauthUrl")
         }
 
         runCatching {
-            val title = when (provider) {
-                PROVIDER_GOOGLE -> getString(R.string.google_sign_in_title)
-                PROVIDER_APPLE -> getString(R.string.apple_sign_in_title)
-                PROVIDER_FACEBOOK -> getString(R.string.facebook_sign_in_title)
-                else -> getString(R.string.oauth_sign_in_title, provider.replaceFirstChar { it.uppercase() })
-            }
-            val action =
-                EmailCheckFragmentDirections.actionEmailCheckFragmentToOauthWebViewFragment(
-                    url = oauthUrl,
-                    title = title
-                )
-            findNavController().navigate(action)
+            // Use Chrome Custom Tabs instead of WebView - Google blocks WebView OAuth
+            val customTabsIntent = CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .setToolbarColor(ContextCompat.getColor(requireContext(), R.color.main_purple))
+                .build()
+            customTabsIntent.launchUrl(requireContext(), Uri.parse(oauthUrl))
         }.onFailure { throwable ->
             Log.e(TAG, "Failed to launch $provider OAuth flow", throwable)
             Toast.makeText(

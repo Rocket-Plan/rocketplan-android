@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?attr/selectableItemBackground"
+    android:orientation="vertical"
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="12dp">
+
+    <TextView
+        android:id="@+id/primaryText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/dark_text_rp"
+        android:textSize="14sp"
+        tools:text="123 Main Street" />
+
+    <TextView
+        android:id="@+id/secondaryText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textColor="@color/light_text_rp"
+        android:textSize="12sp"
+        android:visibility="gone"
+        tools:text="Denver, CO, USA"
+        tools:visibility="visible" />
+
+</LinearLayout>

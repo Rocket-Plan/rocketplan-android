@@ -9,6 +9,7 @@ import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
+import com.google.android.libraries.places.api.model.Place
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -61,6 +62,58 @@ class CreateProjectViewModel(application: Application) : AndroidViewModel(applic
             latitude = latitude,
             longitude = longitude
         )
+        submitProject(addressRequest)
+    }
+
+    /**
+     * Creates a project from a Google Places API Place object.
+     * Extracts address components and coordinates from the place.
+     */
+    fun createProjectFromPlace(place: Place) {
+        val addressComponents = place.addressComponents?.asList() ?: emptyList()
+
+        // Extract address components by type
+        val streetNumber = addressComponents.find { "street_number" in it.types }?.name ?: ""
+        val route = addressComponents.find { "route" in it.types }?.name ?: ""
+        val subpremise = addressComponents.find { "subpremise" in it.types }?.name
+        val city = addressComponents.find { "locality" in it.types }?.name
+            ?: addressComponents.find { "sublocality" in it.types }?.name
+            ?: addressComponents.find { "administrative_area_level_2" in it.types }?.name
+            ?: ""
+        val state = addressComponents.find { "administrative_area_level_1" in it.types }?.shortName ?: ""
+        val postalCode = addressComponents.find { "postal_code" in it.types }?.name ?: ""
+        val country = addressComponents.find { "country" in it.types }?.name ?: ""
+
+        // Combine street number and route for the street address
+        val street = "$streetNumber $route".trim()
+
+        if (street.isEmpty()) {
+            // If we can't extract a proper street, use the formatted address
+            val formattedAddress = place.address ?: ""
+            if (formattedAddress.isEmpty()) {
+                _validationEvents.tryEmit(CreateProjectValidation.AddressRequired)
+                return
+            }
+            val addressRequest = CreateAddressRequest(
+                address = formattedAddress,
+                latitude = place.latLng?.latitude,
+                longitude = place.latLng?.longitude
+            )
+            submitProject(addressRequest)
+            return
+        }
+
+        val addressRequest = CreateAddressRequest(
+            address = street,
+            address2 = subpremise,
+            city = city,
+            state = state,
+            zip = postalCode,
+            country = country,
+            latitude = place.latLng?.latitude,
+            longitude = place.latLng?.longitude
+        )
+
         submitProject(addressRequest)
     }
 

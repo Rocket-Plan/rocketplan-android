@@ -464,6 +464,27 @@
             app:destination="@id/projectTypeSelectionFragment"
             app:popUpTo="@id/createProjectFragment"
             app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_createProjectFragment_to_addressSearchFragment"
+            app:destination="@id/addressSearchFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/addressSearchFragment"
+        android:name="com.example.rocketplan_android.ui.projects.AddressSearchFragment"
+        android:label="@string/create_project_title"
+        tools:layout="@layout/fragment_address_search">
+
+        <action
+            android:id="@+id/action_addressSearchFragment_to_manualAddressEntryFragment"
+            app:destination="@id/manualAddressEntryFragment" />
+
+        <action
+            android:id="@+id/action_addressSearchFragment_to_projectTypeSelectionFragment"
+            app:destination="@id/projectTypeSelectionFragment"
+            app:popUpTo="@id/nav_projects"
+            app:popUpToInclusive="false" />
     </fragment>
 
     <fragment
@@ -475,14 +496,14 @@
         <action
             android:id="@+id/action_manualAddressEntryFragment_to_projectLandingFragment"
             app:destination="@id/projectLandingFragment"
-            app:popUpTo="@id/createProjectFragment"
-            app:popUpToInclusive="true" />
+            app:popUpTo="@id/nav_projects"
+            app:popUpToInclusive="false" />
 
         <action
             android:id="@+id/action_manualAddressEntryFragment_to_projectTypeSelectionFragment"
             app:destination="@id/projectTypeSelectionFragment"
-            app:popUpTo="@id/createProjectFragment"
-            app:popUpToInclusive="true" />
+            app:popUpTo="@id/nav_projects"
+            app:popUpToInclusive="false" />
     </fragment>
 
     <fragment

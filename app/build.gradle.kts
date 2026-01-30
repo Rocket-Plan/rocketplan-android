@@ -45,7 +45,9 @@ android {
         versionName = "1.29 ($buildNumber)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("maps.api.key", "")
+        val mapsApiKey = localProperties.getProperty("maps.api.key", "")
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+        buildConfigField("String", "MAPS_API_KEY", "\"$mapsApiKey\"")
     }
 
     // Product Flavors for different environments and device types
@@ -244,6 +246,9 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx)
     implementation(libs.play.services.maps)
     implementation(libs.play.services.location)
+
+    // Google Places SDK for address autocomplete
+    implementation("com.google.android.libraries.places:places:3.3.0")
 
     // Networking
     implementation(libs.retrofit)

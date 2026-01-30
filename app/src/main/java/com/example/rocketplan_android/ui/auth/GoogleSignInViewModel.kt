@@ -100,11 +100,11 @@ class GoogleSignInViewModel(application: Application) : AndroidViewModel(applica
 
                 is GoogleSignInResult.NoCredentials -> {
                     if (BuildConfig.ENABLE_LOGGING) {
-                        Log.d(TAG, "No Google credentials available")
+                        Log.d(TAG, "No Google credentials available, falling back to WebView OAuth")
                     }
                     _isLoading.value = false
-                    _errorMessage.value = "No Google account found. Please add a Google account in Settings."
-                    _state.value = GoogleSignInState.Error("No Google account found")
+                    _shouldFallbackToWebView.value = true
+                    _state.value = GoogleSignInState.FallbackToWebView
                 }
 
                 is GoogleSignInResult.Unavailable -> {

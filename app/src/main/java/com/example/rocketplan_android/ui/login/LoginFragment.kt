@@ -2,6 +2,7 @@ package com.example.rocketplan_android.ui.login
 
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -10,6 +11,8 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.browser.customtabs.CustomTabsIntent
+import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.doOnNextLayout
 import androidx.core.view.isVisible
@@ -285,11 +288,11 @@ class LoginFragment : Fragment() {
     }
 
     /**
-     * Launch Google OAuth flow via WebView (fallback method)
+     * Launch Google OAuth flow via Chrome Custom Tabs (fallback method)
      */
     private fun launchGoogleOAuthWebView() {
         if (BuildConfig.ENABLE_LOGGING) {
-            Log.d(TAG, "Starting Google OAuth WebView flow...")
+            Log.d(TAG, "Starting Google OAuth Custom Tabs flow...")
         }
 
         val schema = when (BuildConfig.ENVIRONMENT) {
@@ -309,12 +312,12 @@ class LoginFragment : Fragment() {
         }
 
         runCatching {
-            val action =
-                LoginFragmentDirections.actionLoginFragmentToOauthWebViewFragment(
-                    url = oauthUrl,
-                    title = getString(R.string.google_sign_in_title)
-                )
-            findNavController().navigate(action)
+            // Use Chrome Custom Tabs instead of WebView - Google blocks WebView OAuth
+            val customTabsIntent = CustomTabsIntent.Builder()
+                .setShowTitle(true)
+                .setToolbarColor(ContextCompat.getColor(requireContext(), R.color.main_purple))
+                .build()
+            customTabsIntent.launchUrl(requireContext(), Uri.parse(oauthUrl))
         }.onFailure { error ->
             Log.e(TAG, "Error launching OAuth flow", error)
             Toast.makeText(

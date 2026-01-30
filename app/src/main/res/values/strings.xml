@@ -585,6 +585,14 @@
     <string name="manual_address_postal_error">ZIP / postal code is required.</string>
     <string name="manual_address_select_country_first">Please select a country first</string>
 
+    <!-- Address Search -->
+    <string name="address_search_title">Search Address</string>
+    <string name="address_search_hint">Type an address…</string>
+    <string name="address_search_enter_manually">Enter address manually</string>
+    <string name="address_search_recent">Recent Addresses</string>
+    <string name="address_search_no_results">No addresses found</string>
+    <string name="address_search_error">Unable to search addresses. Please try again.</string>
+
     <!-- Batch Photo Capture -->
     <string name="batch_capture_active">Batch Capture Active</string>
     <string name="batch_capture_clear">Clear</string>
