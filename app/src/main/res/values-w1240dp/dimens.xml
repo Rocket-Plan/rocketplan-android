@@ -1,3 +1,25 @@
 <resources>
     <dimen name="fab_margin">200dp</dimen>
+
+    <!-- Text sizes - large tablet/desktop, scaled +4-6sp from phone -->
+    <dimen name="text_size_caption">14sp</dimen>
+    <dimen name="text_size_caption_large">15sp</dimen>
+    <dimen name="text_size_body_small">16sp</dimen>
+    <dimen name="text_size_body">17sp</dimen>
+    <dimen name="text_size_body_large">18sp</dimen>
+    <dimen name="text_size_title">20sp</dimen>
+    <dimen name="text_size_title_large">22sp</dimen>
+    <dimen name="text_size_headline">24sp</dimen>
+    <dimen name="text_size_headline_large">28sp</dimen>
+    <dimen name="text_size_display">36sp</dimen>
+
+    <!-- Semantic text sizes for common UI patterns -->
+    <dimen name="text_size_tab_button">20sp</dimen>
+    <dimen name="text_size_card_title">20sp</dimen>
+    <dimen name="text_size_card_subtitle">18sp</dimen>
+    <dimen name="text_size_card_caption">16sp</dimen>
+    <dimen name="text_size_button">18sp</dimen>
+    <dimen name="text_size_input">18sp</dimen>
+    <dimen name="text_size_chip">16sp</dimen>
+    <dimen name="text_size_badge">14sp</dimen>
 </resources>

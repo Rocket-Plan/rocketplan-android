@@ -49,7 +49,7 @@
                         android:layout_weight="1"
                         android:text="@string/photos"
                         android:textAllCaps="false"
-                        android:textSize="14sp" />
+                        android:textSize="@dimen/text_size_tab_button" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/roomDamagesTabButton"
@@ -59,7 +59,7 @@
                         android:layout_weight="1"
                         android:text="@string/damages"
                         android:textAllCaps="false"
-                        android:textSize="14sp" />
+                        android:textSize="@dimen/text_size_tab_button" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/roomScopeTabButton"
@@ -160,7 +160,7 @@
                 android:layout_weight="1"
                 android:text="@string/add_note_with_plus"
                 android:textColor="@color/black"
-                android:textSize="14sp"
+                android:textSize="@dimen/text_size_card_title"
                 android:textStyle="bold" />
 
             <TextView
@@ -226,7 +226,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/add_photo"
                             android:textColor="@color/black"
-                            android:textSize="14sp"
+                            android:textSize="@dimen/text_size_card_title"
                             android:textStyle="bold" />
 
                         <TextView
@@ -235,7 +235,7 @@
                             android:layout_marginTop="4dp"
                             android:text="@string/add_photo_card_subtitle"
                             android:textColor="@color/light_text_rp"
-                            android:textSize="12sp" />
+                            android:textSize="@dimen/text_size_card_subtitle" />
                     </LinearLayout>
                 </LinearLayout>
             </FrameLayout>

@@ -180,8 +180,15 @@ class SyncQueueManager(
 
             // Check if we should pull updates (avoid hammering server on rapid foreground/background)
             val now = System.currentTimeMillis()
-            val elapsed = now - lastForegroundSyncAt
-            val shouldSync = elapsed > AppConfig.FOREGROUND_SYNC_THRESHOLD_MS
+            val (shouldSync, elapsed) = mutex.withLock {
+                val elapsed = now - lastForegroundSyncAt
+                if (elapsed > AppConfig.FOREGROUND_SYNC_THRESHOLD_MS) {
+                    lastForegroundSyncAt = now
+                    true to elapsed
+                } else {
+                    false to elapsed
+                }
+            }
             if (shouldSync) {
                 Log.d(TAG, "🔄 Foreground sync triggered (last sync was ${elapsed / 1000}s ago)")
                 remoteLogger.log(
@@ -194,7 +201,6 @@ class SyncQueueManager(
                         "didPull" to "true"
                     )
                 )
-                lastForegroundSyncAt = now
                 enqueue(SyncJob.EnsureUserContext)
                 enqueue(SyncJob.SyncProjects(force = false))
             } else {
@@ -431,8 +437,8 @@ class SyncQueueManager(
             queue.add(queued)
             taskIndex[job.key] = queued
             updateProjectSyncingProjectsLocked()
+            notifier.tryEmit(Unit)
         }
-        notifier.tryEmit(Unit)
     }
 
     private suspend fun processLoop() {
@@ -447,7 +453,14 @@ class SyncQueueManager(
             if (next == null) {
                 _isActive.value = false
                 _currentSyncJob.value = null
-                notifier.first()
+                try {
+                    notifier.first()
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "Notifier error in processLoop", e)
+                    delay(1000)  // Back off before retrying
+                }
                 continue
             }
 

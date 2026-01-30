@@ -18,6 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -278,6 +279,22 @@ class PusherService(
             }
             pusher.disconnect()
         }
+    }
+
+    /**
+     * Shutdown the Pusher service, canceling all coroutines and releasing resources.
+     * Call this when the app is terminating or the service is no longer needed.
+     */
+    fun shutdown() {
+        channelBindings.keys.toList().forEach { unsubscribe(it) }
+        scope.launch {
+            stateMutex.withLock {
+                reconnectJob?.cancel()
+                reconnectJob = null
+            }
+            pusher.disconnect()
+        }
+        scope.cancel()
     }
 
     fun connectIfNeeded() {

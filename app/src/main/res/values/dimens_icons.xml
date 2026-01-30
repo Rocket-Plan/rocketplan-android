@@ -18,5 +18,5 @@
     <dimen name="icon_size_card_large">48dp</dimen>
     <dimen name="icon_size_card_room">53dp</dimen>
     <dimen name="icon_size_section">56dp</dimen>
-    <dimen name="icon_size_tile">65dp</dimen>
+    <dimen name="icon_size_tile">56dp</dimen>
 </resources>

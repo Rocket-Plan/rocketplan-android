@@ -168,8 +168,13 @@ class RocketDryFragment : Fragment() {
         }
 
         exteriorSpaceCard.setOnClickListener {
-            Log.d(TAG, "➕ Add Exterior Space card tapped")
-            Toast.makeText(context, "Add Exterior Space", Toast.LENGTH_SHORT).show()
+            Log.d(TAG, "➕ Add Exterior Space card tapped - opening room type picker")
+            val action = RocketDryFragmentDirections
+                .actionRocketDryFragmentToRoomTypePickerFragment(
+                    projectId = args.projectId,
+                    mode = RoomTypePickerMode.EXTERIOR.name
+                )
+            findNavController().navigate(action)
         }
 
         addExternalLogButton.setOnClickListener {

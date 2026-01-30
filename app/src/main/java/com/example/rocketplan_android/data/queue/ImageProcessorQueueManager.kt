@@ -26,6 +26,7 @@ import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -72,7 +73,11 @@ class ImageProcessorQueueManager(
     private val queueMutex = Mutex()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val okHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder().build()
+        OkHttpClient.Builder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.MINUTES)
+            .writeTimeout(5, TimeUnit.MINUTES)
+            .build()
     }
 
     /**
@@ -80,6 +85,16 @@ class ImageProcessorQueueManager(
      * Used to trigger photo sync for the room after upload.
      */
     var onAssemblyUploadCompleted: (suspend (projectId: Long, roomId: Long) -> Unit)? = null
+
+    /**
+     * Shutdown the queue manager, canceling all pending work and releasing resources.
+     * Call this when the app is terminating or the manager is no longer needed.
+     */
+    fun shutdown() {
+        scope.cancel()
+        okHttpClient.dispatcher.executorService.shutdown()
+        okHttpClient.connectionPool.evictAll()
+    }
 
     /**
      * Recover assemblies left in UPLOADING state after process death.
@@ -328,7 +343,13 @@ class ImageProcessorQueueManager(
             val isNetworkError = error is java.net.UnknownHostException ||
                 error is java.net.SocketTimeoutException ||
                 error is java.net.ConnectException ||
-                (error is java.io.IOException && error.message?.contains("network", ignoreCase = true) == true)
+                error is java.net.NoRouteToHostException ||
+                error is javax.net.ssl.SSLException ||
+                (error is java.io.IOException && (
+                    error.message?.contains("network", ignoreCase = true) == true ||
+                    error.message?.contains("connection", ignoreCase = true) == true ||
+                    error.message?.contains("reset", ignoreCase = true) == true
+                ))
 
             if (isNetworkError) {
                 // Keep as QUEUED for retry when network returns

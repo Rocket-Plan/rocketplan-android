@@ -1,4 +1,11 @@
 <resources>
+    <!-- Tab text appearance - uses responsive text size -->
+    <style name="TabTextAppearance.RocketPlan" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">@dimen/text_size_tab_button</item>
+        <item name="android:textStyle">bold</item>
+        <item name="textAllCaps">true</item>
+    </style>
+
     <style name="Widget.RocketPlan.SegmentedButton" parent="Widget.MaterialComponents.Button.OutlinedButton">
         <item name="android:insetLeft">0dp</item>
         <item name="android:insetRight">0dp</item>
@@ -44,5 +51,9 @@
     <style name="TextAppearance.RocketPlan.Chip" parent="TextAppearance.Material3.LabelLarge">
         <item name="android:textSize">14sp</item>
         <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.RocketPlan.BottomNav" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textSize">@dimen/text_size_caption</item>
     </style>
 </resources>

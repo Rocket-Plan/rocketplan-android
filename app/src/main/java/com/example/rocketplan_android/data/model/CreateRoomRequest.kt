@@ -15,6 +15,8 @@ data class CreateRoomRequest(
     val locationUuid: String? = null,
     @SerializedName("is_source")
     val isSource: Boolean = false,
+    @SerializedName("is_exterior")
+    val isExterior: Boolean = false,
     @SerializedName("idempotency_key")
     val idempotencyKey: String? = null
 )

@@ -193,24 +193,20 @@ class RocketDryRoomFragment : Fragment() {
         val saveButton =
             dialogView.findViewById<MaterialButton>(R.id.saveMaterialGoalButton)
 
-        val materialAdapter = ArrayAdapter(
-            requireContext(),
-            R.layout.list_item_dropdown,
-            materialOptions
-        )
-        materialNameInput.setAdapter(materialAdapter)
-        materialNameInputLayout.isEndIconVisible = materialAdapter.count > 0
-        materialNameInput.threshold = 0
-        materialNameInput.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus && materialAdapter.count > 0) {
-                materialNameInput.showDropDown()
+        // Make material field tap to show picker popup (iOS-style)
+        materialNameInput.isFocusable = false
+        materialNameInput.isFocusableInTouchMode = false
+        materialNameInputLayout.isEndIconVisible = true
+        materialNameInputLayout.endIconMode = TextInputLayout.END_ICON_DROPDOWN_MENU
+
+        val showMaterialPicker = {
+            showMaterialPickerDialog { selectedMaterial ->
+                materialNameInput.setText(selectedMaterial)
             }
         }
-        materialNameInput.setOnClickListener {
-            if (materialAdapter.count > 0) {
-                materialNameInput.showDropDown()
-            }
-        }
+
+        materialNameInput.setOnClickListener { showMaterialPicker() }
+        materialNameInputLayout.setEndIconOnClickListener { showMaterialPicker() }
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setView(dialogView)
@@ -267,12 +263,47 @@ class RocketDryRoomFragment : Fragment() {
         }
 
         dialog.show()
-        materialNameInput.requestFocus()
-        materialNameInput.post {
-            if (materialAdapter.count > 0) {
-                materialNameInput.showDropDown()
-            }
+    }
+
+    private fun showMaterialPickerDialog(onMaterialSelected: (String) -> Unit) {
+        val pickerView = layoutInflater.inflate(R.layout.dialog_material_picker, null)
+        val recyclerView = pickerView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.materialList)
+
+        val pickerDialog = MaterialAlertDialogBuilder(requireContext())
+            .setView(pickerView)
+            .setCancelable(true)
+            .create()
+
+        recyclerView.adapter = MaterialPickerAdapter(materialOptions) { selectedMaterial ->
+            onMaterialSelected(selectedMaterial)
+            pickerDialog.dismiss()
         }
+
+        pickerDialog.show()
+    }
+
+    private class MaterialPickerAdapter(
+        private val materials: List<String>,
+        private val onItemClick: (String) -> Unit
+    ) : androidx.recyclerview.widget.RecyclerView.Adapter<MaterialPickerAdapter.ViewHolder>() {
+
+        class ViewHolder(itemView: android.view.View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView) {
+            val materialName: android.widget.TextView = itemView.findViewById(R.id.materialName)
+        }
+
+        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
+            val view = android.view.LayoutInflater.from(parent.context)
+                .inflate(R.layout.item_material_picker, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val material = materials[position]
+            holder.materialName.text = material
+            holder.itemView.setOnClickListener { onItemClick(material) }
+        }
+
+        override fun getItemCount(): Int = materials.size
     }
 
     @Suppress("DEPRECATION") // SOFT_INPUT_ADJUST_RESIZE still needed for dialog keyboard behavior

@@ -9,4 +9,33 @@
     <dimen name="room_photos_min_height">200dp</dimen>
     <dimen name="rocketdry_add_button_size">28dp</dimen>
     <dimen name="rocketdry_add_button_padding">6dp</dimen>
+
+    <!-- Text sizes - responsive to screen size (phones)
+         Scale: caption < body < title < headline
+         - 10-11sp: captions, timestamps, metadata
+         - 12-13sp: body text, subtitles, secondary info
+         - 14sp: primary labels, card titles, buttons
+         - 16-18sp: section headers, list titles
+         - 20-24sp: screen titles, page headlines
+         - 26-32sp: large display text, hero numbers -->
+    <dimen name="text_size_caption">10sp</dimen>
+    <dimen name="text_size_caption_large">11sp</dimen>
+    <dimen name="text_size_body_small">12sp</dimen>
+    <dimen name="text_size_body">13sp</dimen>
+    <dimen name="text_size_body_large">14sp</dimen>
+    <dimen name="text_size_title">16sp</dimen>
+    <dimen name="text_size_title_large">18sp</dimen>
+    <dimen name="text_size_headline">20sp</dimen>
+    <dimen name="text_size_headline_large">24sp</dimen>
+    <dimen name="text_size_display">28sp</dimen>
+
+    <!-- Semantic text sizes for common UI patterns -->
+    <dimen name="text_size_tab_button">14sp</dimen>
+    <dimen name="text_size_card_title">14sp</dimen>
+    <dimen name="text_size_card_subtitle">12sp</dimen>
+    <dimen name="text_size_card_caption">11sp</dimen>
+    <dimen name="text_size_button">14sp</dimen>
+    <dimen name="text_size_input">14sp</dimen>
+    <dimen name="text_size_chip">12sp</dimen>
+    <dimen name="text_size_badge">10sp</dimen>
 </resources>

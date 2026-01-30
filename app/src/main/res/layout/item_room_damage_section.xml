@@ -34,7 +34,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/black"
-                android:textSize="20sp"
+                android:textSize="@dimen/text_size_title"
                 android:textStyle="bold"
                 tools:text="Basement Damages" />
         </LinearLayout>
@@ -72,7 +72,7 @@
                 android:layout_weight="1"
                 android:text="+ Add a note"
                 android:textColor="@color/black"
-                android:textSize="13sp"
+                android:textSize="@dimen/text_size_body"
                 android:textStyle="bold" />
 
             <TextView
@@ -80,7 +80,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/light_text_rp"
-                android:textSize="11sp"
+                android:textSize="@dimen/text_size_card_caption"
                 tools:text="No Notes" />
 
             <ImageView
@@ -131,7 +131,7 @@
                 android:layout_marginStart="16dp"
                 android:text="@string/add_scope_of_work_items"
                 android:textColor="@color/black"
-                android:textSize="13sp"
+                android:textSize="@dimen/text_size_body"
                 android:textStyle="bold" />
         </LinearLayout>
     </FrameLayout>
@@ -164,7 +164,7 @@
         android:gravity="center_vertical"
         android:text="@string/damages_coming_soon"
         android:textColor="@color/light_text_rp"
-        android:textSize="12sp"
+        android:textSize="@dimen/text_size_body_small"
         android:visibility="gone" />
 
     <androidx.recyclerview.widget.RecyclerView

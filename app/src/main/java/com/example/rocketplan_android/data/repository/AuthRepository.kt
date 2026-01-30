@@ -77,7 +77,8 @@ class AuthRepository(
             val response = authService.login(LoginRequest(email, password))
 
             if (response.isSuccessful && response.body() != null) {
-                val loginResponse = response.body()!!
+                val loginResponse = response.body()
+                    ?: return Result.failure(Exception("Empty login response"))
 
                 // Save token (format: "1|plainTextTokenString...")
                 saveAuthToken(loginResponse.token)
@@ -94,9 +95,11 @@ class AuthRepository(
 
                 val userContextResult = refreshUserContext()
                 if (userContextResult.isFailure) {
-                    return Result.failure(userContextResult.exceptionOrNull()!!)
+                    return Result.failure(userContextResult.exceptionOrNull()
+                        ?: Exception("Unknown error during user context refresh"))
                 }
-                val currentUser = userContextResult.getOrNull()!!
+                val currentUser = userContextResult.getOrNull()
+                    ?: return Result.failure(Exception("User context is null"))
 
                 Result.success(
                     AuthSession(
@@ -137,7 +140,8 @@ class AuthRepository(
             val response = authService.register(RegisterRequest(email, password, passwordConfirmation))
 
             if (response.isSuccessful && response.body() != null) {
-                val registerResponse = response.body()!!
+                val registerResponse = response.body()
+                    ?: return Result.failure(Exception("Empty registration response"))
 
                 // Save token for newly registered user
                 saveAuthToken(registerResponse.token)
@@ -149,9 +153,11 @@ class AuthRepository(
 
                 val userContextResult = refreshUserContext()
                 if (userContextResult.isFailure) {
-                    return Result.failure(userContextResult.exceptionOrNull()!!)
+                    return Result.failure(userContextResult.exceptionOrNull()
+                        ?: Exception("Unknown error during user context refresh"))
                 }
-                val currentUser = userContextResult.getOrNull()!!
+                val currentUser = userContextResult.getOrNull()
+                    ?: return Result.failure(Exception("User context is null"))
 
                 Result.success(
                     AuthSession(
@@ -206,7 +212,8 @@ class AuthRepository(
             val response = authService.authenticateWithGoogle(GoogleAuthRequest(idToken))
 
             if (response.isSuccessful && response.body() != null) {
-                val authResponse = response.body()!!
+                val authResponse = response.body()
+                    ?: return Result.failure(Exception("Empty Google auth response"))
 
                 // Save token
                 saveAuthToken(authResponse.token)
@@ -217,9 +224,11 @@ class AuthRepository(
 
                 val userContextResult = refreshUserContext()
                 if (userContextResult.isFailure) {
-                    return Result.failure(userContextResult.exceptionOrNull()!!)
+                    return Result.failure(userContextResult.exceptionOrNull()
+                        ?: Exception("Unknown error during user context refresh"))
                 }
-                val currentUser = userContextResult.getOrNull()!!
+                val currentUser = userContextResult.getOrNull()
+                    ?: return Result.failure(Exception("User context is null"))
 
                 // Save email from user context
                 secureStorage.saveUserEmail(currentUser.email)

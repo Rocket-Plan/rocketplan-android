@@ -204,6 +204,7 @@ class RoomPushHandler(
             levelUuid = if (isSingleLevel) null else payload.levelUuid,
             locationUuid = payload.locationUuid,
             isSource = payload.isSource,
+            isExterior = payload.isExterior,
             idempotencyKey = idempotencyKey
         )
 

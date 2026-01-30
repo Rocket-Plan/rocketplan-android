@@ -25,6 +25,8 @@
         android:layout_height="wrap_content"
         android:background="@color/white"
         app:itemIconTint="@null"
+        app:itemTextAppearanceActive="@style/TextAppearance.RocketPlan.BottomNav"
+        app:itemTextAppearanceInactive="@style/TextAppearance.RocketPlan.BottomNav"
         app:itemTextColor="@color/bottom_nav_text_color"
         app:labelVisibilityMode="labeled"
         app:layout_constraintBottom_toBottomOf="parent"

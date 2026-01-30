@@ -74,6 +74,7 @@
             app:tabIndicatorColor="@color/main_purple"
             app:tabSelectedTextColor="@color/main_purple"
             app:tabTextColor="@color/light_text_rp"
+            app:tabTextAppearance="@style/TabTextAppearance.RocketPlan"
             app:tabMode="scrollable"
             app:tabGravity="fill" />
 

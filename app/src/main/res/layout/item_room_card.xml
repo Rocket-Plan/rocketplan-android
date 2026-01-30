@@ -60,7 +60,7 @@
             android:paddingBottom="4dp"
             android:singleLine="true"
             android:textColor="@android:color/white"
-            android:textSize="10sp"
+            android:textSize="@dimen/text_size_badge"
             android:textStyle="bold"
             android:visibility="gone"
             tools:text="$1.2k" />
@@ -90,7 +90,7 @@
                 android:paddingHorizontal="12dp"
                 android:paddingVertical="4dp"
                 android:textColor="@android:color/white"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_body_small"
                 android:textStyle="bold"
                 tools:text="3/5" />
         </LinearLayout>
@@ -107,7 +107,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@android:color/white"
-                android:textSize="16sp"
+                android:textSize="@dimen/text_size_card_title"
                 android:textStyle="bold"
                 tools:text="Basement" />
 
@@ -117,7 +117,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:textColor="@android:color/white"
-                android:textSize="12sp"
+                android:textSize="@dimen/text_size_card_subtitle"
                 tools:text="7 Photos" />
         </LinearLayout>
     </FrameLayout>

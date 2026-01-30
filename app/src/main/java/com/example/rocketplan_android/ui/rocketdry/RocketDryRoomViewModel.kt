@@ -267,10 +267,27 @@ class RocketDryRoomViewModel(
     }
 
     private fun buildMaterialOptions(materials: List<OfflineMaterialEntity>): List<String> {
-        if (materials.isEmpty()) return emptyList()
-        return materials.mapNotNull { material ->
+        // Default materials commonly used in water damage restoration
+        val defaultMaterials = listOf(
+            "Drywall",
+            "Hardwood",
+            "Carpet",
+            "Concrete",
+            "Plywood",
+            "Subfloor",
+            "Insulation",
+            "Ceiling Tile",
+            "Baseboard",
+            "OSB",
+            "Plaster",
+            "Laminate"
+        )
+
+        val dbMaterials = materials.mapNotNull { material ->
             material.name.trim().takeIf { it.isNotEmpty() }
         }
+
+        return (defaultMaterials + dbMaterials)
             .distinctBy { it.lowercase(Locale.getDefault()) }
             .sortedBy { it.lowercase(Locale.getDefault()) }
     }

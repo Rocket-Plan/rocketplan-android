@@ -229,6 +229,7 @@
     <string name="rocketdry_room_material_goals_title">Material Drying Goals</string>
     <string name="rocketdry_add_material_goal_cta">Add new material</string>
     <string name="rocketdry_goal_add_title">Add drying goal</string>
+    <string name="rocketdry_select_material">Select Material</string>
     <string name="rocketdry_goal_material_hint">Material name</string>
     <string name="rocketdry_goal_target_hint">Target moisture (%)</string>
     <string name="rocketdry_goal_material_required">Enter a material name</string>
