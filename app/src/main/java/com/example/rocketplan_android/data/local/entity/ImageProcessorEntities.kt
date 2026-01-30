@@ -17,7 +17,8 @@ import androidx.room.PrimaryKey
         Index(value = ["roomId"]),
         Index(value = ["projectId"]),
         Index(value = ["status"]),
-        Index(value = ["groupUuid"])
+        Index(value = ["groupUuid"]),
+        Index(value = ["entityUuid"])
     ]
 )
 data class ImageProcessorAssemblyEntity(
@@ -39,7 +40,8 @@ data class ImageProcessorAssemblyEntity(
     val lastTimeout: Int = 0,
     val isWaitingForConnectivity: Boolean = false,
     val entityType: String? = null,
-    val entityId: Long? = null
+    val entityId: Long? = null,
+    val entityUuid: String? = null
 )
 
 @Entity(
@@ -90,7 +92,8 @@ enum class AssemblyStatus(val value: String) {
     CANCELLED("cancelled"),
     RETRYING("retrying"),
     WAITING_FOR_CONNECTIVITY("waiting_for_connectivity"),
-    WAITING_FOR_ROOM("waiting_for_room");
+    WAITING_FOR_ROOM("waiting_for_room"),
+    WAITING_FOR_ENTITY("waiting_for_entity");
 
     companion object {
         fun fromValue(value: String): AssemblyStatus? =

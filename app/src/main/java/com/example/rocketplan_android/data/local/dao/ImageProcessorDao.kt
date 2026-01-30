@@ -132,6 +132,15 @@ interface ImageProcessorDao {
 
     @Query(
         """
+        SELECT * FROM image_processor_assemblies
+        WHERE entityUuid = :entityUuid
+        ORDER BY createdAt ASC
+        """
+    )
+    suspend fun getAssembliesByEntityUuid(entityUuid: String): List<ImageProcessorAssemblyEntity>
+
+    @Query(
+        """
         SELECT a.roomId, SUM(a.totalFiles) as pendingCount
         FROM image_processor_assemblies a
         WHERE a.projectId = :projectId

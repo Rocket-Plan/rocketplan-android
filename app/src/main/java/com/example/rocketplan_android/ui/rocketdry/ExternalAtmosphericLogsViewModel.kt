@@ -5,10 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import android.net.Uri
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.model.FileToUpload
 import com.example.rocketplan_android.util.UuidUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,6 +37,7 @@ class ExternalAtmosphericLogsViewModel(
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val imageProcessorRepository = rocketPlanApp.imageProcessorRepository
 
     private val _uiState = MutableStateFlow<ExternalAtmosphericLogsUiState>(ExternalAtmosphericLogsUiState.Loading)
     val uiState: StateFlow<ExternalAtmosphericLogsUiState> = _uiState
@@ -76,9 +79,45 @@ class ExternalAtmosphericLogsViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val now = Date()
             val hasPhoto = !photoLocalPath.isNullOrBlank()
+            val logUuid = UuidUtils.generateUuidV7()
+
+            // Create assembly at photo capture time (before log syncs)
+            // The assembly will be promoted when the log gets a serverId
+            var photoAssemblyId: String? = null
+            if (hasPhoto && photoLocalPath != null) {
+                val filename = "atmos_${logUuid}_${System.currentTimeMillis()}.jpg"
+                val fileToUpload = FileToUpload(
+                    uri = Uri.parse(photoLocalPath),
+                    filename = filename,
+                    deleteOnCompletion = false
+                )
+                val assemblyResult = imageProcessorRepository.createAssembly(
+                    roomId = null, // External atmospheric logs are project-level
+                    projectId = projectId,
+                    filesToUpload = listOf(fileToUpload),
+                    templateId = "atmospheric_log",
+                    entityType = "atmospheric_log",
+                    entityId = null, // No serverId yet - will be populated after sync
+                    entityUuid = logUuid
+                )
+                assemblyResult.onSuccess { assemblyId ->
+                    photoAssemblyId = assemblyId
+                    android.util.Log.d(
+                        "ExternalAtmosLogsVM",
+                        "📸 Created WAITING_FOR_ENTITY assembly for atmospheric log photo: assemblyId=$assemblyId logUuid=$logUuid"
+                    )
+                }.onFailure { error ->
+                    android.util.Log.e(
+                        "ExternalAtmosLogsVM",
+                        "❌ Failed to create assembly for atmospheric log photo: logUuid=$logUuid",
+                        error
+                    )
+                }
+            }
+
             val log = OfflineAtmosphericLogEntity(
                 logId = -System.currentTimeMillis(),
-                uuid = UuidUtils.generateUuidV7(),
+                uuid = logUuid,
                 projectId = projectId,
                 roomId = null,
                 date = now,
@@ -88,7 +127,8 @@ class ExternalAtmosphericLogsViewModel(
                 windSpeed = windSpeed,
                 isExternal = true,
                 photoLocalPath = if (hasPhoto) photoLocalPath else null,
-                photoUploadStatus = if (hasPhoto) "pending" else "none",
+                photoUploadStatus = if (photoAssemblyId != null) "queued" else "none",
+                photoAssemblyId = photoAssemblyId,
                 createdAt = now,
                 updatedAt = now,
                 syncStatus = SyncStatus.PENDING,
@@ -96,7 +136,7 @@ class ExternalAtmosphericLogsViewModel(
             )
             android.util.Log.d(
                 "ExternalAtmosLogsVM",
-                "🧪 Saving external atmospheric log: uuid=${log.uuid} projectId=$projectId"
+                "🧪 Saving external atmospheric log: uuid=${log.uuid} projectId=$projectId assemblyId=$photoAssemblyId"
             )
             runCatching { localDataService.saveAtmosphericLogs(listOf(log)) }
                 .onSuccess {

@@ -151,22 +151,133 @@ class ImageProcessorQueueManager(
     }
 
     /**
-     * Promote WAITING_FOR_ROOM assemblies to QUEUED once their project has synced.
+     * Promote a WAITING_FOR_ENTITY assembly to QUEUED once its entity (e.g., atmospheric log) syncs.
+     *
+     * Called by push handlers when an entity gets a serverId assigned.
+     *
+     * @param entityType The type of entity (e.g., "atmospheric_log")
+     * @param entityUuid The UUID of the entity that was synced
+     * @param entityId The serverId assigned to the entity
+     */
+    suspend fun promoteWaitingAssembly(entityType: String, entityUuid: String, entityId: Long) {
+        val waitingAssemblies = dao.getAssembliesByEntityUuid(entityUuid)
+            .filter {
+                it.entityType == entityType &&
+                it.status == AssemblyStatus.WAITING_FOR_ENTITY.value
+            }
+
+        if (waitingAssemblies.isEmpty()) {
+            Log.d(TAG, "📭 No waiting assemblies found for $entityType uuid=$entityUuid")
+            return
+        }
+
+        for (assembly in waitingAssemblies) {
+            // Update assembly with the entity's serverId
+            val updated = assembly.copy(
+                entityId = entityId,
+                lastUpdatedAt = System.currentTimeMillis()
+            )
+            dao.updateAssembly(updated)
+
+            // Also update the stored upload data with the entityId
+            val uploadData = uploadStore.read(assembly.assemblyId)
+            if (uploadData != null) {
+                val updatedData = uploadData.copy(entityId = entityId)
+                uploadStore.write(assembly.assemblyId, updatedData)
+            }
+
+            // Promote to QUEUED
+            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.QUEUED, null)
+
+            Log.d(TAG, "✅ Promoted WAITING_FOR_ENTITY assembly ${assembly.assemblyId} to QUEUED (entityId=$entityId)")
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Promoted waiting entity assembly to QUEUED",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "entity_type" to entityType,
+                    "entity_uuid" to entityUuid,
+                    "entity_id" to entityId.toString()
+                )
+            )
+        }
+
+        // Trigger queue processing
+        processNextQueuedAssembly()
+    }
+
+    /**
+     * Promote WAITING_FOR_ROOM and WAITING_FOR_ENTITY assemblies to QUEUED once their dependencies sync.
      *
      * IMPORTANT: We do NOT POST the assembly to the backend here. We just transition
-     * the status from WAITING_FOR_ROOM to QUEUED. The actual backend POST happens in
+     * the status from WAITING_FOR_ROOM/WAITING_FOR_ENTITY to QUEUED. The actual backend POST happens in
      * uploadAssembly() which immediately uploads photos after the POST.
      *
      * This prevents a race condition where the backend receives the assembly creation
      * but photos haven't been uploaded yet, causing the backend to process 0 files.
      */
     private suspend fun registerWaitingAssemblies(): Boolean {
-        val waitingAssemblies = dao.getAssembliesByStatus(listOf(AssemblyStatus.WAITING_FOR_ROOM.value))
+        val waitingAssemblies = dao.getAssembliesByStatus(listOf(
+            AssemblyStatus.WAITING_FOR_ROOM.value,
+            AssemblyStatus.WAITING_FOR_ENTITY.value
+        ))
         if (waitingAssemblies.isEmpty()) return false
 
         var promoted = false
 
         for (assembly in waitingAssemblies) {
+            val isWaitingForEntity = assembly.status == AssemblyStatus.WAITING_FOR_ENTITY.value
+
+            // For WAITING_FOR_ENTITY assemblies, check if entity has synced
+            if (isWaitingForEntity) {
+                val entityServerId = resolveEntityServerId(assembly.entityType, assembly.entityUuid)
+                if (entityServerId == null) {
+                    Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} waiting for entity sync (${assembly.entityType})")
+                    continue
+                }
+
+                // Update assembly with the resolved entity ID
+                val updated = assembly.copy(
+                    entityId = entityServerId,
+                    lastUpdatedAt = System.currentTimeMillis()
+                )
+                dao.updateAssembly(updated)
+
+                // Also update stored upload data
+                val uploadData = uploadStore.read(assembly.assemblyId)
+                if (uploadData != null) {
+                    val updatedData = uploadData.copy(entityId = entityServerId)
+                    uploadStore.write(assembly.assemblyId, updatedData)
+                }
+
+                val resolvedUploadData = ensureUploadConfig(assembly.assemblyId, uploadData ?: continue)
+                if (resolvedUploadData == null) {
+                    updateAssemblyStatus(
+                        assembly.assemblyId,
+                        AssemblyStatus.WAITING_FOR_ENTITY,
+                        "Image processor config unavailable"
+                    )
+                    continue
+                }
+
+                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.QUEUED, null)
+                Log.d(TAG, "✅ Promoted WAITING_FOR_ENTITY assembly ${assembly.assemblyId} to QUEUED (entityId=$entityServerId)")
+                remoteLogger?.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "Promoted waiting entity assembly to QUEUED",
+                    metadata = mapOf(
+                        "assembly_id" to assembly.assemblyId,
+                        "entity_type" to (assembly.entityType ?: "unknown"),
+                        "entity_id" to entityServerId.toString()
+                    )
+                )
+                promoted = true
+                continue
+            }
+
+            // For WAITING_FOR_ROOM assemblies, check if project has synced
             val projectServerId = offlineDao.getProject(assembly.projectId)?.serverId
             if (projectServerId == null) {
                 Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} waiting for project sync")
@@ -241,6 +352,23 @@ class ImageProcessorQueueManager(
         }
 
         return promoted
+    }
+
+    /**
+     * Resolve the server ID for an entity (e.g., atmospheric log) by its type and UUID.
+     */
+    private suspend fun resolveEntityServerId(entityType: String?, entityUuid: String?): Long? {
+        if (entityType == null || entityUuid == null) return null
+
+        return when (entityType) {
+            "atmospheric_log" -> {
+                offlineDao.getAtmosphericLogByUuid(entityUuid)?.serverId?.takeIf { it > 0 }
+            }
+            else -> {
+                Log.w(TAG, "Unknown entity type for server ID resolution: $entityType")
+                null
+            }
+        }
     }
 
     private suspend fun ensureUploadConfig(

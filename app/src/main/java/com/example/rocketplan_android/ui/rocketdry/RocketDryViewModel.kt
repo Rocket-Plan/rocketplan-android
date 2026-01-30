@@ -23,6 +23,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import com.example.rocketplan_android.util.UuidUtils
+import com.example.rocketplan_android.data.model.FileToUpload
+import android.net.Uri
 import java.util.Date
 import java.util.Locale
 
@@ -37,6 +39,7 @@ class RocketDryViewModel(
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val imageProcessorRepository = rocketPlanApp.imageProcessorRepository
 
     private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
     val uiState: StateFlow<RocketDryUiState> = _uiState
@@ -150,9 +153,45 @@ class RocketDryViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             val now = Date()
             val hasPhoto = !photoLocalPath.isNullOrBlank()
+            val logUuid = UuidUtils.generateUuidV7()
+
+            // Create assembly at photo capture time (before log syncs)
+            // The assembly will be promoted when the log gets a serverId
+            var photoAssemblyId: String? = null
+            if (hasPhoto && photoLocalPath != null) {
+                val filename = "atmos_${logUuid}_${System.currentTimeMillis()}.jpg"
+                val fileToUpload = FileToUpload(
+                    uri = Uri.parse(photoLocalPath),
+                    filename = filename,
+                    deleteOnCompletion = false
+                )
+                val assemblyResult = imageProcessorRepository.createAssembly(
+                    roomId = null, // External atmospheric logs are project-level
+                    projectId = projectId,
+                    filesToUpload = listOf(fileToUpload),
+                    templateId = "atmospheric_log",
+                    entityType = "atmospheric_log",
+                    entityId = null, // No serverId yet - will be populated after sync
+                    entityUuid = logUuid
+                )
+                assemblyResult.onSuccess { assemblyId ->
+                    photoAssemblyId = assemblyId
+                    android.util.Log.d(
+                        "RocketDryVM",
+                        "📸 Created WAITING_FOR_ENTITY assembly for atmospheric log photo: assemblyId=$assemblyId logUuid=$logUuid"
+                    )
+                }.onFailure { error ->
+                    android.util.Log.e(
+                        "RocketDryVM",
+                        "❌ Failed to create assembly for atmospheric log photo: logUuid=$logUuid",
+                        error
+                    )
+                }
+            }
+
             val log = OfflineAtmosphericLogEntity(
                 logId = -System.currentTimeMillis(),
-                uuid = UuidUtils.generateUuidV7(),
+                uuid = logUuid,
                 projectId = projectId,
                 roomId = roomId,
                 date = now,
@@ -162,7 +201,8 @@ class RocketDryViewModel(
                 windSpeed = windSpeed,
                 isExternal = true,
                 photoLocalPath = if (hasPhoto) photoLocalPath else null,
-                photoUploadStatus = if (hasPhoto) "pending" else "none",
+                photoUploadStatus = if (photoAssemblyId != null) "queued" else "none",
+                photoAssemblyId = photoAssemblyId,
                 createdAt = now,
                 updatedAt = now,
                 syncStatus = SyncStatus.PENDING,
@@ -170,7 +210,7 @@ class RocketDryViewModel(
             )
             android.util.Log.d(
                 "RocketDryVM",
-                "🧪 Saving external atmospheric log: uuid=${log.uuid} projectId=$projectId roomId=$roomId rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed"
+                "🧪 Saving external atmospheric log: uuid=${log.uuid} projectId=$projectId roomId=$roomId rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed assemblyId=$photoAssemblyId"
             )
             runCatching { localDataService.saveAtmosphericLogs(listOf(log)) }
                 .onSuccess {

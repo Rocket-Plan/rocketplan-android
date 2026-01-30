@@ -65,7 +65,8 @@ class ImageProcessorRepository(
         order: List<String> = emptyList(),
         notes: Map<String, List<String>> = emptyMap(),
         entityType: String? = null,
-        entityId: Long? = null
+        entityId: Long? = null,
+        entityUuid: String? = null
     ): Result<String> = withContext(ioDispatcher) {
         if (filesToUpload.isEmpty()) {
             return@withContext Result.failure(IllegalArgumentException("No files to upload"))
@@ -134,10 +135,12 @@ class ImageProcessorRepository(
         val assemblyId = UuidUtils.generateUuidV7().replace("-", "")
         val now = System.currentTimeMillis()
         val totalBytes = preparedFiles.sumOf { getFileSize(it.uri) }
-        val status = if (waitingForSync) {
-            AssemblyStatus.WAITING_FOR_ROOM.value
-        } else {
-            AssemblyStatus.QUEUED.value
+        // Determine status: wait for project sync, wait for entity sync, or ready to queue
+        val waitingForEntitySync = entityType != null && entityId == null && entityUuid != null
+        val status = when {
+            waitingForSync -> AssemblyStatus.WAITING_FOR_ROOM.value
+            waitingForEntitySync -> AssemblyStatus.WAITING_FOR_ENTITY.value
+            else -> AssemblyStatus.QUEUED.value
         }
 
         val assemblyEntity = ImageProcessorAssemblyEntity(
@@ -151,7 +154,8 @@ class ImageProcessorRepository(
             createdAt = now,
             lastUpdatedAt = now,
             entityType = entityType,
-            entityId = entityId
+            entityId = entityId,
+            entityUuid = entityUuid
         )
 
         val localId = dao.insertAssembly(assemblyEntity)
@@ -188,6 +192,7 @@ class ImageProcessorRepository(
                 notes = notes,
                 entityType = entityType,
                 entityId = entityId,
+                entityUuid = entityUuid,
                 irPhotos = irPhotos
             )
         )

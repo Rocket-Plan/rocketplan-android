@@ -78,5 +78,6 @@ data class StoredUploadData(
     val notes: Map<String, List<String>>,
     val entityType: String? = null,
     val entityId: Long? = null,
+    val entityUuid: String? = null,
     val irPhotos: List<Map<String, IRPhotoData>>? = null
 )

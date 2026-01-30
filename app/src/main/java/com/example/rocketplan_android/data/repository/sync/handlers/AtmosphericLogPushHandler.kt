@@ -1,17 +1,14 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
-import android.net.Uri
 import android.util.Log
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.AtmosphericLogRequest
-import com.example.rocketplan_android.data.model.FileToUpload
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import retrofit2.HttpException
-import java.io.File
 
 /**
  * Handles pushing atmospheric log upsert/delete operations to the server.
@@ -82,90 +79,43 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
         )
         ctx.localDataService.saveAtmosphericLogs(listOf(synced))
 
-        // Check if there's a pending photo upload for this log
-        if (shouldTriggerPhotoUpload(synced)) {
-            triggerPhotoUpload(synced)
+        // Promote any WAITING_FOR_ENTITY assemblies for this log now that it has a serverId
+        if (synced.serverId != null && synced.photoAssemblyId != null) {
+            promoteWaitingAssembly(synced)
         }
 
         return OperationOutcome.SUCCESS
     }
 
     /**
-     * Check if this atmospheric log has a pending photo that needs to be uploaded.
+     * Promote WAITING_FOR_ENTITY assemblies to QUEUED now that the log has a serverId.
+     * The assembly was created at photo capture time with entityUuid but no entityId.
+     * Now we can provide the entityId and let the queue process the upload.
      */
-    private fun shouldTriggerPhotoUpload(log: OfflineAtmosphericLogEntity): Boolean {
-        // Need serverId for entity reference
-        if (log.serverId == null) return false
-
-        // Check for pending photo
-        val localPath = log.photoLocalPath
-        if (localPath.isNullOrBlank()) return false
-
-        // Check if upload is pending (not already started or completed)
-        if (log.photoUploadStatus != "pending") return false
-
-        // Verify file still exists
-        val file = File(localPath)
-        return file.exists()
-    }
-
-    /**
-     * Create an assembly to upload the photo for this atmospheric log.
-     */
-    private suspend fun triggerPhotoUpload(log: OfflineAtmosphericLogEntity) {
-        val repository = ctx.imageProcessorRepositoryProvider() ?: run {
-            Log.w(TAG, "⚠️ ImageProcessorRepository not available for photo upload")
-            return
-        }
-
-        val localPath = log.photoLocalPath ?: return
+    private suspend fun promoteWaitingAssembly(log: OfflineAtmosphericLogEntity) {
         val serverId = log.serverId ?: return
-        val file = File(localPath)
+        val queueManager = ctx.imageProcessorQueueManagerProvider()
 
-        if (!file.exists()) {
-            Log.w(TAG, "⚠️ Photo file not found: $localPath")
+        if (queueManager == null) {
+            Log.w(TAG, "⚠️ ImageProcessorQueueManager not available for assembly promotion")
             return
         }
 
-        Log.d(TAG, "📸 Creating photo upload assembly for atmospheric log serverId=$serverId")
+        Log.d(TAG, "📸 Promoting waiting assembly for atmospheric log: uuid=${log.uuid} serverId=$serverId assemblyId=${log.photoAssemblyId}")
 
-        val fileToUpload = FileToUpload(
-            uri = Uri.fromFile(file),
-            filename = file.name,
-            deleteOnCompletion = true
-        )
-
-        val result = repository.createAssembly(
-            roomId = null,
-            projectId = log.projectId,
-            filesToUpload = listOf(fileToUpload),
-            templateId = "atmospheric_log_photo",
-            entityType = "AtmosphericLog",
+        queueManager.promoteWaitingAssembly(
+            entityType = "atmospheric_log",
+            entityUuid = log.uuid,
             entityId = serverId
         )
 
-        result.fold(
-            onSuccess = { assemblyId ->
-                Log.d(TAG, "✅ Photo upload assembly created: $assemblyId")
-                // Update log with assembly ID and status
-                val updated = log.copy(
-                    photoAssemblyId = assemblyId,
-                    photoUploadStatus = "uploading"
-                )
-                ctx.localDataService.saveAtmosphericLogs(listOf(updated))
-
-                // Trigger queue processing
-                ctx.imageProcessorQueueManagerProvider()?.processNextQueuedAssembly()
-            },
-            onFailure = { error ->
-                Log.e(TAG, "❌ Failed to create photo upload assembly", error)
-                // Mark as failed so it can be retried later
-                val updated = log.copy(
-                    photoUploadStatus = "failed"
-                )
-                ctx.localDataService.saveAtmosphericLogs(listOf(updated))
-            }
+        // Update log status to reflect the assembly is now queued for upload
+        val updated = log.copy(
+            photoUploadStatus = "uploading"
         )
+        ctx.localDataService.saveAtmosphericLogs(listOf(updated))
+
+        Log.d(TAG, "✅ Assembly promoted and log photo status updated to 'uploading'")
     }
 
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
