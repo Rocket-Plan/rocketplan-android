@@ -39,6 +39,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportCategoryEn
 import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
+import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
 import com.example.rocketplan_android.data.local.entity.preferredImageSource
 import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
@@ -1175,6 +1177,9 @@ class LocalDataService private constructor(
         dao.upsertUsers(users)
     }
 
+    fun observeUsersForCompany(companyId: Long): Flow<List<OfflineUserEntity>> =
+        dao.observeUsersForCompany(companyId)
+
     suspend fun saveProperty(property: OfflinePropertyEntity) = withContext(ioDispatcher) {
         dao.upsertProperty(property)
     }
@@ -1439,6 +1444,56 @@ class LocalDataService private constructor(
 
     suspend fun getAttachmentsForSupportMessage(messageId: Long): List<OfflineSupportMessageAttachmentEntity> =
         withContext(ioDispatcher) { dao.getAttachmentsForSupportMessage(messageId) }
+    // endregion
+
+    // region Roles
+    suspend fun saveRoles(roles: List<OfflineRoleEntity>) = withContext(ioDispatcher) {
+        if (roles.isNotEmpty()) {
+            dao.upsertRoles(roles)
+        }
+    }
+
+    suspend fun getRolesForCompany(companyId: Long): List<OfflineRoleEntity> =
+        withContext(ioDispatcher) { dao.getRolesForCompany(companyId) }
+
+    suspend fun getRole(roleId: Long): OfflineRoleEntity? =
+        withContext(ioDispatcher) { dao.getRole(roleId) }
+
+    /**
+     * Saves user-role assignments, replacing existing roles for each user.
+     * Groups by userId to clear old roles before inserting new ones.
+     */
+    suspend fun saveUserRoles(userRoles: List<OfflineUserRoleEntity>) = withContext(ioDispatcher) {
+        if (userRoles.isEmpty()) return@withContext
+
+        database.withTransaction {
+            // Clear existing roles for each affected user, then insert new ones
+            val userIds = userRoles.map { it.userId }.distinct()
+            userIds.forEach { userId ->
+                dao.clearUserRoles(userId)
+            }
+            dao.upsertUserRoles(userRoles)
+        }
+    }
+
+    /**
+     * Checks if the specified user has the 'company-admin' role.
+     * Used to gate admin-only features like editing/deleting employees and company settings.
+     */
+    suspend fun isUserCompanyAdmin(userId: Long): Boolean =
+        withContext(ioDispatcher) { dao.isUserCompanyAdmin(userId) }
+
+    /**
+     * Observable version of isUserCompanyAdmin for reactive UI updates.
+     */
+    fun observeIsUserCompanyAdmin(userId: Long): Flow<Boolean> =
+        dao.observeIsUserCompanyAdmin(userId)
+
+    /**
+     * Gets all roles for a specific user.
+     */
+    suspend fun getRolesForUser(userId: Long): List<OfflineRoleEntity> =
+        withContext(ioDispatcher) { dao.getRolesForUser(userId) }
     // endregion
 
     companion object {

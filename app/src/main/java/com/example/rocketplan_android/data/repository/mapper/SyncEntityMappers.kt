@@ -14,8 +14,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
+import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.data.model.offline.AlbumDto
@@ -33,6 +35,7 @@ import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
 import com.example.rocketplan_android.data.model.offline.ProjectDto
 import com.example.rocketplan_android.data.model.offline.ProjectPhotoListingDto
 import com.example.rocketplan_android.data.model.offline.PropertyDto
+import com.example.rocketplan_android.data.model.offline.RoleDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
 import com.example.rocketplan_android.data.model.offline.UserDto
@@ -210,6 +213,38 @@ internal fun UserDto.toEntity(): OfflineUserEntity {
         lastSyncedAt = timestamp
     )
 }
+
+/**
+ * Converts a RoleDto to an OfflineRoleEntity for local storage.
+ */
+internal fun RoleDto.toEntity(): OfflineRoleEntity =
+    OfflineRoleEntity(
+        roleId = id,
+        name = name ?: "role-$id",
+        displayName = displayName,
+        description = description,
+        companyId = companyId
+    )
+
+/**
+ * Extracts unique roles from a list of UserDtos and converts them to entities.
+ */
+internal fun List<UserDto>.extractUniqueRoles(): List<OfflineRoleEntity> =
+    flatMap { it.roles ?: emptyList() }
+        .distinctBy { it.id }
+        .map { it.toEntity() }
+
+/**
+ * Converts a UserDto's roles to OfflineUserRoleEntity join records.
+ */
+internal fun UserDto.toUserRoleEntities(): List<OfflineUserRoleEntity> =
+    roles?.map { role ->
+        OfflineUserRoleEntity(
+            userId = id,
+            roleId = role.id,
+            companyId = companyId ?: role.companyId
+        )
+    } ?: emptyList()
 
 internal fun PropertyDto.toEntity(
     existing: OfflinePropertyEntity? = null,

@@ -14,7 +14,9 @@ data class NoteListItem(
     val id: String,
     val content: String,
     val meta: String,
-    val status: String
+    val status: String,
+    val canDelete: Boolean = true,
+    val canEdit: Boolean = true
 )
 
 class ProjectNotesAdapter(
@@ -55,6 +57,7 @@ class ProjectNotesAdapter(
             meta.text = item.meta
             status.text = item.status
             status.visibility = if (item.status.isBlank()) View.GONE else View.VISIBLE
+            deleteButton.visibility = if (item.canDelete) View.VISIBLE else View.GONE
         }
 
         init {

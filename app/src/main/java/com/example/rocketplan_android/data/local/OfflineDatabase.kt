@@ -42,6 +42,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportCategoryEn
 import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
+import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 
 @Database(
     entities = [
@@ -76,9 +78,11 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAtt
         OfflineSupportCategoryEntity::class,
         OfflineSupportConversationEntity::class,
         OfflineSupportMessageEntity::class,
-        OfflineSupportMessageAttachmentEntity::class
+        OfflineSupportMessageAttachmentEntity::class,
+        OfflineRoleEntity::class,
+        OfflineUserRoleEntity::class
     ],
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -307,6 +311,40 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_19_20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create roles table for user permissions (iOS parity)
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_roles (
+                        roleId INTEGER NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        displayName TEXT,
+                        description TEXT,
+                        companyId INTEGER
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_roles_name ON offline_roles(name)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_roles_companyId ON offline_roles(companyId)")
+
+                // Create user-role join table (many-to-many)
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_user_roles (
+                        userId INTEGER NOT NULL,
+                        roleId INTEGER NOT NULL,
+                        companyId INTEGER,
+                        PRIMARY KEY(userId, roleId)
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_user_roles_userId ON offline_user_roles(userId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_user_roles_roleId ON offline_user_roles(roleId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_user_roles_companyId ON offline_user_roles(companyId)")
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -314,7 +352,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {

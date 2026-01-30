@@ -120,6 +120,16 @@ data class ProjectAddressDto(
     val longitude: String? = null
 )
 
+data class RoleDto(
+    val id: Long,
+    val name: String?,
+    @SerializedName("display_name")
+    val displayName: String?,
+    val description: String?,
+    @SerializedName("company_id")
+    val companyId: Long?
+)
+
 data class UserDto(
     val id: Long,
     val uuid: String?,
@@ -129,6 +139,7 @@ data class UserDto(
     @SerializedName("last_name")
     val lastName: String?,
     val role: String?,
+    val roles: List<RoleDto>?,
     @SerializedName("company_id")
     val companyId: Long?,
     @SerializedName("created_at")

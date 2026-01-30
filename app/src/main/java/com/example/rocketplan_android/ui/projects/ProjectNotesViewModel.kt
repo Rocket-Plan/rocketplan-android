@@ -33,13 +33,24 @@ class ProjectNotesViewModel(
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
     private val notesRealtimeManager = rocketPlanApp.notesRealtimeManager
+    private val authRepository = rocketPlanApp.authRepository
     private val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.US)
+
+    // Current user context for permission checks
+    private var currentUserId: Long? = null
+    private var isCompanyAdmin: Boolean = false
 
     private val _uiState = MutableStateFlow(ProjectNotesUiState())
     val uiState: StateFlow<ProjectNotesUiState> = _uiState
 
     init {
         viewModelScope.launch {
+            // Load user context for permission checks
+            currentUserId = authRepository.getStoredUserId()
+            currentUserId?.let { userId ->
+                isCompanyAdmin = localDataService.isUserCompanyAdmin(userId)
+            }
+
             val notesFlow = if (roomId != null) {
                 localDataService.observeNotesForRoom(projectId, roomId)
             } else {
@@ -127,11 +138,16 @@ class ProjectNotesViewModel(
             isDirty || syncStatus != SyncStatus.SYNCED -> "Pending"
             else -> ""
         }
+        // User can delete/edit if they own the note OR if they're a company admin
+        val isOwner = userId != null && userId == currentUserId
+        val canModify = isOwner || isCompanyAdmin
         return NoteListItem(
             id = uuid,
             content = content,
             meta = meta,
-            status = status
+            status = status,
+            canDelete = canModify,
+            canEdit = canModify
         )
     }
 

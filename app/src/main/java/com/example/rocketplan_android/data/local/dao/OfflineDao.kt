@@ -39,6 +39,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportCategoryEn
 import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
+import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import com.example.rocketplan_android.data.local.model.ProjectWithProperty
 import kotlinx.coroutines.flow.Flow
@@ -1167,5 +1169,64 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_support_message_attachments WHERE messageId = :messageId ORDER BY attachmentId")
     suspend fun getAttachmentsForSupportMessage(messageId: Long): List<OfflineSupportMessageAttachmentEntity>
+    // endregion
+
+    // region Roles
+    @Upsert
+    suspend fun upsertRoles(roles: List<OfflineRoleEntity>)
+
+    @Query("SELECT * FROM offline_roles WHERE companyId = :companyId ORDER BY name")
+    suspend fun getRolesForCompany(companyId: Long): List<OfflineRoleEntity>
+
+    @Query("SELECT * FROM offline_roles WHERE roleId = :roleId LIMIT 1")
+    suspend fun getRole(roleId: Long): OfflineRoleEntity?
+
+    @Upsert
+    suspend fun upsertUserRoles(userRoles: List<OfflineUserRoleEntity>)
+
+    @Query("DELETE FROM offline_user_roles WHERE userId = :userId")
+    suspend fun clearUserRoles(userId: Long)
+
+    /**
+     * Checks if a user has the 'company-admin' role.
+     * Used to gate admin-only features (edit/delete employees, company settings, etc.)
+     */
+    @Query(
+        """
+        SELECT EXISTS(
+            SELECT 1 FROM offline_user_roles ur
+            INNER JOIN offline_roles r ON ur.roleId = r.roleId
+            WHERE ur.userId = :userId AND r.name = 'company-admin'
+        )
+        """
+    )
+    suspend fun isUserCompanyAdmin(userId: Long): Boolean
+
+    /**
+     * Observable version of isUserCompanyAdmin for reactive UI updates.
+     */
+    @Query(
+        """
+        SELECT EXISTS(
+            SELECT 1 FROM offline_user_roles ur
+            INNER JOIN offline_roles r ON ur.roleId = r.roleId
+            WHERE ur.userId = :userId AND r.name = 'company-admin'
+        )
+        """
+    )
+    fun observeIsUserCompanyAdmin(userId: Long): Flow<Boolean>
+
+    /**
+     * Gets all roles for a specific user.
+     */
+    @Query(
+        """
+        SELECT r.* FROM offline_roles r
+        INNER JOIN offline_user_roles ur ON r.roleId = ur.roleId
+        WHERE ur.userId = :userId
+        ORDER BY r.name
+        """
+    )
+    suspend fun getRolesForUser(userId: Long): List<OfflineRoleEntity>
     // endregion
 }

@@ -106,6 +106,7 @@ class CompanyInfoFragment : Fragment() {
         } ?: getString(R.string.company_info_company_id_missing)
         binding.userName.text = content.userName
         binding.userEmail.text = content.userEmail
+        binding.adminBadge.isVisible = content.isCompanyAdmin
 
         updateLogo(content.logoUrl)
     }

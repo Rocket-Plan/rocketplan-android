@@ -782,3 +782,37 @@ data class OfflineSupportMessageAttachmentEntity(
     val fileSize: Long = 0,
     val mimeType: String?
 )
+
+// ============================================================================
+// Role Entities (for user roles / permissions)
+// ============================================================================
+
+@Entity(
+    tableName = "offline_roles",
+    indices = [
+        Index(value = ["name"]),
+        Index(value = ["companyId"])
+    ]
+)
+data class OfflineRoleEntity(
+    @PrimaryKey val roleId: Long,
+    val name: String,
+    val displayName: String?,
+    val description: String?,
+    val companyId: Long?
+)
+
+@Entity(
+    tableName = "offline_user_roles",
+    primaryKeys = ["userId", "roleId"],
+    indices = [
+        Index(value = ["userId"]),
+        Index(value = ["roleId"]),
+        Index(value = ["companyId"])
+    ]
+)
+data class OfflineUserRoleEntity(
+    val userId: Long,
+    val roleId: Long,
+    val companyId: Long?
+)

@@ -100,6 +100,17 @@
     <string name="map_location_unavailable">Location unavailable right now.</string>
     <string name="notifications_placeholder_message">Notifications will live here.</string>
     <string name="people_placeholder_message">Invite your team to see them here.</string>
+    <string name="people_empty_message">No team members found.</string>
+    <string name="people_loading">Loading team members…</string>
+    <string name="admin_badge">Admin</string>
+    <string name="you_badge">You</string>
+    <string name="edit_person">Edit person</string>
+    <string name="delete_person">Delete person</string>
+    <string name="delete_person_title">Remove team member</string>
+    <string name="delete_person_message">Remove %1$s from your team?</string>
+    <string name="person_deleted">Team member removed</string>
+    <string name="person_delete_failed">Unable to remove team member</string>
+    <string name="cannot_delete_self">You cannot remove yourself from the team</string>
 
     <string name="brand_rocketplan">RocketPlan</string>
     <string name="content_desc_onboarding_illustration">Onboarding illustration</string>

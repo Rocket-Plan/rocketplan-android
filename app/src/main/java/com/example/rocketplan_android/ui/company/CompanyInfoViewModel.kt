@@ -13,7 +13,9 @@ import kotlinx.coroutines.launch
 
 class CompanyInfoViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val authRepository: AuthRepository = (application as RocketPlanApplication).authRepository
+    private val rocketPlanApp = application as RocketPlanApplication
+    private val authRepository: AuthRepository = rocketPlanApp.authRepository
+    private val localDataService = rocketPlanApp.localDataService
 
     private val _uiState = MutableStateFlow<CompanyInfoUiState>(CompanyInfoUiState.Loading)
     val uiState: StateFlow<CompanyInfoUiState> = _uiState
@@ -61,15 +63,25 @@ class CompanyInfoViewModel(application: Application) : AndroidViewModel(applicat
             val companyName = authRepository.getStoredCompanyName()?.takeIf { it.isNotBlank() }
             val userName = authRepository.getStoredUserName()?.takeIf { it.isNotBlank() }
             val userEmail = authRepository.getSavedEmail()
+            val userId = authRepository.getStoredUserId()
 
             // Return cached content if we have the essentials
             if (companyName != null && userName != null) {
+                val isCompanyAdmin = userId?.let {
+                    try {
+                        localDataService.isUserCompanyAdmin(it)
+                    } catch (e: Exception) {
+                        false
+                    }
+                } ?: false
+
                 CompanyInfoUiState.Content(
                     companyName = companyName,
                     companyId = companyId,
                     logoUrl = null, // Logo URL not cached
                     userName = userName,
                     userEmail = userEmail ?: "",
+                    isCompanyAdmin = isCompanyAdmin,
                     isRefreshing = false
                 )
             } else {
@@ -102,12 +114,21 @@ class CompanyInfoViewModel(application: Application) : AndroidViewModel(applicat
                     .joinToString(" ")
                     .ifBlank { user.email.ifBlank { resources.getString(R.string.company_info_unknown_user) } }
 
+                // Check if user is company admin from local database
+                val isCompanyAdmin = try {
+                    localDataService.isUserCompanyAdmin(user.id)
+                } catch (e: Exception) {
+                    Log.w("CompanyInfoVM", "Failed to check admin status", e)
+                    false
+                }
+
                 _uiState.value = CompanyInfoUiState.Content(
                     companyName = companyName,
                     companyId = selectedCompany?.id ?: storedCompanyId ?: user.getPrimaryCompanyId(),
                     logoUrl = selectedCompany?.logoUrl,
                     userName = userName,
                     userEmail = user.email,
+                    isCompanyAdmin = isCompanyAdmin,
                     isRefreshing = false
                 )
             },
@@ -136,6 +157,7 @@ sealed class CompanyInfoUiState {
         val logoUrl: String?,
         val userName: String,
         val userEmail: String,
+        val isCompanyAdmin: Boolean = false,
         val isRefreshing: Boolean = false
     ) : CompanyInfoUiState()
 

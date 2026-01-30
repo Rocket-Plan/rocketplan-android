@@ -405,10 +405,25 @@ class OfflineSyncRepository(
         itemCount++
         ensureActive()
 
-        // Save USERS (essential for photo metadata)
-        detail.users?.let {
-            localDataService.saveUsers(it.map { user -> user.toEntity() })
-            itemCount += it.size
+        // Save USERS and their ROLES (essential for photo metadata and permission checks)
+        detail.users?.let { users ->
+            // Save user entities
+            localDataService.saveUsers(users.map { user -> user.toEntity() })
+            itemCount += users.size
+
+            // Extract and save unique roles from all users
+            val uniqueRoles = users.extractUniqueRoles()
+            if (uniqueRoles.isNotEmpty()) {
+                localDataService.saveRoles(uniqueRoles)
+                Log.d(TAG, "💼 Saved ${uniqueRoles.size} unique roles")
+            }
+
+            // Save user-role relationships
+            val userRoles = users.flatMap { it.toUserRoleEntities() }
+            if (userRoles.isNotEmpty()) {
+                localDataService.saveUserRoles(userRoles)
+                Log.d(TAG, "👥 Saved ${userRoles.size} user-role assignments")
+            }
         }
         ensureActive()
 
