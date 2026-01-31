@@ -472,6 +472,9 @@
     <string name="loss_info_claim_adjuster_phone_label">Adjuster Phone:</string>
     <string name="loss_info_claim_adjuster_email_label">Adjuster Email:</string>
     <string name="loss_info_edit_claim">Edit claim</string>
+    <string name="loss_info_add_claim">Add claim</string>
+    <string name="loss_info_claim_create_success">Claim created.</string>
+    <string name="loss_info_claim_create_failed">Unable to create claim.</string>
     <string name="loss_info_claim_save_success">Claim saved.</string>
     <string name="loss_info_claim_save_failed">Unable to save claim.</string>
     <string name="loss_info_claim_deductible_label">Deductible</string>

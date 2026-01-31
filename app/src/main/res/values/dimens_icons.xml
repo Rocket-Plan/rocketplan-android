@@ -12,7 +12,7 @@
     <dimen name="icon_size_nav">24dp</dimen>
     <dimen name="icon_size_list">28dp</dimen>
     <dimen name="icon_size_tab">32dp</dimen>
-    <dimen name="icon_size_list_large">34dp</dimen>
+    <dimen name="icon_size_list_large">42dp</dimen>
     <dimen name="icon_size_action">40dp</dimen>
     <dimen name="icon_touch_target">44dp</dimen>
     <dimen name="icon_size_card_large">48dp</dimen>

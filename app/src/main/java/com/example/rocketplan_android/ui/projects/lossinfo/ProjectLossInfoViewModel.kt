@@ -93,6 +93,8 @@ data class PropertyInfoFormInput(
 sealed interface ProjectLossInfoEvent {
     data object SaveSuccess : ProjectLossInfoEvent
     data class SaveFailed(val message: String) : ProjectLossInfoEvent
+    data class ClaimCreated(val claim: ClaimDto) : ProjectLossInfoEvent
+    data class ClaimCreateFailed(val message: String) : ProjectLossInfoEvent
     data class ClaimUpdated(val claim: ClaimDto) : ProjectLossInfoEvent
     data class ClaimUpdateFailed(val message: String) : ProjectLossInfoEvent
     data class PropertyMissing(val message: String) : ProjectLossInfoEvent
@@ -476,6 +478,50 @@ class ProjectLossInfoViewModel(
                 val message = error.message ?: rocketPlanApp.getString(R.string.loss_info_claim_save_failed)
                 _uiState.update { it.copy(savingClaimId = null, errorMessage = message) }
                 _events.emit(ProjectLossInfoEvent.ClaimUpdateFailed(message))
+            }
+        }
+    }
+
+    fun createClaim(request: ClaimMutationRequest) {
+        viewModelScope.launch {
+            if (_uiState.value.isSaving) return@launch
+            _uiState.update { it.copy(isSaving = true, errorMessage = null) }
+
+            val project = localDataService.getProject(projectId)
+            val projectServerId = project?.serverId ?: project?.projectId
+                ?: run {
+                    val message = rocketPlanApp.getString(R.string.loss_info_claim_create_failed)
+                    _uiState.update { it.copy(isSaving = false, errorMessage = message) }
+                    _events.emit(ProjectLossInfoEvent.ClaimCreateFailed(message))
+                    return@launch
+                }
+
+            val idempotencyKey = request.idempotencyKey ?: UuidUtils.generateUuidV7()
+            val requestWithKey = request.copy(
+                idempotencyKey = idempotencyKey,
+                projectId = projectServerId
+            )
+
+            val result = runCatching { api.createProjectClaim(projectServerId, requestWithKey) }
+            result.onSuccess { created ->
+                val projectDisplayName = listOfNotNull(
+                    project?.addressLine1?.takeIf { it.isNotBlank() },
+                    project?.title?.takeIf { it.isNotBlank() },
+                    project?.alias?.takeIf { it.isNotBlank() }
+                ).firstOrNull()
+                    ?: rocketPlanApp.getString(R.string.loss_info_claim_project_tag)
+
+                _uiState.update { state ->
+                    state.copy(
+                        isSaving = false,
+                        claims = state.claims + ClaimListItem(created, projectDisplayName)
+                    )
+                }
+                _events.emit(ProjectLossInfoEvent.ClaimCreated(created))
+            }.onFailure { error ->
+                val message = error.message ?: rocketPlanApp.getString(R.string.loss_info_claim_create_failed)
+                _uiState.update { it.copy(isSaving = false, errorMessage = message) }
+                _events.emit(ProjectLossInfoEvent.ClaimCreateFailed(message))
             }
         }
     }

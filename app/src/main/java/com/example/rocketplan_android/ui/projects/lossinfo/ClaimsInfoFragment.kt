@@ -17,6 +17,7 @@ import com.example.rocketplan_android.data.model.ClaimMutationRequest
 import com.example.rocketplan_android.util.DateUtils
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.launch
@@ -37,8 +38,10 @@ class ClaimsInfoFragment : Fragment() {
     private lateinit var claimsList: androidx.recyclerview.widget.RecyclerView
     private lateinit var emptyState: View
     private lateinit var loadingIndicator: View
+    private lateinit var addClaimFab: FloatingActionButton
     private val adapter = ClaimsListAdapter(::onEditClaim)
     private var editDialogState: ClaimEditDialogState? = null
+    private var createDialogState: ClaimCreateDialogState? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -51,9 +54,12 @@ class ClaimsInfoFragment : Fragment() {
         claimsList = view.findViewById(R.id.claimsRecyclerView)
         emptyState = view.findViewById(R.id.claimsEmptyState)
         loadingIndicator = view.findViewById(R.id.claimsLoading)
+        addClaimFab = view.findViewById(R.id.addClaimFab)
 
         claimsList.layoutManager = LinearLayoutManager(requireContext())
         claimsList.adapter = adapter
+
+        addClaimFab.setOnClickListener { showCreateClaimDialog() }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -65,6 +71,8 @@ class ClaimsInfoFragment : Fragment() {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.events.collect { event ->
                     when (event) {
+                        is ProjectLossInfoEvent.ClaimCreated -> handleClaimCreated(event)
+                        is ProjectLossInfoEvent.ClaimCreateFailed -> handleClaimCreateFailed(event)
                         is ProjectLossInfoEvent.ClaimUpdated -> handleClaimUpdated(event)
                         is ProjectLossInfoEvent.ClaimUpdateFailed -> handleClaimUpdateFailed(event)
                         else -> Unit
@@ -205,6 +213,106 @@ class ClaimsInfoFragment : Fragment() {
         state.progress.visibility = if (isSaving) View.VISIBLE else View.GONE
     }
 
+    private fun showCreateClaimDialog() {
+        val dialog = BottomSheetDialog(requireContext())
+        val content = layoutInflater.inflate(R.layout.dialog_claim_edit, null)
+        dialog.setContentView(content)
+
+        val subtitle = content.findViewById<TextView>(R.id.claimEditSubtitle)
+        subtitle.text = getString(R.string.loss_info_claim_project_tag)
+
+        val policyHolderInput = content.findViewById<TextInputEditText>(R.id.claimPolicyHolderInput)
+        val ownershipStatusInput = content.findViewById<TextInputEditText>(R.id.claimOwnershipStatusInput)
+        val phoneInput = content.findViewById<TextInputEditText>(R.id.claimPhoneInput)
+        val emailInput = content.findViewById<TextInputEditText>(R.id.claimEmailInput)
+        val representativeInput = content.findViewById<TextInputEditText>(R.id.claimRepresentativeInput)
+        val providerInput = content.findViewById<TextInputEditText>(R.id.claimProviderInput)
+        val deductibleInput = content.findViewById<TextInputEditText>(R.id.claimDeductibleInput)
+        val policyNumberInput = content.findViewById<TextInputEditText>(R.id.claimPolicyNumberInput)
+        val claimNumberInput = content.findViewById<TextInputEditText>(R.id.claimClaimNumberInput)
+        val adjusterInput = content.findViewById<TextInputEditText>(R.id.claimAdjusterInput)
+        val adjusterPhoneInput = content.findViewById<TextInputEditText>(R.id.claimAdjusterPhoneInput)
+        val adjusterEmailInput = content.findViewById<TextInputEditText>(R.id.claimAdjusterEmailInput)
+        val saveButton = content.findViewById<MaterialButton>(R.id.saveClaimButton)
+        val cancelButton = content.findViewById<MaterialButton>(R.id.cancelClaimButton)
+        val progress = content.findViewById<CircularProgressIndicator>(R.id.claimEditProgress)
+
+        saveButton.text = getString(R.string.loss_info_add_claim)
+
+        val inputs = listOf(
+            policyHolderInput,
+            ownershipStatusInput,
+            phoneInput,
+            emailInput,
+            representativeInput,
+            providerInput,
+            deductibleInput,
+            policyNumberInput,
+            claimNumberInput,
+            adjusterInput,
+            adjusterPhoneInput,
+            adjusterEmailInput
+        )
+
+        createDialogState = ClaimCreateDialogState(
+            dialog = dialog,
+            saveButton = saveButton,
+            progress = progress,
+            inputs = inputs
+        )
+
+        saveButton.setOnClickListener {
+            setCreateDialogSaving(true)
+            val request = ClaimMutationRequest(
+                policyHolder = policyHolderInput.valueOrNull(),
+                ownershipStatus = ownershipStatusInput.valueOrNull(),
+                policyHolderPhone = phoneInput.valueOrNull(),
+                policyHolderEmail = emailInput.valueOrNull(),
+                representative = representativeInput.valueOrNull(),
+                provider = providerInput.valueOrNull(),
+                insuranceDeductible = deductibleInput.valueOrNull(),
+                policyNumber = policyNumberInput.valueOrNull(),
+                claimNumber = claimNumberInput.valueOrNull(),
+                adjuster = adjusterInput.valueOrNull(),
+                adjusterPhone = adjusterPhoneInput.valueOrNull(),
+                adjusterEmail = adjusterEmailInput.valueOrNull(),
+                projectId = projectId
+            )
+            viewModel.createClaim(request)
+        }
+
+        cancelButton.setOnClickListener { dialog.dismiss() }
+        dialog.setOnDismissListener { createDialogState = null }
+
+        dialog.show()
+    }
+
+    private fun handleClaimCreated(event: ProjectLossInfoEvent.ClaimCreated) {
+        Toast.makeText(
+            requireContext(),
+            getString(R.string.loss_info_claim_create_success),
+            Toast.LENGTH_SHORT
+        ).show()
+        createDialogState?.dialog?.dismiss()
+        createDialogState = null
+    }
+
+    private fun handleClaimCreateFailed(event: ProjectLossInfoEvent.ClaimCreateFailed) {
+        setCreateDialogSaving(false)
+        Toast.makeText(
+            requireContext(),
+            event.message.ifBlank { getString(R.string.loss_info_claim_create_failed) },
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    private fun setCreateDialogSaving(isSaving: Boolean) {
+        val state = createDialogState ?: return
+        state.inputs.forEach { it.isEnabled = !isSaving }
+        state.saveButton.isEnabled = !isSaving
+        state.progress.visibility = if (isSaving) View.VISIBLE else View.GONE
+    }
+
     companion object {
         private const val ARG_PROJECT_ID = "arg_project_id"
 
@@ -218,6 +326,13 @@ class ClaimsInfoFragment : Fragment() {
 
 private data class ClaimEditDialogState(
     val claimId: Long,
+    val dialog: BottomSheetDialog,
+    val saveButton: MaterialButton,
+    val progress: CircularProgressIndicator,
+    val inputs: List<TextInputEditText>
+)
+
+private data class ClaimCreateDialogState(
     val dialog: BottomSheetDialog,
     val saveButton: MaterialButton,
     val progress: CircularProgressIndicator,

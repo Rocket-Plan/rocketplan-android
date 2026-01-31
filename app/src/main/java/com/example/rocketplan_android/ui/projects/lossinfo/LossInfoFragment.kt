@@ -114,6 +114,8 @@ class LossInfoFragment : Fragment() {
                             ).show()
                         }
                         is ProjectLossInfoEvent.PropertyMissing -> Unit
+                        is ProjectLossInfoEvent.ClaimCreated,
+                        is ProjectLossInfoEvent.ClaimCreateFailed,
                         is ProjectLossInfoEvent.ClaimUpdated,
                         is ProjectLossInfoEvent.ClaimUpdateFailed -> Unit
                     }
