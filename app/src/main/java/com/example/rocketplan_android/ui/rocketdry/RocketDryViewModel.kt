@@ -31,6 +31,11 @@ import java.util.Locale
 private const val DEFAULT_LEVEL_LABEL = "General"
 private const val UNASSIGNED_LABEL = "Unassigned"
 
+enum class RocketDryTab {
+    EQUIPMENT,
+    MOISTURE
+}
+
 class RocketDryViewModel(
     application: Application,
     private val projectId: Long
@@ -43,6 +48,13 @@ class RocketDryViewModel(
 
     private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
     val uiState: StateFlow<RocketDryUiState> = _uiState
+
+    private val _currentTab = MutableStateFlow<RocketDryTab?>(null)
+    val currentTab: StateFlow<RocketDryTab?> = _currentTab
+
+    fun setCurrentTab(tab: RocketDryTab) {
+        _currentTab.value = tab
+    }
 
     init {
         viewModelScope.launch {

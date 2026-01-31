@@ -35,7 +35,6 @@ class RocketDryFragment : Fragment() {
 
     companion object {
         private const val TAG = "RocketDryFragment"
-        private const val KEY_CURRENT_TAB = "current_tab"
     }
 
     private val args: RocketDryFragmentArgs by navArgs()
@@ -75,7 +74,6 @@ class RocketDryFragment : Fragment() {
     private lateinit var locationLevelAdapter: LocationLevelAdapter
     private lateinit var equipmentLevelAdapter: EquipmentLevelAdapter
     private var suppressToggleChanges = false
-    private lateinit var currentTab: RocketDryTab
     private var latestReadyState: RocketDryUiState.Ready? = null
 
     // Photo capture callback - stored while navigating to camera
@@ -93,24 +91,13 @@ class RocketDryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initializeViews(view)
-        // Restore tab from savedInstanceState if available, otherwise use initial
-        val savedTab = savedInstanceState?.getString(KEY_CURRENT_TAB)
-        val tabToSelect = when {
-            savedTab != null -> if (savedTab == "MOISTURE") RocketDryTab.MOISTURE else RocketDryTab.EQUIPMENT
-            else -> initialTab
-        }
+        // Restore tab from ViewModel (survives navigation) or use initial tab
+        val tabToSelect = viewModel.currentTab.value ?: initialTab
         selectTab(tabToSelect)
         setupClickListeners()
         setupRecyclerViews()
         observeViewModel()
         observePhotoResult()
-    }
-
-    override fun onSaveInstanceState(outState: Bundle) {
-        super.onSaveInstanceState(outState)
-        if (::currentTab.isInitialized) {
-            outState.putString(KEY_CURRENT_TAB, currentTab.name)
-        }
     }
 
     private fun observePhotoResult() {
@@ -169,7 +156,7 @@ class RocketDryFragment : Fragment() {
                 RocketDryTab.MOISTURE -> R.id.moistureButton
             }
         )
-        currentTab = tab
+        viewModel.setCurrentTab(tab)
         updateToggleStyles(tab)
         showTab(tab)
         toggleGroup.post { suppressToggleChanges = false }
@@ -243,7 +230,7 @@ class RocketDryFragment : Fragment() {
     }
 
     private fun onTabSelected(tab: RocketDryTab) {
-        currentTab = tab
+        viewModel.setCurrentTab(tab)
         updateToggleStyles(tab)
         showTab(tab)
     }
@@ -326,7 +313,7 @@ class RocketDryFragment : Fragment() {
         equipmentTotalCount.text = getString(R.string.loading_project)
         equipmentStatusBreakdown.text = ""
         latestReadyState = null
-        showTab(currentTab)
+        viewModel.currentTab.value?.let { showTab(it) }
     }
 
     private fun renderState(state: RocketDryUiState.Ready) {
@@ -350,7 +337,7 @@ class RocketDryFragment : Fragment() {
             state.equipmentTotals.removed,
             state.equipmentTotals.damaged
         )
-        showTab(currentTab)
+        viewModel.currentTab.value?.let { showTab(it) }
     }
 
     private fun renderExternalLogSummary(latestLog: AtmosphericLogItem?, logCount: Int) {
@@ -445,9 +432,4 @@ class RocketDryFragment : Fragment() {
         findNavController().navigate(action)
     }
 
-}
-
-private enum class RocketDryTab {
-    EQUIPMENT,
-    MOISTURE
 }
