@@ -1,11 +1,16 @@
 package com.example.rocketplan_android.ui.rocketdry
 
+import android.app.Dialog
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.Window
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.core.view.isVisible
@@ -18,9 +23,10 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import coil.load
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.ui.common.SinglePhotoCaptureFragment
-import com.google.android.material.appbar.MaterialToolbar
+import com.github.chrisbanes.photoview.PhotoView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.launch
 import java.io.File
@@ -39,7 +45,6 @@ class ExternalAtmosphericLogsFragment : Fragment() {
         ExternalAtmosphericLogsViewModel.provideFactory(requireActivity().application, args.projectId)
     }
 
-    private lateinit var toolbar: MaterialToolbar
     private lateinit var logsRecyclerView: RecyclerView
     private lateinit var emptyState: LinearLayout
     private lateinit var addLogFab: FloatingActionButton
@@ -58,7 +63,6 @@ class ExternalAtmosphericLogsFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initializeViews(view)
-        setupToolbar()
         setupRecyclerView()
         setupFab()
         observeViewModel()
@@ -92,16 +96,9 @@ class ExternalAtmosphericLogsFragment : Fragment() {
     }
 
     private fun initializeViews(view: View) {
-        toolbar = view.findViewById(R.id.toolbar)
         logsRecyclerView = view.findViewById(R.id.logsRecyclerView)
         emptyState = view.findViewById(R.id.emptyState)
         addLogFab = view.findViewById(R.id.addLogFab)
-    }
-
-    private fun setupToolbar() {
-        toolbar.setNavigationOnClickListener {
-            findNavController().navigateUp()
-        }
     }
 
     private fun setupRecyclerView() {
@@ -156,8 +153,43 @@ class ExternalAtmosphericLogsFragment : Fragment() {
                 viewModel.deleteAtmosphericLog(logId)
                 Toast.makeText(requireContext(), R.string.atmospheric_log_deleted, Toast.LENGTH_SHORT).show()
             }
+
+            override fun onPhotoClicked(photoUrl: String?, photoLocalPath: String?) {
+                Log.d(TAG, "🖼️ Photo clicked: url=$photoUrl, localPath=$photoLocalPath")
+                showFullScreenPhoto(photoUrl, photoLocalPath)
+            }
         }
         bottomSheet.show(childFragmentManager, AtmosphericLogDetailBottomSheet.TAG)
+    }
+
+    private fun showFullScreenPhoto(photoUrl: String?, photoLocalPath: String?) {
+        val dialog = Dialog(requireContext(), android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+
+        val photoView = PhotoView(requireContext()).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+            setOnClickListener { dialog.dismiss() }
+        }
+
+        // Load the image
+        val localPath = photoLocalPath
+        if (!localPath.isNullOrBlank()) {
+            val file = File(localPath)
+            if (file.exists()) {
+                photoView.load(file)
+            } else if (!photoUrl.isNullOrBlank()) {
+                photoView.load(photoUrl)
+            }
+        } else if (!photoUrl.isNullOrBlank()) {
+            photoView.load(photoUrl)
+        }
+
+        dialog.setContentView(photoView)
+        dialog.show()
     }
 
     private fun showAddLogDialog() {

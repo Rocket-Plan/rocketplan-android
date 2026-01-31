@@ -101,7 +101,7 @@ class ExternalAtmosphericLogsViewModel(
 
                     val externalLogs = filtered
                         .sortedByDescending { it.date.time }
-                        .mapIndexed { index, log -> log.toUiItem(index + 1) }
+                        .mapIndexed { index, log -> log.toUiItem(filtered.size - index) }
 
                     _uiState.value = ExternalAtmosphericLogsUiState.Ready(
                         projectAddress = buildProjectAddress(project),
@@ -139,7 +139,7 @@ class ExternalAtmosphericLogsViewModel(
                     projectId = projectId,
                     filesToUpload = listOf(fileToUpload),
                     templateId = "atmospheric_log",
-                    entityType = "atmospheric_log",
+                    entityType = "AtmosphericLog", // Must match iOS/server expected format
                     entityId = null, // No serverId yet - will be populated after sync
                     entityUuid = logUuid
                 )

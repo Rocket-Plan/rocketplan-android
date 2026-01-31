@@ -25,6 +25,7 @@ class AtmosphericLogDetailBottomSheet : BottomSheetDialogFragment() {
     interface Callback {
         fun onEditRequested(logId: Long)
         fun onDeleteRequested(logId: Long)
+        fun onPhotoClicked(photoUrl: String?, photoLocalPath: String?) {}
     }
 
     companion object {
@@ -152,6 +153,8 @@ class AtmosphericLogDetailBottomSheet : BottomSheetDialogFragment() {
     private fun loadPhoto() {
         android.util.Log.d(TAG, "📷 loadPhoto: localPath=$photoLocalPath, url=$photoUrl")
 
+        var hasPhoto = false
+
         // Try local path first, then URL
         val localPath = photoLocalPath
         if (!localPath.isNullOrBlank()) {
@@ -163,22 +166,32 @@ class AtmosphericLogDetailBottomSheet : BottomSheetDialogFragment() {
                 }
                 photoThumbnail.isVisible = true
                 photoPlaceholder.isVisible = false
-                return
+                hasPhoto = true
             }
         }
 
-        val url = photoUrl
-        if (!url.isNullOrBlank()) {
-            android.util.Log.d(TAG, "📷 Loading from URL: $url")
-            photoThumbnail.load(url) {
-                crossfade(true)
+        if (!hasPhoto) {
+            val url = photoUrl
+            if (!url.isNullOrBlank()) {
+                android.util.Log.d(TAG, "📷 Loading from URL: $url")
+                photoThumbnail.load(url) {
+                    crossfade(true)
+                }
+                photoThumbnail.isVisible = true
+                photoPlaceholder.isVisible = false
+                hasPhoto = true
+            } else {
+                android.util.Log.d(TAG, "📷 No photo available, showing placeholder")
+                photoThumbnail.isVisible = false
+                photoPlaceholder.isVisible = true
             }
-            photoThumbnail.isVisible = true
-            photoPlaceholder.isVisible = false
-        } else {
-            android.util.Log.d(TAG, "📷 No photo available, showing placeholder")
-            photoThumbnail.isVisible = false
-            photoPlaceholder.isVisible = true
+        }
+
+        // Make photo clickable to view full screen
+        if (hasPhoto) {
+            photoThumbnail.setOnClickListener {
+                callback?.onPhotoClicked(photoUrl, photoLocalPath)
+            }
         }
     }
 

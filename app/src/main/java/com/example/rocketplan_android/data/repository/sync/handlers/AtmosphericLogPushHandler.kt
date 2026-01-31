@@ -106,7 +106,7 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
         Log.d(TAG, "📸 Promoting waiting assembly for atmospheric log: uuid=${log.uuid} serverId=$serverId assemblyId=${log.photoAssemblyId}")
 
         queueManager.promoteWaitingAssembly(
-            entityType = "atmospheric_log",
+            entityType = "AtmosphericLog", // Must match iOS/server expected format
             entityUuid = log.uuid,
             entityId = serverId
         )

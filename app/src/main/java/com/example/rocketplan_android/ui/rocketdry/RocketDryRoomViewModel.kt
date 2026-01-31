@@ -112,7 +112,7 @@ class RocketDryRoomViewModel(
                     projectId = projectId,
                     filesToUpload = listOf(fileToUpload),
                     templateId = "atmospheric_log",
-                    entityType = "atmospheric_log",
+                    entityType = "AtmosphericLog", // Must match iOS/server expected format
                     entityId = null, // No serverId yet - will be populated after sync
                     entityUuid = logUuid
                 )

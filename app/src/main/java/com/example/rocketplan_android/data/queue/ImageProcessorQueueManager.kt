@@ -367,7 +367,7 @@ class ImageProcessorQueueManager(
         if (entityType == null || entityUuid == null) return null
 
         return when (entityType) {
-            "atmospheric_log" -> {
+            "AtmosphericLog" -> {
                 offlineDao.getAtmosphericLogByUuid(entityUuid)?.serverId?.takeIf { it > 0 }
             }
             else -> {
@@ -1311,7 +1311,7 @@ class ImageProcessorQueueManager(
             }
 
             // For atmospheric log photos, trigger re-sync to get photoUrl from server
-            if (assembly?.entityType == "atmospheric_log" && assembly.entityUuid != null) {
+            if (assembly?.entityType == "AtmosphericLog" && assembly.entityUuid != null) {
                 Log.d(TAG, "📸 Atmospheric log photo upload completed, triggering re-sync for uuid=${assembly.entityUuid}")
                 try {
                     onAtmosphericLogPhotoCompleted?.invoke(assembly.entityUuid, projectId)
