@@ -11,6 +11,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
@@ -62,8 +63,13 @@ class NewSupportConversationFragment : Fragment() {
 
                     // Navigate to chat on success
                     state.createdConversationId?.let { conversationId ->
+                        // Pop new conversation screen off stack so back from Chat goes to Support list
+                        val options = NavOptions.Builder()
+                            .setPopUpTo(R.id.newSupportConversationFragment, true)
+                            .build()
                         findNavController().navigate(
-                            NewSupportConversationFragmentDirections.actionToChat(conversationId)
+                            NewSupportConversationFragmentDirections.actionToChat(conversationId),
+                            options
                         )
                     }
                 }

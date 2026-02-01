@@ -768,4 +768,11 @@
     <string name="timecard_clocked_out_toast">Clocked out successfully</string>
     <string name="timecard_updated_toast">Timecard updated</string>
     <string name="timecard_deleted_toast">Timecard deleted</string>
+
+    <!-- Accessibility -->
+    <string name="photo_content_description">Photo taken on %1$s</string>
+    <string name="photo_content_description_no_date">Photo</string>
+    <string name="room_thumbnail_description">%1$s room thumbnail</string>
+    <string name="room_thumbnail_no_image">%1$s room, no image</string>
+    <string name="album_thumbnail_description">%1$s album with %2$d photos</string>
 </resources>

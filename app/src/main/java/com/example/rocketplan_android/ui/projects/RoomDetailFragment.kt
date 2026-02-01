@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import com.example.rocketplan_android.util.safeNavigate
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -427,7 +428,7 @@ class RoomDetailFragment : Fragment() {
                     roomId = args.roomId,
                     categoryId = categoryId
                 )
-            findNavController().navigate(action)
+            safeNavigate(action)
         }
         deleteRoomButton.setOnClickListener { confirmDeleteRoom() }
     }
@@ -460,7 +461,7 @@ class RoomDetailFragment : Fragment() {
                 projectId = args.projectId,
                 roomId = args.roomId
             )
-        findNavController().navigate(action)
+        safeNavigate(action)
     }
 
     private fun navigateToBatchCapture() {
@@ -469,7 +470,7 @@ class RoomDetailFragment : Fragment() {
                 projectId = args.projectId,
                 roomId = args.roomId
             )
-        findNavController().navigate(action)
+        safeNavigate(action)
     }
 
     private fun navigateToFlirCapture() {
@@ -479,7 +480,7 @@ class RoomDetailFragment : Fragment() {
                 roomId = args.roomId,
                 captureMode = "ir"
             )
-        findNavController().navigate(action)
+        safeNavigate(action)
     }
 
     private fun openScopeEditor(item: RoomScopeItem) {
@@ -605,7 +606,7 @@ class RoomDetailFragment : Fragment() {
                 roomId = targetRoomId,
                 categoryId = categoryId
             )
-        findNavController().navigate(action)
+        safeNavigate(action)
     }
 
     private fun openEquipmentTotals() {
@@ -614,7 +615,7 @@ class RoomDetailFragment : Fragment() {
                 projectId = args.projectId,
                 startTab = "equipment"
             )
-        findNavController().navigate(action)
+        safeNavigate(action)
     }
 
     private fun showAddScopeDialog() {
@@ -1131,7 +1132,7 @@ class RoomDetailFragment : Fragment() {
                 photoIds = photoIds.toLongArray(),
                 startIndex = startIndex
             )
-        findNavController().navigate(action)
+        safeNavigate(action)
     }
 
     private fun updatePhotoVisibility(loadState: LoadState? = null) {

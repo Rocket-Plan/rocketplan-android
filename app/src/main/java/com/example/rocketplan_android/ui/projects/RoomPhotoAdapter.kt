@@ -72,6 +72,10 @@ class RoomPhotoPagingAdapter(
             }
 
             dateLabel.text = photo.capturedOn ?: ""
+            // Accessibility: describe the photo for screen readers
+            preview.contentDescription = photo.capturedOn?.let {
+                itemView.context.getString(R.string.photo_content_description, it)
+            } ?: itemView.context.getString(R.string.photo_content_description_no_date)
             itemView.setOnClickListener { onPhotoSelected(photo) }
             noteBadge.isVisible = photo.noteCount > 0
             noteCountLabel.text = photo.noteCount.toString()

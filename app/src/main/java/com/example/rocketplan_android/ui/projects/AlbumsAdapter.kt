@@ -57,6 +57,12 @@ class AlbumsAdapter(
                 crossfade(true)
             }
             thumbnail.isVisible = true
+            // Accessibility: describe the album thumbnail for screen readers
+            thumbnail.contentDescription = itemView.context.getString(
+                R.string.album_thumbnail_description,
+                album.name,
+                album.photoCount
+            )
             itemView.setOnClickListener { onAlbumClick(album) }
         }
     }

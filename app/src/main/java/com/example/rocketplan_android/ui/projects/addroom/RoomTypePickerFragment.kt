@@ -13,6 +13,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -123,7 +124,11 @@ class RoomTypePickerFragment : Fragment() {
                                     roomId = event.roomId,
                                     startTab = "photos"
                                 )
-                            findNavController().navigate(action)
+                            // Pop room picker off stack so back from RoomDetail goes to ProjectLanding
+                            val options = NavOptions.Builder()
+                                .setPopUpTo(R.id.roomTypePickerFragment, true)
+                                .build()
+                            findNavController().navigate(action, options)
                         }
                         is RoomTypePickerEvent.RoomCreationFailed -> {
                             Toast.makeText(

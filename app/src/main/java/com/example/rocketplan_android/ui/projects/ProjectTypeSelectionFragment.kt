@@ -107,8 +107,10 @@ class ProjectTypeSelectionFragment : Fragment() {
         }
         val action = ProjectTypeSelectionFragmentDirections
             .actionProjectTypeSelectionFragmentToProjectDetailFragment(projectId)
+        // Pop all create flow screens (CreateProject, AddressSearch/ManualAddressEntry, ProjectTypeSelection)
+        // so back button goes to project list, not through the create flow
         val options = NavOptions.Builder()
-            .setPopUpTo(R.id.projectTypeSelectionFragment, true)
+            .setPopUpTo(R.id.nav_projects, false)
             .build()
         navController.navigate(action, options)
     }

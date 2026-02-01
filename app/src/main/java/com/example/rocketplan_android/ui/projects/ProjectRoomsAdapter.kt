@@ -204,6 +204,12 @@ class ProjectRoomsAdapter(
                 room.photoCount,
                 room.photoCount
             )
+            // Accessibility: describe the room thumbnail for screen readers
+            thumbnail.contentDescription = if (room.thumbnailUrl.isNullOrBlank()) {
+                itemView.context.getString(R.string.room_thumbnail_no_image, room.title)
+            } else {
+                itemView.context.getString(R.string.room_thumbnail_description, room.title)
+            }
             itemView.setOnClickListener { onRoomClick(room) }
         }
 
