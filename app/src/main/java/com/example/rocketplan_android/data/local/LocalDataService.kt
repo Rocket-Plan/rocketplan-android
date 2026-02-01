@@ -486,6 +486,20 @@ class LocalDataService private constructor(
     }
     // endregion
 
+    /**
+     * Checks if there's a pending DELETE operation for the given entity type and ID.
+     * Use this before upserting API data to prevent resurrecting deleted items.
+     *
+     * @param entityType The type of entity (e.g., "room", "photo", "note")
+     * @param serverId The server ID of the entity
+     * @param uuid The UUID of the entity (optional, for local-only entities)
+     * @return true if a pending delete exists, false otherwise
+     */
+    suspend fun hasPendingDelete(entityType: String, serverId: Long, uuid: String = ""): Boolean =
+        withContext(ioDispatcher) {
+            dao.hasPendingDelete(entityType, serverId, uuid)
+        }
+
     // region Mutations
     suspend fun saveProjects(projects: List<OfflineProjectEntity>) = withContext(ioDispatcher) {
         if (projects.isEmpty()) {

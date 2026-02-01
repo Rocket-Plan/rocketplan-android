@@ -482,7 +482,8 @@ class PhotoSyncService(
 
             entities += photo.toEntity(
                 defaultRoomId = resolvedRoomId,
-                defaultProjectId = resolvedProjectId
+                defaultProjectId = resolvedProjectId,
+                existing = existing
             )
         }
 

@@ -970,6 +970,26 @@ interface OfflineDao {
     // endregion
 
     // region Sync Queue
+    /**
+     * Checks if there's a pending DELETE operation for the given entity.
+     * Used to prevent API sync from resurrecting locally-deleted items.
+     *
+     * @param entityType The type of entity (e.g., "room", "photo", "note")
+     * @param serverId The server ID of the entity
+     * @param uuid The UUID of the entity (for local-only entities without server ID)
+     * @return true if a pending delete exists, false otherwise
+     */
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM offline_sync_queue
+            WHERE entityType = :entityType
+              AND operationType = 'DELETE'
+              AND status IN ('PENDING', 'SYNCED_PENDING', 'FAILED')
+              AND (entityId = :serverId OR entityUuid = :uuid)
+        )
+    """)
+    suspend fun hasPendingDelete(entityType: String, serverId: Long, uuid: String): Boolean
+
     @Upsert
     suspend fun upsertSyncOperation(operation: OfflineSyncQueueEntity)
 

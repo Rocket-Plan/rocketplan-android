@@ -145,7 +145,7 @@ internal fun buildProjectEntity(
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         isDirty = false,
-        isDeleted = false,
+        isDeleted = existing?.isDeleted ?: false,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
@@ -293,7 +293,10 @@ internal fun PropertyDto.toEntity(
     )
 }
 
-internal fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocationEntity {
+internal fun LocationDto.toEntity(
+    defaultProjectId: Long? = null,
+    existing: OfflineLocationEntity? = null
+): OfflineLocationEntity {
     val timestamp = now()
     // Filter out purely numeric/dash strings to prevent IDs from becoming display titles
     val resolvedTitle = listOfNotNull(
@@ -309,7 +312,7 @@ internal fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocati
     return OfflineLocationEntity(
         locationId = id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         title = resolvedTitle,
         type = resolvedType,
@@ -318,8 +321,8 @@ internal fun LocationDto.toEntity(defaultProjectId: Long? = null): OfflineLocati
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
         isDirty = false,
-        isDeleted = false,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        isDeleted = existing?.isDeleted ?: false,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
     )
@@ -392,7 +395,7 @@ internal fun RoomDto.toEntity(
         syncStatus = if (serverId != null) SyncStatus.SYNCED else existing?.syncStatus ?: SyncStatus.PENDING,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = if (serverId != null) false else existing?.isDirty ?: true,
-        isDeleted = false,
+        isDeleted = existing?.isDeleted ?: false,
         createdAt = createdAtValue,
         updatedAt = updatedAtValue,
         lastSyncedAt = if (serverId != null) timestamp else existing?.lastSyncedAt
@@ -444,7 +447,8 @@ internal fun RoomPhotoDto.toPhotoDto(defaultProjectId: Long, defaultRoomId: Long
 
 internal fun PhotoDto.toEntity(
     defaultRoomId: Long? = this.roomId,
-    defaultProjectId: Long? = this.projectId
+    defaultProjectId: Long? = this.projectId,
+    existing: OfflinePhotoEntity? = null
 ): OfflinePhotoEntity {
     val timestamp = now()
     val hasRemote = !remoteUrl.isNullOrBlank()
@@ -459,16 +463,16 @@ internal fun PhotoDto.toEntity(
     val resolvedProjectId = defaultProjectId ?: projectId
 
     return OfflinePhotoEntity(
-        photoId = id,
+        photoId = existing?.photoId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         roomId = defaultRoomId,
         logId = logId,
         moistureLogId = moistureLogId,
         albumId = null,
         fileName = fileName ?: "photo_$id.jpg",
-        localPath = localPath ?: "",
+        localPath = localPath ?: existing?.localPath ?: "",
         remoteUrl = remoteUrl,
         thumbnailUrl = thumbnailUrl,
         uploadStatus = "completed",
@@ -483,17 +487,18 @@ internal fun PhotoDto.toEntity(
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false,
+        isDeleted = existing?.isDeleted ?: false,
         cacheStatus = when {
             localCachePath != null -> PhotoCacheStatus.READY
+            existing?.cachedOriginalPath != null -> existing.cacheStatus
             hasRemote -> PhotoCacheStatus.PENDING
             else -> PhotoCacheStatus.NONE
         },
-        cachedOriginalPath = localCachePath,
-        cachedThumbnailPath = null,
-        lastAccessedAt = timestamp.takeIf { localCachePath != null }
+        cachedOriginalPath = localCachePath ?: existing?.cachedOriginalPath,
+        cachedThumbnailPath = existing?.cachedThumbnailPath,
+        lastAccessedAt = timestamp.takeIf { localCachePath != null } ?: existing?.lastAccessedAt
     )
 }
 
@@ -531,12 +536,15 @@ internal fun ProjectPhotoListingDto.toPhotoDto(defaultProjectId: Long): PhotoDto
     )
 }
 
-internal fun AtmosphericLogDto.toEntity(defaultRoomId: Long? = roomId): OfflineAtmosphericLogEntity {
+internal fun AtmosphericLogDto.toEntity(
+    defaultRoomId: Long? = roomId,
+    existing: OfflineAtmosphericLogEntity? = null
+): OfflineAtmosphericLogEntity {
     val timestamp = now()
     return OfflineAtmosphericLogEntity(
-        logId = id,
+        logId = existing?.logId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = defaultRoomId,
         date = DateUtils.parseApiDate(date) ?: timestamp,
@@ -550,28 +558,30 @@ internal fun AtmosphericLogDto.toEntity(defaultRoomId: Long? = roomId): OfflineA
         isInlet = isInlet ?: false,
         inletId = inletId,
         outletId = outletId,
-        photoUrl = photoUrl,
-        photoLocalPath = photoLocalPath,
-        photoUploadStatus = photoUploadStatus ?: "completed",
-        photoAssemblyId = photoAssemblyId,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        photoUrl = photoUrl ?: existing?.photoUrl,
+        photoLocalPath = photoLocalPath ?: existing?.photoLocalPath,
+        photoUploadStatus = photoUploadStatus ?: existing?.photoUploadStatus ?: "completed",
+        photoAssemblyId = photoAssemblyId ?: existing?.photoAssemblyId,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = existing?.isDeleted ?: false
     )
 }
 
-internal fun MoistureLogDto.toEntity(): OfflineMoistureLogEntity? {
+internal fun MoistureLogDto.toEntity(
+    existing: OfflineMoistureLogEntity? = null
+): OfflineMoistureLogEntity? {
     val material = materialId ?: damageMaterial?.id ?: return null
     val resolvedReading = reading ?: moistureContent
     val timestamp = now()
     return OfflineMoistureLogEntity(
-        logId = id,
+        logId = existing?.logId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = roomId,
         materialId = material,
@@ -579,16 +589,16 @@ internal fun MoistureLogDto.toEntity(): OfflineMoistureLogEntity? {
         moistureContent = resolvedReading ?: 0.0,
         location = location,
         depth = depth,
-        photoUrl = photoUrl,
-        photoLocalPath = photoLocalPath,
-        photoUploadStatus = photoUploadStatus ?: "completed",
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        photoUrl = photoUrl ?: existing?.photoUrl,
+        photoLocalPath = photoLocalPath ?: existing?.photoLocalPath,
+        photoUploadStatus = photoUploadStatus ?: existing?.photoUploadStatus ?: "completed",
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = existing?.isDeleted ?: false
     )
 }
 
@@ -618,12 +628,14 @@ internal fun DamageMaterialDto.toMaterialEntity(): OfflineMaterialEntity {
     )
 }
 
-internal fun EquipmentDto.toEntity(): OfflineEquipmentEntity {
+internal fun EquipmentDto.toEntity(
+    existing: OfflineEquipmentEntity? = null
+): OfflineEquipmentEntity {
     val timestamp = now()
     return OfflineEquipmentEntity(
-        equipmentId = id,
+        equipmentId = existing?.equipmentId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = roomId,
         type = type ?: "equipment",
@@ -634,13 +646,13 @@ internal fun EquipmentDto.toEntity(): OfflineEquipmentEntity {
         status = status ?: "active",
         startDate = DateUtils.parseApiDate(startDate),
         endDate = DateUtils.parseApiDate(endDate),
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = existing?.isDeleted ?: false
     )
 }
 
@@ -664,52 +676,62 @@ internal fun OfflineEquipmentEntity.toRequest(
         updatedAt = updatedAtOverride ?: updatedAt.toApiTimestamp()
     )
 
-internal fun NoteDto.toEntity(): OfflineNoteEntity? {
+internal fun NoteDto.toEntity(
+    existing: OfflineNoteEntity? = null
+): OfflineNoteEntity? {
     val timestamp = now()
     return OfflineNoteEntity(
-        noteId = id,
+        noteId = existing?.noteId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = roomId,
         userId = userId,
         content = body,
         photoId = photoId,
         categoryId = categoryId,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = existing?.isDeleted ?: false
     )
 }
 
-internal fun DamageMaterialDto.toEntity(defaultProjectId: Long? = projectId, defaultRoomId: Long? = null): OfflineDamageEntity? {
+internal fun DamageMaterialDto.toEntity(
+    defaultProjectId: Long? = projectId,
+    defaultRoomId: Long? = null,
+    existing: OfflineDamageEntity? = null
+): OfflineDamageEntity? {
     val project = defaultProjectId ?: projectId ?: return null
     val resolvedRoomId = roomId ?: defaultRoomId
     val timestamp = now()
     return OfflineDamageEntity(
-        damageId = id,
+        damageId = existing?.damageId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = project,
         roomId = resolvedRoomId,
         title = title ?: "Damage $id",
         description = description,
         severity = severity,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = existing?.isDeleted ?: false
     )
 }
 
-internal fun WorkScopeDto.toEntity(defaultProjectId: Long? = null, defaultRoomId: Long? = null): OfflineWorkScopeEntity? {
+internal fun WorkScopeDto.toEntity(
+    defaultProjectId: Long? = null,
+    defaultRoomId: Long? = null,
+    existing: OfflineWorkScopeEntity? = null
+): OfflineWorkScopeEntity? {
     val resolvedProjectId = defaultProjectId ?: projectId
     val resolvedRoomId = roomId ?: defaultRoomId
     val timestamp = now()
@@ -728,9 +750,9 @@ internal fun WorkScopeDto.toEntity(defaultProjectId: Long? = null, defaultRoomId
         ?: "Work Scope $id"
     val resolvedDescription = description?.takeIf { it.isNotBlank() } ?: name
     return OfflineWorkScopeEntity(
-        workScopeId = id,
+        workScopeId = existing?.workScopeId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         roomId = resolvedRoomId,
         name = resolvedName,
@@ -743,13 +765,13 @@ internal fun WorkScopeDto.toEntity(defaultProjectId: Long? = null, defaultRoomId
         rate = numericRate,
         quantity = numericQuantity,
         lineTotal = numericLineTotal,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = existing?.isDeleted ?: false
     )
 }
 
@@ -818,12 +840,15 @@ internal fun AlbumDto.toEntity(defaultProjectId: Long, defaultRoomId: Long? = nu
 // Timecard Mappers
 // ============================================================================
 
-internal fun TimecardDto.toEntity(defaultCompanyId: Long? = null): OfflineTimecardEntity {
+internal fun TimecardDto.toEntity(
+    defaultCompanyId: Long? = null,
+    existing: OfflineTimecardEntity? = null
+): OfflineTimecardEntity {
     val timestamp = now()
     return OfflineTimecardEntity(
-        timecardId = id,
+        timecardId = existing?.timecardId ?: id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         userId = userId,
         timecardTypeId = timecardTypeId,
@@ -833,13 +858,13 @@ internal fun TimecardDto.toEntity(defaultCompanyId: Long? = null): OfflineTimeca
         elapsed = elapsed,
         notes = notes,
         companyId = companyId ?: defaultCompanyId ?: 0L,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
-        syncVersion = 1,
+        syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = false
+        isDeleted = existing?.isDeleted ?: false
     )
 }
 
