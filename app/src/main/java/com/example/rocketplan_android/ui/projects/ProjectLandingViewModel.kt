@@ -13,6 +13,7 @@ import com.example.rocketplan_android.data.model.ProjectStatus
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -62,6 +63,9 @@ class ProjectLandingViewModel(
     private val _events = Channel<ProjectLandingEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
     private val aliasUpdateInProgress = MutableStateFlow(false)
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
     init {
         // Prioritize this project in the sync queue
@@ -183,6 +187,22 @@ class ProjectLandingViewModel(
     fun updateProjectStatus(projectStatus: ProjectStatus) {
         viewModelScope.launch {
             offlineSyncRepository.updateProjectStatus(projectId, projectStatus)
+        }
+    }
+
+    fun refreshProject() {
+        if (_isRefreshing.value) return
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            try {
+                Log.d("ProjectLandingVM", "🔄 Pull-to-refresh project $projectId")
+                offlineSyncRepository.syncProjectGraph(projectId, skipPhotos = false, source = "ProjectLandingFragment")
+                Log.d("ProjectLandingVM", "✅ Refresh complete for project $projectId")
+            } catch (t: Throwable) {
+                Log.e("ProjectLandingVM", "❌ Failed to refresh project $projectId", t)
+            } finally {
+                _isRefreshing.value = false
+            }
         }
     }
 

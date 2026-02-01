@@ -5,6 +5,8 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.network.SyncNetworkMonitor
+import com.example.rocketplan_android.data.repository.IncomingProjectSync
+import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.sync.SyncQueueManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +28,8 @@ import kotlinx.coroutines.launch
 class SyncStatusBannerManager(
     private val syncNetworkMonitor: SyncNetworkMonitor,
     private val localDataService: LocalDataService,
-    private val syncQueueManager: SyncQueueManager
+    private val syncQueueManager: SyncQueueManager,
+    private val offlineSyncRepository: OfflineSyncRepository
 ) {
     companion object {
         private const val TAG = "SyncStatusBannerManager"
@@ -45,14 +48,15 @@ class SyncStatusBannerManager(
     @OptIn(FlowPreview::class)
     private fun observeState() {
         scope.launch(Dispatchers.IO) {
-            // Combine network state, pending operations, and current sync progress
+            // Combine network state, pending operations, current sync progress, and incoming sync
             combine(
                 syncNetworkMonitor.isOnline,
                 localDataService.observeSyncOperations(SyncStatus.PENDING),
                 localDataService.observeSyncOperations(SyncStatus.SYNCING),
-                syncQueueManager.currentSyncProgress
-            ) { isOnline, pendingOps, syncingOps, currentProgress ->
-                BannerInputs(isOnline, pendingOps, syncingOps, currentProgress)
+                syncQueueManager.currentSyncProgress,
+                offlineSyncRepository.activeIncomingSync
+            ) { isOnline, pendingOps, syncingOps, currentProgress, incomingSync ->
+                BannerInputs(isOnline, pendingOps, syncingOps, currentProgress, incomingSync)
             }
                 .debounce(300) // Debounce to avoid rapid updates
                 .distinctUntilChanged()
@@ -68,11 +72,12 @@ class SyncStatusBannerManager(
         val isOnline: Boolean,
         val pendingOps: List<OfflineSyncQueueEntity>,
         val syncingOps: List<OfflineSyncQueueEntity>,
-        val currentSyncProgress: SyncQueueManager.SyncProgress?
+        val currentSyncProgress: SyncQueueManager.SyncProgress?,
+        val incomingSync: IncomingProjectSync?
     )
 
     private fun computeBannerState(inputs: BannerInputs): SyncStatusBannerState {
-        val (isOnline, pendingOps, syncingOps, _) = inputs
+        val (isOnline, pendingOps, syncingOps, _, incomingSync) = inputs
 
         // If offline, show offline banner
         if (!isOnline) {
@@ -82,14 +87,31 @@ class SyncStatusBannerManager(
         // Combine pending and syncing operations (outgoing changes)
         val allActiveOps = pendingOps + syncingOps
 
-        // Only show banner when there are pending operations to upload (phase 2)
-        // Don't show during skeleton sync (phase 1) when there's nothing to upload
+        // Show banner for outgoing operations (uploads)
         if (allActiveOps.isNotEmpty()) {
             val items = aggregateByTypeCounts(allActiveOps)
             return SyncStatusBannerState.Syncing(items)
         }
 
-        // Nothing to upload, hide banner
+        // Show banner for incoming project sync (downloads from pull-to-refresh)
+        if (incomingSync != null) {
+            // Build display like iOS: "Syncing: Rooms" with "2 of 4 items" progress
+            val stepDisplay = "Syncing: ${incomingSync.currentStep}"
+            val progressDisplay = if (incomingSync.totalSteps > 1) {
+                "${incomingSync.currentIndex} of ${incomingSync.totalSteps}"
+            } else null
+            val items = listOf(
+                SyncProgressItem(
+                    entityType = "project_incoming",
+                    displayName = stepDisplay,
+                    projectName = progressDisplay,
+                    count = incomingSync.currentIndex
+                )
+            )
+            return SyncStatusBannerState.Syncing(items)
+        }
+
+        // Nothing to sync, hide banner
         return SyncStatusBannerState.Hidden
     }
 

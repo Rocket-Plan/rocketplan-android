@@ -25,6 +25,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.config.AppConfig
@@ -47,6 +48,7 @@ class ProjectLandingFragment : Fragment() {
         ProjectLandingViewModel.provideFactory(requireActivity().application, args.projectId)
     }
 
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
     private lateinit var menuButton: ImageButton
     private lateinit var projectTitle: TextView
     private lateinit var aliasAction: TextView
@@ -79,11 +81,19 @@ class ProjectLandingFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
+        setupSwipeRefresh()
         bindListeners()
         observeViewModel()
     }
 
+    private fun setupSwipeRefresh() {
+        swipeRefreshLayout.setOnRefreshListener {
+            viewModel.refreshProject()
+        }
+    }
+
     private fun bindViews(root: View) {
+        swipeRefreshLayout = root.findViewById(R.id.swipeRefreshLayout)
         menuButton = root.findViewById(R.id.menuButton)
         projectTitle = root.findViewById(R.id.projectTitle)
         aliasAction = root.findViewById(R.id.projectAliasAction)
@@ -250,6 +260,14 @@ class ProjectLandingFragment : Fragment() {
                             ).show()
                         }
                     }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.isRefreshing.collect { isRefreshing ->
+                    swipeRefreshLayout.isRefreshing = isRefreshing
                 }
             }
         }

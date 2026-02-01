@@ -50,6 +50,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.io.File
@@ -62,6 +65,15 @@ private const val TAG = "OfflineSyncRepo"
 
 data class PhotoDeletionResult(val synced: Boolean)
 data class RoomDeletionResult(val synced: Boolean)
+
+/** Represents an active incoming (download) sync operation */
+data class IncomingProjectSync(
+    val projectId: Long,
+    val projectName: String?,
+    val currentStep: String = "Rooms",
+    val currentIndex: Int = 0,
+    val totalSteps: Int = 1
+)
 
 class OfflineSyncRepository(
     private val api: OfflineSyncApi,
@@ -76,6 +88,10 @@ class OfflineSyncRepository(
 ) {
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
     private var imageProcessorRepository: ImageProcessorRepository? = null
+
+    /** Tracks active incoming (download) sync for UI display */
+    private val _activeIncomingSync = MutableStateFlow<IncomingProjectSync?>(null)
+    val activeIncomingSync: StateFlow<IncomingProjectSync?> = _activeIncomingSync.asStateFlow()
 
     // Lazily initialized services for delegation
     private val photoSyncService by lazy {
@@ -1056,72 +1072,78 @@ class OfflineSyncRepository(
         Log.d("API", "🔄 [syncProjectGraph] Starting $syncType sync for project $projectId")
         val startTime = System.currentTimeMillis()
 
-        val segments = buildList {
-            add(SyncSegment.PROJECT_ESSENTIALS)
+        // Look up project name for banner display
+        val project = localDataService.getProject(projectId)
+        val projectName = project?.addressLine1?.takeIf { it.isNotBlank() }
+            ?: project?.title?.takeIf { it.isNotBlank() }
+            ?: project?.uid
+
+        // Define steps with human-readable names
+        data class SyncStep(val segment: SyncSegment, val displayName: String)
+        val steps = buildList {
+            add(SyncStep(SyncSegment.PROJECT_ESSENTIALS, "Rooms"))
             if (!skipPhotos) {
-                add(SyncSegment.PROJECT_METADATA)
-                add(SyncSegment.ALL_ROOM_PHOTOS)
-                add(SyncSegment.PROJECT_LEVEL_PHOTOS)
+                add(SyncStep(SyncSegment.PROJECT_METADATA, "Notes & Equipment"))
+                add(SyncStep(SyncSegment.ALL_ROOM_PHOTOS, "Room Photos"))
+                add(SyncStep(SyncSegment.PROJECT_LEVEL_PHOTOS, "Project Photos"))
             }
         }
+        val totalSteps = steps.size
 
-        val results = syncProjectSegments(projectId, segments, source)
-        val duration = System.currentTimeMillis() - startTime
+        try {
+            val results = mutableListOf<SyncResult>()
 
-        val essentialsResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_ESSENTIALS }
-        when (essentialsResult) {
-            is SyncResult.Failure -> {
-                Log.e("API", "❌ [syncProjectGraph] Failed to sync essentials", essentialsResult.error)
-                return@withContext results
-            }
-            is SyncResult.Incomplete -> {
-                Log.w(
-                    "API",
-                    "⚠️ [syncProjectGraph] Essentials sync incomplete (${essentialsResult.reason}); skipping follow-up segments"
+            for ((index, step) in steps.withIndex()) {
+                // Update progress for current step
+                _activeIncomingSync.value = IncomingProjectSync(
+                    projectId = projectId,
+                    projectName = projectName,
+                    currentStep = step.displayName,
+                    currentIndex = index + 1,
+                    totalSteps = totalSteps
                 )
-                return@withContext results
-            }
-            else -> {
-                // Success, continue
-            }
-        }
 
-        // Skip metadata and photos for FAST foreground sync - rooms are available now
-        if (skipPhotos) {
-            Log.d("API", "✅ [syncProjectGraph] FAST sync completed in ${duration}ms (metadata & photos deferred)")
-            essentialsResult?.let {
-                Log.d("API", "   Essentials: ${it.itemsSynced} items in ${it.durationMs}ms")
+                // Sync this segment
+                val segmentResults = syncProjectSegments(projectId, listOf(step.segment), source)
+                results.addAll(segmentResults)
+
+                // Check results and handle failures
+                val result = segmentResults.firstOrNull()
+                if (step.segment == SyncSegment.PROJECT_ESSENTIALS) {
+                    // Essentials failure is fatal - abort sync
+                    when (result) {
+                        is SyncResult.Failure -> {
+                            Log.e("API", "❌ [syncProjectGraph] Failed to sync essentials", result.error)
+                            return@withContext results
+                        }
+                        is SyncResult.Incomplete -> {
+                            Log.w("API", "⚠️ [syncProjectGraph] Essentials sync incomplete (${result.reason})")
+                            return@withContext results
+                        }
+                        else -> { /* Success, continue */ }
+                    }
+                } else if (result != null && !result.success) {
+                    // Non-essential failures - log warning but continue
+                    Log.w("API", "⚠️ [syncProjectGraph] ${step.displayName} sync failed but continuing", result.error)
+                }
             }
-            return@withContext results
-        }
 
-        val metadataResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_METADATA }
-        if (metadataResult != null && !metadataResult.success) {
-            Log.w("API", "⚠️ [syncProjectGraph] Metadata sync failed but continuing", metadataResult.error)
+            val duration = System.currentTimeMillis() - startTime
+            Log.d("API", "✅ [syncProjectGraph] $syncType sync completed in ${duration}ms")
+            for (result in results) {
+                val label = when (result.segment) {
+                    SyncSegment.PROJECT_ESSENTIALS -> "Essentials"
+                    SyncSegment.PROJECT_METADATA -> "Metadata"
+                    SyncSegment.ALL_ROOM_PHOTOS -> "Room photos"
+                    SyncSegment.PROJECT_LEVEL_PHOTOS -> "Project photos"
+                    else -> result.segment.name
+                }
+                Log.d("API", "   $label: ${result.itemsSynced} items in ${result.durationMs}ms")
+            }
+            results
+        } finally {
+            _activeIncomingSync.value = null
         }
-        val roomPhotosResult = results.firstOrNull { it.segment == SyncSegment.ALL_ROOM_PHOTOS }
-        if (roomPhotosResult != null && !roomPhotosResult.success) {
-            Log.w("API", "⚠️ [syncProjectGraph] Room photos sync failed but continuing", roomPhotosResult.error)
-        }
-        val projectPhotosResult = results.firstOrNull { it.segment == SyncSegment.PROJECT_LEVEL_PHOTOS }
-        if (projectPhotosResult != null && !projectPhotosResult.success) {
-            Log.w("API", "⚠️ [syncProjectGraph] Project-level photos sync failed", projectPhotosResult.error)
-        }
-
-        Log.d("API", "✅ [syncProjectGraph] FULL sync completed in ${duration}ms")
-        essentialsResult?.let {
-            Log.d("API", "   Essentials: ${it.itemsSynced} items in ${it.durationMs}ms")
-        }
-        metadataResult?.let {
-            Log.d("API", "   Metadata: ${it.itemsSynced} items in ${it.durationMs}ms")
-        }
-        roomPhotosResult?.let {
-            Log.d("API", "   Room photos: ${it.itemsSynced} photos in ${it.durationMs}ms")
-        }
-        projectPhotosResult?.let {
-            Log.d("API", "   Project photos: ${it.itemsSynced} photos in ${it.durationMs}ms")
-        }
-        results
     }
 
     /**

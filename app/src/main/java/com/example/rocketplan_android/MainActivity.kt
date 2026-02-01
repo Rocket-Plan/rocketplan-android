@@ -110,7 +110,8 @@ class MainActivity : AppCompatActivity() {
         syncStatusBannerManager = SyncStatusBannerManager(
             syncNetworkMonitor = rocketPlanApp.syncNetworkMonitor,
             localDataService = rocketPlanApp.localDataService,
-            syncQueueManager = rocketPlanApp.syncQueueManager
+            syncQueueManager = rocketPlanApp.syncQueueManager,
+            offlineSyncRepository = rocketPlanApp.offlineSyncRepository
         )
 
         if (BuildConfig.ENABLE_LOGGING) {
@@ -670,8 +671,17 @@ class MainActivity : AppCompatActivity() {
                         iconView.setBackgroundResource(R.drawable.bg_icon_circle_green)
                         iconView.setImageResource(R.drawable.ic_sync)
                         iconView.setColorFilter(getColor(R.color.sync_banner_syncing_stroke))
-                        titleView.text = getString(R.string.sync_banner_syncing_title)
-                        subtitleView.text = formatSyncingItems(state.items)
+                        // Check if this is an incoming (download) sync
+                        val incomingItem = state.items.firstOrNull { it.entityType == "project_incoming" }
+                        if (incomingItem != null) {
+                            // For incoming sync, show step name in title and progress in subtitle
+                            titleView.text = incomingItem.displayName // "Syncing: Rooms"
+                            subtitleView.text = incomingItem.projectName ?: "" // "2 of 4"
+                        } else {
+                            // For outgoing sync, show generic title and items in subtitle
+                            titleView.text = getString(R.string.sync_banner_syncing_title)
+                            subtitleView.text = formatSyncingItems(state.items)
+                        }
                     }
                     is SyncStatusBannerState.Refreshing -> {
                         bannerCard.visibility = View.VISIBLE
