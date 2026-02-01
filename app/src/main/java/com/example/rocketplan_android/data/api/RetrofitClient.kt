@@ -4,6 +4,7 @@ import com.example.rocketplan_android.config.AppConfig
 import com.google.gson.GsonBuilder
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
+import okhttp3.CertificatePinner
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -99,12 +100,39 @@ object RetrofitClient {
     }
 
     /**
-     * OkHttp client with interceptors and timeouts
+     * Certificate pinner for SSL pinning to prevent MITM attacks.
+     *
+     * To generate certificate hashes, run:
+     * openssl s_client -servername <hostname> -connect <hostname>:443 | \
+     *   openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | \
+     *   openssl dgst -sha256 -binary | openssl enc -base64
+     *
+     * Note: Pin both the leaf certificate and at least one backup (intermediate CA)
+     * to avoid lockout during certificate rotation.
+     */
+    private val certificatePinner: CertificatePinner? = if (AppConfig.isProduction) {
+        CertificatePinner.Builder()
+            // Production API - pin leaf and intermediate certificates
+            .add("api-public.rocketplantech.com",
+                "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=" // TODO: Replace with actual leaf cert hash
+            )
+            .add("api-public.rocketplantech.com",
+                "sha256/CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=" // TODO: Replace with intermediate CA hash
+            )
+            .build()
+    } else {
+        // Disable pinning in dev/staging for easier debugging
+        null
+    }
+
+    /**
+     * OkHttp client with interceptors, timeouts, and certificate pinning
      */
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
         .addInterceptor(GzipRequestInterceptor())
+        .apply { certificatePinner?.let { certificatePinner(it) } }
         .connectTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
         .readTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
         .writeTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)

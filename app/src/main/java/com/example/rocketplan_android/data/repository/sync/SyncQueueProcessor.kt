@@ -45,6 +45,8 @@ import com.google.gson.Gson
 import retrofit2.HttpException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import com.example.rocketplan_android.util.UuidUtils
 import java.util.Date
@@ -89,6 +91,13 @@ class SyncQueueProcessor(
 ) : SyncQueueEnqueuer {
     private val gson = Gson()
     private val syncQueueLogger = SyncQueueLogger(remoteLogger)
+
+    /**
+     * Mutex to protect operation execution from race conditions.
+     * Ensures isEntityDeleted check and operation execution are atomic,
+     * preventing race where entity is deleted between check and sync.
+     */
+    private val operationMutex = Mutex()
 
     // Handler context and handlers for extracted push logic
     private val handlerContext by lazy {
@@ -176,15 +185,21 @@ class SyncQueueProcessor(
             block: suspend () -> OperationOutcome
         ) {
             val startTime = System.currentTimeMillis()
-            // Check if entity was deleted (e.g., by cascadeDeleteProject) to prevent race condition
-            // where delete clears sync queue but concurrent processor is mid-execution
-            if (operation.operationType != SyncOperationType.DELETE && isEntityDeleted(operation.entityType, operation.entityId, operation.entityUuid)) {
-                Log.d(TAG, "⏭️ [$label] Entity ${operation.entityType}/${operation.entityId} is deleted locally, dropping operation")
-                localDataService.removeSyncOperation(operation.operationId)
-                return
+
+            // Use mutex to ensure isEntityDeleted check and block execution are atomic.
+            // This prevents race conditions where entity is deleted between check and sync.
+            val outcome = operationMutex.withLock {
+                // Check if entity was deleted (e.g., by cascadeDeleteProject) to prevent race condition
+                // where delete clears sync queue but concurrent processor is mid-execution
+                if (operation.operationType != SyncOperationType.DELETE && isEntityDeleted(operation.entityType, operation.entityId, operation.entityUuid)) {
+                    Log.d(TAG, "⏭️ [$label] Entity ${operation.entityType}/${operation.entityId} is deleted locally, dropping operation")
+                    localDataService.removeSyncOperation(operation.operationId)
+                    return
+                }
+                runCatching { block() }
             }
 
-            runCatching { block() }
+            outcome
                 .onSuccess { outcome ->
                     val durationMs = System.currentTimeMillis() - startTime
                     val metricsOutcome = when (outcome) {

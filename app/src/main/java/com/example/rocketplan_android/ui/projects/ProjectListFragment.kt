@@ -10,7 +10,9 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -87,36 +89,38 @@ class ProjectListFragment : Fragment() {
 
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.uiState.collect { state ->
-                when (state) {
-                    is ProjectsUiState.Loading -> {
-                        progressBar.isVisible = true
-                        recyclerView.isVisible = false
-                        emptyStateLayout.isVisible = false
-                    }
-                    is ProjectsUiState.Success -> {
-                        progressBar.isVisible = false
-
-                        val projects = when {
-                            tabKey == TAB_MY_PROJECTS -> state.myProjects
-                            statusFilter != null -> state.projectsByStatus[statusFilter] ?: emptyList()
-                            else -> emptyList()
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state ->
+                    when (state) {
+                        is ProjectsUiState.Loading -> {
+                            progressBar.isVisible = true
+                            recyclerView.isVisible = false
+                            emptyStateLayout.isVisible = false
                         }
+                        is ProjectsUiState.Success -> {
+                            progressBar.isVisible = false
 
-                        if (projects.isEmpty()) {
+                            val projects = when {
+                                tabKey == TAB_MY_PROJECTS -> state.myProjects
+                                statusFilter != null -> state.projectsByStatus[statusFilter] ?: emptyList()
+                                else -> emptyList()
+                            }
+
+                            if (projects.isEmpty()) {
+                                recyclerView.isVisible = false
+                                emptyStateLayout.isVisible = true
+                            } else {
+                                recyclerView.isVisible = true
+                                emptyStateLayout.isVisible = false
+                                adapter.submitList(projects)
+                            }
+                        }
+                        is ProjectsUiState.Error -> {
+                            progressBar.isVisible = false
                             recyclerView.isVisible = false
                             emptyStateLayout.isVisible = true
-                        } else {
-                            recyclerView.isVisible = true
-                            emptyStateLayout.isVisible = false
-                            adapter.submitList(projects)
+                            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
                         }
-                    }
-                    is ProjectsUiState.Error -> {
-                        progressBar.isVisible = false
-                        recyclerView.isVisible = false
-                        emptyStateLayout.isVisible = true
-                        Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
                     }
                 }
             }

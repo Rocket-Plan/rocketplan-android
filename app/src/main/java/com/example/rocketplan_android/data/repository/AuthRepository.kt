@@ -51,8 +51,9 @@ class AuthRepository(
             val response = authService.checkEmail(CheckEmailRequest(email))
             android.util.Log.d("AuthRepository", "checkEmail: response code=${response.code()}")
 
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            if (response.isSuccessful) {
+                response.body()?.let { Result.success(it) }
+                    ?: Result.failure(Exception("Empty response body"))
             } else {
                 val apiError = ApiError.fromHttpResponse(
                     response.code(),
@@ -187,8 +188,9 @@ class AuthRepository(
         return try {
             val response = authService.resetPassword(ResetPasswordRequest(email))
 
-            if (response.isSuccessful && response.body() != null) {
-                Result.success(response.body()!!)
+            if (response.isSuccessful) {
+                response.body()?.let { Result.success(it) }
+                    ?: Result.failure(Exception("Empty response body"))
             } else {
                 val apiError = ApiError.fromHttpResponse(
                     response.code(),
