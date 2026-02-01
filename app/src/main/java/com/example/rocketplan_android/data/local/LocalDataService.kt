@@ -43,6 +43,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
 import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
 import com.example.rocketplan_android.data.local.entity.preferredImageSource
 import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
@@ -248,6 +249,18 @@ class LocalDataService private constructor(
 
     suspend fun getPropertyByServerId(serverId: Long): OfflinePropertyEntity? =
         withContext(ioDispatcher) { dao.getPropertyByServerId(serverId) }
+
+    fun observeProperty(propertyId: Long): Flow<OfflinePropertyEntity?> =
+        dao.observeProperty(propertyId)
+
+    fun observePropertyByServerId(serverId: Long): Flow<OfflinePropertyEntity?> =
+        dao.observePropertyByServerId(serverId)
+
+    fun observeDamageTypes(projectServerId: Long): Flow<List<OfflineDamageTypeEntity>> =
+        dao.observeDamageTypes(projectServerId)
+
+    fun observeDamageCauses(projectServerId: Long): Flow<List<OfflineDamageCauseEntity>> =
+        dao.observeDamageCauses(projectServerId)
 
     suspend fun deleteProperty(propertyId: Long) =
         withContext(ioDispatcher) { dao.deleteProperty(propertyId) }
@@ -1669,6 +1682,34 @@ class LocalDataService private constructor(
         if (types.isNotEmpty()) {
             dao.upsertTimecardTypes(types)
         }
+    }
+    // endregion
+
+    // region Claims (Loss Info offline support)
+    fun observeProjectClaims(projectId: Long): Flow<List<OfflineClaimEntity>> =
+        dao.observeProjectClaims(projectId)
+
+    fun observeLocationClaims(locationId: Long): Flow<List<OfflineClaimEntity>> =
+        dao.observeLocationClaims(locationId)
+
+    suspend fun getProjectClaims(projectId: Long): List<OfflineClaimEntity> =
+        withContext(ioDispatcher) { dao.getProjectClaims(projectId) }
+
+    suspend fun getLocationClaims(locationId: Long): List<OfflineClaimEntity> =
+        withContext(ioDispatcher) { dao.getLocationClaims(locationId) }
+
+    suspend fun saveClaims(claims: List<OfflineClaimEntity>) = withContext(ioDispatcher) {
+        if (claims.isNotEmpty()) {
+            dao.upsertClaims(claims)
+        }
+    }
+
+    suspend fun deleteClaimsForProject(projectId: Long) = withContext(ioDispatcher) {
+        dao.deleteClaimsForProject(projectId)
+    }
+
+    suspend fun deleteClaimsForLocation(locationId: Long) = withContext(ioDispatcher) {
+        dao.deleteClaimsForLocation(locationId)
     }
     // endregion
 

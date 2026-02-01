@@ -72,6 +72,28 @@ data class OfflinePropertyEntity(
     val zipCode: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
+    // Property info fields
+    val yearBuilt: Int? = null,
+    val buildingName: String? = null,
+    val referredByName: String? = null,
+    val referredByPhone: String? = null,
+    val isPlatinumAgent: Boolean? = null,
+    val isResidential: Boolean? = null,
+    val isCommercial: Boolean? = null,
+    val propertyTypeId: Long? = null,
+    val propertyTypeName: String? = null,
+    val asbestosStatusId: Long? = null,
+    val asbestosStatusName: String? = null,
+    // Loss info fields
+    val damageCategory: Int? = null,
+    val lossClass: Int? = null,
+    val lossDate: String? = null,
+    val callReceived: String? = null,
+    val crewDispatched: String? = null,
+    val arrivedOnSite: String? = null,
+    val damageCauseId: Long? = null,
+    val damageCauseName: String? = null,
+    // Sync fields
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
     val createdAt: Date = Date(),
@@ -864,4 +886,39 @@ data class OfflineTimecardTypeEntity(
     val typeId: Int,
     val name: String,
     val description: String? = null
+)
+
+// ============================================================================
+// Claim Entities (for Loss Info offline support)
+// ============================================================================
+
+@Entity(
+    tableName = "offline_claims",
+    indices = [
+        Index(value = ["projectId"]),
+        Index(value = ["locationId"])
+    ]
+)
+data class OfflineClaimEntity(
+    @PrimaryKey
+    val claimId: Long,
+    val projectId: Long? = null,
+    val locationId: Long? = null,
+    val policyHolder: String? = null,
+    val ownershipStatus: String? = null,
+    val policyHolderPhone: String? = null,
+    val policyHolderEmail: String? = null,
+    val representative: String? = null,
+    val provider: String? = null,
+    val insuranceDeductible: String? = null,
+    val policyNumber: String? = null,
+    val claimNumber: String? = null,
+    val adjuster: String? = null,
+    val adjusterPhone: String? = null,
+    val adjusterEmail: String? = null,
+    val claimTypeId: Long? = null,
+    val claimTypeName: String? = null,
+    val createdAt: Date? = null,
+    val updatedAt: Date? = null,
+    val lastSyncedAt: Date? = null
 )

@@ -46,6 +46,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
 
 @Database(
     entities = [
@@ -84,9 +85,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntit
         OfflineRoleEntity::class,
         OfflineUserRoleEntity::class,
         OfflineTimecardEntity::class,
-        OfflineTimecardTypeEntity::class
+        OfflineTimecardTypeEntity::class,
+        OfflineClaimEntity::class
     ],
-    version = 21,
+    version = 22,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -398,6 +400,62 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_21_22 = object : Migration(21, 22) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add property info fields to offline_properties
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN yearBuilt INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN buildingName TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN referredByName TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN referredByPhone TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN isPlatinumAgent INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN isResidential INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN isCommercial INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN propertyTypeId INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN propertyTypeName TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN asbestosStatusId INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN asbestosStatusName TEXT")
+                // Add loss info fields to offline_properties
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN damageCategory INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN lossClass INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN lossDate TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN callReceived TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN crewDispatched TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN arrivedOnSite TEXT")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN damageCauseId INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN damageCauseName TEXT")
+
+                // Create offline_claims table for caching claims
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_claims (
+                        claimId INTEGER NOT NULL PRIMARY KEY,
+                        projectId INTEGER,
+                        locationId INTEGER,
+                        policyHolder TEXT,
+                        ownershipStatus TEXT,
+                        policyHolderPhone TEXT,
+                        policyHolderEmail TEXT,
+                        representative TEXT,
+                        provider TEXT,
+                        insuranceDeductible TEXT,
+                        policyNumber TEXT,
+                        claimNumber TEXT,
+                        adjuster TEXT,
+                        adjusterPhone TEXT,
+                        adjusterEmail TEXT,
+                        claimTypeId INTEGER,
+                        claimTypeName TEXT,
+                        createdAt INTEGER,
+                        updatedAt INTEGER,
+                        lastSyncedAt INTEGER
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_claims_projectId ON offline_claims(projectId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_claims_locationId ON offline_claims(locationId)")
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -405,7 +463,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {

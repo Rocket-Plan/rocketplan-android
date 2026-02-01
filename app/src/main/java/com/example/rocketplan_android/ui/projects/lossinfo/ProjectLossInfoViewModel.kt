@@ -10,6 +10,9 @@ import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
+import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.SyncStatus
@@ -31,8 +34,12 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -102,6 +109,8 @@ sealed interface ProjectLossInfoEvent {
 
 data class ProjectLossInfoUiState(
     val isLoading: Boolean = true,
+    val isSyncing: Boolean = false,
+    val isClaimsLoading: Boolean = true,
     val isSaving: Boolean = false,
     val savingClaimId: Long? = null,
     val errorMessage: String? = null,
@@ -326,6 +335,28 @@ private class ProjectLossInfoRepository(
             zipCode = resolvedZip,
             latitude = resolvedLat,
             longitude = resolvedLng,
+            // Property info fields
+            yearBuilt = yearBuilt,
+            buildingName = name,
+            referredByName = referredByName,
+            referredByPhone = referredByPhone,
+            isPlatinumAgent = isPlatinumAgent,
+            isResidential = isResidential,
+            isCommercial = isCommercial,
+            propertyTypeId = propertyTypeId,
+            propertyTypeName = resolvedPropertyType(),
+            asbestosStatusId = asbestosStatusId,
+            asbestosStatusName = asbestosStatus?.name,
+            // Loss info fields
+            damageCategory = damageCategory,
+            lossClass = lossClass,
+            lossDate = lossDate,
+            callReceived = callReceived,
+            crewDispatched = crewDispatched,
+            arrivedOnSite = arrivedOnSite,
+            damageCauseId = damageCause?.id,
+            damageCauseName = damageCause?.name,
+            // Sync fields
             syncStatus = SyncStatus.SYNCED,
             syncVersion = 1,
             createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
@@ -359,43 +390,235 @@ class ProjectLossInfoViewModel(
     private val claimIdempotencyKeys: MutableMap<Long, String> = mutableMapOf()
 
     init {
-        refresh()
+        // Start observing local data immediately (offline-first)
+        observeLocalData()
+        // Trigger background sync without blocking UI
+        triggerBackgroundSync()
     }
 
-    fun refresh() {
+    /**
+     * Observe local Room data reactively. UI updates immediately from cache.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun observeLocalData() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                isSaving = false,
-                savingClaimId = null,
-                errorMessage = null
-            )
+            // Observe project to get propertyId and projectServerId
+            localDataService.observeProjects()
+                .map { projects -> projects.firstOrNull { it.projectId == projectId } }
+                .filterNotNull()
+                .flatMapLatest { project ->
+                    val propertyId = project.propertyId
+                    val projectServerId = project.serverId ?: project.projectId
+
+                    // If no property yet, emit minimal state and wait
+                    if (propertyId == null) {
+                        return@flatMapLatest flowOf(
+                            CombinedLocalData(
+                                project = project,
+                                property = null,
+                                damageTypes = emptyList(),
+                                damageCauses = emptyList(),
+                                claims = emptyList()
+                            )
+                        )
+                    }
+
+                    // Combine all the reactive flows
+                    combine(
+                        localDataService.observePropertyByServerId(propertyId),
+                        localDataService.observeDamageTypes(projectServerId),
+                        localDataService.observeDamageCauses(projectServerId),
+                        localDataService.observeProjectClaims(projectServerId)
+                    ) { property, damageTypes, damageCauses, claims ->
+                        CombinedLocalData(
+                            project = project,
+                            property = property,
+                            damageTypes = damageTypes,
+                            damageCauses = damageCauses,
+                            claims = claims
+                        )
+                    }
+                }
+                .collect { data ->
+                    updateUiFromLocalData(data)
+                }
+        }
+    }
+
+    /**
+     * Trigger background sync to fetch latest data from server.
+     * This runs non-blocking and updates Room, which triggers reactive UI updates.
+     */
+    private fun triggerBackgroundSync() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncing = true) }
+
+            // First ensure property is attached
             val propertyReady = ensurePropertyAttached()
             if (propertyReady.isFailure) {
                 val error = propertyReady.exceptionOrNull()
                 val message = error?.message ?: "Property still syncing, please try again."
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    isSaving = false,
-                    savingClaimId = null,
-                    errorMessage = message
-                )
+                _uiState.update { it.copy(isSyncing = false, errorMessage = message) }
                 _events.tryEmit(ProjectLossInfoEvent.PropertyMissing(message))
                 return@launch
             }
+
+            // Now sync all loss info data in background
             runCatching { repository.load(projectId) }
                 .onSuccess { payload ->
-                    _uiState.value = payload.toUiState()
+                    // Save data to Room (triggers reactive updates)
+                    savePayloadToRoom(payload)
+                    _uiState.update { it.copy(isSyncing = false, isLoading = false) }
                 }
                 .onFailure { error ->
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        isSaving = false,
-                        savingClaimId = null,
-                        errorMessage = error.message ?: "Unable to load loss info"
-                    )
+                    Log.w("LossInfo", "Background sync failed: ${error.message}", error)
+                    // Don't show error if we have cached data
+                    val hasData = _uiState.value.property != null
+                    _uiState.update {
+                        it.copy(
+                            isSyncing = false,
+                            isLoading = false,
+                            errorMessage = if (hasData) null else error.message
+                        )
+                    }
                 }
         }
+
+        // Load claims in background separately
+        viewModelScope.launch {
+            loadClaimsInBackground()
+        }
+    }
+
+    /**
+     * Save API payload to Room for offline caching.
+     */
+    private suspend fun savePayloadToRoom(payload: ProjectLossInfoPayload) {
+        // Save property with all loss info fields
+        val propertyEntity = payload.property.toEntityForRoom(payload.project)
+        localDataService.saveProperty(propertyEntity)
+
+        // Save damage types and causes
+        val projectServerId = payload.project.serverId ?: payload.project.projectId
+        localDataService.replaceDamageTypes(
+            projectServerId,
+            payload.damageTypes.map { it.toEntity(projectServerId) }
+        )
+        localDataService.replaceDamageCauses(
+            projectServerId,
+            payload.damageCauses.map { it.toEntity(projectServerId) }
+        )
+
+        // Save claims
+        val allClaims = mutableListOf<OfflineClaimEntity>()
+        payload.projectClaims.forEach { claim ->
+            allClaims.add(claim.toEntity())
+        }
+        payload.locationClaims.forEach { (_, claims) ->
+            claims.forEach { claim ->
+                allClaims.add(claim.toEntity())
+            }
+        }
+        if (allClaims.isNotEmpty()) {
+            localDataService.saveClaims(allClaims)
+        }
+    }
+
+    /**
+     * Load claims from API in background and save to Room.
+     */
+    private suspend fun loadClaimsInBackground() {
+        val project = localDataService.getProject(projectId) ?: return
+        val projectServerId = project.serverId ?: return
+
+        _uiState.update { it.copy(isClaimsLoading = true) }
+
+        runCatching {
+            val projectClaims = api.getProjectClaims(projectServerId).data
+            val locations = localDataService.getLocations(projectId)
+                .mapNotNull { entity ->
+                    entity.serverId?.let { serverId ->
+                        ClaimLocation(id = serverId, name = entity.title)
+                    }
+                }
+
+            val allClaims = mutableListOf<OfflineClaimEntity>()
+            projectClaims.forEach { claim ->
+                allClaims.add(claim.toEntity())
+            }
+
+            locations.forEach { location ->
+                runCatching { api.getLocationClaims(location.id).data }
+                    .getOrNull()
+                    ?.forEach { claim ->
+                        allClaims.add(claim.toEntity())
+                    }
+            }
+
+            if (allClaims.isNotEmpty()) {
+                localDataService.saveClaims(allClaims)
+            }
+        }.onFailure { error ->
+            Log.w("LossInfo", "Failed to load claims: ${error.message}")
+        }
+
+        _uiState.update { it.copy(isClaimsLoading = false) }
+    }
+
+    /**
+     * Update UI state from locally observed data.
+     */
+    private fun updateUiFromLocalData(data: CombinedLocalData) {
+        val project = data.project
+        val property = data.property
+
+        val projectDisplayName = listOfNotNull(
+            project.addressLine1?.takeIf { it.isNotBlank() },
+            project.title.takeIf { it.isNotBlank() },
+            project.alias?.takeIf { it.isNotBlank() }
+        ).firstOrNull()
+            ?: rocketPlanApp.getString(R.string.loss_info_claim_project_tag)
+
+        // Convert cached claims to ClaimListItems
+        val claimItems = data.claims.map { entity ->
+            ClaimListItem(
+                claim = entity.toDto(),
+                locationName = projectDisplayName // Simplification - could resolve location names
+            )
+        }
+
+        // Convert damage types/causes from entities to DTOs
+        val damageTypeDtos = data.damageTypes.map { it.toDto() }
+        val damageCauseDtos = data.damageCauses.map { it.toDto() }
+
+        // Build PropertyDto from entity if available
+        val propertyDto = property?.toDto()
+
+        _uiState.update { current ->
+            current.copy(
+                isLoading = property == null && current.isSyncing,
+                projectTitle = projectDisplayName,
+                projectCode = project.uid?.takeIf { it.isNotBlank() } ?: project.projectNumber,
+                projectCreatedAt = project.createdAt?.let { dateFormatter.format(it) },
+                property = propertyDto,
+                damageTypes = damageTypeDtos,
+                damageCauses = damageCauseDtos,
+                damageCategory = property?.damageCategory,
+                lossClass = property?.lossClass,
+                lossDate = property?.lossDate?.let { DateUtils.parseApiDate(it) },
+                callReceived = property?.callReceived?.let { DateUtils.parseApiDate(it) },
+                crewDispatched = property?.crewDispatched?.let { DateUtils.parseApiDate(it) },
+                arrivedOnSite = property?.arrivedOnSite?.let { DateUtils.parseApiDate(it) },
+                selectedDamageCause = property?.damageCauseId?.let { id ->
+                    damageCauseDtos.firstOrNull { it.id == id }
+                },
+                claims = claimItems
+            )
+        }
+    }
+
+    fun refresh() {
+        triggerBackgroundSync()
     }
 
     fun savePropertyInfo(form: PropertyInfoFormInput) {
@@ -743,4 +966,191 @@ class ProjectLossInfoViewModel(
             }
         }
     }
+}
+
+// Helper data class for combining local flows
+private data class CombinedLocalData(
+    val project: OfflineProjectEntity,
+    val property: OfflinePropertyEntity?,
+    val damageTypes: List<OfflineDamageTypeEntity>,
+    val damageCauses: List<OfflineDamageCauseEntity>,
+    val claims: List<OfflineClaimEntity>
+)
+
+// Extension functions for entity <-> DTO conversions
+
+private fun PropertyDto.toEntityForRoom(project: OfflineProjectEntity): OfflinePropertyEntity {
+    val timestamp = Date()
+    return OfflinePropertyEntity(
+        propertyId = id,
+        serverId = id,
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        address = address ?: project.addressLine1 ?: "",
+        city = city,
+        state = state,
+        zipCode = postalCode,
+        latitude = latitude,
+        longitude = longitude,
+        // Property info fields
+        yearBuilt = yearBuilt,
+        buildingName = name,
+        referredByName = referredByName,
+        referredByPhone = referredByPhone,
+        isPlatinumAgent = isPlatinumAgent,
+        isResidential = isResidential,
+        isCommercial = isCommercial,
+        propertyTypeId = propertyTypeId,
+        propertyTypeName = resolvedPropertyType(),
+        asbestosStatusId = asbestosStatusId,
+        asbestosStatusName = asbestosStatus?.name,
+        // Loss info fields
+        damageCategory = damageCategory,
+        lossClass = lossClass,
+        lossDate = lossDate,
+        callReceived = callReceived,
+        crewDispatched = crewDispatched,
+        arrivedOnSite = arrivedOnSite,
+        damageCauseId = damageCause?.id,
+        damageCauseName = damageCause?.name,
+        // Sync fields
+        syncStatus = SyncStatus.SYNCED,
+        syncVersion = 1,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        lastSyncedAt = timestamp
+    )
+}
+
+private fun OfflinePropertyEntity.toDto(): PropertyDto {
+    return PropertyDto(
+        id = serverId ?: propertyId,
+        uuid = uuid,
+        address = address,
+        city = city,
+        state = state,
+        postalCode = zipCode,
+        latitude = latitude,
+        longitude = longitude,
+        isResidential = isResidential,
+        isCommercial = isCommercial,
+        yearBuilt = yearBuilt,
+        name = buildingName,
+        referredByName = referredByName,
+        referredByPhone = referredByPhone,
+        isPlatinumAgent = isPlatinumAgent,
+        asbestosStatusId = asbestosStatusId,
+        asbestosStatus = asbestosStatusName?.let {
+            com.example.rocketplan_android.data.model.offline.PropertyDataDto(
+                id = asbestosStatusId,
+                name = it
+            )
+        },
+        damageCategory = damageCategory,
+        lossClass = lossClass,
+        lossDate = lossDate,
+        callReceived = callReceived,
+        crewDispatched = crewDispatched,
+        arrivedOnSite = arrivedOnSite,
+        damageCause = damageCauseId?.let { id ->
+            DamageCauseDto(id = id, name = damageCauseName)
+        },
+        propertyTypeId = propertyTypeId,
+        propertyType = propertyTypeName,
+        createdAt = null,
+        updatedAt = null
+    )
+}
+
+private fun DamageTypeDto.toEntity(projectServerId: Long): OfflineDamageTypeEntity {
+    return OfflineDamageTypeEntity(
+        projectServerId = projectServerId,
+        damageTypeId = id,
+        name = name,
+        title = title
+    )
+}
+
+private fun OfflineDamageTypeEntity.toDto(): DamageTypeDto {
+    return DamageTypeDto(
+        id = damageTypeId,
+        name = name,
+        title = title
+    )
+}
+
+private fun DamageCauseDto.toEntity(projectServerId: Long): OfflineDamageCauseEntity {
+    return OfflineDamageCauseEntity(
+        projectServerId = projectServerId,
+        damageCauseId = id,
+        name = name,
+        isStandard = isStandard,
+        propertyDamageTypeId = propertyDamageType?.id,
+        propertyDamageTypeName = propertyDamageType?.name,
+        propertyDamageTypeTitle = propertyDamageType?.title
+    )
+}
+
+private fun OfflineDamageCauseEntity.toDto(): DamageCauseDto {
+    return DamageCauseDto(
+        id = damageCauseId,
+        name = name,
+        isStandard = isStandard,
+        propertyDamageType = propertyDamageTypeId?.let { id ->
+            DamageTypeDto(
+                id = id,
+                name = propertyDamageTypeName,
+                title = propertyDamageTypeTitle
+            )
+        }
+    )
+}
+
+private fun ClaimDto.toEntity(): OfflineClaimEntity {
+    return OfflineClaimEntity(
+        claimId = id,
+        projectId = projectId,
+        locationId = locationId,
+        policyHolder = policyHolder ?: claimInfo?.policyHolder,
+        ownershipStatus = ownershipStatus ?: claimInfo?.ownershipStatus,
+        policyHolderPhone = policyHolderPhone ?: claimInfo?.policyHolderPhone,
+        policyHolderEmail = policyHolderEmail ?: claimInfo?.policyHolderEmail,
+        representative = representative ?: claimInfo?.representative,
+        provider = provider ?: claimInfo?.provider,
+        insuranceDeductible = insuranceDeductible ?: claimInfo?.insuranceDeductible,
+        policyNumber = policyNumber ?: claimInfo?.policyNumber,
+        claimNumber = claimNumber ?: claimInfo?.claimNumber,
+        adjuster = adjuster ?: claimInfo?.adjuster,
+        adjusterPhone = adjusterPhone ?: claimInfo?.adjusterPhone,
+        adjusterEmail = adjusterEmail ?: claimInfo?.adjusterEmail,
+        claimTypeId = claimType?.id,
+        claimTypeName = claimType?.name,
+        createdAt = createdAt,
+        updatedAt = updatedAt,
+        lastSyncedAt = Date()
+    )
+}
+
+private fun OfflineClaimEntity.toDto(): ClaimDto {
+    return ClaimDto(
+        id = claimId,
+        projectId = projectId,
+        locationId = locationId,
+        policyHolder = policyHolder,
+        ownershipStatus = ownershipStatus,
+        policyHolderPhone = policyHolderPhone,
+        policyHolderEmail = policyHolderEmail,
+        representative = representative,
+        provider = provider,
+        insuranceDeductible = insuranceDeductible,
+        policyNumber = policyNumber,
+        claimNumber = claimNumber,
+        adjuster = adjuster,
+        adjusterPhone = adjusterPhone,
+        adjusterEmail = adjusterEmail,
+        claimType = claimTypeId?.let { id ->
+            com.example.rocketplan_android.data.model.ClaimTypeDto(id = id, name = claimTypeName)
+        },
+        createdAt = createdAt,
+        updatedAt = updatedAt
+    )
 }

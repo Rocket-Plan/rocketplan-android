@@ -43,6 +43,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
+import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import com.example.rocketplan_android.data.local.model.ProjectWithProperty
 import kotlinx.coroutines.flow.Flow
@@ -316,6 +317,24 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_damage_causes WHERE projectServerId = :projectServerId")
     suspend fun clearDamageCauses(projectServerId: Long)
+
+    @Query(
+        """
+        SELECT * FROM offline_damage_types
+        WHERE projectServerId = :projectServerId
+        ORDER BY COALESCE(name, title) COLLATE NOCASE
+        """
+    )
+    fun observeDamageTypes(projectServerId: Long): Flow<List<OfflineDamageTypeEntity>>
+
+    @Query(
+        """
+        SELECT * FROM offline_damage_causes
+        WHERE projectServerId = :projectServerId
+        ORDER BY COALESCE(name, '') COLLATE NOCASE
+        """
+    )
+    fun observeDamageCauses(projectServerId: Long): Flow<List<OfflineDamageCauseEntity>>
     // endregion
 
     // region Atmospheric Logs
@@ -932,6 +951,12 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_properties WHERE serverId = :serverId LIMIT 1")
     suspend fun getPropertyByServerId(serverId: Long): OfflinePropertyEntity?
 
+    @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId LIMIT 1")
+    fun observeProperty(propertyId: Long): Flow<OfflinePropertyEntity?>
+
+    @Query("SELECT * FROM offline_properties WHERE serverId = :serverId LIMIT 1")
+    fun observePropertyByServerId(serverId: Long): Flow<OfflinePropertyEntity?>
+
     @Query(
         """
         SELECT address FROM (
@@ -1378,5 +1403,28 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_timecard_types")
     suspend fun clearTimecardTypes()
+    // endregion
+
+    // region Claims (Loss Info offline support)
+    @Upsert
+    suspend fun upsertClaims(claims: List<OfflineClaimEntity>)
+
+    @Query("SELECT * FROM offline_claims WHERE projectId = :projectId ORDER BY createdAt DESC")
+    fun observeProjectClaims(projectId: Long): Flow<List<OfflineClaimEntity>>
+
+    @Query("SELECT * FROM offline_claims WHERE locationId = :locationId ORDER BY createdAt DESC")
+    fun observeLocationClaims(locationId: Long): Flow<List<OfflineClaimEntity>>
+
+    @Query("SELECT * FROM offline_claims WHERE projectId = :projectId ORDER BY createdAt DESC")
+    suspend fun getProjectClaims(projectId: Long): List<OfflineClaimEntity>
+
+    @Query("SELECT * FROM offline_claims WHERE locationId = :locationId ORDER BY createdAt DESC")
+    suspend fun getLocationClaims(locationId: Long): List<OfflineClaimEntity>
+
+    @Query("DELETE FROM offline_claims WHERE projectId = :projectId")
+    suspend fun deleteClaimsForProject(projectId: Long)
+
+    @Query("DELETE FROM offline_claims WHERE locationId = :locationId")
+    suspend fun deleteClaimsForLocation(locationId: Long)
     // endregion
 }
