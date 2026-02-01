@@ -15,7 +15,7 @@
     <dimen name="icon_size_list_large">42dp</dimen>
     <dimen name="icon_size_action">40dp</dimen>
     <dimen name="icon_touch_target">44dp</dimen>
-    <dimen name="icon_size_card_large">48dp</dimen>
+    <dimen name="icon_size_card_large">44dp</dimen>
     <dimen name="icon_size_card_room">53dp</dimen>
     <dimen name="icon_size_section">56dp</dimen>
     <dimen name="icon_size_tile">56dp</dimen>

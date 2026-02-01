@@ -31,8 +31,7 @@
                 app:cardBackgroundColor="@android:color/transparent"
                 app:cardCornerRadius="28dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/main_purple"
-                app:strokeWidth="2dp">
+                app:strokeWidth="0dp">
 
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/roomTabGroup"

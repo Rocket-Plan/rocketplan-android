@@ -1197,9 +1197,9 @@ class RoomDetailFragment : Fragment() {
         // Create dynamic buttons for each category from actual data
         categories.forEach { category ->
             val button = com.google.android.material.button.MaterialButton(
-                requireContext(),
+                android.view.ContextThemeWrapper(requireContext(), R.style.Widget_RocketPlan_DamageFilterButton),
                 null,
-                com.google.android.material.R.attr.materialButtonOutlinedStyle
+                0
             ).apply {
                 id = View.generateViewId()
                 text = category

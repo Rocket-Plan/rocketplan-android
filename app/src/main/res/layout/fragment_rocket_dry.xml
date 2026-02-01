@@ -55,9 +55,8 @@
             <com.google.android.material.button.MaterialButtonToggleGroup
                 android:id="@+id/toggleGroup"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
+                android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
-                android:padding="4dp"
                 app:checkedButton="@id/equipmentButton"
                 app:selectionRequired="true"
                 app:singleSelection="true">
@@ -66,7 +65,7 @@
                     style="@style/Widget.RocketPlan.SegmentedButton"
                     android:id="@+id/equipmentButton"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:layout_weight="1"
                     android:text="@string/equipment"
                     android:textAllCaps="false"
@@ -76,7 +75,7 @@
                     style="@style/Widget.RocketPlan.SegmentedButton"
                     android:id="@+id/moistureButton"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="@dimen/icon_size_card_large"
                     android:layout_weight="1"
                     android:text="@string/moisture"
                     android:textAllCaps="false"
