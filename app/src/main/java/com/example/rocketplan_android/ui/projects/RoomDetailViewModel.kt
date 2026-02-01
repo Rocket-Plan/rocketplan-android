@@ -1057,6 +1057,14 @@ class RoomDetailViewModel(
 
             if (activeAssemblies.isNotEmpty()) {
                 val active = activeAssemblies.first()
+                // Set initial state immediately so UI shows processing card even for queued/offline assemblies
+                _inFlightAssembly.value = InFlightAssemblyState(
+                    assemblyId = active.assemblyId,
+                    processedCount = 0,
+                    totalCount = active.totalFiles
+                )
+                Log.d(TAG, "📊 Set initial inFlightAssembly: id=${active.assemblyId}, status=${active.status}, total=${active.totalFiles}")
+
                 inFlightAssemblyJob?.cancel()
                 inFlightAssemblyJob = viewModelScope.launch {
                     imageProcessorRepository.observePhotosByAssemblyLocalId(active.id)

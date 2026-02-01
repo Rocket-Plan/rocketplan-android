@@ -15,6 +15,7 @@ import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository.RequestType
 import com.example.rocketplan_android.data.repository.SyncResult
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.util.DateUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -185,6 +186,9 @@ class RoomSyncService(
     suspend fun deleteRoom(projectId: Long, roomId: Long): RoomDeletionResult = withContext(ioDispatcher) {
         val room = localDataService.getRoom(roomId)
             ?: throw IllegalArgumentException("Room not found: $roomId")
+
+        // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
+        room.serverId?.let { DeletionTombstoneCache.recordDeletion("room", it) }
 
         Log.d(
             TAG,

@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
@@ -140,6 +141,8 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         )
         return runCatching {
             ctx.api.deleteEquipment(equipment.serverId, deleteRequest)
+            // Clear tombstone now that server confirmed deletion
+            DeletionTombstoneCache.clearTombstone("equipment", equipment.serverId)
             equipment.copy(
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
@@ -147,11 +150,15 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             )
         }.recoverCatching { error ->
             when {
-                error.isMissingOnServer() -> equipment.copy(
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = ctx.now()
-                )
+                error.isMissingOnServer() -> {
+                    // Clear tombstone - item is already gone from server
+                    DeletionTombstoneCache.clearTombstone("equipment", equipment.serverId)
+                    equipment.copy(
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastSyncedAt = ctx.now()
+                    )
+                }
                 else -> throw error
             }
         }.onFailure {

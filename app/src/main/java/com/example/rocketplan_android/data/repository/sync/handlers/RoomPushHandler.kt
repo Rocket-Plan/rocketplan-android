@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
 import com.example.rocketplan_android.config.AppConfig
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
@@ -448,6 +449,8 @@ class RoomPushHandler(
             lastSyncedAt = ctx.now()
         )
         ctx.localDataService.saveRooms(listOf(cleaned))
+        // Clear tombstone now that server confirmed deletion
+        serverId.let { DeletionTombstoneCache.clearTombstone("room", it) }
         return OperationOutcome.SUCCESS
     }
 

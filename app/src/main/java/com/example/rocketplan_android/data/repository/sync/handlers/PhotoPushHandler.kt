@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
@@ -35,6 +36,8 @@ class PhotoPushHandler(private val ctx: PushHandlerContext) {
             lastSyncedAt = ctx.now()
         )
         ctx.localDataService.savePhotos(listOf(cleaned))
+        // Clear tombstone now that server confirmed deletion
+        DeletionTombstoneCache.clearTombstone("photo", serverId)
         return OperationOutcome.SUCCESS
     }
 

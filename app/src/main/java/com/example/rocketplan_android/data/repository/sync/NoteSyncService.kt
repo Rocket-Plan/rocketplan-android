@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.repository.sync
 
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -73,6 +74,9 @@ class NoteSyncService(
         projectId: Long,
         note: OfflineNoteEntity
     ) = withContext(ioDispatcher) {
+        // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
+        note.serverId?.let { DeletionTombstoneCache.recordDeletion("note", it) }
+
         val lockUpdatedAt = note.updatedAt.toApiTimestamp()
         val updated = note.copy(
             isDeleted = true,

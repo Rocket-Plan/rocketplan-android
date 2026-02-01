@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository
 
 import android.util.Log
 import com.example.rocketplan_android.data.api.OfflineSyncApi
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
@@ -329,6 +330,9 @@ class OfflineSyncRepository(
                 throw Exception("Project not found locally")
             }
 
+        // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
+        project.serverId?.let { DeletionTombstoneCache.recordDeletion("project", it) }
+
         Log.d("API", "🗑️ [deleteProject] Found project - title: ${project.title}, serverId: ${project.serverId}, uuid: ${project.uuid}")
 
         val lockUpdatedAt = project.updatedAt.toApiTimestamp()
@@ -524,7 +528,20 @@ class OfflineSyncRepository(
 
         detail.rooms?.let { rooms ->
             val resolvedRooms = rooms.mapNotNull { room ->
+                // Skip if recently deleted locally (tombstone) or has pending delete in sync queue
+                if (room.id > 0 && (
+                    DeletionTombstoneCache.isRecentlyDeleted("room", room.id) ||
+                    localDataService.hasPendingDelete("room", room.id)
+                )) {
+                    Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - recently deleted locally")
+                    return@mapNotNull null
+                }
                 val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
+                // Don't resurrect deleted entities
+                if (existing?.isDeleted == true) {
+                    Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - local entity is deleted")
+                    return@mapNotNull null
+                }
                 if (room.id <= 0 && existing == null) {
                     Log.w(
                         "API",
@@ -653,8 +670,21 @@ class OfflineSyncRepository(
         // Process and save rooms (must be sequential for DB consistency)
         for ((locationId, rooms) in roomResults) {
             if (rooms.isNotEmpty()) {
-                val resolvedRooms = rooms.map { room ->
+                val resolvedRooms = rooms.mapNotNull { room ->
+                    // Skip if recently deleted locally (tombstone) or has pending delete in sync queue
+                    if (room.id > 0 && (
+                        DeletionTombstoneCache.isRecentlyDeleted("room", room.id) ||
+                        localDataService.hasPendingDelete("room", room.id)
+                    )) {
+                        Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - recently deleted locally")
+                        return@mapNotNull null
+                    }
                     val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
+                    // Don't resurrect deleted entities
+                    if (existing?.isDeleted == true) {
+                        Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - local entity is deleted")
+                        return@mapNotNull null
+                    }
                     room.toEntity(
                         existing = existing,
                         projectId = projectId,
@@ -662,7 +692,7 @@ class OfflineSyncRepository(
                     )
                 }
                 localDataService.saveRooms(resolvedRooms)
-                itemCount += rooms.size
+                itemCount += resolvedRooms.size
             }
         }
         ensureActive()
@@ -835,6 +865,10 @@ class OfflineSyncRepository(
     suspend fun deletePhoto(photoId: Long): PhotoDeletionResult = withContext(ioDispatcher) {
         val photo = localDataService.getPhoto(photoId)
             ?: throw IllegalArgumentException("Photo not found: $photoId")
+
+        // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
+        photo.serverId?.let { DeletionTombstoneCache.recordDeletion("photo", it) }
+
         val lockUpdatedAt = photo.updatedAt.toApiTimestamp()
         val timestamp = now()
         val marked = photo.copy(

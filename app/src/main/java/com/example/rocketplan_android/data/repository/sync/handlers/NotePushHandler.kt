@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
@@ -126,6 +127,8 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
             lastSyncedAt = ctx.now()
         )
         ctx.localDataService.saveNote(cleaned)
+        // Clear tombstone now that server confirmed deletion
+        DeletionTombstoneCache.clearTombstone("note", serverId)
         return OperationOutcome.SUCCESS
     }
 

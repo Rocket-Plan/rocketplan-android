@@ -1,6 +1,8 @@
 package com.example.rocketplan_android.data.queue
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.util.Log
 import androidx.work.BackoffPolicy
@@ -78,6 +80,20 @@ class ImageProcessorQueueManager(
             .readTimeout(5, TimeUnit.MINUTES)
             .writeTimeout(5, TimeUnit.MINUTES)
             .build()
+    }
+
+    private val connectivityManager: ConnectivityManager by lazy {
+        context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    }
+
+    /**
+     * Check if network is currently available.
+     * Used to skip upload attempts when offline (matching iOS pre-flight behavior).
+     */
+    private fun isNetworkAvailable(): Boolean {
+        val activeNetwork = connectivityManager.activeNetwork ?: return false
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork) ?: return false
+        return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     /**
@@ -434,6 +450,22 @@ class ImageProcessorQueueManager(
         photos: List<ImageProcessorPhotoEntity>,
         source: String = "unknown"
     ): Boolean {
+        // Pre-flight network check: skip attempt if offline (matching iOS behavior)
+        if (!isNetworkAvailable()) {
+            Log.d(TAG, "📴 Offline - skipping assembly creation for ${assembly.assemblyId}, will retry when network returns")
+            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.QUEUED, "Waiting for network")
+            remoteLogger?.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "Assembly creation deferred - device offline",
+                metadata = mapOf(
+                    "assembly_id" to assembly.assemblyId,
+                    "source" to source
+                )
+            )
+            return false
+        }
+
         Log.d(TAG, "🔄 Creating assembly on backend for ${assembly.assemblyId} (source=$source)")
 
         val projectServerId = offlineDao.getProject(assembly.projectId)?.serverId
@@ -1338,8 +1370,13 @@ class ImageProcessorQueueManager(
             )
         )
 
-        // Process next queued assembly
-        processNextQueuedAssembly()
+        // Process next queued assembly, but skip if we're offline to avoid busy loop
+        // NetworkMonitor will trigger retry when network returns
+        if (isNetworkAvailable()) {
+            processNextQueuedAssembly()
+        } else {
+            Log.d(TAG, "⏸️ Skipping next assembly processing - device offline")
+        }
     }
 
     private suspend fun updateAssemblyStatus(

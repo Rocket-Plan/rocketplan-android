@@ -956,6 +956,8 @@ class RoomDetailFragment : Fragment() {
                         }
                         processingPhotosAdapter.submitProgress(progress)
                         Log.d(TAG, "📊 Processing progress: ${assembly?.processedCount ?: 0}/${assembly?.totalCount ?: 0}")
+                        // Update visibility to show RecyclerView when processing items exist
+                        updatePhotoVisibility()
                     }
                 }
                 // Hide the banner - processing status is now shown in the grid
@@ -1144,31 +1146,35 @@ class RoomDetailFragment : Fragment() {
 
         val waitingForRealtime = awaitingRealtimePhotos
         val adapterItemCount = photoAdapter.itemCount
+        val hasProcessingItems = processingPhotosAdapter.itemCount > 0
 
         // Don't show full loading overlay for snapshot refresh - it causes flicker
         // Only show spinner for initial load when we have no data yet
-        if (snapshotRefreshInProgress && adapterItemCount == 0 && latestPhotoCount == 0) {
+        if (snapshotRefreshInProgress && adapterItemCount == 0 && latestPhotoCount == 0 && !hasProcessingItems) {
             photosLoadingSpinner.isVisible = true
             return
         }
         val hasPhotos = adapterItemCount > 0
         val effectiveLoadState = latestLoadState
-        val isLoading = effectiveLoadState is LoadState.Loading && adapterItemCount == 0
+        val isLoading = effectiveLoadState is LoadState.Loading && adapterItemCount == 0 && !hasProcessingItems
         // Hide full-screen overlay, use inline spinner instead
         loadingOverlay.isVisible = false
 
-        val showPlaceholder = adapterItemCount == 0 && latestPhotoCount == 0 && effectiveLoadState !is LoadState.Loading
-        val showSpinner = isLoading || (
+        // Show placeholder only when there are no photos AND no processing items
+        val showPlaceholder = adapterItemCount == 0 && latestPhotoCount == 0 && !hasProcessingItems && effectiveLoadState !is LoadState.Loading
+        // Don't show spinner if we have processing items (they show their own spinner)
+        val showSpinner = !hasProcessingItems && (isLoading || (
             adapterItemCount == 0 &&
                 (waitingForRealtime || (latestPhotoCount > 0 && effectiveLoadState !is LoadState.Error))
-            )
+            ))
 
         Log.d(
             TAG,
-            "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=$adapterItemCount, loadState=$effectiveLoadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder, showSpinner=$showSpinner, snapshotRefreshing=$snapshotRefreshInProgress"
+            "👁 updatePhotoVisibility: latestPhotoCount=$latestPhotoCount, adapterItemCount=$adapterItemCount, hasProcessingItems=$hasProcessingItems, loadState=$effectiveLoadState, hasPhotos=$hasPhotos, showPlaceholder=$showPlaceholder, showSpinner=$showSpinner, snapshotRefreshing=$snapshotRefreshInProgress"
         )
 
-        photosRecyclerView.isVisible = hasPhotos
+        // Show RecyclerView if we have photos OR processing items
+        photosRecyclerView.isVisible = hasPhotos || hasProcessingItems
         placeholderContainer.isVisible = showPlaceholder
         placeholderImage.isVisible = false
         placeholderText.text = if (showPlaceholder) getString(R.string.rocket_scan_empty_state) else ""

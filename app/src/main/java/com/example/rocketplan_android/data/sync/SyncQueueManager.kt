@@ -3,6 +3,7 @@ package com.example.rocketplan_android.data.sync
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import com.example.rocketplan_android.config.AppConfig
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.repository.AuthRepository
@@ -760,6 +761,8 @@ class SyncQueueManager(
                     .onFailure { error ->
                         Log.e(TAG, "❌ Failed to sync deleted records", error)
                     }
+                // Prune expired tombstones after sync cycle to prevent memory growth
+                DeletionTombstoneCache.pruneExpired()
             }
 
             is SyncJob.SyncUpdatedRecords -> {
