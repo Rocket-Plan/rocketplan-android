@@ -16,6 +16,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
@@ -28,6 +30,7 @@ import com.example.rocketplan_android.data.model.offline.EquipmentRequest
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
+import com.example.rocketplan_android.data.model.offline.CreateTimecardRequest
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.PhotoDto
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
@@ -38,6 +41,9 @@ import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoleDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomPhotoDto
+import com.example.rocketplan_android.data.model.offline.TimecardDto
+import com.example.rocketplan_android.data.model.offline.TimecardTypeDto
+import com.example.rocketplan_android.data.model.offline.UpdateTimecardRequest
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
@@ -805,5 +811,159 @@ internal fun AlbumDto.toEntity(defaultProjectId: Long, defaultRoomId: Long? = nu
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
+    )
+}
+
+// ============================================================================
+// Timecard Mappers
+// ============================================================================
+
+internal fun TimecardDto.toEntity(defaultCompanyId: Long? = null): OfflineTimecardEntity {
+    val timestamp = now()
+    return OfflineTimecardEntity(
+        timecardId = id,
+        serverId = id,
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        projectId = projectId,
+        userId = userId,
+        timecardTypeId = timecardTypeId,
+        timecardTypeName = timecardType?.name ?: "Standard",
+        timeIn = DateUtils.parseApiDate(timeIn) ?: timestamp,
+        timeOut = timeOut?.let { DateUtils.parseApiDate(it) },
+        elapsed = elapsed,
+        notes = notes,
+        companyId = companyId ?: defaultCompanyId ?: 0L,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        lastSyncedAt = timestamp,
+        syncStatus = SyncStatus.SYNCED,
+        syncVersion = 1,
+        isDirty = false,
+        isDeleted = false
+    )
+}
+
+internal fun TimecardTypeDto.toEntity(): OfflineTimecardTypeEntity =
+    OfflineTimecardTypeEntity(
+        typeId = id,
+        name = name,
+        description = description
+    )
+
+internal fun OfflineTimecardEntity.toCreateRequest(): CreateTimecardRequest =
+    CreateTimecardRequest(
+        timeIn = DateUtils.formatApiDate(timeIn),
+        timecardTypeId = timecardTypeId,
+        uuid = uuid,
+        notes = notes,
+        idempotencyKey = uuid
+    )
+
+internal fun OfflineTimecardEntity.toUpdateRequest(
+    updatedAtOverride: String? = null
+): UpdateTimecardRequest =
+    UpdateTimecardRequest(
+        timeIn = DateUtils.formatApiDate(timeIn),
+        timeOut = timeOut?.let { DateUtils.formatApiDate(it) },
+        timecardTypeId = timecardTypeId,
+        notes = notes,
+        updatedAt = updatedAtOverride ?: updatedAt.toApiTimestamp()
+    )
+
+// ============================================================================
+// Log Photo Mappers (for offline caching)
+// ============================================================================
+
+/**
+ * Creates an OfflinePhotoEntity from an atmospheric log's photo URL.
+ * Returns null if the log has no photo.
+ */
+internal fun AtmosphericLogDto.toPhotoEntity(): OfflinePhotoEntity? {
+    if (photoUrl.isNullOrBlank()) return null
+    val timestamp = now()
+    val logServerId = id
+    // Use negative timestamp as local ID for new records (will be replaced on sync)
+    val localId = -System.currentTimeMillis()
+    val photoUuid = uuid?.let { "atmos-photo-$it" } ?: UuidUtils.generateUuidV7()
+
+    return OfflinePhotoEntity(
+        photoId = localId,
+        serverId = null, // Log photos don't have separate server IDs
+        uuid = photoUuid,
+        projectId = projectId,
+        roomId = roomId,
+        logId = logServerId,
+        moistureLogId = null,
+        albumId = null,
+        fileName = "atmospheric_log_${logServerId}.jpg",
+        localPath = "",
+        remoteUrl = photoUrl,
+        thumbnailUrl = photoUrl, // Use same URL for thumbnail
+        uploadStatus = "completed",
+        assemblyId = null,
+        tusUploadId = null,
+        fileSize = 0,
+        width = null,
+        height = null,
+        mimeType = "image/jpeg",
+        capturedAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        lastSyncedAt = timestamp,
+        syncStatus = SyncStatus.SYNCED,
+        syncVersion = 1,
+        isDirty = false,
+        isDeleted = false,
+        cacheStatus = PhotoCacheStatus.PENDING,
+        cachedOriginalPath = null,
+        cachedThumbnailPath = null,
+        lastAccessedAt = null
+    )
+}
+
+/**
+ * Creates an OfflinePhotoEntity from a moisture log's photo URL.
+ * Returns null if the log has no photo.
+ */
+internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
+    if (photoUrl.isNullOrBlank()) return null
+    val timestamp = now()
+    val logServerId = id
+    // Use negative timestamp as local ID for new records (will be replaced on sync)
+    val localId = -System.currentTimeMillis()
+    val photoUuid = uuid?.let { "moisture-photo-$it" } ?: UuidUtils.generateUuidV7()
+
+    return OfflinePhotoEntity(
+        photoId = localId,
+        serverId = null, // Log photos don't have separate server IDs
+        uuid = photoUuid,
+        projectId = projectId,
+        roomId = roomId,
+        logId = null,
+        moistureLogId = logServerId,
+        albumId = null,
+        fileName = "moisture_log_${logServerId}.jpg",
+        localPath = "",
+        remoteUrl = photoUrl,
+        thumbnailUrl = photoUrl, // Use same URL for thumbnail
+        uploadStatus = "completed",
+        assemblyId = null,
+        tusUploadId = null,
+        fileSize = 0,
+        width = null,
+        height = null,
+        mimeType = "image/jpeg",
+        capturedAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        lastSyncedAt = timestamp,
+        syncStatus = SyncStatus.SYNCED,
+        syncVersion = 1,
+        isDirty = false,
+        isDeleted = false,
+        cacheStatus = PhotoCacheStatus.PENDING,
+        cachedOriginalPath = null,
+        cachedThumbnailPath = null,
+        lastAccessedAt = null
     )
 }

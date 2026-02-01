@@ -11,6 +11,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 
@@ -208,5 +209,19 @@ interface SyncQueueEnqueuer {
 
     suspend fun enqueueSupportMessageCreation(
         message: OfflineSupportMessageEntity
+    )
+
+    // ============================================================================
+    // Timecard Operations
+    // ============================================================================
+
+    suspend fun enqueueTimecardUpsert(
+        timecard: OfflineTimecardEntity,
+        lockUpdatedAt: String? = null
+    )
+
+    suspend fun enqueueTimecardDeletion(
+        timecard: OfflineTimecardEntity,
+        lockUpdatedAt: String? = null
     )
 }

@@ -97,6 +97,16 @@ class PhotoCacheManager(
                     originalPath = originalFile.absolutePath,
                     thumbnailPath = thumbnailFile?.absolutePath
                 )
+
+                // Sync cached path back to log entity so UI can use it for offline display
+                photo.logId?.let { logId ->
+                    localDataService.updateAtmosphericLogPhotoLocalPath(logId, originalFile.absolutePath)
+                    Log.d(TAG, "📸 Updated atmospheric log $logId with cached photo path")
+                }
+                photo.moistureLogId?.let { moistureLogId ->
+                    localDataService.updateMoistureLogPhotoLocalPath(moistureLogId, originalFile.absolutePath)
+                    Log.d(TAG, "📸 Updated moisture log $moistureLogId with cached photo path")
+                }
             }
         } catch (t: Throwable) {
             Log.e(TAG, "Error caching photo ${photo.photoId}", t)

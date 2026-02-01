@@ -22,6 +22,7 @@ import com.example.rocketplan_android.data.repository.ImageProcessingConfigurati
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.repository.sync.SupportSyncService
+import com.example.rocketplan_android.data.repository.sync.TimecardSyncService
 import com.example.rocketplan_android.data.storage.ImageProcessingConfigStore
 import com.example.rocketplan_android.data.storage.ImageProcessorUploadStore
 import com.example.rocketplan_android.data.storage.OfflineRoomTypeCatalogStore
@@ -99,6 +100,9 @@ class RocketPlanApplication : Application() {
     lateinit var supportSyncService: SupportSyncService
         private set
 
+    lateinit var timecardSyncService: TimecardSyncService
+        private set
+
     lateinit var photoSyncRealtimeManager: PhotoSyncRealtimeManager
         private set
     lateinit var projectRealtimeManager: ProjectRealtimeManager
@@ -153,6 +157,14 @@ class RocketPlanApplication : Application() {
             api = offlineSyncApi,
             localDataService = localDataService,
             syncQueueEnqueuer = { offlineSyncRepository.syncQueueEnqueuer }
+        )
+
+        timecardSyncService = TimecardSyncService(
+            localDataService = localDataService,
+            syncQueueEnqueuer = { offlineSyncRepository.syncQueueEnqueuer },
+            logLocalDeletion = { entityType, entityId, uuid ->
+                Log.d(TAG, "Local deletion: $entityType $entityId ($uuid)")
+            }
         )
 
         val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager

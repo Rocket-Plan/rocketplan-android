@@ -41,6 +41,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEnt
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
 import com.example.rocketplan_android.data.local.entity.hasRenderableAsset
 import com.example.rocketplan_android.data.local.entity.preferredImageSource
 import com.example.rocketplan_android.data.local.entity.preferredThumbnailSource
@@ -716,6 +718,9 @@ class LocalDataService private constructor(
             val albumPhotos = dao.deleteAlbumPhotosByRoomId(phantomRoomId)
             val albums = dao.markAlbumsDeletedByRoomId(phantomRoomId)
             val snapshots = dao.clearRoomPhotoSnapshots(phantomRoomId)
+            // Delete log photos before deleting logs
+            val atmosLogPhotos = dao.deletePhotosForAtmosphericLogsByRoomId(phantomRoomId)
+            val moistureLogPhotos = dao.deletePhotosForMoistureLogsByRoomId(phantomRoomId)
             val photos = dao.deletePhotosByRoomId(phantomRoomId)
             val notes = dao.deleteNotesByRoomId(phantomRoomId)
             val damages = dao.deleteDamagesByRoomId(phantomRoomId)
@@ -730,7 +735,8 @@ class LocalDataService private constructor(
                 "🧹 Deleted phantom roomId=$phantomRoomId and cleaned refs " +
                     "(rooms=$rooms, photos=$photos, notes=$notes, damages=$damages, equipment=$equipment, " +
                     "moistureLogs=$moistureLogs, atmosphericLogs=$atmosphericLogs, workScopes=$workScopes, " +
-                "albums=$albums, albumPhotos=$albumPhotos, snapshots=$snapshots)"
+                    "albums=$albums, albumPhotos=$albumPhotos, snapshots=$snapshots, " +
+                    "atmosLogPhotos=$atmosLogPhotos, moistureLogPhotos=$moistureLogPhotos)"
             )
         }
     }
@@ -751,9 +757,22 @@ class LocalDataService private constructor(
 
         database.withTransaction {
             roomIds.forEach { id ->
+                // First, delete sync operations for all child entities to prevent orphaned sync ops
+                dao.deleteSyncOpsForEquipmentByRoom(id)
+                dao.deleteSyncOpsForNotesByRoom(id)
+                dao.deleteSyncOpsForDamagesByRoom(id)
+                dao.deleteSyncOpsForMoistureLogsByRoom(id)
+                dao.deleteSyncOpsForAtmosphericLogsByRoom(id)
+                dao.deleteSyncOpsForWorkScopesByRoom(id)
+                dao.deleteSyncOpsForPhotosByRoom(id)
+
+                // Then delete the actual entities
                 dao.deleteAlbumPhotosByRoomId(id)
                 dao.markAlbumsDeletedByRoomId(id)
                 dao.clearRoomPhotoSnapshots(id)
+                // Delete log photos before deleting logs (to avoid FK issues)
+                dao.deletePhotosForAtmosphericLogsByRoomId(id)
+                dao.deletePhotosForMoistureLogsByRoomId(id)
                 dao.deletePhotosByRoomId(id)
                 dao.deleteNotesByRoomId(id)
                 dao.deleteDamagesByRoomId(id)
@@ -777,6 +796,61 @@ class LocalDataService private constructor(
 
     suspend fun saveAtmosphericLogs(logs: List<OfflineAtmosphericLogEntity>) = withContext(ioDispatcher) {
         dao.upsertAtmosphericLogs(logs)
+    }
+
+    /**
+     * Saves or updates photo entities for atmospheric/moisture logs.
+     * If a photo already exists for the log, updates the URL if changed and resets cache status.
+     * If no photo exists, inserts a new photo entity.
+     *
+     * @param photos List of photo entities to save (must have logId or moistureLogId set)
+     */
+    suspend fun saveOrUpdateLogPhotos(photos: List<OfflinePhotoEntity>) = withContext(ioDispatcher) {
+        if (photos.isEmpty()) return@withContext
+
+        database.withTransaction {
+            photos.forEach { photo ->
+                val existing = when {
+                    photo.logId != null -> dao.getPhotoForAtmosphericLog(photo.logId)
+                    photo.moistureLogId != null -> dao.getPhotoForMoistureLog(photo.moistureLogId)
+                    else -> null
+                }
+
+                if (existing != null) {
+                    // Update existing photo if URL changed
+                    if (existing.remoteUrl != photo.remoteUrl) {
+                        val updated = existing.copy(
+                            remoteUrl = photo.remoteUrl,
+                            thumbnailUrl = photo.thumbnailUrl,
+                            cacheStatus = PhotoCacheStatus.PENDING,
+                            cachedOriginalPath = null,
+                            cachedThumbnailPath = null,
+                            updatedAt = photo.updatedAt
+                        )
+                        dao.upsertPhotos(listOf(updated))
+                        Log.d("LocalDataService", "📸 Updated log photo ${existing.photoId} with new URL")
+                    }
+                } else {
+                    // Insert new photo entity
+                    dao.upsertPhotos(listOf(photo))
+                    Log.d("LocalDataService", "📸 Created log photo for logId=${photo.logId}, moistureLogId=${photo.moistureLogId}")
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates the photoLocalPath on an atmospheric log after its photo has been cached.
+     */
+    suspend fun updateAtmosphericLogPhotoLocalPath(logId: Long, localPath: String) = withContext(ioDispatcher) {
+        dao.updateAtmosphericLogPhotoLocalPath(logId, localPath)
+    }
+
+    /**
+     * Updates the photoLocalPath on a moisture log after its photo has been cached.
+     */
+    suspend fun updateMoistureLogPhotoLocalPath(logId: Long, localPath: String) = withContext(ioDispatcher) {
+        dao.updateMoistureLogPhotoLocalPath(logId, localPath)
     }
 
     suspend fun savePhotos(photos: List<OfflinePhotoEntity>) = withContext(ioDispatcher) {
@@ -1067,11 +1141,24 @@ class LocalDataService private constructor(
                     photosToDelete.addAll(dao.getPhotosForRoomSnapshot(id))
                 }
 
-                // Delete all room children
+                // Delete all room children and their sync operations
                 ids.forEach { id ->
+                    // First, delete sync operations for all child entities to prevent orphaned sync ops
+                    dao.deleteSyncOpsForEquipmentByRoom(id)
+                    dao.deleteSyncOpsForNotesByRoom(id)
+                    dao.deleteSyncOpsForDamagesByRoom(id)
+                    dao.deleteSyncOpsForMoistureLogsByRoom(id)
+                    dao.deleteSyncOpsForAtmosphericLogsByRoom(id)
+                    dao.deleteSyncOpsForWorkScopesByRoom(id)
+                    dao.deleteSyncOpsForPhotosByRoom(id)
+
+                    // Then delete the actual entities
                     dao.deleteAlbumPhotosByRoomId(id)
                     dao.markAlbumsDeletedByRoomId(id)
                     dao.clearRoomPhotoSnapshots(id)
+                    // Delete log photos before deleting logs (to avoid FK issues)
+                    dao.deletePhotosForAtmosphericLogsByRoomId(id)
+                    dao.deletePhotosForMoistureLogsByRoomId(id)
                     dao.deletePhotosByRoomId(id)
                     dao.deleteNotesByRoomId(id)
                     dao.deleteDamagesByRoomId(id)
@@ -1494,6 +1581,81 @@ class LocalDataService private constructor(
      */
     suspend fun getRolesForUser(userId: Long): List<OfflineRoleEntity> =
         withContext(ioDispatcher) { dao.getRolesForUser(userId) }
+    // endregion
+
+    // region Timecards
+    fun observeTimecardsForProject(projectId: Long): Flow<List<OfflineTimecardEntity>> =
+        dao.observeTimecardsForProject(projectId)
+
+    fun observeTimecardsForUser(userId: Long): Flow<List<OfflineTimecardEntity>> =
+        dao.observeTimecardsForUser(userId)
+
+    fun observeActiveTimecard(userId: Long): Flow<OfflineTimecardEntity?> =
+        dao.observeActiveTimecard(userId)
+
+    suspend fun getActiveTimecard(userId: Long): OfflineTimecardEntity? =
+        withContext(ioDispatcher) { dao.getActiveTimecard(userId) }
+
+    suspend fun getTimecard(timecardId: Long): OfflineTimecardEntity? =
+        withContext(ioDispatcher) { dao.getTimecard(timecardId) }
+
+    suspend fun getTimecardByUuid(uuid: String): OfflineTimecardEntity? =
+        withContext(ioDispatcher) { dao.getTimecardByUuid(uuid) }
+
+    suspend fun getTimecardByServerId(serverId: Long): OfflineTimecardEntity? =
+        withContext(ioDispatcher) { dao.getTimecardByServerId(serverId) }
+
+    suspend fun saveTimecard(timecard: OfflineTimecardEntity) = withContext(ioDispatcher) {
+        dao.upsertTimecard(timecard)
+    }
+
+    suspend fun saveTimecards(timecards: List<OfflineTimecardEntity>) = withContext(ioDispatcher) {
+        if (timecards.isNotEmpty()) {
+            dao.upsertTimecards(timecards)
+        }
+    }
+
+    suspend fun markTimecardDeleted(timecardId: Long) = withContext(ioDispatcher) {
+        dao.markTimecardDeleted(timecardId, Date().time)
+    }
+
+    suspend fun markTimecardSynced(uuid: String, serverId: Long) = withContext(ioDispatcher) {
+        dao.markTimecardSynced(uuid, serverId, Date().time)
+    }
+
+    suspend fun markTimecardsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        if (serverIds.isEmpty()) return@withContext
+        dao.markTimecardsDeleted(serverIds)
+    }
+
+    suspend fun markTimecardsDeletedByProject(projectId: Long) = withContext(ioDispatcher) {
+        dao.markTimecardsDeletedByProject(projectId)
+    }
+
+    suspend fun getTimecardsForDate(userId: Long, startOfDay: Date, endOfDay: Date): List<OfflineTimecardEntity> =
+        withContext(ioDispatcher) {
+            dao.getTimecardsForDate(userId, startOfDay.time, endOfDay.time)
+        }
+
+    suspend fun getTimecardsForWeek(userId: Long, startOfWeek: Date, endOfWeek: Date): List<OfflineTimecardEntity> =
+        withContext(ioDispatcher) {
+            dao.getTimecardsForWeek(userId, startOfWeek.time, endOfWeek.time)
+        }
+    // endregion
+
+    // region Timecard Types
+    fun observeTimecardTypes(): Flow<List<OfflineTimecardTypeEntity>> =
+        dao.observeTimecardTypes()
+
+    suspend fun getTimecardTypes(): List<OfflineTimecardTypeEntity> =
+        withContext(ioDispatcher) { dao.getTimecardTypes() }
+
+    suspend fun replaceTimecardTypes(types: List<OfflineTimecardTypeEntity>) = withContext(ioDispatcher) {
+        dao.clearTimecardTypes()
+        if (types.isNotEmpty()) {
+            dao.upsertTimecardTypes(types)
+        }
+    }
     // endregion
 
     companion object {

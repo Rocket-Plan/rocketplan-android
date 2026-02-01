@@ -816,3 +816,52 @@ data class OfflineUserRoleEntity(
     val roleId: Long,
     val companyId: Long?
 )
+
+// ============================================================================
+// Timecard Entities
+// ============================================================================
+
+@Entity(
+    tableName = "offline_timecards",
+    indices = [
+        Index(value = ["uuid"], unique = true),
+        Index(value = ["serverId"]),
+        Index(value = ["projectId"]),
+        Index(value = ["userId"]),
+        Index(value = ["syncStatus"]),
+        Index(value = ["timeIn"]),
+        Index(value = ["isDeleted"])
+    ]
+)
+data class OfflineTimecardEntity(
+    @PrimaryKey(autoGenerate = true)
+    val timecardId: Long = 0,
+    val serverId: Long? = null,
+    val uuid: String,
+    val projectId: Long,
+    val userId: Long,
+    val timecardTypeId: Int = 1,  // Default: Standard
+    val timecardTypeName: String = "Standard",
+    val timeIn: Date,
+    val timeOut: Date? = null,
+    val elapsed: Long? = null,  // seconds
+    val notes: String? = null,
+    val companyId: Long,
+
+    // Sync fields
+    val isDirty: Boolean = false,
+    val isDeleted: Boolean = false,
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
+    val syncVersion: Int = 0,
+    val createdAt: Date = Date(),
+    val updatedAt: Date = Date(),
+    val lastSyncedAt: Date? = null
+)
+
+@Entity(tableName = "offline_timecard_types")
+data class OfflineTimecardTypeEntity(
+    @PrimaryKey
+    val typeId: Int,
+    val name: String,
+    val description: String? = null
+)

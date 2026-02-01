@@ -144,5 +144,7 @@ data class FeatureFlagValues(
     @SerializedName("rocket_pay")
     val rocketPay: Boolean? = null,
     @SerializedName("use_image_processor")
-    val useImageProcessor: Boolean? = null
+    val useImageProcessor: Boolean? = null,
+    @SerializedName("timecards")
+    val timecardsEnabled: Boolean? = null
 )

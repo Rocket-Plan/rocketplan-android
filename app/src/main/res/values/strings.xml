@@ -742,4 +742,30 @@
     <string name="sync_banner_offline_subtitle">Changes will sync when connected</string>
     <string name="sync_banner_syncing_title">Syncing…</string>
     <string name="sync_banner_icon_description">Sync status icon</string>
+
+    <!-- Timecards -->
+    <string name="timecard_title">Clock In/Out</string>
+    <string name="timecard_subtitle">Track your time on this project.</string>
+    <string name="timecard_clock_in">Clock In</string>
+    <string name="timecard_clock_out">Clock Out</string>
+    <string name="timecard_clocked_in">Clocked In</string>
+    <string name="timecard_clocked_out">Clocked Out</string>
+    <string name="timecard_today">Today</string>
+    <string name="timecard_yesterday">Yesterday</string>
+    <string name="timecard_this_week">This Week</string>
+    <string name="timecard_recent">Recent Timecards</string>
+    <string name="timecard_empty">No timecards yet. Clock in to start tracking time.</string>
+    <string name="timecard_in_progress">In Progress</string>
+    <string name="timecard_time_separator">–</string>
+    <string name="timecard_time_in">Clock In Time</string>
+    <string name="timecard_time_out">Clock Out Time</string>
+    <string name="timecard_select_time">Select Time</string>
+    <string name="timecard_notes">Notes (optional)</string>
+    <string name="timecard_edit_title">Edit Timecard</string>
+    <string name="timecard_delete_title">Delete Timecard</string>
+    <string name="timecard_delete_confirm">Are you sure you want to delete this timecard?</string>
+    <string name="timecard_clocked_in_toast">Clocked in successfully</string>
+    <string name="timecard_clocked_out_toast">Clocked out successfully</string>
+    <string name="timecard_updated_toast">Timecard updated</string>
+    <string name="timecard_deleted_toast">Timecard deleted</string>
 </resources>

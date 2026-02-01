@@ -65,6 +65,7 @@ class ProjectLandingFragment : Fragment() {
     private lateinit var allNotesCard: View
     private lateinit var allNotesIcon: ImageView
     private lateinit var allNotesSubtitle: TextView
+    private lateinit var timecardCard: View
 
     private var latestSummary: ProjectLandingSummary? = null
     private var statusDialog: AlertDialog? = null
@@ -101,6 +102,7 @@ class ProjectLandingFragment : Fragment() {
         allNotesCard = root.findViewById(R.id.allNotesCard)
         allNotesIcon = root.findViewById(R.id.allNotesIcon)
         allNotesSubtitle = root.findViewById(R.id.allNotesSubtitle)
+        timecardCard = root.findViewById(R.id.timecardCard)
     }
 
     private fun bindListeners() {
@@ -189,6 +191,11 @@ class ProjectLandingFragment : Fragment() {
         allNotesCard.setOnClickListener {
             val action = ProjectLandingFragmentDirections
                 .actionProjectLandingFragmentToProjectNotesFragment(args.projectId)
+            findNavController().navigate(action)
+        }
+        timecardCard.setOnClickListener {
+            val action = ProjectLandingFragmentDirections
+                .actionProjectLandingFragmentToTimecardFragment(args.projectId)
             findNavController().navigate(action)
         }
         statusContainer.setOnClickListener {
@@ -289,6 +296,7 @@ class ProjectLandingFragment : Fragment() {
         allNotesSubtitle.text = getString(R.string.project_notes_subtitle)
 
         rocketDryCard.isVisible = AppConfig.isRocketDryEnabled
+        timecardCard.isVisible = true
     }
 
     private fun showAliasInputDialog() {

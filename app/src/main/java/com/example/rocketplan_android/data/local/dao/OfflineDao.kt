@@ -41,6 +41,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEnt
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
 import com.example.rocketplan_android.data.local.model.RoomPhotoSummary
 import com.example.rocketplan_android.data.local.model.ProjectWithProperty
 import kotlinx.coroutines.flow.Flow
@@ -343,6 +345,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_atmospheric_logs WHERE logId = :logId LIMIT 1")
     suspend fun getAtmosphericLog(logId: Long): OfflineAtmosphericLogEntity?
+
+    @Query("UPDATE offline_atmospheric_logs SET photoLocalPath = :localPath WHERE logId = :logId")
+    suspend fun updateAtmosphericLogPhotoLocalPath(logId: Long, localPath: String)
     // endregion
 
     // region Photos
@@ -383,6 +388,24 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_photos WHERE photoId = :photoId LIMIT 1")
     suspend fun getPhotoById(photoId: Long): OfflinePhotoEntity?
+
+    @Query("SELECT * FROM offline_photos WHERE logId = :logId LIMIT 1")
+    suspend fun getPhotoForAtmosphericLog(logId: Long): OfflinePhotoEntity?
+
+    @Query("SELECT * FROM offline_photos WHERE moistureLogId = :logId LIMIT 1")
+    suspend fun getPhotoForMoistureLog(logId: Long): OfflinePhotoEntity?
+
+    @Query("DELETE FROM offline_photos WHERE logId IN (SELECT logId FROM offline_atmospheric_logs WHERE roomId = :roomId)")
+    suspend fun deletePhotosForAtmosphericLogsByRoomId(roomId: Long): Int
+
+    @Query("DELETE FROM offline_photos WHERE moistureLogId IN (SELECT logId FROM offline_moisture_logs WHERE roomId = :roomId)")
+    suspend fun deletePhotosForMoistureLogsByRoomId(roomId: Long): Int
+
+    @Query("DELETE FROM offline_photos WHERE logId IN (SELECT logId FROM offline_atmospheric_logs WHERE projectId = :projectId)")
+    suspend fun deletePhotosForAtmosphericLogsByProjectId(projectId: Long): Int
+
+    @Query("DELETE FROM offline_photos WHERE moistureLogId IN (SELECT logId FROM offline_moisture_logs WHERE projectId = :projectId)")
+    suspend fun deletePhotosForMoistureLogsByProjectId(projectId: Long): Int
 
     @Query("UPDATE offline_photos SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migratePhotoRoomIds(oldRoomId: Long, newRoomId: Long): Int
@@ -794,6 +817,9 @@ interface OfflineDao {
 
     @Query("UPDATE offline_moisture_logs SET isDeleted = 1 WHERE projectId = :projectId")
     suspend fun markMoistureLogsDeletedByProject(projectId: Long)
+
+    @Query("UPDATE offline_moisture_logs SET photoLocalPath = :localPath WHERE logId = :logId")
+    suspend fun updateMoistureLogPhotoLocalPath(logId: Long, localPath: String)
     // endregion
 
     // region Notes & Damages & Work Scopes
@@ -1042,6 +1068,28 @@ interface OfflineDao {
     @Query("DELETE FROM offline_sync_queue WHERE entityType = 'work_scope' AND entityId IN (SELECT workScopeId FROM offline_work_scopes WHERE projectId IN (:projectIds))")
     suspend fun deleteSyncOpsForWorkScopesByProject(projectIds: List<Long>): Int
 
+    // Room-based sync queue deletion methods - for cascade delete when room is deleted
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'equipment' AND entityId IN (SELECT equipmentId FROM offline_equipment WHERE roomId = :roomId)")
+    suspend fun deleteSyncOpsForEquipmentByRoom(roomId: Long): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'note' AND entityId IN (SELECT noteId FROM offline_notes WHERE roomId = :roomId)")
+    suspend fun deleteSyncOpsForNotesByRoom(roomId: Long): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'damage' AND entityId IN (SELECT damageId FROM offline_damages WHERE roomId = :roomId)")
+    suspend fun deleteSyncOpsForDamagesByRoom(roomId: Long): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'moisture_log' AND entityId IN (SELECT logId FROM offline_moisture_logs WHERE roomId = :roomId)")
+    suspend fun deleteSyncOpsForMoistureLogsByRoom(roomId: Long): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'atmospheric_log' AND entityId IN (SELECT logId FROM offline_atmospheric_logs WHERE roomId = :roomId)")
+    suspend fun deleteSyncOpsForAtmosphericLogsByRoom(roomId: Long): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'work_scope' AND entityId IN (SELECT workScopeId FROM offline_work_scopes WHERE roomId = :roomId)")
+    suspend fun deleteSyncOpsForWorkScopesByRoom(roomId: Long): Int
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'photo' AND entityId IN (SELECT photoId FROM offline_photos WHERE roomId = :roomId)")
+    suspend fun deleteSyncOpsForPhotosByRoom(roomId: Long): Int
+
     /** Counts unsynced operations (PENDING or FAILED) for a project, its property, and children */
     @Query("""
         SELECT COUNT(*) FROM offline_sync_queue WHERE status IN ('PENDING', 'FAILED') AND (
@@ -1228,5 +1276,87 @@ interface OfflineDao {
         """
     )
     suspend fun getRolesForUser(userId: Long): List<OfflineRoleEntity>
+    // endregion
+
+    // region Timecards
+    @Upsert
+    suspend fun upsertTimecard(timecard: OfflineTimecardEntity)
+
+    @Upsert
+    suspend fun upsertTimecards(timecards: List<OfflineTimecardEntity>)
+
+    @Query("SELECT * FROM offline_timecards WHERE projectId = :projectId AND isDeleted = 0 ORDER BY timeIn DESC")
+    fun observeTimecardsForProject(projectId: Long): Flow<List<OfflineTimecardEntity>>
+
+    @Query("SELECT * FROM offline_timecards WHERE userId = :userId AND isDeleted = 0 ORDER BY timeIn DESC")
+    fun observeTimecardsForUser(userId: Long): Flow<List<OfflineTimecardEntity>>
+
+    @Query("SELECT * FROM offline_timecards WHERE userId = :userId AND timeOut IS NULL AND isDeleted = 0 LIMIT 1")
+    suspend fun getActiveTimecard(userId: Long): OfflineTimecardEntity?
+
+    @Query("SELECT * FROM offline_timecards WHERE userId = :userId AND timeOut IS NULL AND isDeleted = 0 LIMIT 1")
+    fun observeActiveTimecard(userId: Long): Flow<OfflineTimecardEntity?>
+
+    @Query("SELECT * FROM offline_timecards WHERE timecardId = :timecardId LIMIT 1")
+    suspend fun getTimecard(timecardId: Long): OfflineTimecardEntity?
+
+    @Query("SELECT * FROM offline_timecards WHERE uuid = :uuid LIMIT 1")
+    suspend fun getTimecardByUuid(uuid: String): OfflineTimecardEntity?
+
+    @Query("SELECT * FROM offline_timecards WHERE serverId = :serverId LIMIT 1")
+    suspend fun getTimecardByServerId(serverId: Long): OfflineTimecardEntity?
+
+    @Query("UPDATE offline_timecards SET isDeleted = 1, isDirty = 1, updatedAt = :now WHERE timecardId = :timecardId")
+    suspend fun markTimecardDeleted(timecardId: Long, now: Long)
+
+    @Query("UPDATE offline_timecards SET serverId = :serverId, syncStatus = 'SYNCED', isDirty = 0, lastSyncedAt = :now WHERE uuid = :uuid")
+    suspend fun markTimecardSynced(uuid: String, serverId: Long, now: Long)
+
+    @Query("UPDATE offline_timecards SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
+    suspend fun markTimecardsDeleted(serverIds: List<Long>)
+
+    @Query("UPDATE offline_timecards SET isDeleted = 1 WHERE projectId = :projectId")
+    suspend fun markTimecardsDeletedByProject(projectId: Long)
+
+    @Query(
+        """
+        SELECT * FROM offline_timecards
+        WHERE userId = :userId
+          AND isDeleted = 0
+          AND timeIn >= :startOfDay
+          AND timeIn < :endOfDay
+        ORDER BY timeIn DESC
+        """
+    )
+    suspend fun getTimecardsForDate(userId: Long, startOfDay: Long, endOfDay: Long): List<OfflineTimecardEntity>
+
+    @Query(
+        """
+        SELECT * FROM offline_timecards
+        WHERE userId = :userId
+          AND isDeleted = 0
+          AND timeIn >= :startOfWeek
+          AND timeIn < :endOfWeek
+        ORDER BY timeIn DESC
+        """
+    )
+    suspend fun getTimecardsForWeek(userId: Long, startOfWeek: Long, endOfWeek: Long): List<OfflineTimecardEntity>
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'timecard' AND entityId IN (SELECT timecardId FROM offline_timecards WHERE projectId IN (:projectIds))")
+    suspend fun deleteSyncOpsForTimecardsByProject(projectIds: List<Long>): Int
+    // endregion
+
+    // region Timecard Types
+    @Upsert
+    suspend fun upsertTimecardTypes(types: List<OfflineTimecardTypeEntity>)
+
+    @Query("SELECT * FROM offline_timecard_types ORDER BY typeId")
+    fun observeTimecardTypes(): Flow<List<OfflineTimecardTypeEntity>>
+
+    @Query("SELECT * FROM offline_timecard_types ORDER BY typeId")
+    suspend fun getTimecardTypes(): List<OfflineTimecardTypeEntity>
+
+    @Query("DELETE FROM offline_timecard_types")
+    suspend fun clearTimecardTypes()
     // endregion
 }

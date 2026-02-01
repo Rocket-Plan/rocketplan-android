@@ -66,6 +66,10 @@ import com.example.rocketplan_android.data.model.offline.SupportConversationDto
 import com.example.rocketplan_android.data.model.offline.SupportMessageDto
 import com.example.rocketplan_android.data.model.offline.CreateSupportConversationRequest
 import com.example.rocketplan_android.data.model.offline.CreateSupportMessageRequest
+import com.example.rocketplan_android.data.model.offline.TimecardDto
+import com.example.rocketplan_android.data.model.offline.TimecardTypeDto
+import com.example.rocketplan_android.data.model.offline.CreateTimecardRequest
+import com.example.rocketplan_android.data.model.offline.UpdateTimecardRequest
 
 interface OfflineSyncApi {
 
@@ -559,4 +563,35 @@ interface OfflineSyncApi {
     suspend fun markSupportMessagesAsRead(
         @Path("id") id: Long
     ): Response<Unit>
+
+    // ============================================================================
+    // Timecards
+    // ============================================================================
+
+    @GET("/api/projects/{projectId}/timecards")
+    suspend fun getTimecards(
+        @Path("projectId") projectId: Long,
+        @Query("filter[updated_date]") updatedSince: String? = null
+    ): PaginatedResponse<TimecardDto>
+
+    @POST("/api/projects/{projectId}/timecards")
+    suspend fun createTimecard(
+        @Path("projectId") projectId: Long,
+        @Body request: CreateTimecardRequest
+    ): TimecardDto
+
+    @PUT("/api/timecards/{timecardId}")
+    suspend fun updateTimecard(
+        @Path("timecardId") timecardId: Long,
+        @Body request: UpdateTimecardRequest
+    ): TimecardDto
+
+    @HTTP(method = "DELETE", path = "/api/timecards/{timecardId}", hasBody = true)
+    suspend fun deleteTimecard(
+        @Path("timecardId") timecardId: Long,
+        @Body body: DeleteWithTimestampRequest
+    ): Response<Unit>
+
+    @GET("/api/timecard-types")
+    suspend fun getTimecardTypes(): PaginatedResponse<TimecardTypeDto>
 }

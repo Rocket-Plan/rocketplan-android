@@ -44,6 +44,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEnt
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
 
 @Database(
     entities = [
@@ -80,9 +82,11 @@ import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
         OfflineSupportMessageEntity::class,
         OfflineSupportMessageAttachmentEntity::class,
         OfflineRoleEntity::class,
-        OfflineUserRoleEntity::class
+        OfflineUserRoleEntity::class,
+        OfflineTimecardEntity::class,
+        OfflineTimecardTypeEntity::class
     ],
-    version = 20,
+    version = 21,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -345,6 +349,55 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_20_21 = object : Migration(20, 21) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create timecards table for time tracking feature
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_timecards (
+                        timecardId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        serverId INTEGER,
+                        uuid TEXT NOT NULL,
+                        projectId INTEGER NOT NULL,
+                        userId INTEGER NOT NULL,
+                        timecardTypeId INTEGER NOT NULL DEFAULT 1,
+                        timecardTypeName TEXT NOT NULL DEFAULT 'Standard',
+                        timeIn INTEGER NOT NULL,
+                        timeOut INTEGER,
+                        elapsed INTEGER,
+                        notes TEXT,
+                        companyId INTEGER NOT NULL,
+                        isDirty INTEGER NOT NULL DEFAULT 0,
+                        isDeleted INTEGER NOT NULL DEFAULT 0,
+                        syncStatus TEXT NOT NULL DEFAULT 'PENDING',
+                        syncVersion INTEGER NOT NULL DEFAULT 0,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        lastSyncedAt INTEGER
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_offline_timecards_uuid ON offline_timecards(uuid)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_timecards_serverId ON offline_timecards(serverId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_timecards_projectId ON offline_timecards(projectId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_timecards_userId ON offline_timecards(userId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_timecards_syncStatus ON offline_timecards(syncStatus)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_timecards_timeIn ON offline_timecards(timeIn)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_timecards_isDeleted ON offline_timecards(isDeleted)")
+
+                // Create timecard types table
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_timecard_types (
+                        typeId INTEGER NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun getInstance(context: Context): OfflineDatabase =
             instance ?: synchronized(this) {
                 instance ?: buildDatabase(context).also { instance = it }
@@ -352,7 +405,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {

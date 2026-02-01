@@ -10,6 +10,7 @@ import com.example.rocketplan_android.data.repository.SyncSegment
 import com.example.rocketplan_android.data.repository.mapper.latestTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toMaterialEntity
+import com.example.rocketplan_android.data.repository.mapper.toPhotoEntity
 import com.example.rocketplan_android.data.repository.mapper.updatedSinceParam
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
 import com.google.gson.Gson
@@ -104,9 +105,18 @@ class ProjectMetadataSyncService(
             val atmosSince = syncCheckpointStore.updatedSinceParam(atmosCheckpointKey)
             runCatching { api.getProjectAtmosphericLogs(serverProjectId, atmosSince) }
                 .onSuccess { response ->
-                    localDataService.saveAtmosphericLogs(response.data.map { it.toEntity(defaultRoomId = null) })
-                    itemCount.addAndGet(response.data.size)
-                    response.data.latestTimestamp { it.updatedAt }
+                    val dtos = response.data
+                    localDataService.saveAtmosphericLogs(dtos.map { it.toEntity(defaultRoomId = null) })
+                    itemCount.addAndGet(dtos.size)
+
+                    // Create photo entities for logs with photos (enables offline caching)
+                    val logPhotos = dtos.mapNotNull { it.toPhotoEntity() }
+                    if (logPhotos.isNotEmpty()) {
+                        localDataService.saveOrUpdateLogPhotos(logPhotos)
+                        Log.d(TAG, "[atmospheric_logs] Created ${logPhotos.size} photo entities for offline caching")
+                    }
+
+                    dtos.latestTimestamp { it.updatedAt }
                         ?.let { syncCheckpointStore.updateCheckpoint(atmosCheckpointKey, it) }
                 }.isSuccess
         }
@@ -249,6 +259,14 @@ class ProjectMetadataSyncService(
 
         val entities = logs.mapNotNull { it.toEntity() }
         localDataService.saveMoistureLogs(entities)
+
+        // Create photo entities for logs with photos (enables offline caching)
+        val logPhotos = logs.mapNotNull { it.toPhotoEntity() }
+        if (logPhotos.isNotEmpty()) {
+            localDataService.saveOrUpdateLogPhotos(logPhotos)
+            Log.d(TAG, "[syncRoomMoistureLogs] Created ${logPhotos.size} photo entities for offline caching")
+        }
+
         val duration = System.currentTimeMillis() - startTime
         Log.d(
             TAG,

@@ -177,6 +177,10 @@
         <action
             android:id="@+id/action_projectLandingFragment_to_rocketDryFragment"
             app:destination="@id/rocketDryFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_timecardFragment"
+            app:destination="@id/timecardFragment" />
     </fragment>
 
     <fragment
@@ -596,6 +600,17 @@
         android:name="com.example.rocketplan_android.ui.projects.lossinfo.ProjectLossInfoFragment"
         android:label="@string/add_project_info_title"
         tools:layout="@layout/fragment_project_loss_info">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/timecardFragment"
+        android:name="com.example.rocketplan_android.ui.timecard.TimecardFragment"
+        android:label="@string/timecard_title"
+        tools:layout="@layout/fragment_timecard">
 
         <argument
             android:name="projectId"

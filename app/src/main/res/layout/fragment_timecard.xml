@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Project Address -->
+            <TextView
+                android:id="@+id/timecardProjectAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_headline"
+                android:textStyle="bold"
+                tools:text="201 Faker Road" />
+
+            <!-- Clock Display Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                app:cardBackgroundColor="@color/main_purple"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="24dp">
+
+                    <TextView
+                        android:id="@+id/timecardStatusLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/timecard_clocked_out"
+                        android:textColor="@android:color/white"
+                        android:textSize="@dimen/text_size_title" />
+
+                    <TextView
+                        android:id="@+id/timecardElapsedTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@android:color/white"
+                        android:textSize="48sp"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"
+                        tools:text="00:00:00" />
+
+                    <TextView
+                        android:id="@+id/timecardTypeLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@android:color/white"
+                        android:textSize="@dimen/text_size_body"
+                        android:visibility="gone"
+                        tools:text="Standard"
+                        tools:visibility="visible" />
+
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Clock In/Out Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/timecardClockButton"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginTop="16dp"
+                android:text="@string/timecard_clock_in"
+                android:textSize="@dimen/text_size_title"
+                app:cornerRadius="8dp" />
+
+            <!-- Summaries -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:orientation="horizontal"
+                android:weightSum="2">
+
+                <!-- Today Total -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/timecard_today"
+                        android:textColor="@color/light_text_rp"
+                        android:textSize="@dimen/text_size_body" />
+
+                    <TextView
+                        android:id="@+id/timecardTodayTotal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/dark_text_rp"
+                        android:textSize="@dimen/text_size_title_large"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"
+                        tools:text="2:30" />
+                </LinearLayout>
+
+                <!-- Week Total -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/timecard_this_week"
+                        android:textColor="@color/light_text_rp"
+                        android:textSize="@dimen/text_size_body" />
+
+                    <TextView
+                        android:id="@+id/timecardWeekTotal"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@color/dark_text_rp"
+                        android:textSize="@dimen/text_size_title_large"
+                        android:textStyle="bold"
+                        android:fontFamily="monospace"
+                        tools:text="18:45" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Recent Timecards Header -->
+            <TextView
+                android:id="@+id/timecardHistoryTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/timecard_recent"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_title_large"
+                android:textStyle="bold" />
+
+            <!-- Timecards RecyclerView -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/timecardRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:nestedScrollingEnabled="false"
+                tools:itemCount="3"
+                tools:listitem="@layout/item_timecard" />
+
+            <!-- Empty State -->
+            <TextView
+                android:id="@+id/timecardEmptyState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_horizontal"
+                android:padding="24dp"
+                android:text="@string/timecard_empty"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                android:visibility="gone" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

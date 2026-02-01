@@ -20,6 +20,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
@@ -62,6 +63,7 @@ import com.example.rocketplan_android.data.repository.sync.handlers.PropertyPush
 import com.example.rocketplan_android.data.repository.sync.handlers.PushHandlerContext
 import com.example.rocketplan_android.data.repository.sync.handlers.RoomPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.SupportPushHandler
+import com.example.rocketplan_android.data.repository.sync.handlers.TimecardPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.PendingProjectSyncResult
 
 data class PendingOperationResult(
@@ -111,6 +113,7 @@ class SyncQueueProcessor(
     private val photoHandler by lazy { PhotoPushHandler(handlerContext) }
     private val atmosphericLogHandler by lazy { AtmosphericLogPushHandler(handlerContext) }
     private val supportHandler by lazy { SupportPushHandler(handlerContext) }
+    private val timecardHandler by lazy { TimecardPushHandler(handlerContext) }
 
     private enum class OperationOutcome {
         SUCCESS,
@@ -135,6 +138,7 @@ class SyncQueueProcessor(
             "equipment" -> localDataService.getEquipment(entityId)?.isDeleted == true
             "moisture_log" -> entityUuid?.let { localDataService.getMoistureLogByUuid(it)?.isDeleted } == true
             "atmospheric_log" -> entityUuid?.let { localDataService.getAtmosphericLogByUuid(it)?.isDeleted } == true
+            "timecard" -> entityUuid?.let { localDataService.getTimecardByUuid(it)?.isDeleted } == true
             // For other entity types, assume not deleted if we can't check
             else -> false
         }
@@ -397,6 +401,13 @@ class SyncQueueProcessor(
                     when (operation.operationType) {
                         SyncOperationType.CREATE -> supportHandler.handleMessageCreate(operation).toLocal()
                         else -> OperationOutcome.DROP
+                    }
+                }
+                "timecard" -> handleOperation(operation, "pending:timecard") {
+                    when (operation.operationType) {
+                        SyncOperationType.CREATE,
+                        SyncOperationType.UPDATE -> timecardHandler.handleUpsert(operation).toLocal()
+                        SyncOperationType.DELETE -> timecardHandler.handleDelete(operation).toLocal()
                     }
                 }
                 else -> {
@@ -1078,6 +1089,7 @@ class SyncQueueProcessor(
             "atmospheric_log" -> "Atmospheric log sync waiting for parent room to sync"
             "support_conversation" -> "Support conversation sync waiting for server connection"
             "support_message" -> "Support message sync waiting for conversation to sync"
+            "timecard" -> "Timecard sync waiting for project to sync"
             else -> "Sync operation waiting for dependencies to resolve"
         }
     }
@@ -1169,6 +1181,47 @@ class SyncQueueProcessor(
             priority = SyncPriority.MEDIUM
         )
         localDataService.enqueueSyncOperation(operation)
+    }
+
+    override suspend fun enqueueTimecardUpsert(
+        timecard: OfflineTimecardEntity,
+        lockUpdatedAt: String?
+    ) {
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "timecard",
+            entityId = timecard.timecardId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
+        val opType = if (timecard.serverId == null) SyncOperationType.CREATE else SyncOperationType.UPDATE
+        enqueueOperation(
+            entityType = "timecard",
+            entityId = timecard.timecardId,
+            entityUuid = timecard.uuid,
+            operationType = opType,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
+    override suspend fun enqueueTimecardDeletion(
+        timecard: OfflineTimecardEntity,
+        lockUpdatedAt: String?
+    ) {
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "timecard",
+            entityId = timecard.timecardId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
+        enqueueOperation(
+            entityType = "timecard",
+            entityId = timecard.timecardId,
+            entityUuid = timecard.uuid,
+            operationType = SyncOperationType.DELETE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
     }
 
     companion object {

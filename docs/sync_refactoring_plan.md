@@ -465,6 +465,14 @@ Handles room and location operations:
 - `fetchRoomsForLocation(locationId)` - Paginated room fetch
 - `resolveExistingRoomForSync(projectId, room)` - Match incoming room to existing local entity
 
+**Cascade Delete Behavior:**
+When a room is deleted via `deleteRoom()`, `LocalDataService.cascadeDeleteRoom()` is called to:
+1. Delete sync queue operations for all child entities (equipment, notes, damages, moisture logs, atmospheric logs, work scopes, photos)
+2. Delete the actual child entity records from the database
+3. Clean up photo snapshots and image processor assemblies
+
+This ensures orphaned sync operations don't remain in the queue after their parent entities are deleted, which would cause the sync banner to show stuck "Syncing..." messages indefinitely.
+
 ### NoteSyncService
 **File:** `data/repository/sync/NoteSyncService.kt`
 
@@ -479,6 +487,13 @@ Handles note CRUD and queueing:
 Handles equipment CRUD and queueing:
 - `upsertEquipmentOffline(...)` - Create/update equipment and enqueue upsert
 - `deleteEquipmentOffline(equipmentId, uuid)` - Soft delete and enqueue delete
+
+**Sync Dependencies:**
+Equipment sync operations require their parent entities (project and optionally room) to have server IDs. The `EquipmentPushHandler` returns `SKIP` if:
+- The parent project doesn't have a `serverId` yet
+- The parent room (if assigned) doesn't have a `serverId` yet
+
+Skipped operations use exponential backoff and retry until the parent syncs or `maxSkips` is reached.
 
 ### MoistureLogSyncService
 **File:** `data/repository/sync/MoistureLogSyncService.kt`
