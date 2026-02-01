@@ -229,7 +229,7 @@ class ProjectMetadataSyncService(
 
     suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
-        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial") }
+        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial,photo") }
             .onFailure { error ->
                 Log.e(TAG, "[syncRoomMoistureLogs] Failed for roomId=$roomId (projectId=$projectId)", error)
             }

@@ -572,6 +572,7 @@ data class AtmosphericLogDto(
     val photoUploadStatus: String?,
     @SerializedName("photo_assembly_id")
     val photoAssemblyId: String?,
+    val photo: LogPhotoDto? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
@@ -604,10 +605,36 @@ data class MoistureLogDto(
     val photoLocalPath: String? = null,
     @SerializedName("photo_upload_status")
     val photoUploadStatus: String? = null,
+    val photo: LogPhotoDto? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
     val updatedAt: String?
+)
+
+/**
+ * Photo object returned when including photo relation on atmospheric/moisture logs.
+ * Contains nested sizes with URLs for different resolutions.
+ */
+data class LogPhotoDto(
+    val id: Long? = null,
+    val uuid: String? = null,
+    val sizes: PhotoSizesDto? = null,
+    @SerializedName("created_at")
+    val createdAt: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
+) {
+    /** Returns the best available photo URL (medium preferred, falls back to raw) */
+    fun getBestUrl(): String? = sizes?.medium ?: sizes?.raw ?: sizes?.large
+}
+
+data class PhotoSizesDto(
+    val small: String? = null,
+    val medium: String? = null,
+    val large: String? = null,
+    val gallery: String? = null,
+    val raw: String? = null
 )
 
 data class EquipmentDto(

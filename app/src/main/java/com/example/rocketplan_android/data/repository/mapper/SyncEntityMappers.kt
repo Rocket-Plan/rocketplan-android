@@ -875,20 +875,25 @@ internal fun OfflineTimecardEntity.toUpdateRequest(
 // ============================================================================
 
 /**
- * Creates an OfflinePhotoEntity from an atmospheric log's photo URL.
+ * Creates an OfflinePhotoEntity from an atmospheric log's photo.
+ * Uses nested photo.sizes URL (from include=photo) or falls back to photoUrl.
  * Returns null if the log has no photo.
  */
 internal fun AtmosphericLogDto.toPhotoEntity(): OfflinePhotoEntity? {
-    if (photoUrl.isNullOrBlank()) return null
+    // Prefer nested photo.sizes (from include=photo), fall back to flat photoUrl
+    val url = photo?.getBestUrl() ?: photoUrl
+    if (url.isNullOrBlank()) return null
+
     val timestamp = now()
     val logServerId = id
     // Use negative timestamp as local ID for new records (will be replaced on sync)
     val localId = -System.currentTimeMillis()
-    val photoUuid = uuid?.let { "atmos-photo-$it" } ?: UuidUtils.generateUuidV7()
+    val photoUuid = photo?.uuid ?: uuid?.let { "atmos-photo-$it" } ?: UuidUtils.generateUuidV7()
+    val thumbnailUrl = photo?.sizes?.small ?: url
 
     return OfflinePhotoEntity(
         photoId = localId,
-        serverId = null, // Log photos don't have separate server IDs
+        serverId = photo?.id, // Use photo's server ID if available
         uuid = photoUuid,
         projectId = projectId,
         roomId = roomId,
@@ -897,8 +902,8 @@ internal fun AtmosphericLogDto.toPhotoEntity(): OfflinePhotoEntity? {
         albumId = null,
         fileName = "atmospheric_log_${logServerId}.jpg",
         localPath = "",
-        remoteUrl = photoUrl,
-        thumbnailUrl = photoUrl, // Use same URL for thumbnail
+        remoteUrl = url,
+        thumbnailUrl = thumbnailUrl,
         uploadStatus = "completed",
         assemblyId = null,
         tusUploadId = null,
@@ -907,8 +912,8 @@ internal fun AtmosphericLogDto.toPhotoEntity(): OfflinePhotoEntity? {
         height = null,
         mimeType = "image/jpeg",
         capturedAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
-        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(photo?.createdAt ?: createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(photo?.updatedAt ?: updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
@@ -922,20 +927,25 @@ internal fun AtmosphericLogDto.toPhotoEntity(): OfflinePhotoEntity? {
 }
 
 /**
- * Creates an OfflinePhotoEntity from a moisture log's photo URL.
+ * Creates an OfflinePhotoEntity from a moisture log's photo.
+ * Uses nested photo.sizes URL (from include=photo) or falls back to photoUrl.
  * Returns null if the log has no photo.
  */
 internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
-    if (photoUrl.isNullOrBlank()) return null
+    // Prefer nested photo.sizes (from include=photo), fall back to flat photoUrl
+    val url = photo?.getBestUrl() ?: photoUrl
+    if (url.isNullOrBlank()) return null
+
     val timestamp = now()
     val logServerId = id
     // Use negative timestamp as local ID for new records (will be replaced on sync)
     val localId = -System.currentTimeMillis()
-    val photoUuid = uuid?.let { "moisture-photo-$it" } ?: UuidUtils.generateUuidV7()
+    val photoUuid = photo?.uuid ?: uuid?.let { "moisture-photo-$it" } ?: UuidUtils.generateUuidV7()
+    val thumbnailUrl = photo?.sizes?.small ?: url
 
     return OfflinePhotoEntity(
         photoId = localId,
-        serverId = null, // Log photos don't have separate server IDs
+        serverId = photo?.id, // Use photo's server ID if available
         uuid = photoUuid,
         projectId = projectId,
         roomId = roomId,
@@ -944,8 +954,8 @@ internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
         albumId = null,
         fileName = "moisture_log_${logServerId}.jpg",
         localPath = "",
-        remoteUrl = photoUrl,
-        thumbnailUrl = photoUrl, // Use same URL for thumbnail
+        remoteUrl = url,
+        thumbnailUrl = thumbnailUrl,
         uploadStatus = "completed",
         assemblyId = null,
         tusUploadId = null,
@@ -954,8 +964,8 @@ internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
         height = null,
         mimeType = "image/jpeg",
         capturedAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
-        createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
-        updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        createdAt = DateUtils.parseApiDate(photo?.createdAt ?: createdAt) ?: timestamp,
+        updatedAt = DateUtils.parseApiDate(photo?.updatedAt ?: updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,

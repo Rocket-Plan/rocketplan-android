@@ -61,11 +61,11 @@ interface OfflineDao {
     @Query("UPDATE offline_projects SET propertyId = NULL, propertyType = NULL WHERE propertyId = :propertyId")
     suspend fun clearProjectPropertyId(propertyId: Long)
 
-    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
+    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeProjects(): Flow<List<OfflineProjectEntity>>
 
     @Transaction
-    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
+    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0 ORDER BY updatedAt DESC")
     fun observeProjectsWithProperty(): Flow<List<ProjectWithProperty>>
 
     @Query("SELECT * FROM offline_projects WHERE projectId = :projectId LIMIT 1")
@@ -74,7 +74,7 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_projects WHERE serverId = :serverId AND companyId = :companyId AND isDeleted = 0 LIMIT 1")
     suspend fun getProjectByServerId(serverId: Long, companyId: Long): OfflineProjectEntity?
 
-    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0")
+    @Query("SELECT * FROM offline_projects WHERE isDeleted = 0 ORDER BY updatedAt DESC")
     suspend fun getProjectsOnce(): List<OfflineProjectEntity>
 
     @Query("SELECT COUNT(*) FROM offline_projects")
