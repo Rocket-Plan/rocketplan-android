@@ -769,6 +769,35 @@
     <string name="timecard_updated_toast">Timecard updated</string>
     <string name="timecard_deleted_toast">Timecard deleted</string>
 
+    <!-- Time/Format strings -->
+    <string name="time_zero">00:00:00</string>
+    <string name="version_format">v%1$s</string>
+    <string name="id_format">ID: %1$d</string>
+    <string name="separator_bullet"> • </string>
+    <string name="time_label_separator">%1$s • %2$s</string>
+    <string name="entity_operation_format">%1$s • %2$s</string>
+
+    <!-- Debug/Config strings -->
+    <string name="config_loading">Loading…</string>
+    <string name="config_reloading">Reloading from server…</string>
+    <string name="config_service_format">Service: %1$s</string>
+    <string name="config_url_format">URL: %1$s</string>
+    <string name="config_api_key_format">API Key: %1$s</string>
+    <string name="config_api_key_truncated_format">API Key: %1$s…%2$s</string>
+    <string name="config_api_key_na">N/A</string>
+    <string name="config_loaded_success">✅ Loaded successfully</string>
+    <string name="config_reloaded_success">✅ Reloaded from server</string>
+    <string name="config_error_label">Error</string>
+    <string name="config_failed_format">❌ Failed: %1$s</string>
+    <string name="config_reloaded_toast">Config reloaded: %1$s</string>
+    <string name="config_load_failed_toast">Failed to load config: %1$s</string>
+
+    <!-- Unit labels -->
+    <string name="humidity_value_format">%1$d%%</string>
+    <string name="temperature_value_format">%1$d°F</string>
+    <string name="pressure_value_format">%1$d kPa</string>
+    <string name="wind_speed_value_format">%1$d mph</string>
+
     <!-- Accessibility -->
     <string name="photo_content_description">Photo taken on %1$s</string>
     <string name="photo_content_description_no_date">Photo</string>

@@ -46,6 +46,7 @@ class PhotoViewerFragment : Fragment() {
     private lateinit var addNoteFab: FloatingActionButton
     private lateinit var deletePhotoFab: FloatingActionButton
     private lateinit var pagerAdapter: PhotoPagerAdapter
+    private var pageChangeCallback: ViewPager2.OnPageChangeCallback? = null
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -71,12 +72,13 @@ class PhotoViewerFragment : Fragment() {
         pagerAdapter = PhotoPagerAdapter()
         photoPager.adapter = pagerAdapter
 
-        photoPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+        pageChangeCallback = object : ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
                 viewModel.onPageSelected(position)
             }
-        })
+        }
+        photoPager.registerOnPageChangeCallback(pageChangeCallback!!)
     }
 
     private fun observeViewModel() {
@@ -210,6 +212,8 @@ class PhotoViewerFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        pageChangeCallback?.let { photoPager.unregisterOnPageChangeCallback(it) }
+        pageChangeCallback = null
         (activity as? AppCompatActivity)?.supportActionBar?.subtitle = null
         super.onDestroyView()
     }

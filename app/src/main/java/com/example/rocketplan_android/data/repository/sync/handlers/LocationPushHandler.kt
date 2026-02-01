@@ -153,9 +153,8 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                 )
                 val retryResult = runCatching { ctx.api.updateLocation(serverId, retryRequest) }
                     .onFailure { if (it is CancellationException) throw it }
-                if (retryResult.isFailure) {
-                    val retryError = retryResult.exceptionOrNull()
-                    if (retryError?.isConflict() == true) {
+                retryResult.onFailure { retryError ->
+                    if (retryError.isConflict()) {
                         Log.w(
                             SYNC_TAG,
                             "⚠️ [handlePendingLocationUpdate] Retry still got 409; recording conflict for user resolution"
@@ -186,7 +185,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                         ctx.recordConflict(conflict)
                         return OperationOutcome.CONFLICT_PENDING
                     }
-                    throw retryError!!
+                    throw retryError
                 }
                 Log.d(SYNC_TAG, "✅ [handlePendingLocationUpdate] Retry update succeeded for location $serverId")
             } else {

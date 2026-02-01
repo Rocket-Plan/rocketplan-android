@@ -50,10 +50,10 @@ class ExternalAtmosphericLogAdapter(
 
         fun bind(log: AtmosphericLogItem) {
             logHeader.text = log.dateTime
-            humidityValue.text = "${log.humidity.roundToInt()}%"
-            temperatureValue.text = "${log.temperature.roundToInt()}°F"
-            pressureValue.text = "${log.pressure.roundToInt()} kPa"
-            windSpeedValue.text = "${log.windSpeed.roundToInt()} mph"
+            humidityValue.text = itemView.context.getString(R.string.humidity_value_format, log.humidity.roundToInt())
+            temperatureValue.text = itemView.context.getString(R.string.temperature_value_format, log.temperature.roundToInt())
+            pressureValue.text = itemView.context.getString(R.string.pressure_value_format, log.pressure.roundToInt())
+            windSpeedValue.text = itemView.context.getString(R.string.wind_speed_value_format, log.windSpeed.roundToInt())
 
             // Load photo
             loadPhoto(log)

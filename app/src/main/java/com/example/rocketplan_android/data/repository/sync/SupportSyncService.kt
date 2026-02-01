@@ -11,6 +11,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAtt
 import com.example.rocketplan_android.data.model.offline.SupportConversationDto
 import com.example.rocketplan_android.data.model.offline.SupportMessageDto
 import com.example.rocketplan_android.util.UuidUtils
+import com.example.rocketplan_android.util.toDetailedErrorString
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -74,7 +75,7 @@ class SupportSyncService(
             Log.d(TAG, "Synced ${entities.size} support categories")
             Result.success(entities)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync support categories", e)
+            Log.e(TAG, "Failed to sync support categories: ${e.toDetailedErrorString()}", e)
             Result.failure(e)
         }
     }
@@ -95,7 +96,7 @@ class SupportSyncService(
             Log.d(TAG, "Synced ${entities.size} support conversations")
             Result.success(entities)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync support conversations", e)
+            Log.e(TAG, "Failed to sync support conversations: ${e.toDetailedErrorString()}", e)
             Result.failure(e)
         }
     }
@@ -131,7 +132,7 @@ class SupportSyncService(
             Log.d(TAG, "Synced ${entities.size} messages for conversation $conversationServerId")
             Result.success(entities)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to sync messages for conversation $conversationServerId", e)
+            Log.e(TAG, "Failed to sync messages for conversation $conversationServerId: ${e.toDetailedErrorString()}", e)
             Result.failure(e)
         }
     }
@@ -232,7 +233,7 @@ class SupportSyncService(
             Log.d(TAG, "Closed conversation ${conversation.conversationId}")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to close conversation ${conversation.conversationId}", e)
+            Log.e(TAG, "Failed to close conversation ${conversation.conversationId}: ${e.toDetailedErrorString()}", e)
             Result.failure(e)
         }
     }
@@ -256,7 +257,7 @@ class SupportSyncService(
             Log.d(TAG, "Marked messages as read for conversation ${conversation.conversationId}")
             Result.success(Unit)
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to mark messages as read for conversation ${conversation.conversationId}", e)
+            Log.e(TAG, "Failed to mark messages as read for conversation ${conversation.conversationId}: ${e.toDetailedErrorString()}", e)
             Result.failure(e)
         }
     }

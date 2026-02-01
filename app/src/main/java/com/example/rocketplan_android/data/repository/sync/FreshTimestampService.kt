@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository.sync
 
 import android.util.Log
 import com.example.rocketplan_android.data.api.OfflineSyncApi
+import com.example.rocketplan_android.util.toDetailedErrorString
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

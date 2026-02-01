@@ -35,7 +35,7 @@ class AboutFragment : Fragment() {
         (activity as? AppCompatActivity)?.supportActionBar?.title =
             getString(R.string.about_title)
 
-        binding.versionValue.text = "v${BuildConfig.VERSION_NAME}"
+        binding.versionValue.text = getString(R.string.version_format, BuildConfig.VERSION_NAME)
         binding.environmentValue.text = BuildConfig.ENVIRONMENT
 
         binding.termsButton.setOnClickListener {

@@ -186,8 +186,8 @@ class ProjectRoomsAdapter(
                 }
 
                 // Show processing progress overlay with spinner and count
-                if (hasProcessingProgress) {
-                    val progress = room.processingProgress!!
+                val progress = room.processingProgress
+                if (progress != null) {
                     processingContainer.isVisible = true
                     processingProgress.isVisible = true
                     processingProgress.text = "${progress.completed}/${progress.total}"

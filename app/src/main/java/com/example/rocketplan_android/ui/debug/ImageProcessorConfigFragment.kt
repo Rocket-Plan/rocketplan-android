@@ -59,7 +59,7 @@ class ImageProcessorConfigFragment : Fragment() {
         lifecycleScope.launch {
             loadingIndicator.visibility = View.VISIBLE
             reloadButton.isEnabled = false
-            statusText.text = if (forceRefresh) "Reloading from server..." else "Loading..."
+            statusText.text = if (forceRefresh) getString(R.string.config_reloading) else getString(R.string.config_loading)
 
             val result = repository.getConfiguration(forceRefresh)
 
@@ -67,34 +67,35 @@ class ImageProcessorConfigFragment : Fragment() {
             reloadButton.isEnabled = true
 
             result.onSuccess { config ->
-                serviceText.text = "Service: ${config.service}"
-                urlText.text = "URL: ${config.url}"
+                serviceText.text = getString(R.string.config_service_format, config.service)
+                urlText.text = getString(R.string.config_url_format, config.url)
                 val key = config.apiKey
                 apiKeyText.text = if (key != null && key.length > 28) {
-                    "API Key: ${key.take(20)}...${key.takeLast(8)}"
+                    getString(R.string.config_api_key_truncated_format, key.take(20), key.takeLast(8))
                 } else {
-                    "API Key: ${key ?: "N/A"}"
+                    getString(R.string.config_api_key_format, key ?: getString(R.string.config_api_key_na))
                 }
-                statusText.text = if (forceRefresh) "✅ Reloaded from server" else "✅ Loaded successfully"
+                statusText.text = if (forceRefresh) getString(R.string.config_reloaded_success) else getString(R.string.config_loaded_success)
                 statusText.setTextColor(resources.getColor(android.R.color.holo_green_dark, null))
 
                 if (forceRefresh) {
                     Toast.makeText(
                         requireContext(),
-                        "Config reloaded: ${config.service}",
+                        getString(R.string.config_reloaded_toast, config.service),
                         Toast.LENGTH_SHORT
                     ).show()
                 }
             }.onFailure { error ->
-                serviceText.text = "Service: Error"
-                urlText.text = "URL: Error"
-                apiKeyText.text = "API Key: Error"
-                statusText.text = "❌ Failed: ${error.message}"
+                val errorLabel = getString(R.string.config_error_label)
+                serviceText.text = getString(R.string.config_service_format, errorLabel)
+                urlText.text = getString(R.string.config_url_format, errorLabel)
+                apiKeyText.text = getString(R.string.config_api_key_format, errorLabel)
+                statusText.text = getString(R.string.config_failed_format, error.message)
                 statusText.setTextColor(resources.getColor(android.R.color.holo_red_dark, null))
 
                 Toast.makeText(
                     requireContext(),
-                    "Failed to load config: ${error.message}",
+                    getString(R.string.config_load_failed_toast, error.message),
                     Toast.LENGTH_LONG
                 ).show()
             }

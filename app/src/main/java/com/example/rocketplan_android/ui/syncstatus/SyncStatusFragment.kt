@@ -163,7 +163,7 @@ class SyncStatusViewHolder(
 
     fun bind(status: ProjectSyncStatus) {
         projectTitle.text = status.projectTitle
-        projectId.text = "ID: ${status.projectId}"
+        projectId.text = itemView.context.getString(R.string.id_format, status.projectId)
         roomCount.text = status.roomCount.toString()
         photoCount.text = status.photoCount.toString()
         albumCount.text = status.albumCount.toString()
@@ -255,7 +255,7 @@ class SyncQueueViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     fun bind(item: SyncQueueItem) {
         val operation = item.operationType.name.lowercase()
             .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-        title.text = "${item.entityType} • $operation"
+        title.text = itemView.context.getString(R.string.entity_operation_format, item.entityType, operation)
 
         val statusLabel = when (item.status) {
             SyncStatus.PENDING -> itemView.context.getString(R.string.sync_status_pending)
@@ -274,7 +274,7 @@ class SyncQueueViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
             item.scheduledAt != null -> itemView.context.getString(R.string.sync_time_scheduled)
             else -> itemView.context.getString(R.string.sync_time_created)
         }
-        timestamp.text = "$timeLabel • ${formatTimestamp(item.displayTimestamp)}"
+        timestamp.text = itemView.context.getString(R.string.time_label_separator, timeLabel, formatTimestamp(item.displayTimestamp))
 
         val error = item.errorMessage
         if (error.isNullOrBlank()) {

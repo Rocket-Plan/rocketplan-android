@@ -861,9 +861,14 @@ class BatchCaptureFragment : Fragment() {
             Log.d(TAG, "startActiveMode: FLIR surface not ready for $captureMode mode, waiting for availability")
             return
         }
+        // Ensure we have a valid surface to attach
+        val validSurface = surface ?: run {
+            Log.w(TAG, "startActiveMode: Surface is null despite surfaceReady check, aborting")
+            return
+        }
         stopRegularCamera()
         Log.d(TAG, "startActiveMode: Starting $captureMode mode with $fusionMode fusion")
-        flirController.attachTextureSurface(surface!!, flirTextureView.width, flirTextureView.height)
+        flirController.attachTextureSurface(validSurface, flirTextureView.width, flirTextureView.height)
         flirController.startDiscovery()
     }
 
@@ -1038,6 +1043,7 @@ class BatchCaptureFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        modeToggle.clearOnButtonCheckedListeners()
         cameraProvider?.unbindAll()
         tearDownFlirPreviewSurface()
         flirController.disconnect()

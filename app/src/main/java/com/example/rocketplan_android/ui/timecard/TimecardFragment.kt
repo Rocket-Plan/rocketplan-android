@@ -111,7 +111,7 @@ class TimecardFragment : Fragment() {
         when (state) {
             is TimecardUiState.Loading -> {
                 projectAddress.text = getString(R.string.loading_project)
-                elapsedTime.text = "00:00:00"
+                elapsedTime.text = getString(R.string.time_zero)
                 adapter.submitList(emptyList())
             }
 
@@ -130,7 +130,7 @@ class TimecardFragment : Fragment() {
                     typeLabel.text = state.activeTimecard?.timecardTypeName
                 } else {
                     statusLabel.text = getString(R.string.timecard_clocked_out)
-                    elapsedTime.text = "00:00:00"
+                    elapsedTime.text = getString(R.string.time_zero)
                     clockButton.text = getString(R.string.timecard_clock_in)
                     clockButton.setBackgroundColor(
                         resources.getColor(R.color.main_purple, null)

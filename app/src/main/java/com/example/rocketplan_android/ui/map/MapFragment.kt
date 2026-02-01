@@ -49,6 +49,7 @@ class MapFragment : Fragment() {
     private var lastKnownLocation: Location? = null
     private var hasAppliedInitialCamera = false
     private var userHasMovedMap = false
+    private var tabSelectedListener: TabLayout.OnTabSelectedListener? = null
 
     private val fusedLocationClient by lazy {
         LocationServices.getFusedLocationProviderClient(requireContext())
@@ -88,6 +89,8 @@ class MapFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        tabSelectedListener?.let { binding.mapTabs.removeOnTabSelectedListener(it) }
+        tabSelectedListener = null
         super.onDestroyView()
         googleMap = null
         hasAppliedInitialCamera = false
@@ -123,7 +126,7 @@ class MapFragment : Fragment() {
         binding.mapTabs.apply {
             addTab(newTab().setText(R.string.projects_tab_my_projects))
             addTab(newTab().setText(R.string.project_status_wip))
-            addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            tabSelectedListener = object : TabLayout.OnTabSelectedListener {
                 override fun onTabSelected(tab: TabLayout.Tab?) {
                     selectedTab = if (tab?.position == 1) MapTab.WIP else MapTab.MY_PROJECTS
                     Log.d(TAG, "Tab selected: $selectedTab")
@@ -136,7 +139,8 @@ class MapFragment : Fragment() {
                     userHasMovedMap = false
                     renderLatestState()
                 }
-            })
+            }
+            addOnTabSelectedListener(tabSelectedListener!!)
         }
     }
 
