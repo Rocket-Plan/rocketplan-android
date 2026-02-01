@@ -78,19 +78,19 @@ class ProjectRealtimeManager(
             channel = PusherConfig.projectCreatedChannel(userId),
             eventName = PusherConfig.PROJECT_CREATED_EVENT,
             bucket = subscribedUserChannels
-        ) { syncQueueManager.refreshProjects() }
+        ) { syncQueueManager.refreshProjectsIncremental() }
 
         subscribe(
             channel = PusherConfig.projectCompletedChannelForUser(userId),
             eventName = PusherConfig.PROJECT_COMPLETED_EVENT,
             bucket = subscribedUserChannels
-        ) { syncQueueManager.refreshProjects() }
+        ) { syncQueueManager.refreshProjectsIncremental() }
 
         subscribe(
             channel = PusherConfig.projectDeletedChannel(userId),
             eventName = PusherConfig.PROJECT_DELETED_EVENT,
             bucket = subscribedUserChannels
-        ) { syncQueueManager.refreshProjects() }
+        ) { syncQueueManager.refreshProjectsIncremental() }
 
         subscribe(
             channel = PusherConfig.userRoleChangedChannel(userId),
@@ -105,7 +105,7 @@ class ProjectRealtimeManager(
                     metadata = mapOf("user_id" to userId.toString())
                 )
                 authRepository.refreshUserContext()
-                syncQueueManager.refreshProjects()
+                syncQueueManager.refreshProjectsIncremental()
             }
         }
     }
@@ -115,7 +115,7 @@ class ProjectRealtimeManager(
             channel = PusherConfig.projectCompletedChannelForCompany(companyId),
             eventName = PusherConfig.PROJECT_COMPLETED_EVENT,
             bucket = subscribedCompanyChannels
-        ) { syncQueueManager.refreshProjects() }
+        ) { syncQueueManager.refreshProjectsIncremental() }
     }
 
     private fun subscribe(

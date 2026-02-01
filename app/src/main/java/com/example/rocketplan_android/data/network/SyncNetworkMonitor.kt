@@ -166,7 +166,7 @@ class SyncNetworkMonitor(
                 // Reset any FAILED operations so they get retried now that network is back
                 syncQueueManager.resetFailedOperations()
                 syncQueueManager.processPendingOperations()
-                syncQueueManager.refreshProjects()
+                syncQueueManager.refreshProjectsIncremental()
             } catch (e: kotlin.coroutines.cancellation.CancellationException) {
                 throw e
             } catch (e: Exception) {

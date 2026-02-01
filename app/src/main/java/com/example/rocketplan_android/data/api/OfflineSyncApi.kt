@@ -337,7 +337,8 @@ interface OfflineSyncApi {
     @GET("/api/projects/{projectId}/atmospheric-logs")
     suspend fun getProjectAtmosphericLogs(
         @Path("projectId") projectId: Long,
-        @Query("filter[updated_date]") updatedSince: String? = null
+        @Query("filter[updated_date]") updatedSince: String? = null,
+        @Query("include") include: String? = "photo"
     ): PaginatedResponse<AtmosphericLogDto>
 
     @GET("/api/rooms/{roomId}/atmospheric-logs")
@@ -511,7 +512,8 @@ interface OfflineSyncApi {
     @GET("/api/sync/deleted")
     suspend fun getDeletedRecords(
         @Query("since") since: String,
-        @Query("types[]") types: List<String>? = null
+        @Query("types[]") types: List<String>? = null,
+        @Query("project_id") projectId: Long? = null
     ): Response<DeletedRecordsResponse>
 
     @GET("/api/sync/updated")

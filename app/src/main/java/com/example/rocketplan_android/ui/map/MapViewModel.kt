@@ -88,7 +88,7 @@ class MapViewModel(application: Application) : AndroidViewModel(application) {
 
     fun refreshProjects() {
         _isRefreshing.value = true
-        syncQueueManager.refreshProjects()
+        syncQueueManager.refreshProjectsIncremental()
     }
 
     private fun ProjectWithProperty.toListItemWithCoords(): ProjectListItem {

@@ -24,6 +24,7 @@ import com.example.rocketplan_android.data.model.offline.WorkScopeSheetDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeItemRequest
 import com.example.rocketplan_android.data.repository.mapper.*
 import com.example.rocketplan_android.data.repository.sync.DeletedRecordsSyncService
+import com.example.rocketplan_android.data.repository.sync.UpdatedRecordsSyncService
 import com.example.rocketplan_android.data.repository.sync.EquipmentSyncService
 import com.example.rocketplan_android.data.repository.sync.MoistureLogSyncService
 import com.example.rocketplan_android.data.repository.sync.NoteSyncService
@@ -190,6 +191,15 @@ class OfflineSyncRepository(
             localDataService = localDataService,
             syncCheckpointStore = syncCheckpointStore,
             photoCacheManager = photoCacheManager,
+            remoteLogger = remoteLogger,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val updatedRecordsSyncService by lazy {
+        UpdatedRecordsSyncService(
+            api = api,
+            syncCheckpointStore = syncCheckpointStore,
             remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher
         )
@@ -1165,6 +1175,22 @@ class OfflineSyncRepository(
     suspend fun syncDeletedRecords(
         types: List<String> = DeletedRecordsSyncService.DEFAULT_TYPES
     ): Result<Unit> = deletedRecordsSyncService.syncDeletedRecords(types)
+
+    /**
+     * Syncs deleted records for a specific project.
+     * Checks for deletions of child entities (rooms, photos, notes, etc.) since last sync.
+     */
+    suspend fun syncDeletedRecordsForProject(
+        projectServerId: Long,
+        localProjectId: Long
+    ): Result<Int> = deletedRecordsSyncService.syncDeletedRecordsForProject(projectServerId, localProjectId)
+
+    /**
+     * Returns the set of project server IDs that have been updated since the last checkpoint.
+     * Used for incremental sync to only refresh changed projects.
+     */
+    suspend fun getUpdatedProjectIds(): Result<Set<Long>> =
+        updatedRecordsSyncService.getUpdatedProjectIds()
 
     /**
      * Checks if a project has any updates on the server since the given timestamp.

@@ -130,6 +130,144 @@ class DeletedRecordsSyncService(
         Result.success(Unit)
     }
 
+    /**
+     * Syncs deleted records for a specific project.
+     * Uses a per-project checkpoint to track what's been synced.
+     * Only deletes child entities (rooms, photos, notes, etc.) - not the project itself.
+     */
+    suspend fun syncDeletedRecordsForProject(
+        projectServerId: Long,
+        localProjectId: Long
+    ): Result<Int> = withContext(ioDispatcher) {
+        val checkpointKey = "deleted_records_project_$projectServerId"
+        val serverTimeKey = "deleted_records_project_${projectServerId}_server_date"
+
+        val now = Date()
+        val lastServerDate = syncCheckpointStore.getCheckpoint(serverTimeKey)
+        val rawSinceDate = syncCheckpointStore.getCheckpoint(checkpointKey)
+            ?: Date(now.time - DEFAULT_DELETION_LOOKBACK_MS)
+
+        // Handle clock skew
+        val sinceDate = when {
+            lastServerDate != null && rawSinceDate.after(lastServerDate) -> {
+                Log.w(TAG, "⚠️ [syncDeletedForProject] Future checkpoint clamped for project $projectServerId")
+                syncCheckpointStore.updateCheckpoint(checkpointKey, lastServerDate)
+                lastServerDate
+            }
+            lastServerDate == null && rawSinceDate.after(now) -> {
+                val clamped = Date(0)
+                syncCheckpointStore.updateCheckpoint(checkpointKey, clamped)
+                clamped
+            }
+            else -> rawSinceDate
+        }
+
+        val sinceParam = DateUtils.formatApiDate(sinceDate)
+        Log.d(TAG, "🔄 [syncDeletedForProject] Fetching deletions for project $projectServerId since $sinceParam")
+
+        val response = runCatching {
+            api.getDeletedRecords(
+                since = sinceParam,
+                types = PROJECT_CHILD_TYPES,
+                projectId = projectServerId
+            )
+        }.onFailure {
+            Log.e(TAG, "❌ [syncDeletedForProject] Failed to fetch deletions for project $projectServerId", it)
+        }.getOrElse { return@withContext Result.failure(it) }
+
+        if (!response.isSuccessful) {
+            val errorBody = runCatching { response.errorBody()?.string() }.getOrNull()
+            Log.e(TAG, "❌ [syncDeletedForProject] Non-success response ${response.code()}: $errorBody")
+            return@withContext Result.failure(
+                IllegalStateException("Project deleted records sync failed with HTTP ${response.code()}")
+            )
+        }
+
+        val body = response.body()
+        if (body == null) {
+            Log.w(TAG, "⚠️ [syncDeletedForProject] Empty body for project $projectServerId")
+            return@withContext Result.failure(IllegalStateException("Deleted records response body missing"))
+        }
+
+        // Apply deletions for child entities only (skip project-level deletions)
+        val deletedCount = applyProjectChildDeletions(body, localProjectId)
+
+        // Update checkpoint
+        val serverTimestamp = DateUtils.parseHttpDate(response.headers()["Date"])
+        if (serverTimestamp != null) {
+            syncCheckpointStore.updateCheckpoint(checkpointKey, serverTimestamp)
+            syncCheckpointStore.updateCheckpoint(serverTimeKey, serverTimestamp)
+        }
+
+        if (deletedCount > 0) {
+            Log.d(TAG, "✅ [syncDeletedForProject] Applied $deletedCount deletions for project $projectServerId")
+            remoteLogger?.log(
+                LogLevel.INFO,
+                TAG,
+                "Project deletion sync completed",
+                mapOf(
+                    "projectServerId" to projectServerId.toString(),
+                    "deletedCount" to deletedCount.toString(),
+                    "since" to sinceParam
+                )
+            )
+        } else {
+            Log.d(TAG, "✅ [syncDeletedForProject] No deletions for project $projectServerId since $sinceParam")
+        }
+
+        Result.success(deletedCount)
+    }
+
+    private suspend fun applyProjectChildDeletions(response: DeletedRecordsResponse, localProjectId: Long): Int {
+        var count = 0
+
+        // Delete child entities - properties, rooms, locations, photos, notes, etc.
+        // Note: We don't delete the project itself here since we're syncing it
+        if (response.properties.isNotEmpty()) {
+            localDataService.markPropertiesDeleted(response.properties)
+            count += response.properties.size
+        }
+        if (response.rooms.isNotEmpty()) {
+            localDataService.markRoomsDeleted(response.rooms)
+            count += response.rooms.size
+        }
+        if (response.locations.isNotEmpty()) {
+            localDataService.markLocationsDeleted(response.locations)
+            count += response.locations.size
+        }
+        if (response.photos.isNotEmpty()) {
+            localDataService.markPhotosDeleted(response.photos)
+            count += response.photos.size
+        }
+        if (response.notes.isNotEmpty()) {
+            localDataService.markNotesDeleted(response.notes)
+            count += response.notes.size
+        }
+        if (response.equipment.isNotEmpty()) {
+            localDataService.markEquipmentDeleted(response.equipment)
+            count += response.equipment.size
+        }
+        if (response.damageMaterials.isNotEmpty()) {
+            localDataService.markDamagesDeleted(response.damageMaterials)
+            count += response.damageMaterials.size
+        }
+        if (response.atmosphericLogs.isNotEmpty()) {
+            localDataService.markAtmosphericLogsDeleted(response.atmosphericLogs)
+            count += response.atmosphericLogs.size
+        }
+        val allMoistureLogs = (response.moistureLogs + response.damageMaterialRoomLogs).distinct()
+        if (allMoistureLogs.isNotEmpty()) {
+            localDataService.markMoistureLogsDeleted(allMoistureLogs)
+            count += allMoistureLogs.size
+        }
+        if (response.workScopeActions.isNotEmpty()) {
+            localDataService.markWorkScopesDeleted(response.workScopeActions)
+            count += response.workScopeActions.size
+        }
+
+        return count
+    }
+
     private suspend fun applyDeletedRecords(response: DeletedRecordsResponse) {
         // Cascade delete projects first - this will also delete all child entities
         // (rooms, photos, notes, etc.) even if the server didn't explicitly list them
@@ -160,6 +298,18 @@ class DeletedRecordsSyncService(
         // Note: atmospheric_logs are not supported by the backend API
         val DEFAULT_TYPES = listOf(
             "projects",
+            "properties",
+            "photos",
+            "notes",
+            "rooms",
+            "locations",
+            "equipment",
+            "damage_materials",
+            "damage_material_room_logs",
+            "work_scope_actions"
+        )
+        // Types to check for project-level deletion sync (excludes "projects" since we're syncing it)
+        private val PROJECT_CHILD_TYPES = listOf(
             "properties",
             "photos",
             "notes",

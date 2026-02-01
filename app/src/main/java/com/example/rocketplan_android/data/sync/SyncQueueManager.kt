@@ -96,6 +96,9 @@ class SyncQueueManager(
     @Volatile
     private var lastForegroundSyncAt = 0L
 
+    // Track projects with updates for incremental sync
+    private val pendingUpdatedProjectIds = mutableSetOf<Long>()
+
     init {
         scope.launch { processLoop() }
         scope.launch { observePendingOperations() }
@@ -156,6 +159,21 @@ class SyncQueueManager(
             enqueue(SyncJob.ProcessPendingOperations)
             enqueue(SyncJob.SyncDeletedRecords)  // Sync deletions from server
             enqueue(SyncJob.SyncProjects(force = true))
+        }
+    }
+
+    /**
+     * Incremental refresh: only syncs projects that have actually changed.
+     * Uses /api/sync/updated to identify changed projects, then queues only those for sync.
+     * Falls back to full sync if the updated records fetch fails.
+     */
+    fun refreshProjectsIncremental() {
+        scope.launch {
+            enqueue(SyncJob.EnsureUserContext)
+            enqueue(SyncJob.ProcessPendingOperations)
+            enqueue(SyncJob.SyncDeletedRecords)
+            enqueue(SyncJob.SyncUpdatedRecords)
+            enqueue(SyncJob.SyncProjects(force = false))
         }
     }
 
@@ -509,6 +527,7 @@ class SyncQueueManager(
             is SyncJob.EnsureUserContext -> _currentSyncProgress.value = SyncProgress(job, null, "Loading user data...")
             is SyncJob.SyncProjects -> _currentSyncProgress.value = SyncProgress(job, null, "Loading project list...")
             is SyncJob.SyncDeletedRecords -> _currentSyncProgress.value = SyncProgress(job, null, "Checking for deletions...")
+            is SyncJob.SyncUpdatedRecords -> _currentSyncProgress.value = SyncProgress(job, null, "Checking for updates...")
             is SyncJob.ProcessPendingOperations -> _currentSyncProgress.value = null // Don't show for pending ops
             is SyncJob.SyncProjectGraph -> {} // Handled below with project lookup
         }
@@ -625,6 +644,54 @@ class SyncQueueManager(
 
                 projectRealtimeManager?.updateProjects(projects.map { it.projectId }.toSet())
 
+                // Check if we have specific updated project IDs from SyncUpdatedRecords
+                val updatedServerIds = mutex.withLock {
+                    pendingUpdatedProjectIds.toSet().also { pendingUpdatedProjectIds.clear() }
+                }
+
+                // If incremental sync identified specific changed projects, only sync those
+                if (!job.force && updatedServerIds.isNotEmpty()) {
+                    val changedProjects = projects.filter { project ->
+                        project.serverId?.let { updatedServerIds.contains(it) } == true
+                    }
+
+                    Log.d(TAG, "📊 Incremental sync: ${changedProjects.size} changed projects (of ${updatedServerIds.size} updated IDs)")
+
+                    if (changedProjects.isEmpty()) {
+                        Log.d(TAG, "✅ No local projects match updated IDs, skipping individual syncs")
+                    } else {
+                        changedProjects.forEachIndexed { index, project ->
+                            enqueue(
+                                SyncJob.SyncProjectGraph(
+                                    projectId = project.projectId,
+                                    prio = 2 + index,
+                                    skipPhotos = true,
+                                    mode = SyncJob.ProjectSyncMode.ESSENTIALS_ONLY,
+                                    skipContentSync = false // Changed projects get full sync
+                                )
+                            )
+                        }
+
+                        remoteLogger.log(
+                            LogLevel.INFO,
+                            TAG,
+                            "Incremental sync queued changed projects",
+                            mapOf(
+                                "changedCount" to changedProjects.size.toString(),
+                                "updatedIdsCount" to updatedServerIds.size.toString()
+                            )
+                        )
+                    }
+
+                    // Mark initial sync as completed
+                    if (!_initialSyncCompleted.value) {
+                        _initialSyncCompleted.value = true
+                        Log.d(TAG, "✅ Initial project sync completed")
+                    }
+                    return
+                }
+
+                // Fall through to full sync if no updated IDs available (force=true or fallback)
                 val now = System.currentTimeMillis()
                 val recentCutoff = now - RECENT_SYNC_THRESHOLD_MS
                 val eligible = projects.filter { project ->
@@ -636,13 +703,16 @@ class SyncQueueManager(
                 // Sort by most recent (updatedAt descending) to prioritize recent projects
                 val sortedByRecency = eligible.sortedByDescending { it.updatedAt?.time ?: 0L }
 
-                // Only do full content sync (photos/metadata) for the N most recent projects
-                val topNForFullSync = sortedByRecency.take(MAX_FULL_SYNC_PROJECTS).map { it.projectId }.toSet()
+                // Full sync for: all assigned projects + top N unassigned projects
+                val currentAssignedIds = assignedProjectIds.value
+                val assignedForFullSync = sortedByRecency.filter { currentAssignedIds.contains(it.projectId) }.map { it.projectId }.toSet()
+                val unassignedForFullSync = sortedByRecency.filter { !currentAssignedIds.contains(it.projectId) }.take(MAX_UNASSIGNED_FULL_SYNC).map { it.projectId }.toSet()
+                val allForFullSync = assignedForFullSync + unassignedForFullSync
 
-                Log.d(TAG, "📊 Queuing ${eligible.size} projects: ${topNForFullSync.size} for full sync, ${eligible.size - topNForFullSync.size} essentials-only")
+                Log.d(TAG, "📊 Queuing ${eligible.size} projects: ${assignedForFullSync.size} assigned + ${unassignedForFullSync.size} unassigned for full sync, ${eligible.size - allForFullSync.size} essentials-only")
 
                 sortedByRecency.forEachIndexed { index, project ->
-                    val skipContent = !topNForFullSync.contains(project.projectId)
+                    val skipContent = !allForFullSync.contains(project.projectId)
                     enqueue(
                         SyncJob.SyncProjectGraph(
                             projectId = project.projectId,
@@ -662,8 +732,9 @@ class SyncQueueManager(
                         "Queued projects for background sync",
                         mapOf(
                             "totalQueued" to sortedByRecency.size.toString(),
-                            "fullSyncCount" to topNForFullSync.size.toString(),
-                            "essentialsOnlyCount" to (sortedByRecency.size - topNForFullSync.size).toString()
+                            "assignedFullSync" to assignedForFullSync.size.toString(),
+                            "unassignedFullSync" to unassignedForFullSync.size.toString(),
+                            "essentialsOnlyCount" to (sortedByRecency.size - allForFullSync.size).toString()
                         )
                     )
                 }
@@ -691,6 +762,29 @@ class SyncQueueManager(
                     }
             }
 
+            is SyncJob.SyncUpdatedRecords -> {
+                if (!isNetworkAvailable()) {
+                    Log.d(TAG, "⏭️ Skipping SyncUpdatedRecords (no network)")
+                    return
+                }
+                syncRepository.getUpdatedProjectIds()
+                    .onSuccess { changedIds ->
+                        if (changedIds.isNotEmpty()) {
+                            mutex.withLock {
+                                pendingUpdatedProjectIds.addAll(changedIds)
+                            }
+                            Log.d(TAG, "📊 [SyncUpdatedRecords] Found ${changedIds.size} changed projects")
+                        } else {
+                            Log.d(TAG, "📊 [SyncUpdatedRecords] No project changes detected")
+                        }
+                    }
+                    .onFailure { error ->
+                        Log.e(TAG, "❌ [SyncUpdatedRecords] Failed to fetch updated records, will use full sync", error)
+                        // Set force flag so SyncProjects falls back to full sync
+                        pendingSyncProjectsForce.set(true)
+                    }
+            }
+
             is SyncJob.SyncProjectGraph -> {
                 // Skip network-dependent sync operations when offline
                 if (!isNetworkAvailable()) {
@@ -713,6 +807,15 @@ class SyncQueueManager(
                 // Look up project UID once for detailed progress display
                 val project = localDataService.getProject(job.projectId)
                 val projectUid = project?.uid
+
+                // Check for deleted items in this project before syncing
+                val projectServerId = project?.serverId
+                if (projectServerId != null) {
+                    syncRepository.syncDeletedRecordsForProject(projectServerId, job.projectId)
+                        .onFailure { error ->
+                            Log.w(TAG, "⚠️ [SyncProjectGraph] Failed to sync deleted records for project ${job.projectId}", error)
+                        }
+                }
                 val phaseDescription = when (mode) {
                     SyncJob.ProjectSyncMode.FULL -> "full sync"
                     SyncJob.ProjectSyncMode.ESSENTIALS_ONLY -> "rooms"
@@ -814,9 +917,9 @@ class SyncQueueManager(
 
                 // If fast sync succeeded, queue photo sync (unless skipContentSync or already pending)
                 if (syncSucceeded && mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
-                    // Skip content sync for older projects (not in top N most recent)
+                    // Skip content sync for unassigned projects outside top N
                     if (job.skipContentSync) {
-                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, skipping content sync (not in top $MAX_FULL_SYNC_PROJECTS)")
+                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, skipping content sync (not assigned and not in top $MAX_UNASSIGNED_FULL_SYNC unassigned)")
                     } else {
                         val shouldEnqueuePhotos = mutex.withLock {
                             if (pendingPhotoSyncs.contains(job.projectId)) {
@@ -922,9 +1025,9 @@ class SyncQueueManager(
         private const val RECENT_SYNC_THRESHOLD_MS = 5 * 60 * 1000L
         // Interval to check for backoff-scheduled operations that are now due
         private const val SCHEDULED_RETRY_CHECK_INTERVAL_MS = 30_000L
-        // Only do full content sync (photos/metadata) for this many most recent projects
+        // Full sync for all assigned projects + this many unassigned projects (by recency)
         // Other projects get essentials-only (fast sync) for navigation
-        private const val MAX_FULL_SYNC_PROJECTS = 10
+        private const val MAX_UNASSIGNED_FULL_SYNC = 5
     }
 
     private suspend fun focusProjectSync(projectId: Long) {

@@ -12,6 +12,8 @@ sealed class SyncJob(
 
     data object SyncDeletedRecords : SyncJob(priority = 0, key = "sync_deleted_records")
 
+    data object SyncUpdatedRecords : SyncJob(priority = 0, key = "sync_updated_records")
+
     enum class ProjectSyncMode {
         FULL,
         ESSENTIALS_ONLY,

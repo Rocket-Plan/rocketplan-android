@@ -103,15 +103,15 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun refreshProjects() {
-        Log.d(TAG, "🔄 Manual refresh triggered")
+        Log.d(TAG, "🔄 Manual refresh triggered (incremental)")
         _uiState.value = ProjectsUiState.Loading
         _isRefreshing.value = true
         remoteLogger.log(
             level = LogLevel.INFO,
             tag = TAG,
-            message = "Manual refresh requested by user"
+            message = "Manual refresh requested by user (incremental)"
         )
-        syncQueueManager.refreshProjects()
+        syncQueueManager.refreshProjectsIncremental()
     }
 
     fun prioritizeProject(projectId: Long) {
