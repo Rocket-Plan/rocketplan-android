@@ -174,7 +174,7 @@ class AtmosphericLogPushHandlerTest {
         // Verify promoteWaitingAssembly was called with correct parameters
         coVerify {
             queueManager.promoteWaitingAssembly(
-                entityType = "atmospheric_log",
+                entityType = "AtmosphericLog",
                 entityUuid = logUuid,
                 entityId = newServerId
             )
@@ -253,7 +253,7 @@ class AtmosphericLogPushHandlerTest {
         // Should call promote since we have serverId and assemblyId
         coVerify {
             queueManager.promoteWaitingAssembly(
-                entityType = "atmospheric_log",
+                entityType = "AtmosphericLog",
                 entityUuid = logUuid,
                 entityId = existingServerId
             )

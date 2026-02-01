@@ -53,7 +53,7 @@ class ImageProcessorQueueManagerTest {
 
     private fun createWaitingAssembly(
         assemblyId: String = "test-assembly-123",
-        entityType: String = "atmospheric_log",
+        entityType: String = "AtmosphericLog",
         entityUuid: String = "test-log-uuid",
         entityId: Long? = null
     ) = ImageProcessorAssemblyEntity(
@@ -73,7 +73,7 @@ class ImageProcessorQueueManagerTest {
     )
 
     private fun createStoredUploadData(
-        entityType: String = "atmospheric_log",
+        entityType: String = "AtmosphericLog",
         entityUuid: String = "test-log-uuid",
         entityId: Long? = null
     ) = StoredUploadData(
@@ -112,7 +112,7 @@ class ImageProcessorQueueManagerTest {
 
         val queueManager = createQueueManager()
         queueManager.promoteWaitingAssembly(
-            entityType = "atmospheric_log",
+            entityType = "AtmosphericLog",
             entityUuid = entityUuid,
             entityId = entityId
         )
@@ -146,7 +146,7 @@ class ImageProcessorQueueManagerTest {
 
         val queueManager = createQueueManager()
         queueManager.promoteWaitingAssembly(
-            entityType = "atmospheric_log",
+            entityType = "AtmosphericLog",
             entityUuid = entityUuid,
             entityId = entityId
         )
@@ -169,7 +169,7 @@ class ImageProcessorQueueManagerTest {
 
         val queueManager = createQueueManager()
         queueManager.promoteWaitingAssembly(
-            entityType = "atmospheric_log",
+            entityType = "AtmosphericLog",
             entityUuid = entityUuid,
             entityId = entityId
         )
@@ -189,7 +189,7 @@ class ImageProcessorQueueManagerTest {
 
         // Should not throw, just log and return
         queueManager.promoteWaitingAssembly(
-            entityType = "atmospheric_log",
+            entityType = "AtmosphericLog",
             entityUuid = entityUuid,
             entityId = entityId
         )
