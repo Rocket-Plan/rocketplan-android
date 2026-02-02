@@ -48,6 +48,16 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okio.BufferedSink
 
 /**
+ * Result of fetching assembly status from backend.
+ * Differentiates between success, not found (404), and transient errors.
+ */
+sealed class BackendStatusResult {
+    data class Success(val snapshot: ImageProcessorStatusSnapshot) : BackendStatusResult()
+    data object NotFound : BackendStatusResult()  // 404 - assembly doesn't exist on backend
+    data class TransientError(val message: String) : BackendStatusResult()  // Network, 5xx, timeout
+}
+
+/**
  * Manages sequential processing of image processor assemblies.
  * Ensures only one assembly uploads at a time (matching iOS behavior).
  */
@@ -69,6 +79,8 @@ class ImageProcessorQueueManager(
         // Match iOS cap: exponential backoff up to 30 minutes
         private const val MAX_RETRY_TIMEOUT_SECONDS = 1800
         private const val ONE_OFF_RETRY_WORK_NAME = "image_processor_retry_one_off"
+        // If server says "pending" for longer than this, consider it stuck and retry (5 minutes)
+        private const val PENDING_STUCK_THRESHOLD_MS = 5 * 60 * 1000L
     }
 
     private val isProcessingQueue = AtomicBoolean(false)
@@ -837,24 +849,43 @@ class ImageProcessorQueueManager(
     }
 
     private suspend fun reconcileProcessingAssembliesInternal(source: String) {
-        val assemblies = dao.getAssembliesByStatus(listOf(AssemblyStatus.PROCESSING.value))
+        // Match iOS: reconcile PENDING, PROCESSING, and RETRYING assemblies
+        // This ensures stuck assemblies (e.g., server pending but never processed) get retried
+        // Note: No failsCount filter here - even max-retry assemblies should reconcile to COMPLETED
+        val assemblies = dao.getAssembliesByStatus(listOf(
+            AssemblyStatus.PENDING.value,
+            AssemblyStatus.PROCESSING.value,
+            AssemblyStatus.RETRYING.value
+        ))
+
         if (assemblies.isEmpty()) {
-            Log.d(TAG, "✅ No processing assemblies to reconcile (source=$source)")
+            Log.d(TAG, "✅ No assemblies to reconcile (source=$source)")
             return
         }
 
-        Log.d(TAG, "🔎 Reconciling ${assemblies.size} processing assemblies (source=$source)")
+        Log.d(TAG, "🔎 Reconciling ${assemblies.size} assemblies (source=$source)")
+        val statusList = assemblies.map { it.status }.distinct().joinToString(",")
         remoteLogger?.log(
             level = LogLevel.INFO,
             tag = TAG,
-            message = "Reconciling processing assemblies",
+            message = "Reconciling assemblies with backend",
             metadata = mapOf(
                 "source" to source,
-                "count" to assemblies.size.toString()
+                "count" to assemblies.size.toString(),
+                "statuses" to statusList
             )
         )
 
-        assemblies.forEach { reconcileAssemblyStatusInternal(it.assemblyId, source) }
+        val results = assemblies.map { reconcileAssemblyStatusInternal(it.assemblyId, source) }
+
+        // If any assemblies were marked for retry (QUEUED), trigger queue processing
+        val needsProcessing = results.any { result ->
+            result.getOrNull() == AssemblyStatus.QUEUED
+        }
+        if (needsProcessing) {
+            Log.d(TAG, "🚀 Triggering queue processing after reconciliation marked assemblies for retry")
+            processNextQueuedAssembly()
+        }
     }
 
     private suspend fun reconcileAssemblyStatusInternal(
@@ -876,8 +907,47 @@ class ImageProcessorQueueManager(
             val assembly = dao.getAssembly(assemblyId)
                 ?: throw IllegalArgumentException("Assembly not found")
             val photos = dao.getPhotosByAssemblyUuid(assemblyId)
-            val snapshot = fetchBackendStatus(assembly)
-                ?: throw IllegalStateException("No status from backend")
+            val statusResult = fetchBackendStatus(assembly)
+
+            // Handle different backend status results
+            val snapshot = when (statusResult) {
+                is BackendStatusResult.NotFound -> {
+                    // 404 - backend doesn't know about this assembly, mark for retry to re-create it
+                    Log.w(TAG, "⚠️ Assembly $assemblyId not found on backend (404), marking for retry")
+                    remoteLogger?.log(
+                        level = LogLevel.WARN,
+                        tag = TAG,
+                        message = "Assembly not found on backend (404) - marking for retry",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "source" to source,
+                            "local_status" to assembly.status
+                        )
+                    )
+                    // Reset ALL non-completed photos (not just FAILED) since assembly will be re-created
+                    // Photos in UPLOADING/PROCESSING would otherwise be skipped
+                    resetAllPhotosForRetry(assemblyId)
+                    // Reset to QUEUED so uploadAssembly will call retryAssemblyCreation
+                    updateAssemblyStatus(assemblyId, AssemblyStatus.QUEUED, "Backend assembly not found, retrying")
+                    return@runCatching AssemblyStatus.QUEUED
+                }
+                is BackendStatusResult.TransientError -> {
+                    // Network error, 5xx, timeout - don't trigger re-create, just skip this reconciliation
+                    Log.d(TAG, "⏸️ Assembly $assemblyId transient error (${statusResult.message}), will retry later")
+                    remoteLogger?.log(
+                        level = LogLevel.INFO,
+                        tag = TAG,
+                        message = "Assembly reconciliation skipped due to transient error",
+                        metadata = mapOf(
+                            "assembly_id" to assemblyId,
+                            "source" to source,
+                            "error" to statusResult.message
+                        )
+                    )
+                    return@runCatching null  // Return null to indicate no action taken
+                }
+                is BackendStatusResult.Success -> statusResult.snapshot
+            }
 
             val completedCount = snapshot.completedFiles ?: 0
             val isComplete = snapshot.isComplete == true ||
@@ -918,10 +988,66 @@ class ImageProcessorQueueManager(
                 return@runCatching AssemblyStatus.COMPLETED
             }
 
-            val targetStatus = mappedStatus ?: AssemblyStatus.PROCESSING
-            updateAssemblyStatus(assemblyId, targetStatus, assembly.errorMessage)
+            // Check if assembly is stuck in "pending" on server for too long
+            // This happens when the image processor service never picks up the job
+            // Require BOTH local and server to be PENDING to avoid false positives:
+            // - If local is still UPLOADING but server is "pending", that's normal (not done uploading yet)
+            // - If local was PROCESSING but server just flipped to "pending", wait for next reconciliation
+            val localIsPending = AssemblyStatus.fromValue(assembly.status) == AssemblyStatus.PENDING
+            val serverSaysPending = mappedStatus == AssemblyStatus.PENDING
+            val stuckTooLong = (System.currentTimeMillis() - assembly.lastUpdatedAt) > PENDING_STUCK_THRESHOLD_MS
 
-            Log.d(TAG, "ℹ️ Assembly $assemblyId reconciliation finished (source=$source, status=${targetStatus.value})")
+            if (localIsPending && serverSaysPending && stuckTooLong && assembly.failsCount < MAX_RETRY_ATTEMPTS) {
+                // Server never processed this - mark as FAILED to trigger retry
+                Log.w(TAG, "⚠️ Assembly $assemblyId stuck in server pending for > 5 min, marking for retry")
+                remoteLogger?.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Assembly stuck in server pending - marking for retry",
+                    metadata = mapOf(
+                        "assembly_id" to assemblyId,
+                        "source" to source,
+                        "stuck_duration_ms" to (System.currentTimeMillis() - assembly.lastUpdatedAt).toString(),
+                        "fails_count" to assembly.failsCount.toString()
+                    )
+                )
+
+                // Reset photos to pending so they can be re-uploaded
+                resetFailedPhotosToPending(assemblyId)
+
+                // Mark assembly as FAILED with proper retry bookkeeping (matching other failure paths)
+                val nextTimeout = calculateNextRetryTimeout(assembly.retryCount)
+                val nextRetryAt = System.currentTimeMillis() + (nextTimeout * 1000L)
+
+                val updated = assembly.copy(
+                    status = AssemblyStatus.FAILED.value,
+                    lastUpdatedAt = System.currentTimeMillis(),
+                    errorMessage = "Server image processor did not pick up job",
+                    failsCount = assembly.failsCount + 1,
+                    retryCount = assembly.retryCount + 1,
+                    nextRetryAt = nextRetryAt,
+                    lastTimeout = nextTimeout
+                )
+                dao.updateAssembly(updated)
+
+                // Schedule retry
+                if (updated.failsCount < MAX_RETRY_ATTEMPTS) {
+                    scheduleOneOffRetry(nextTimeout.toLong())
+                }
+
+                return@runCatching AssemblyStatus.FAILED
+            }
+
+            val targetStatus = mappedStatus ?: AssemblyStatus.PROCESSING
+            val currentStatus = AssemblyStatus.fromValue(assembly.status)
+
+            // Only update if status actually changed (avoid resetting lastUpdatedAt on every reconciliation)
+            if (currentStatus != targetStatus) {
+                updateAssemblyStatus(assemblyId, targetStatus, assembly.errorMessage)
+                Log.d(TAG, "ℹ️ Assembly $assemblyId status changed: ${currentStatus?.value} → ${targetStatus.value} (source=$source)")
+            } else {
+                Log.d(TAG, "ℹ️ Assembly $assemblyId reconciliation verified (source=$source, status=${targetStatus.value})")
+            }
             remoteLogger?.log(
                 level = LogLevel.INFO,
                 tag = TAG,
@@ -1143,9 +1269,10 @@ class ImageProcessorQueueManager(
         assembly: ImageProcessorAssemblyEntity,
         photos: List<ImageProcessorPhotoEntity>
     ): Boolean {
-        val status = fetchBackendStatus(assembly) ?: return false
-        val completedCount = status.completedFiles ?: 0
-        val isComplete = status.isComplete == true ||
+        val statusResult = fetchBackendStatus(assembly)
+        val snapshot = (statusResult as? BackendStatusResult.Success)?.snapshot ?: return false
+        val completedCount = snapshot.completedFiles ?: 0
+        val isComplete = snapshot.isComplete == true ||
             (assembly.totalFiles > 0 && completedCount >= assembly.totalFiles)
 
         if (!isComplete) return false
@@ -1172,7 +1299,7 @@ class ImageProcessorQueueManager(
                 "assembly_id" to assembly.assemblyId,
                 "completed_files" to completedCount.toString(),
                 "total_files" to assembly.totalFiles.toString(),
-                "status" to (status.status ?: "unknown")
+                "status" to (snapshot.status ?: "unknown")
             )
         )
 
@@ -1182,7 +1309,7 @@ class ImageProcessorQueueManager(
 
     private suspend fun fetchBackendStatus(
         assembly: ImageProcessorAssemblyEntity
-    ): ImageProcessorStatusSnapshot? {
+    ): BackendStatusResult {
         return runCatching {
             val serverRoomId = resolveServerRoomId(assembly.roomId)
 
@@ -1192,19 +1319,30 @@ class ImageProcessorQueueManager(
             }
 
             if (!response.isSuccessful) {
+                val code = response.code()
                 remoteLogger?.log(
                     level = LogLevel.WARN,
                     tag = TAG,
                     message = "Failed to fetch assembly status",
                     metadata = mapOf(
                         "assembly_id" to assembly.assemblyId,
-                        "code" to response.code().toString()
+                        "code" to code.toString()
                     )
                 )
-                return@runCatching null
+                // Differentiate 404 from other errors
+                return@runCatching if (code == 404) {
+                    BackendStatusResult.NotFound
+                } else {
+                    BackendStatusResult.TransientError("HTTP $code")
+                }
             }
 
-            response.body()?.toSnapshot()
+            val snapshot = response.body()?.toSnapshot()
+            if (snapshot != null) {
+                BackendStatusResult.Success(snapshot)
+            } else {
+                BackendStatusResult.TransientError("Empty response body")
+            }
         }.getOrElse { error ->
             remoteLogger?.log(
                 level = LogLevel.WARN,
@@ -1215,7 +1353,7 @@ class ImageProcessorQueueManager(
                     "error" to (error.message ?: "unknown")
                 )
             )
-            null
+            BackendStatusResult.TransientError(error.message ?: "unknown")
         }
     }
 
@@ -1512,6 +1650,29 @@ class ImageProcessorQueueManager(
 
         if (failedPhotos.isNotEmpty()) {
             Log.d(TAG, "🔄 Reset ${failedPhotos.size} failed photos to PENDING for assembly $assemblyId")
+        }
+    }
+
+    /**
+     * Reset ALL non-completed photos to PENDING for a full assembly retry.
+     * Used when the backend assembly doesn't exist (404) and needs to be re-created.
+     * This includes FAILED, UPLOADING, and PROCESSING photos.
+     */
+    private suspend fun resetAllPhotosForRetry(assemblyId: String) {
+        val photos = dao.getPhotosByAssemblyUuid(assemblyId)
+        val nonCompletedPhotos = photos.filter { it.status != PhotoStatus.COMPLETED.value }
+
+        for (photo in nonCompletedPhotos) {
+            val updated = photo.copy(
+                status = PhotoStatus.PENDING.value,
+                lastUpdatedAt = System.currentTimeMillis(),
+                errorMessage = null
+            )
+            dao.updatePhoto(updated)
+        }
+
+        if (nonCompletedPhotos.isNotEmpty()) {
+            Log.d(TAG, "🔄 Reset ${nonCompletedPhotos.size} photos to PENDING for full retry of assembly $assemblyId")
         }
     }
 }
