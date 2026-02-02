@@ -140,7 +140,8 @@ data class OfflineProjectEntity(
         Index(value = ["uuid"], unique = true),
         Index(value = ["projectId"]),
         Index(value = ["parentLocationId"]),
-        Index(value = ["serverId"])
+        Index(value = ["serverId"]),
+        Index(value = ["projectId", "isDeleted"])
     ]
 )
 data class OfflineLocationEntity(
@@ -170,7 +171,9 @@ data class OfflineLocationEntity(
         Index(value = ["locationId"]),
         Index(value = ["serverId"]),
         Index(value = ["syncStatus"]),
-        Index(value = ["isDirty"])
+        Index(value = ["isDirty"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["locationId", "isDeleted"])
     ]
 )
 data class OfflineRoomEntity(
@@ -350,7 +353,9 @@ data class OfflineRoomPhotoSnapshotEntity(
         Index(value = ["date"]),
         Index(value = ["serverId"]),
         Index(value = ["syncStatus"]),
-        Index(value = ["isDirty"])
+        Index(value = ["isDirty"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["roomId", "isDeleted"])
     ]
 )
 data class OfflineAtmosphericLogEntity(
@@ -390,7 +395,9 @@ data class OfflineAtmosphericLogEntity(
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
         Index(value = ["syncStatus"]),
-        Index(value = ["isDeleted"])
+        Index(value = ["isDeleted"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["projectId", "roomId", "isDeleted"])
     ]
 )
 data class OfflineAlbumEntity(
@@ -438,7 +445,10 @@ data class OfflineAlbumPhotoEntity(
         Index(value = ["uploadStatus"]),
         Index(value = ["syncStatus"]),
         Index(value = ["isDirty"]),
-        Index(value = ["cacheStatus"])
+        Index(value = ["cacheStatus"]),
+        Index(value = ["cacheStatus", "isDeleted", "lastAccessedAt"]),
+        Index(value = ["roomId", "isDeleted", "capturedAt"]),
+        Index(value = ["projectId", "isDeleted"])
     ]
 )
 data class OfflinePhotoEntity(
@@ -483,7 +493,9 @@ data class OfflinePhotoEntity(
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
         Index(value = ["serverId"]),
-        Index(value = ["syncStatus"])
+        Index(value = ["syncStatus"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["roomId", "isDeleted"])
     ]
 )
 data class OfflineEquipmentEntity(
@@ -540,7 +552,9 @@ data class OfflineMaterialEntity(
         Index(value = ["materialId"]),
         Index(value = ["date"]),
         Index(value = ["serverId"]),
-        Index(value = ["syncStatus"])
+        Index(value = ["syncStatus"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["roomId", "isDeleted"])
     ]
 )
 data class OfflineMoistureLogEntity(
@@ -574,7 +588,9 @@ data class OfflineMoistureLogEntity(
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
         Index(value = ["photoId"]),
-        Index(value = ["serverId"])
+        Index(value = ["serverId"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["roomId", "isDeleted"])
     ]
 )
 data class OfflineNoteEntity(
@@ -603,7 +619,9 @@ data class OfflineNoteEntity(
         Index(value = ["uuid"], unique = true),
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
-        Index(value = ["serverId"])
+        Index(value = ["serverId"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["roomId", "isDeleted"])
     ]
 )
 data class OfflineDamageEntity(
@@ -631,7 +649,9 @@ data class OfflineDamageEntity(
         Index(value = ["uuid"], unique = true),
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
-        Index(value = ["serverId"])
+        Index(value = ["serverId"]),
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["roomId", "isDeleted"])
     ]
 )
 data class OfflineWorkScopeEntity(
@@ -668,7 +688,11 @@ data class OfflineWorkScopeEntity(
         Index(value = ["status"]),
         Index(value = ["priority"]),
         Index(value = ["createdAt"]),
-        Index(value = ["scheduledAt"])
+        Index(value = ["scheduledAt"]),
+        Index(value = ["status", "priority", "createdAt"]),
+        Index(value = ["status", "scheduledAt"]),
+        Index(value = ["entityType", "entityId", "status"]),
+        Index(value = ["entityType", "operationType", "status"])
     ]
 )
 data class OfflineSyncQueueEntity(
@@ -852,7 +876,9 @@ data class OfflineUserRoleEntity(
         Index(value = ["userId"]),
         Index(value = ["syncStatus"]),
         Index(value = ["timeIn"]),
-        Index(value = ["isDeleted"])
+        Index(value = ["isDeleted"]),
+        Index(value = ["userId", "timeIn", "isDeleted"]),
+        Index(value = ["userId", "timeOut", "isDeleted"])
     ]
 )
 data class OfflineTimecardEntity(

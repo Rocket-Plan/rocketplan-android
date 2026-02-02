@@ -88,7 +88,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
         OfflineTimecardTypeEntity::class,
         OfflineClaimEntity::class
     ],
-    version = 22,
+    version = 23,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
