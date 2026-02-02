@@ -75,7 +75,7 @@ class TimecardSyncService(
 
         val timestamp = now()
         val elapsed = (timestamp.time - existing.timeIn.time) / 1000 // seconds
-        val lockUpdatedAt = existing.serverId?.let { existing.updatedAt.toApiTimestamp() }
+        val lockUpdatedAt = existing.serverId?.let { (existing.serverUpdatedAt ?: existing.updatedAt).toApiTimestamp() }
 
         val updated = existing.copy(
             timeOut = timestamp,
@@ -106,7 +106,7 @@ class TimecardSyncService(
             ?: return@withContext null
 
         val timestamp = now()
-        val lockUpdatedAt = existing.serverId?.let { existing.updatedAt.toApiTimestamp() }
+        val lockUpdatedAt = existing.serverId?.let { (existing.serverUpdatedAt ?: existing.updatedAt).toApiTimestamp() }
 
         val newTimeIn = timeIn ?: existing.timeIn
         val newTimeOut = timeOut ?: existing.timeOut
@@ -142,7 +142,7 @@ class TimecardSyncService(
             else -> null
         } ?: return@withContext null
 
-        val lockUpdatedAt = existing.serverId?.let { existing.updatedAt.toApiTimestamp() }
+        val lockUpdatedAt = existing.serverId?.let { (existing.serverUpdatedAt ?: existing.updatedAt).toApiTimestamp() }
         val timestamp = now()
         val updated = existing.copy(
             isDeleted = true,

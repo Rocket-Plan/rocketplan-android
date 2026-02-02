@@ -131,6 +131,19 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
         } catch (error: Throwable) {
             if (error.isConflict()) {
                 Log.w(SYNC_TAG, "⚠️ [handlePendingLocationUpdate] 409 conflict for location $serverId; fetching fresh and retrying")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN,
+                    SYNC_TAG,
+                    "Location update 409 conflict",
+                    mapOf(
+                        "locationServerId" to serverId.toString(),
+                        "locationUuid" to location.uuid,
+                        "lockUpdatedAt" to (payload.lockUpdatedAt ?: "null"),
+                        "usedServerTimestamp" to (location.serverUpdatedAt != null).toString(),
+                        "localUpdatedAt" to (location.updatedAt.time.toString()),
+                        "serverUpdatedAt" to (location.serverUpdatedAt?.time?.toString() ?: "null")
+                    )
+                )
                 // Fetch fresh location data from server
                 val freshLocation = fetchFreshLocation(location, serverId)
                 if (freshLocation == null) {
@@ -234,7 +247,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             return OperationOutcome.SUCCESS
         }
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: location.updatedAt.toApiTimestamp()
+            ?: (location.serverUpdatedAt ?: location.updatedAt).toApiTimestamp()
         try {
             ctx.api.deleteLocation(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {

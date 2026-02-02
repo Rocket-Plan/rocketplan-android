@@ -335,7 +335,7 @@ class OfflineSyncRepository(
 
         Log.d("API", "🗑️ [deleteProject] Found project - title: ${project.title}, serverId: ${project.serverId}, uuid: ${project.uuid}")
 
-        val lockUpdatedAt = project.updatedAt.toApiTimestamp()
+        val lockUpdatedAt = (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
 
         // Cascade delete child entities and clear sync ops (runs in transaction)
         localDataService.deleteProject(localProjectId)
@@ -770,7 +770,7 @@ class OfflineSyncRepository(
         runCatching {
             val project = localDataService.getProject(projectId)
                 ?: throw IllegalStateException("Project not found locally")
-            val lockUpdatedAt = project.updatedAt.toApiTimestamp()
+            val lockUpdatedAt = (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
             val updated = project.copy(
                 alias = normalizedAlias,
                 updatedAt = now(),
@@ -793,7 +793,7 @@ class OfflineSyncRepository(
             if (project.status?.equals(status.apiValue, ignoreCase = true) == true) {
                 return@runCatching project
             }
-            val lockUpdatedAt = project.updatedAt.toApiTimestamp()
+            val lockUpdatedAt = (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
             val updated = project.copy(
                 status = status.apiValue,
                 updatedAt = now(),
@@ -869,7 +869,7 @@ class OfflineSyncRepository(
         // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
         photo.serverId?.let { DeletionTombstoneCache.recordDeletion("photo", it) }
 
-        val lockUpdatedAt = photo.updatedAt.toApiTimestamp()
+        val lockUpdatedAt = (photo.serverUpdatedAt ?: photo.updatedAt).toApiTimestamp()
         val timestamp = now()
         val marked = photo.copy(
             isDeleted = true,

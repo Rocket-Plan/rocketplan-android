@@ -20,7 +20,7 @@ class PhotoPushHandler(private val ctx: PushHandlerContext) {
         val serverId = photo.serverId
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: photo.updatedAt.toApiTimestamp()
+            ?: (photo.serverUpdatedAt ?: photo.updatedAt).toApiTimestamp()
 
         val response = ctx.api.deletePhoto(
             serverId,

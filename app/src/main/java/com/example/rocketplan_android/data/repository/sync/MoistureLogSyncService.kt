@@ -19,7 +19,7 @@ class MoistureLogSyncService(
         log: OfflineMoistureLogEntity
     ): OfflineMoistureLogEntity = withContext(ioDispatcher) {
         val existing = localDataService.getMoistureLogByUuid(log.uuid)
-        val lockUpdatedAt = existing?.serverId?.let { existing.updatedAt.toApiTimestamp() }
+        val lockUpdatedAt = existing?.serverId?.let { (existing.serverUpdatedAt ?: existing.updatedAt).toApiTimestamp() }
         localDataService.saveMoistureLogs(listOf(log))
         val saved = localDataService.getMoistureLogByUuid(log.uuid) ?: log
         syncQueueEnqueuer().enqueueMoistureLogUpsert(saved, lockUpdatedAt)

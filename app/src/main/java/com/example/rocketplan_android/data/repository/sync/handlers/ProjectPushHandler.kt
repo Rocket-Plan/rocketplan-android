@@ -135,7 +135,7 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
         val serverId = project.serverId
             ?: return OperationOutcome.SKIP
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: project.updatedAt.toApiTimestamp()
+            ?: (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
         val statusId = ProjectStatus.fromApiValue(project.status)?.backendId
         val request = UpdateProjectRequest(
             alias = project.alias?.takeIf { it.isNotBlank() },
@@ -160,7 +160,7 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
         val serverId = project.serverId
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: project.updatedAt.toApiTimestamp()
+            ?: (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
         val request = DeleteProjectRequest(
             projectId = serverId,
             updatedAt = lockUpdatedAt

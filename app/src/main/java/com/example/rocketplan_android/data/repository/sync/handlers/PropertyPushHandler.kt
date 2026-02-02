@@ -138,7 +138,7 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         val serverId = property.serverId
             ?: return OperationOutcome.SKIP
-        val lockUpdatedAt = payload.lockUpdatedAt ?: property.updatedAt.toApiTimestamp()
+        val lockUpdatedAt = payload.lockUpdatedAt ?: (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
         val request = payload.request.copy(
             updatedAt = lockUpdatedAt,
             idempotencyKey = null
@@ -212,7 +212,7 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             return OperationOutcome.SUCCESS
         }
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: property.updatedAt.toApiTimestamp()
+            ?: (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
         try {
             ctx.api.deleteProperty(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {

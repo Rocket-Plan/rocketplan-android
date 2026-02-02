@@ -354,6 +354,19 @@ class RoomPushHandler(
         } catch (error: Throwable) {
             if (error.isConflict()) {
                 Log.w(SYNC_TAG, "⚠️ [handlePendingRoomUpdate] 409 conflict for room $serverId; fetching fresh and retrying")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN,
+                    SYNC_TAG,
+                    "Room update 409 conflict",
+                    mapOf(
+                        "roomServerId" to serverId.toString(),
+                        "roomUuid" to room.uuid,
+                        "lockUpdatedAt" to (payload.lockUpdatedAt ?: "null"),
+                        "usedServerTimestamp" to (room.serverUpdatedAt != null).toString(),
+                        "localUpdatedAt" to room.updatedAt.time.toString(),
+                        "serverUpdatedAt" to (room.serverUpdatedAt?.time?.toString() ?: "null")
+                    )
+                )
                 // Fetch fresh room data from server
                 val freshRoom = runCatching {
                     ctx.api.getRoomDetail(serverId)
@@ -435,7 +448,7 @@ class RoomPushHandler(
         val serverId = room.serverId
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: room.updatedAt.toApiTimestamp()
+            ?: (room.serverUpdatedAt ?: room.updatedAt).toApiTimestamp()
         try {
             ctx.api.deleteRoom(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {

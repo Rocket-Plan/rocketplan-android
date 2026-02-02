@@ -144,7 +144,7 @@ class PropertySyncService(
             return@withContext createProjectProperty(projectId, request, propertyTypeValue)
         }
         runCatching {
-            val lockUpdatedAt = property.updatedAt.toApiTimestamp()
+            val lockUpdatedAt = (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
             val updated = property.copy(
                 updatedAt = now(),
                 syncStatus = SyncStatus.PENDING,

@@ -148,6 +148,7 @@ internal fun buildProjectEntity(
         isDeleted = existing?.isDeleted ?: false,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
     )
 }
@@ -216,6 +217,7 @@ internal fun UserDto.toEntity(): OfflineUserEntity {
         syncVersion = 1,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
     )
 }
@@ -289,6 +291,7 @@ internal fun PropertyDto.toEntity(
         syncVersion = (existing?.syncVersion ?: 0) + 1,
         createdAt = existing?.createdAt ?: DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
     )
 }
@@ -324,6 +327,7 @@ internal fun LocationDto.toEntity(
         isDeleted = existing?.isDeleted ?: false,
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
     )
 }
@@ -340,6 +344,8 @@ internal fun RoomDto.toEntity(
         ?: UuidUtils.generateUuidV7()
     val createdAtValue = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp
     val updatedAtValue = DateUtils.parseApiDate(updatedAt) ?: timestamp
+
+    val serverUpdatedAtValue = DateUtils.parseApiDate(updatedAt) ?: timestamp
 
     val base = existing ?: OfflineRoomEntity(
         roomId = existing?.roomId ?: serverId ?: -System.currentTimeMillis(),
@@ -361,6 +367,7 @@ internal fun RoomDto.toEntity(
         isDeleted = false,
         createdAt = createdAtValue,
         updatedAt = updatedAtValue,
+        serverUpdatedAt = serverUpdatedAtValue,
         lastSyncedAt = timestamp
     )
 
@@ -398,6 +405,7 @@ internal fun RoomDto.toEntity(
         isDeleted = existing?.isDeleted ?: false,
         createdAt = createdAtValue,
         updatedAt = updatedAtValue,
+        serverUpdatedAt = serverUpdatedAtValue,
         lastSyncedAt = if (serverId != null) timestamp else existing?.lastSyncedAt
     )
 }
@@ -485,6 +493,7 @@ internal fun PhotoDto.toEntity(
         capturedAt = normalizedCapturedAt,
         createdAt = parsedCreatedAt,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -564,6 +573,7 @@ internal fun AtmosphericLogDto.toEntity(
         photoAssemblyId = photoAssemblyId ?: existing?.photoAssemblyId,
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -594,6 +604,7 @@ internal fun MoistureLogDto.toEntity(
         photoUploadStatus = photoUploadStatus ?: existing?.photoUploadStatus ?: "completed",
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -624,6 +635,7 @@ internal fun DamageMaterialDto.toMaterialEntity(): OfflineMaterialEntity {
         syncVersion = 1,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
     )
 }
@@ -648,6 +660,7 @@ internal fun EquipmentDto.toEntity(
         endDate = DateUtils.parseApiDate(endDate),
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -692,6 +705,7 @@ internal fun NoteDto.toEntity(
         categoryId = categoryId,
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -719,6 +733,7 @@ internal fun DamageMaterialDto.toEntity(
         severity = severity,
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -767,6 +782,7 @@ internal fun WorkScopeDto.toEntity(
         lineTotal = numericLineTotal,
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -789,6 +805,7 @@ internal fun MoistureLogDto.toMaterialEntity(): OfflineMaterialEntity? {
         syncVersion = 1,
         createdAt = timestamp,
         updatedAt = timestamp,
+        serverUpdatedAt = timestamp,
         lastSyncedAt = timestamp
     )
 }
@@ -832,6 +849,7 @@ internal fun AlbumDto.toEntity(defaultProjectId: Long, defaultRoomId: Long? = nu
         syncVersion = 1,
         createdAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp
     )
 }
@@ -860,6 +878,7 @@ internal fun TimecardDto.toEntity(
         companyId = companyId ?: defaultCompanyId ?: 0L,
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
@@ -939,6 +958,7 @@ internal fun AtmosphericLogDto.toPhotoEntity(): OfflinePhotoEntity? {
         capturedAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         createdAt = DateUtils.parseApiDate(photo?.createdAt ?: createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(photo?.updatedAt ?: updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(photo?.updatedAt ?: updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
@@ -991,6 +1011,7 @@ internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
         capturedAt = DateUtils.parseApiDate(createdAt) ?: timestamp,
         createdAt = DateUtils.parseApiDate(photo?.createdAt ?: createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(photo?.updatedAt ?: updatedAt) ?: timestamp,
+        serverUpdatedAt = DateUtils.parseApiDate(photo?.updatedAt ?: updatedAt) ?: timestamp,
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,

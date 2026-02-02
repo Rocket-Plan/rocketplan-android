@@ -195,7 +195,7 @@ class RoomSyncService(
             "[deleteRoom] Marking room for deletion (projectId=$projectId, localId=${room.roomId}, serverId=${room.serverId})"
         )
 
-        val lockUpdatedAt = room.updatedAt.toApiTimestamp()
+        val lockUpdatedAt = (room.serverUpdatedAt ?: room.updatedAt).toApiTimestamp()
         val timestamp = now()
         val marked = room.copy(
             isDeleted = true,

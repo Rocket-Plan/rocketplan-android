@@ -64,7 +64,7 @@ class NoteSyncService(
             isDirty = true,
             syncStatus = SyncStatus.PENDING
         )
-        val lockUpdatedAt = note.updatedAt.toApiTimestamp()
+        val lockUpdatedAt = (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
         localDataService.saveNote(updated)
         syncQueueEnqueuer().enqueueNoteUpsert(updated, lockUpdatedAt)
         updated
@@ -77,7 +77,7 @@ class NoteSyncService(
         // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
         note.serverId?.let { DeletionTombstoneCache.recordDeletion("note", it) }
 
-        val lockUpdatedAt = note.updatedAt.toApiTimestamp()
+        val lockUpdatedAt = (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
         val updated = note.copy(
             isDeleted = true,
             isDirty = true,

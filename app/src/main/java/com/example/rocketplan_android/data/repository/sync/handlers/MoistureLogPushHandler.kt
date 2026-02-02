@@ -26,7 +26,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         if (log.isDeleted) return OperationOutcome.DROP
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: log.updatedAt.toApiTimestamp()
+            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
         val synced = pushPendingMoistureLogUpsert(log, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -36,7 +36,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
         val log = ctx.localDataService.getMoistureLogByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: log.updatedAt.toApiTimestamp()
+            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
         val synced = pushPendingMoistureLogDeletion(log, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -149,7 +149,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val deleteRequest = DeleteWithTimestampRequest(
-            updatedAt = lockUpdatedAt ?: log.updatedAt.toApiTimestamp()
+            updatedAt = lockUpdatedAt ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
         )
         return runCatching {
             ctx.api.deleteMoistureLog(log.serverId, deleteRequest)

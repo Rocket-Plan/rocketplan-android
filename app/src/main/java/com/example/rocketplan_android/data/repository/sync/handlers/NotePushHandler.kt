@@ -73,7 +73,7 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
         }
 
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: note.updatedAt.toApiTimestamp()
+            ?: (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
         val request = CreateNoteRequest(
             projectId = projectServerId,
             roomId = roomServerId,
@@ -111,7 +111,7 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
         val serverId = note.serverId
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: note.updatedAt.toApiTimestamp()
+            ?: (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
 
         val response = ctx.api.deleteNote(
             serverId,

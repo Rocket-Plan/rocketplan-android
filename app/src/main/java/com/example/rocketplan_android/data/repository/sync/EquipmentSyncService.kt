@@ -39,7 +39,7 @@ class EquipmentSyncService(
         val timestamp = now()
         val existing = equipmentId?.let { localDataService.getEquipment(it) }
             ?: uuid?.let { localDataService.getEquipmentByUuid(it) }
-        val lockUpdatedAt = existing?.serverId?.let { existing.updatedAt.toApiTimestamp() }
+        val lockUpdatedAt = existing?.serverId?.let { (existing.serverUpdatedAt ?: existing.updatedAt).toApiTimestamp() }
 
         val resolvedId = existing?.equipmentId ?: equipmentId ?: -System.currentTimeMillis()
         val resolvedUuid = existing?.uuid ?: uuid ?: UuidUtils.generateUuidV7()
@@ -86,7 +86,7 @@ class EquipmentSyncService(
         // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
         existing.serverId?.let { DeletionTombstoneCache.recordDeletion("equipment", it) }
 
-        val lockUpdatedAt = existing.serverId?.let { existing.updatedAt.toApiTimestamp() }
+        val lockUpdatedAt = existing.serverId?.let { (existing.serverUpdatedAt ?: existing.updatedAt).toApiTimestamp() }
         val timestamp = now()
         val updated = existing.copy(
             isDeleted = true,

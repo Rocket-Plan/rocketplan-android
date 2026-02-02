@@ -39,7 +39,7 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: log.updatedAt.toApiTimestamp()
+            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
 
         val request = AtmosphericLogRequest(
             uuid = log.uuid,
@@ -128,7 +128,7 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
         val serverId = log.serverId
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: log.updatedAt.toApiTimestamp()
+            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
 
         try {
             val response = ctx.api.deleteAtmosphericLog(

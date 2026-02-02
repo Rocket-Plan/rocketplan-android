@@ -37,7 +37,7 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: timecard.updatedAt.toApiTimestamp()
+            ?: (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
         val synced = pushPendingTimecardUpsert(timecard, projectServerId, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveTimecard(it) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -47,7 +47,7 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         val timecard = ctx.localDataService.getTimecardByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: timecard.updatedAt.toApiTimestamp()
+            ?: (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
         val synced = pushPendingTimecardDeletion(timecard, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveTimecard(it) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -117,7 +117,7 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val deleteRequest = DeleteWithTimestampRequest(
-            updatedAt = lockUpdatedAt ?: timecard.updatedAt.toApiTimestamp()
+            updatedAt = lockUpdatedAt ?: (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
         )
         return runCatching {
             ctx.api.deleteTimecard(timecard.serverId, deleteRequest)

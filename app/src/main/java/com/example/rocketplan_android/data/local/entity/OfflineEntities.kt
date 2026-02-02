@@ -26,6 +26,7 @@ data class OfflineCompanyEntity(
     val syncVersion: Int = 0,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -51,6 +52,7 @@ data class OfflineUserEntity(
     val syncVersion: Int = 0,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -98,6 +100,7 @@ data class OfflinePropertyEntity(
     val syncVersion: Int = 0,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -131,6 +134,7 @@ data class OfflineProjectEntity(
     val isDeleted: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -160,6 +164,7 @@ data class OfflineLocationEntity(
     val isDeleted: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -197,6 +202,7 @@ data class OfflineRoomEntity(
     val isDeleted: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -382,6 +388,7 @@ data class OfflineAtmosphericLogEntity(
     val photoAssemblyId: String? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -416,6 +423,7 @@ data class OfflineAlbumEntity(
     val isDeleted: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -475,6 +483,7 @@ data class OfflinePhotoEntity(
     val capturedAt: Date? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -515,6 +524,7 @@ data class OfflineEquipmentEntity(
     val endDate: Date? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -540,6 +550,7 @@ data class OfflineMaterialEntity(
     val syncVersion: Int = 0,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 
@@ -574,6 +585,7 @@ data class OfflineMoistureLogEntity(
     val photoUploadStatus: String = "none",
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -606,6 +618,7 @@ data class OfflineNoteEntity(
     val photoId: Long? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -636,6 +649,7 @@ data class OfflineDamageEntity(
     val severity: String? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -673,6 +687,7 @@ data class OfflineWorkScopeEntity(
     val lineTotal: Double? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -779,6 +794,7 @@ data class OfflineSupportConversationEntity(
     val lastMessageAt: Date? = null,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -807,6 +823,7 @@ data class OfflineSupportMessageEntity(
     val isRead: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
@@ -903,6 +920,7 @@ data class OfflineTimecardEntity(
     val syncVersion: Int = 0,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
     val lastSyncedAt: Date? = null
 )
 

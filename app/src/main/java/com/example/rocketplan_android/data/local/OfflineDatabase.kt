@@ -88,7 +88,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
         OfflineTimecardTypeEntity::class,
         OfflineClaimEntity::class
     ],
-    version = 23,
+    version = 24,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -400,6 +400,37 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_22_23 = object : Migration(22, 23) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Empty migration - reserved for future use or schema alignment
+            }
+        }
+
+        private val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add serverUpdatedAt column to all entities that have updatedAt for optimistic locking
+                // This separates local modification time from server's authoritative timestamp
+                database.execSQL("ALTER TABLE offline_companies ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_users ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_properties ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_projects ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_locations ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_rooms ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_albums ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_photos ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_equipment ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_materials ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_moisture_logs ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_notes ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_damages ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_work_scopes ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_atmospheric_logs ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_support_conversations ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_support_messages ADD COLUMN serverUpdatedAt INTEGER")
+                database.execSQL("ALTER TABLE offline_timecards ADD COLUMN serverUpdatedAt INTEGER")
+            }
+        }
+
         private val MIGRATION_21_22 = object : Migration(21, 22) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Add property info fields to offline_properties
@@ -463,7 +494,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {

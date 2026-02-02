@@ -53,7 +53,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: equipment.updatedAt.toApiTimestamp()
+            ?: (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
         val synced = pushPendingEquipmentUpsert(equipment, projectServerId, roomServerId, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -63,7 +63,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         val equipment = ctx.localDataService.getEquipmentByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: equipment.updatedAt.toApiTimestamp()
+            ?: (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
         val synced = pushPendingEquipmentDeletion(equipment, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -137,7 +137,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val deleteRequest = DeleteWithTimestampRequest(
-            updatedAt = lockUpdatedAt ?: equipment.updatedAt.toApiTimestamp()
+            updatedAt = lockUpdatedAt ?: (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
         )
         return runCatching {
             ctx.api.deleteEquipment(equipment.serverId, deleteRequest)

@@ -102,7 +102,7 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0 ORDER BY title")
     suspend fun getLocationsForProject(projectId: Long): List<OfflineLocationEntity>
 
-    @Query("SELECT MAX(updatedAt) FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0")
+    @Query("SELECT MAX(serverUpdatedAt) FROM offline_locations WHERE projectId = :projectId AND isDeleted = 0")
     suspend fun getLatestLocationUpdatedAt(projectId: Long): Date?
 
     @Query("SELECT * FROM offline_locations WHERE uuid = :uuid AND isDeleted = 0 LIMIT 1")
@@ -178,7 +178,7 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_rooms WHERE serverId IS NOT NULL")
     suspend fun getRoomsWithServerId(): List<OfflineRoomEntity>
 
-    @Query("SELECT MAX(updatedAt) FROM offline_rooms WHERE locationId = :locationId AND isDeleted = 0")
+    @Query("SELECT MAX(serverUpdatedAt) FROM offline_rooms WHERE locationId = :locationId AND isDeleted = 0")
     suspend fun getLatestRoomUpdatedAt(locationId: Long): Date?
 
     @Query("SELECT * FROM offline_rooms WHERE projectId = :projectId AND isDeleted = 1 AND isDirty = 1 AND serverId IS NOT NULL")
