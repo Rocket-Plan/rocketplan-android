@@ -39,6 +39,7 @@ import com.example.rocketplan_android.data.repository.sync.SyncQueueEnqueuer
 import com.example.rocketplan_android.data.repository.sync.SyncQueueProcessor
 import com.example.rocketplan_android.data.repository.sync.WorkScopeSyncService
 import com.example.rocketplan_android.data.storage.SyncCheckpointStore
+import com.example.rocketplan_android.data.sync.ProjectSyncOrchestrator
 import com.example.rocketplan_android.data.queue.ImageProcessorQueueManager
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
@@ -201,6 +202,17 @@ class OfflineSyncRepository(
         UpdatedRecordsSyncService(
             api = api,
             syncCheckpointStore = syncCheckpointStore,
+            remoteLogger = remoteLogger,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    /**
+     * Orchestrator for full project sync with retry logic and cascade cancellation.
+     * Coordinates sync operations with dependency-aware parallel execution.
+     */
+    private val projectSyncOrchestrator by lazy {
+        ProjectSyncOrchestrator(
             remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher
         )
@@ -1188,6 +1200,72 @@ class OfflineSyncRepository(
         } finally {
             _activeIncomingSync.value = null
         }
+    }
+
+    /**
+     * Syncs a project using the orchestrator with full retry and cascade cancellation support.
+     *
+     * This is the reliable sync method that matches iOS behavior:
+     * - Network retry with increasing delays (2s, 4s, 6s)
+     * - 503 server overload handling with exponential backoff
+     * - Cascade cancellation when parent operations fail
+     * - 30-second timeout safety net
+     *
+     * Use this for user-initiated syncs where reliability is more important than speed.
+     *
+     * @param projectId Local project ID
+     * @param onProgress Optional progress callback for UI updates
+     * @return ProjectSyncOrchestrator.SyncResult with detailed status
+     */
+    suspend fun syncProjectWithRetry(
+        projectId: Long,
+        onProgress: ((ProjectSyncOrchestrator.SyncProgress) -> Unit)? = null
+    ): ProjectSyncOrchestrator.SyncResult = withContext(ioDispatcher) {
+        val serverProjectId = resolveServerProjectId(projectId)
+            ?: return@withContext ProjectSyncOrchestrator.SyncResult.Failure(
+                error = IllegalStateException("Project $projectId has not been synced to server"),
+                durationMs = 0,
+                failedOperations = listOf("resolve_server_id"),
+                cancelledOperations = emptyList()
+            )
+
+        // Create sync operations that delegate to existing methods with persistence
+        val operations = ProjectSyncOrchestrator.SyncOperations(
+            syncEssentials = {
+                val result = syncProjectEssentials(projectId)
+                if (!result.success) {
+                    throw result.error ?: IllegalStateException("Essentials sync failed: ${(result as? SyncResult.Incomplete)?.reason}")
+                }
+                result.itemsSynced
+            },
+            syncMetadata = {
+                val result = syncProjectMetadata(projectId)
+                if (!result.success) {
+                    throw result.error ?: IllegalStateException("Metadata sync failed")
+                }
+                result.itemsSynced
+            },
+            syncRoomPhotos = {
+                val result = syncAllRoomPhotos(projectId)
+                if (!result.success) {
+                    throw result.error ?: IllegalStateException("Room photos sync failed")
+                }
+                result.itemsSynced
+            },
+            syncProjectPhotos = {
+                val result = syncProjectLevelPhotos(projectId)
+                if (!result.success) {
+                    throw result.error ?: IllegalStateException("Project photos sync failed")
+                }
+                result.itemsSynced
+            }
+        )
+
+        projectSyncOrchestrator.syncProject(
+            projectId = projectId,
+            operations = operations,
+            onProgress = onProgress ?: {}
+        )
     }
 
     /**
