@@ -1088,8 +1088,18 @@ class ImageProcessorQueueManager(
                 val errorMessage = "Upload data missing - cannot retry without stored credentials"
                 Log.e(TAG, "❌ No upload data for assembly ${assembly.assemblyId}")
 
-                // Mark assembly as FAILED (terminal state - no retry possible without upload data)
-                updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.FAILED, errorMessage)
+                // Mark assembly as terminally FAILED - upload data can never be recovered
+                // (e.g. app was reinstalled, wiping EncryptedSharedPreferences but not Room DB)
+                // Set failsCount to MAX_RETRY_ATTEMPTS so retry queue will skip it permanently
+                val current = dao.getAssembly(assembly.assemblyId)
+                if (current != null) {
+                    dao.updateAssembly(current.copy(
+                        status = AssemblyStatus.FAILED.value,
+                        failsCount = MAX_RETRY_ATTEMPTS,
+                        errorMessage = errorMessage,
+                        lastUpdatedAt = System.currentTimeMillis()
+                    ))
+                }
 
                 onAssemblyCompleted(assembly.assemblyId, success = false, errorMessage = errorMessage)
                 return

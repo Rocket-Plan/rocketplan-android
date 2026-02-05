@@ -1203,13 +1203,37 @@ class RoomDetailFragment : Fragment() {
         // Create dynamic buttons for each category from actual data
         categories.forEach { category ->
             val button = com.google.android.material.button.MaterialButton(
-                android.view.ContextThemeWrapper(requireContext(), R.style.Widget_RocketPlan_DamageFilterButton),
+                requireContext(),
                 null,
-                0
+                com.google.android.material.R.attr.materialButtonOutlinedStyle
             ).apply {
                 id = View.generateViewId()
                 text = category
                 isAllCaps = false
+                isCheckable = true
+                isChecked = false
+                strokeColor = android.content.res.ColorStateList.valueOf(
+                    androidx.core.content.ContextCompat.getColor(requireContext(), R.color.main_purple)
+                )
+                strokeWidth = (2 * resources.displayMetrics.density).toInt()
+                cornerRadius = (24 * resources.displayMetrics.density).toInt()
+                setBackgroundTintList(
+                    androidx.core.content.ContextCompat.getColorStateList(requireContext(), R.color.damage_filter_background)
+                )
+                setTextColor(
+                    androidx.core.content.ContextCompat.getColorStateList(requireContext(), R.color.damage_filter_text)
+                )
+                setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setPaddingRelative(
+                    (20 * resources.displayMetrics.density).toInt(), 0,
+                    (20 * resources.displayMetrics.density).toInt(), 0
+                )
+                insetTop = 0
+                insetBottom = 0
+                minimumHeight = (48 * resources.displayMetrics.density).toInt()
+                rippleColor = android.content.res.ColorStateList.valueOf(
+                    androidx.core.content.ContextCompat.getColor(requireContext(), R.color.light_purple)
+                )
                 layoutParams = android.view.ViewGroup.MarginLayoutParams(
                     android.view.ViewGroup.LayoutParams.WRAP_CONTENT,
                     android.view.ViewGroup.LayoutParams.WRAP_CONTENT
