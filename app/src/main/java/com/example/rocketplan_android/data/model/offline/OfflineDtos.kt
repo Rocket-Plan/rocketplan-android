@@ -47,6 +47,11 @@ data class StatusResponse(
     val version: String? = null
 )
 
+data class ProjectStatusDto(
+    val id: Int? = null,
+    val name: String? = null
+)
+
 data class ProjectDto(
     val id: Long,
     val uuid: String? = null,
@@ -58,6 +63,8 @@ data class ProjectDto(
     @SerializedName("project_number")
     val projectNumber: String? = null,
     val status: String? = null,
+    @SerializedName("project_status")
+    val projectStatus: ProjectStatusDto? = null,
     @SerializedName("property_type")
     val propertyType: String? = null,
     @SerializedName("company_id")
@@ -83,6 +90,8 @@ data class ProjectDetailDto(
     @SerializedName("project_number")
     val projectNumber: String? = null,
     val status: String? = null,
+    @SerializedName("project_status")
+    val projectStatus: ProjectStatusDto? = null,
     @SerializedName("property_type")
     val propertyType: String? = null,
     @SerializedName("company_id")

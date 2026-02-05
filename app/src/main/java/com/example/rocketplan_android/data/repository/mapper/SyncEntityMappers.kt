@@ -114,7 +114,9 @@ internal fun buildProjectEntity(
         ?: uid?.takeIf { it.isNotBlank() }
         ?: existing?.uuid?.takeIf { it.isNotBlank() }
         ?: "project-$id"
-    val resolvedStatus = status?.takeIf { it.isNotBlank() } ?: "unknown"
+    val resolvedStatus = status?.takeIf { it.isNotBlank() }
+        ?: existing?.status?.takeIf { it.isNotBlank() && !it.equals("unknown", ignoreCase = true) }
+        ?: "unknown"
 
     // Preserve existing propertyId - only update if we have no local property
     // This prevents project list sync from overwriting with wrong propertyId
@@ -161,7 +163,7 @@ internal fun ProjectDto.toEntity(existing: OfflineProjectEntity? = null, fallbac
         title = title,
         alias = alias,
         projectNumber = projectNumber,
-        status = status,
+        status = projectStatus?.name ?: status,
         addressLine1 = address?.address?.takeIf { it.isNotBlank() } ?: existing?.addressLine1,
         addressLine2 = address?.address2?.takeIf { it.isNotBlank() } ?: existing?.addressLine2,
         propertyId = propertyId,
@@ -187,7 +189,7 @@ internal fun ProjectDetailDto.toEntity(
         title = title,
         alias = alias,
         projectNumber = projectNumber,
-        status = status,
+        status = projectStatus?.name ?: status,
         addressLine1 = address?.address?.takeIf { it.isNotBlank() },
         addressLine2 = address?.address2?.takeIf { it.isNotBlank() },
         propertyId = propertyId,
