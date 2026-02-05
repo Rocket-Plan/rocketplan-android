@@ -11,7 +11,6 @@ import com.example.rocketplan_android.data.model.DeleteProjectRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingProjectCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
@@ -134,8 +133,7 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         val serverId = project.serverId
             ?: return OperationOutcome.SKIP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
         val statusId = ProjectStatus.fromApiValue(project.status)?.backendId
         val request = UpdateProjectRequest(
             alias = project.alias?.takeIf { it.isNotBlank() },
@@ -159,8 +157,7 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         val serverId = project.serverId
             ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (project.serverUpdatedAt ?: project.updatedAt).toApiTimestamp()
         val request = DeleteProjectRequest(
             projectId = serverId,
             updatedAt = lockUpdatedAt
@@ -251,14 +248,6 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
         DeletionTombstoneCache.clearTombstone("project", serverId)
         return OperationOutcome.SUCCESS
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 
     private fun OfflineProjectEntity.withAddressFallback(
         projectAddress: ProjectAddressDto?,

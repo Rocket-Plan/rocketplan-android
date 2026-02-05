@@ -6,7 +6,6 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.CreateNoteRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.logging.LogLevel
@@ -72,8 +71,7 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
             return OperationOutcome.SKIP
         }
 
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
         val request = CreateNoteRequest(
             projectId = projectServerId,
             roomId = roomServerId,
@@ -110,8 +108,7 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         val serverId = note.serverId
             ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
 
         val response = ctx.api.deleteNote(
             serverId,
@@ -136,12 +133,4 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
         val project = ctx.localDataService.getProject(projectId)
         return project?.serverId
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }

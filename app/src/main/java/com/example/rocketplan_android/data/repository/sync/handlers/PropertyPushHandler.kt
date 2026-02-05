@@ -6,7 +6,6 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingPropertyCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingPropertyUpdatePayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
@@ -138,7 +137,7 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         val serverId = property.serverId
             ?: return OperationOutcome.SKIP
-        val lockUpdatedAt = payload.lockUpdatedAt ?: (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
         val request = payload.request.copy(
             updatedAt = lockUpdatedAt,
             idempotencyKey = null
@@ -211,8 +210,7 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             cascadeDeleteProperty(property.propertyId)
             return OperationOutcome.SUCCESS
         }
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
         try {
             ctx.api.deleteProperty(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {
@@ -290,12 +288,4 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
         ctx.localDataService.clearProjectPropertyId(propertyId)
         ctx.localDataService.deleteProperty(propertyId)
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }

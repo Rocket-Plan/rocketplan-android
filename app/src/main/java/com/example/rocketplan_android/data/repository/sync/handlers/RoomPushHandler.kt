@@ -13,7 +13,6 @@ import com.example.rocketplan_android.data.model.UpdateRoomRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingRoomCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingRoomUpdatePayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
@@ -346,7 +345,7 @@ class RoomPushHandler(
             isSource = payload.isSource,
             levelId = payload.levelId,
             roomTypeId = payload.roomTypeId,
-            updatedAt = payload.lockUpdatedAt
+            updatedAt = (room.serverUpdatedAt ?: room.updatedAt).toApiTimestamp()
         )
 
         try {
@@ -447,8 +446,7 @@ class RoomPushHandler(
             ?: return OperationOutcome.DROP
         val serverId = room.serverId
             ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (room.serverUpdatedAt ?: room.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (room.serverUpdatedAt ?: room.updatedAt).toApiTimestamp()
         try {
             ctx.api.deleteRoom(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {
@@ -529,14 +527,6 @@ class RoomPushHandler(
         val normalized = value?.trim()?.lowercase() ?: return false
         return normalized.contains("external") || normalized.contains("exterior")
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 
     /**
      * Gets an existing location for a property, or creates one if none exists.

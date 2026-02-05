@@ -5,7 +5,6 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toCreateRequest
@@ -36,8 +35,7 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
             return OperationOutcome.SKIP
         }
 
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
         val synced = pushPendingTimecardUpsert(timecard, projectServerId, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveTimecard(it) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -46,8 +44,7 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val timecard = ctx.localDataService.getTimecardByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
         val synced = pushPendingTimecardDeletion(timecard, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveTimecard(it) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -144,12 +141,4 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         val project = ctx.localDataService.getProject(projectId)
         return project?.serverId
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }

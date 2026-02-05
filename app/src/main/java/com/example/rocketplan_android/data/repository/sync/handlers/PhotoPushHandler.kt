@@ -4,7 +4,6 @@ import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import retrofit2.HttpException
 
@@ -19,8 +18,7 @@ class PhotoPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         val serverId = photo.serverId
             ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (photo.serverUpdatedAt ?: photo.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (photo.serverUpdatedAt ?: photo.updatedAt).toApiTimestamp()
 
         val response = ctx.api.deletePhoto(
             serverId,
@@ -40,12 +38,4 @@ class PhotoPushHandler(private val ctx: PushHandlerContext) {
         DeletionTombstoneCache.clearTombstone("photo", serverId)
         return OperationOutcome.SUCCESS
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }

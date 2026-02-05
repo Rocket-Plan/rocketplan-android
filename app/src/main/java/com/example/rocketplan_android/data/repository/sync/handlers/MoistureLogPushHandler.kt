@@ -7,7 +7,6 @@ import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toRequest
@@ -25,8 +24,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
         val log = ctx.localDataService.getMoistureLogByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         if (log.isDeleted) return OperationOutcome.DROP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
         val synced = pushPendingMoistureLogUpsert(log, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -35,8 +33,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val log = ctx.localDataService.getMoistureLogByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
         val synced = pushPendingMoistureLogDeletion(log, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -224,12 +221,4 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
         val project = ctx.localDataService.getProject(projectId)
         return project?.serverId
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }

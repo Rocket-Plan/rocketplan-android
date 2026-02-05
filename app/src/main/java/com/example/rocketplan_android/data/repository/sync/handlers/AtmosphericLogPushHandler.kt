@@ -6,7 +6,6 @@ import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEnt
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.AtmosphericLogRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import retrofit2.HttpException
 
@@ -38,8 +37,7 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
             null
         }
 
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
 
         val request = AtmosphericLogRequest(
             uuid = log.uuid,
@@ -127,8 +125,7 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
 
         val serverId = log.serverId
             ?: return OperationOutcome.SUCCESS
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
 
         try {
             val response = ctx.api.deleteAtmosphericLog(
@@ -153,12 +150,4 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
         ctx.localDataService.saveAtmosphericLogs(listOf(cleaned))
         return OperationOutcome.SUCCESS
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }

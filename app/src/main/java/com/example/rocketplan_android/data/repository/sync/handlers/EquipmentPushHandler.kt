@@ -6,7 +6,6 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toRequest
@@ -52,8 +51,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             return OperationOutcome.SKIP
         }
 
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
         val synced = pushPendingEquipmentUpsert(equipment, projectServerId, roomServerId, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -62,8 +60,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val equipment = ctx.localDataService.getEquipmentByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
         val synced = pushPendingEquipmentDeletion(equipment, lockUpdatedAt)
         synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
         return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
@@ -170,12 +167,4 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         val project = ctx.localDataService.getProject(projectId)
         return project?.serverId
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }

@@ -10,7 +10,6 @@ import com.example.rocketplan_android.data.model.UpdateLocationRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationUpdatePayload
-import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.logging.LogLevel
@@ -123,7 +122,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             name = payload.name,
             floorNumber = payload.floorNumber,
             isAccessible = payload.isAccessible,
-            updatedAt = payload.lockUpdatedAt
+            updatedAt = (location.serverUpdatedAt ?: location.updatedAt).toApiTimestamp()
         )
 
         try {
@@ -246,8 +245,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             cascadeDeleteLocation(location)
             return OperationOutcome.SUCCESS
         }
-        val lockUpdatedAt = extractLockUpdatedAt(operation.payload)
-            ?: (location.serverUpdatedAt ?: location.updatedAt).toApiTimestamp()
+        val lockUpdatedAt = (location.serverUpdatedAt ?: location.updatedAt).toApiTimestamp()
         try {
             ctx.api.deleteLocation(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {
@@ -293,12 +291,4 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
         )
         ctx.localDataService.saveLocations(listOf(cleaned))
     }
-
-    private fun extractLockUpdatedAt(payload: ByteArray): String? =
-        runCatching {
-            ctx.gson.fromJson(
-                String(payload, Charsets.UTF_8),
-                PendingLockPayload::class.java
-            ).lockUpdatedAt
-        }.getOrNull()
 }
