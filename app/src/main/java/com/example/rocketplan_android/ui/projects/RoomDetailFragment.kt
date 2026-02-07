@@ -142,7 +142,10 @@ class RoomDetailFragment : Fragment() {
     private val damagesAdapter by lazy { RoomDamageAdapter() }
 
     private val scopeAdapter by lazy {
-        RoomScopeAdapter { item -> openScopeEditor(item) }
+        RoomScopeAdapter(
+            onLineItemClick = { item -> openScopeEditor(item) },
+            onScopeGroupLongClick = { group -> confirmScopeGroupDeletion(group) }
+        )
     }
 
     private val photoLoadStateAdapter by lazy {
@@ -157,7 +160,8 @@ class RoomDetailFragment : Fragment() {
                 viewModel.refreshWorkScopesIfStale()
                 openScopePickerScreen()
             },
-            onScopeLineItemClick = { item -> openScopeEditor(item) }
+            onScopeLineItemClick = { item -> openScopeEditor(item) },
+            onScopeGroupLongClick = { group -> confirmScopeGroupDeletion(group) }
         )
     }
 
@@ -484,27 +488,7 @@ class RoomDetailFragment : Fragment() {
     }
 
     private fun openScopeEditor(item: RoomScopeItem) {
-        val actions = arrayOf(
-            getString(R.string.scope_line_item_edit),
-            getString(R.string.scope_line_item_delete)
-        )
-        MaterialAlertDialogBuilder(requireContext())
-            .setTitle(item.title.ifBlank { getString(R.string.scope_sheet) })
-            .setItems(actions) { dialog, which ->
-                when (which) {
-                    0 -> {
-                        dialog.dismiss()
-                        showScopeEditDialog(item)
-                    }
-
-                    1 -> {
-                        dialog.dismiss()
-                        confirmScopeDeletion(item)
-                    }
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        showScopeEditDialog(item)
     }
 
     private fun showScopeEditDialog(item: RoomScopeItem) {
@@ -538,6 +522,7 @@ class RoomDetailFragment : Fragment() {
             .setTitle(getString(R.string.scope_line_item_edit))
             .setView(dialogView)
             .setPositiveButton(R.string.save, null)
+            .setNeutralButton(R.string.delete, null)
             .setNegativeButton(R.string.cancel, null)
             .create()
 
@@ -566,6 +551,13 @@ class RoomDetailFragment : Fragment() {
                 ).show()
                 dialog.dismiss()
             }
+
+            val deleteButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+            deleteButton.setTextColor(ContextCompat.getColor(requireContext(), R.color.warning_red))
+            deleteButton.setOnClickListener {
+                dialog.dismiss()
+                confirmScopeDeletion(item)
+            }
         }
 
         dialog.show()
@@ -582,6 +574,22 @@ class RoomDetailFragment : Fragment() {
                 Toast.makeText(
                     requireContext(),
                     getString(R.string.scope_delete_success),
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+            .show()
+    }
+
+    private fun confirmScopeGroupDeletion(group: RoomScopeGroup) {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.scope_group_delete))
+            .setMessage(getString(R.string.scope_group_delete_confirmation, group.itemCount, group.title))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                viewModel.deleteScopeGroup(group.items.map { it.id })
+                Toast.makeText(
+                    requireContext(),
+                    getString(R.string.scope_group_delete_success),
                     Toast.LENGTH_SHORT
                 ).show()
             }

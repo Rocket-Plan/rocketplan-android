@@ -317,6 +317,9 @@
     <string name="scope_edit_invalid_quantity">Enter a quantity greater than zero.</string>
     <string name="scope_edit_invalid_rate">Enter a valid rate or leave blank.</string>
     <string name="scope_delete_confirmation">Delete \"%1$s\" from this room?</string>
+    <string name="scope_group_delete">Delete scope</string>
+    <string name="scope_group_delete_confirmation">Delete all %1$d line items in \"%2$s\"?</string>
+    <string name="scope_group_delete_success">Scope deleted</string>
     <string name="scope_edit_saved">Line item updated</string>
     <string name="scope_delete_success">Line item deleted</string>
     <plurals name="scope_group_line_items">

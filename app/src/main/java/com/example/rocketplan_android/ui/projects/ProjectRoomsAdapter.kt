@@ -123,7 +123,7 @@ class ProjectRoomsAdapter(
                 roomIconContainer.isVisible = true
                 roomTypeIcon.isVisible = true
                 roomScopeTotal.isVisible = true
-                roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_white)
+                roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_purple)
                 val count = room.damageCount
                 photoCount.text = itemView.resources.getQuantityString(
                     R.plurals.damage_count,
@@ -159,7 +159,7 @@ class ProjectRoomsAdapter(
                 gradientOverlay.isVisible = false
                 roomIconContainer.isVisible = true
                 roomTypeIcon.isVisible = true
-                roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_light)
+                roomTypeIcon.setBackgroundResource(R.drawable.bg_icon_circle_purple)
                 title.setTextColor(ContextCompat.getColor(itemView.context, R.color.black))
                 photoCount.setTextColor(ContextCompat.getColor(itemView.context, R.color.light_text_rp))
                 processingContainer.isVisible = false

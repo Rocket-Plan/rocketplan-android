@@ -129,7 +129,8 @@ class ProjectDetailFragment : Fragment() {
 
     private fun configureRecycler() {
         albumsRecyclerView.configureForAlbums(albumsAdapter)
-        roomsRecyclerView.configureForProjectRooms(roomsAdapter)
+        val spanCount = resources.getInteger(R.integer.room_grid_span_count)
+        roomsRecyclerView.configureForProjectRooms(roomsAdapter, spanCount)
     }
 
     private fun configureToggleGroup() {

@@ -1,5 +1,6 @@
 <resources>
     <dimen name="fab_margin">200dp</dimen>
+    <dimen name="room_card_height">200dp</dimen>
 
     <!-- Text sizes - large tablet/desktop, scaled +4-6sp from phone -->
     <dimen name="text_size_caption">14sp</dimen>

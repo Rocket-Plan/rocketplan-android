@@ -13,8 +13,9 @@
     <!-- Photo preview area -->
     <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
-        android:layout_height="180dp"
+        android:layout_height="wrap_content"
         android:layout_marginHorizontal="16dp"
+        android:minHeight="@dimen/room_card_height"
         app:cardCornerRadius="12dp"
         app:cardElevation="0dp"
         app:strokeColor="@color/light_border"
@@ -23,8 +24,10 @@
         <ImageView
             android:id="@+id/photoPreview"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:scaleType="centerCrop"
+            android:layout_height="wrap_content"
+            android:adjustViewBounds="true"
+            android:maxHeight="300dp"
+            android:scaleType="fitCenter"
             android:visibility="gone"
             tools:visibility="visible"
             tools:src="@color/light_border" />

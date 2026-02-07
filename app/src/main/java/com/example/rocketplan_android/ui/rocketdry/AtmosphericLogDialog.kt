@@ -10,6 +10,7 @@ import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import coil.load
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -246,7 +247,19 @@ fun Fragment.showAtmosphericLogDialog(
         } else {
             EditorInfo.IME_ACTION_NEXT
         }
-        previousStepButton.isEnabled = currentStep > 0
+
+        // On first step show "Cancel" instead of disabled "Back"
+        if (currentStep == 0) {
+            previousStepButton.isEnabled = true
+            previousStepButton.text = getString(R.string.cancel)
+            previousStepButton.icon = null
+            cancelWizardButton.isVisible = false
+        } else {
+            previousStepButton.isEnabled = true
+            previousStepButton.text = getString(R.string.rocketdry_back)
+            previousStepButton.setIconResource(R.drawable.chevron_left)
+            cancelWizardButton.isVisible = true
+        }
 
         // Show "Next" for all input steps (photo step or save handled separately)
         nextStepButton.text = if (currentStep == inputSteps.lastIndex && !hasPhotoStep) {
@@ -286,7 +299,7 @@ fun Fragment.showAtmosphericLogDialog(
                 dialog.show()
                 if (uri != null) {
                     capturedPhotoPath = uri.path
-                    photoPreview.setImageURI(uri)
+                    photoPreview.load(uri)
                     photoPreview.isVisible = true
                     photoPlaceholder.isVisible = false
                     preCaptureButtons.isVisible = false
@@ -313,7 +326,10 @@ fun Fragment.showAtmosphericLogDialog(
     }
 
     previousStepButton.setOnClickListener {
-        if (currentStep == 0) return@setOnClickListener
+        if (currentStep == 0) {
+            dialog.dismiss()
+            return@setOnClickListener
+        }
         stepInputLayout.error = null
         if (currentStep < inputSteps.size) {
             stepInput.text?.toString()?.toDoubleOrNull()?.let { value ->
@@ -603,7 +619,19 @@ fun Fragment.showAtmosphericLogDialogWithValueTracking(
         } else {
             EditorInfo.IME_ACTION_NEXT
         }
-        previousStepButton.isEnabled = currentStep > 0
+
+        // On first step show "Cancel" instead of disabled "Back"
+        if (currentStep == 0) {
+            previousStepButton.isEnabled = true
+            previousStepButton.text = getString(R.string.cancel)
+            previousStepButton.icon = null
+            cancelWizardButton.isVisible = false
+        } else {
+            previousStepButton.isEnabled = true
+            previousStepButton.text = getString(R.string.rocketdry_back)
+            previousStepButton.setIconResource(R.drawable.chevron_left)
+            cancelWizardButton.isVisible = true
+        }
 
         nextStepButton.text = if (currentStep == inputSteps.lastIndex && !hasPhotoStep) {
             getString(R.string.save)
@@ -654,7 +682,10 @@ fun Fragment.showAtmosphericLogDialogWithValueTracking(
     }
 
     previousStepButton.setOnClickListener {
-        if (currentStep == 0) return@setOnClickListener
+        if (currentStep == 0) {
+            dialog.dismiss()
+            return@setOnClickListener
+        }
         stepInputLayout.error = null
         if (currentStep < inputSteps.size) {
             stepInput.text?.toString()?.toDoubleOrNull()?.let { value ->
@@ -856,7 +887,7 @@ fun Fragment.showAtmosphericLogDialogWithValues(
         if (photoPath != null) {
             preCaptureButtons.isVisible = false
             postCaptureButtons.isVisible = true
-            photoPreview.setImageURI(Uri.fromFile(File(photoPath)))
+            photoPreview.load(File(photoPath))
             photoPreview.isVisible = true
             photoPlaceholder.isVisible = false
         } else {

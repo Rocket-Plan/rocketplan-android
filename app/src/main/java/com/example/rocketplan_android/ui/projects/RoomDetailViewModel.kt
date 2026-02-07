@@ -810,6 +810,37 @@ class RoomDetailViewModel(
         }
     }
 
+    fun deleteScopeGroup(itemIds: List<Long>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val now = Date()
+                val deletedItems = itemIds.mapNotNull { id ->
+                    localDataService.getWorkScopeById(id)?.copy(
+                        isDeleted = true,
+                        isDirty = true,
+                        syncStatus = SyncStatus.PENDING,
+                        updatedAt = now
+                    )
+                }
+                if (deletedItems.isNotEmpty()) {
+                    localDataService.saveWorkScopes(deletedItems)
+                    Log.d(TAG, "🗑️ Marked ${deletedItems.size} scope items deleted for group")
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "❌ Failed to delete scope group", t)
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "Failed to delete scope group",
+                    metadata = mapOf(
+                        "projectId" to projectId.toString(),
+                        "itemCount" to itemIds.size.toString()
+                    )
+                )
+            }
+        }
+    }
+
     fun deleteRoom() {
         if (_isDeleting.value) return
         val room = _resolvedRoom.value

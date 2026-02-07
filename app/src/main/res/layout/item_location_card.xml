@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.example.rocketplan_android.ui.components.SquareMaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="170dp"
+    android:layout_height="wrap_content"
     android:layout_marginHorizontal="8dp"
     android:layout_marginBottom="12dp"
     app:cardBackgroundColor="@color/white"
@@ -17,6 +17,26 @@
         android:layout_height="match_parent"
         android:padding="16dp">
 
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineTextZone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.70" />
+
+        <ImageView
+            android:id="@+id/locationIcon"
+            android:layout_width="@dimen/icon_size_tile"
+            android:layout_height="@dimen/icon_size_tile"
+            android:background="@drawable/bg_icon_circle_purple"
+            android:contentDescription="@string/location_icon"
+            android:padding="16dp"
+            android:src="@drawable/ic_material"
+            app:layout_constraintBottom_toTopOf="@id/guidelineTextZone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <TextView
             android:id="@+id/locationName"
             android:layout_width="0dp"
@@ -27,24 +47,10 @@
             android:textColor="@color/dark_text_rp"
             android:textSize="@dimen/text_size_card_title"
             android:textStyle="bold"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:text="Basement" />
-
-        <ImageView
-            android:id="@+id/locationIcon"
-            android:layout_width="@dimen/icon_size_tile"
-            android:layout_height="@dimen/icon_size_tile"
-            android:background="@drawable/bg_icon_circle_purple"
-            android:contentDescription="@string/location_icon"
-            android:padding="16dp"
-            android:src="@drawable/ic_material"
             app:layout_constraintBottom_toTopOf="@id/materialCount"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/locationName"
-            app:layout_constraintVertical_bias="0.45" />
+            tools:text="Basement" />
 
         <TextView
             android:id="@+id/materialCount"
@@ -56,9 +62,8 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/locationIcon"
             tools:text="1 Material" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-</com.google.android.material.card.MaterialCardView>
+</com.example.rocketplan_android.ui.components.SquareMaterialCardView>

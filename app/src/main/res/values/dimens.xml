@@ -9,6 +9,7 @@
     <dimen name="room_photos_min_height">200dp</dimen>
     <dimen name="rocketdry_add_button_size">28dp</dimen>
     <dimen name="rocketdry_add_button_padding">6dp</dimen>
+    <dimen name="room_card_height">150dp</dimen>
 
     <!-- Text sizes - responsive to screen size (phones)
          Scale: caption < body < title < headline

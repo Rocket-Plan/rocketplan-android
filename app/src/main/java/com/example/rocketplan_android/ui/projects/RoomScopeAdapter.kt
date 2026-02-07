@@ -15,7 +15,8 @@ import java.text.NumberFormat
 import java.util.Locale
 
 class RoomScopeAdapter(
-    private val onLineItemClick: (RoomScopeItem) -> Unit
+    private val onLineItemClick: (RoomScopeItem) -> Unit,
+    private val onScopeGroupLongClick: (RoomScopeGroup) -> Unit = {}
 ) : ListAdapter<RoomScopeGroup, RoomScopeAdapter.ScopeGroupViewHolder>(diffCallback) {
 
     private val expandedIds = mutableSetOf<String>()
@@ -62,6 +63,14 @@ class RoomScopeAdapter(
                     expandedIds.add(item.id)
                 }
                 notifyItemChanged(adapterPosition)
+            }
+
+            itemView.setOnLongClickListener {
+                val adapterPosition = bindingAdapterPosition
+                if (adapterPosition == RecyclerView.NO_POSITION) return@setOnLongClickListener false
+                val item = getItem(adapterPosition)
+                onScopeGroupLongClick(item)
+                true
             }
         }
 

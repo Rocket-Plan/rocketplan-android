@@ -16,13 +16,14 @@ import com.google.android.material.button.MaterialButtonToggleGroup
 class RoomDamageSectionAdapter(
     private val onAddNote: (RoomDamageSection) -> Unit,
     private val onAddScope: (RoomDamageSection) -> Unit,
-    private val onScopeLineItemClick: (RoomScopeItem) -> Unit
+    private val onScopeLineItemClick: (RoomScopeItem) -> Unit,
+    private val onScopeGroupLongClick: (RoomScopeGroup) -> Unit = {}
 ) : ListAdapter<RoomDamageSection, RoomDamageSectionAdapter.SectionViewHolder>(diffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SectionViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_room_damage_section, parent, false)
-        return SectionViewHolder(view, onAddNote, onAddScope, onScopeLineItemClick)
+        return SectionViewHolder(view, onAddNote, onAddScope, onScopeLineItemClick, onScopeGroupLongClick)
     }
 
     override fun onBindViewHolder(holder: SectionViewHolder, position: Int) {
@@ -33,7 +34,8 @@ class RoomDamageSectionAdapter(
         itemView: View,
         private val onAddNote: (RoomDamageSection) -> Unit,
         private val onAddScope: (RoomDamageSection) -> Unit,
-        private val onScopeLineItemClick: (RoomScopeItem) -> Unit
+        private val onScopeLineItemClick: (RoomScopeItem) -> Unit,
+        private val onScopeGroupLongClick: (RoomScopeGroup) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
 
         private val title: TextView = itemView.findViewById(R.id.sectionRoomTitle)
@@ -44,7 +46,10 @@ class RoomDamageSectionAdapter(
         private val emptyScopes: TextView = itemView.findViewById(R.id.sectionScopeEmptyText)
         private val roomIcon: ImageView = itemView.findViewById(R.id.sectionRoomIcon)
         private val filterGroup: MaterialButtonToggleGroup = itemView.findViewById(R.id.sectionFilterGroup)
-        private val scopeAdapter = RoomScopeAdapter { item -> onScopeLineItemClick(item) }
+        private val scopeAdapter = RoomScopeAdapter(
+            onLineItemClick = { item -> onScopeLineItemClick(item) },
+            onScopeGroupLongClick = { group -> onScopeGroupLongClick(group) }
+        )
 
         init {
             scopeRecycler.layoutManager = LinearLayoutManager(itemView.context)

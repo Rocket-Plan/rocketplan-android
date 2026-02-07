@@ -27,13 +27,8 @@ class RoomGridSpacingDecoration(
         }
 
         val column = layoutManager.spanSizeLookup.getSpanIndex(position, spanCount)
-        outRect.left = spacing / 2
-        outRect.right = spacing / 2
-        if (column == 0) {
-            outRect.left = spacing
-        } else if (column == spanCount - 1) {
-            outRect.right = spacing
-        }
+        outRect.left = spacing - column * spacing / spanCount
+        outRect.right = (column + 1) * spacing / spanCount
         outRect.top = spacing
     }
 }

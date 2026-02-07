@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+<com.example.rocketplan_android.ui.components.SquareMaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -13,41 +13,57 @@
     app:strokeColor="@color/light_border"
     app:strokeWidth="1dp">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:padding="20dp">
+        android:layout_height="match_parent"
+        android:padding="16dp">
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/guidelineTextZone"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintGuide_percent="0.70" />
 
         <ImageView
             android:id="@+id/equipmentRoomIcon"
             android:layout_width="@dimen/icon_size_tile"
             android:layout_height="@dimen/icon_size_tile"
-            android:layout_marginBottom="12dp"
             android:background="@drawable/bg_icon_circle_purple"
             android:contentDescription="@string/room"
             android:padding="16dp"
             android:src="@drawable/ic_material"
+            app:layout_constraintBottom_toTopOf="@id/guidelineTextZone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
             app:tint="@color/icon_colour" />
 
         <TextView
             android:id="@+id/equipmentRoomName"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="6dp"
+            android:gravity="center"
             android:textColor="@color/dark_text_rp"
             android:textSize="@dimen/text_size_card_title"
             android:textStyle="bold"
+            app:layout_constraintBottom_toTopOf="@id/equipmentRoomSummary"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             tools:text="Basement" />
 
         <TextView
             android:id="@+id/equipmentRoomSummary"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:gravity="center"
             android:textColor="@color/light_text_rp"
             android:textSize="@dimen/text_size_card_subtitle"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
             tools:text="2 Dehumidifiers, 3 Air Movers" />
-    </LinearLayout>
 
-</com.google.android.material.card.MaterialCardView>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</com.example.rocketplan_android.ui.components.SquareMaterialCardView>

@@ -5,7 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
-import androidx.core.view.doOnLayout
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
@@ -40,7 +39,10 @@ class LocationLevelAdapter(
         private val locationsInLevelRecyclerView: RecyclerView =
             itemView.findViewById(R.id.locationsInLevelRecyclerView)
         private val locationAdapter = LocationCardAdapter(onLocationClick)
-        private val gridLayoutManager = GridLayoutManager(itemView.context, 2)
+        private val gridLayoutManager = GridLayoutManager(
+            itemView.context,
+            itemView.resources.getInteger(R.integer.room_grid_span_count)
+        )
 
         init {
             locationsInLevelRecyclerView.layoutManager = gridLayoutManager
@@ -94,14 +96,6 @@ class LocationCardAdapter(
                 itemView.context.getString(R.string.material_count, location.materialCount)
             } else {
                 itemView.context.getString(R.string.materials_count, location.materialCount)
-            }
-            itemView.doOnLayout { view ->
-                val params = view.layoutParams ?: return@doOnLayout
-                val targetSize = view.width
-                if (targetSize > 0 && params.height != targetSize) {
-                    params.height = targetSize
-                    view.layoutParams = params
-                }
             }
             itemView.setOnClickListener { onLocationClick(location) }
         }

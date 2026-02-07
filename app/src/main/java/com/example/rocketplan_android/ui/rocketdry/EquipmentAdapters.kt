@@ -81,7 +81,10 @@ class EquipmentLevelAdapter(
 
         fun bind(level: EquipmentLevel) {
             levelName.text = level.levelName
-            roomsRecyclerView.layoutManager = GridLayoutManager(itemView.context, 2)
+            roomsRecyclerView.layoutManager = GridLayoutManager(
+                itemView.context,
+                itemView.resources.getInteger(R.integer.room_grid_span_count)
+            )
             val adapter = roomAdapter ?: EquipmentRoomAdapter { room -> onRoomClick(room) }.also {
                 roomAdapter = it
                 roomsRecyclerView.adapter = it
