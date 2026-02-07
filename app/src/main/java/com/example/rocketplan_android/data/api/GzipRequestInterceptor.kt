@@ -30,8 +30,11 @@ class GzipRequestInterceptor : Interceptor {
 
             override fun writeTo(sink: BufferedSink) {
                 val gzipSink = GzipSink(sink).buffer()
-                body.writeTo(gzipSink)
-                gzipSink.close()
+                try {
+                    body.writeTo(gzipSink)
+                } finally {
+                    gzipSink.close()
+                }
             }
         }
 

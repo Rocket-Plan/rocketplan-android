@@ -160,9 +160,11 @@ class LocalDataService private constructor(
         filterType: String,
         types: List<OfflineRoomTypeEntity>
     ) = withContext(ioDispatcher) {
-        dao.clearRoomTypes(propertyServerId, filterType)
-        if (types.isNotEmpty()) {
-            dao.upsertRoomTypes(types)
+        database.withTransaction {
+            dao.clearRoomTypes(propertyServerId, filterType)
+            if (types.isNotEmpty()) {
+                dao.upsertRoomTypes(types)
+            }
         }
     }
 
@@ -222,9 +224,11 @@ class LocalDataService private constructor(
         projectServerId: Long,
         types: List<OfflineDamageTypeEntity>
     ) = withContext(ioDispatcher) {
-        dao.clearDamageTypes(projectServerId)
-        if (types.isNotEmpty()) {
-            dao.upsertDamageTypes(types)
+        database.withTransaction {
+            dao.clearDamageTypes(projectServerId)
+            if (types.isNotEmpty()) {
+                dao.upsertDamageTypes(types)
+            }
         }
     }
 
@@ -238,9 +242,11 @@ class LocalDataService private constructor(
         projectServerId: Long,
         causes: List<OfflineDamageCauseEntity>
     ) = withContext(ioDispatcher) {
-        dao.clearDamageCauses(projectServerId)
-        if (causes.isNotEmpty()) {
-            dao.upsertDamageCauses(causes)
+        database.withTransaction {
+            dao.clearDamageCauses(projectServerId)
+            if (causes.isNotEmpty()) {
+                dao.upsertDamageCauses(causes)
+            }
         }
     }
 
@@ -1365,17 +1371,19 @@ class LocalDataService private constructor(
         if (failed.isEmpty()) return@withContext 0
 
         Log.d("LocalDataService", "♻️ Resetting ${failed.size} failed operations for retry")
-        failed.forEach { op ->
-            Log.d("LocalDataService", "  ♻️ Resetting ${op.entityType}/${op.entityId} (was: ${op.errorMessage})")
-            val reset = op.copy(
-                status = SyncStatus.PENDING,
-                skipCount = 0,
-                retryCount = 0,  // Also reset retry count for fresh start
-                scheduledAt = null,
-                errorMessage = null,
-                lastAttemptAt = null
-            )
-            dao.upsertSyncOperation(reset)
+        database.withTransaction {
+            failed.forEach { op ->
+                Log.d("LocalDataService", "  ♻️ Resetting ${op.entityType}/${op.entityId} (was: ${op.errorMessage})")
+                val reset = op.copy(
+                    status = SyncStatus.PENDING,
+                    skipCount = 0,
+                    retryCount = 0,  // Also reset retry count for fresh start
+                    scheduledAt = null,
+                    errorMessage = null,
+                    lastAttemptAt = null
+                )
+                dao.upsertSyncOperation(reset)
+            }
         }
         failed.size
     }
@@ -1446,9 +1454,11 @@ class LocalDataService private constructor(
 
     suspend fun replaceSupportCategories(categories: List<OfflineSupportCategoryEntity>) =
         withContext(ioDispatcher) {
-            dao.clearSupportCategories()
-            if (categories.isNotEmpty()) {
-                dao.upsertSupportCategories(categories)
+            database.withTransaction {
+                dao.clearSupportCategories()
+                if (categories.isNotEmpty()) {
+                    dao.upsertSupportCategories(categories)
+                }
             }
         }
     // endregion
@@ -1678,9 +1688,11 @@ class LocalDataService private constructor(
         withContext(ioDispatcher) { dao.getTimecardTypes() }
 
     suspend fun replaceTimecardTypes(types: List<OfflineTimecardTypeEntity>) = withContext(ioDispatcher) {
-        dao.clearTimecardTypes()
-        if (types.isNotEmpty()) {
-            dao.upsertTimecardTypes(types)
+        database.withTransaction {
+            dao.clearTimecardTypes()
+            if (types.isNotEmpty()) {
+                dao.upsertTimecardTypes(types)
+            }
         }
     }
     // endregion

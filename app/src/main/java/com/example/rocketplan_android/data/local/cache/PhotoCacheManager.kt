@@ -24,6 +24,8 @@ class PhotoCacheManager(
     private val localDataService: LocalDataService,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    // TODO: Share OkHttpClient config (timeouts, cert pinning) with RetrofitClient
+    //  to ensure consistent network behaviour across the app.
     private val httpClient: OkHttpClient = OkHttpClient()
 ) {
 
@@ -110,6 +112,11 @@ class PhotoCacheManager(
             }
         } catch (t: Throwable) {
             Log.e(TAG, "Error caching photo ${photo.photoId}", t)
+            // Clean up any partial files written before the failure
+            val projectDir = File(cacheRoot, photo.projectId.toString())
+            val ext = fileExtension(photo.mimeType)
+            runCatching { File(projectDir, "${photo.uuid}.$ext").delete() }
+            runCatching { File(projectDir, "${photo.uuid}_thumb.jpg").delete() }
             localDataService.markPhotoCacheFailed(photo.photoId)
         }
     }

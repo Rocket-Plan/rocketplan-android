@@ -1,7 +1,6 @@
 package com.example.rocketplan_android.data.model
 
 import com.google.gson.annotations.SerializedName
-import java.util.Date
 
 /**
  * Data transfer objects for Project/Loss Info surfaces.
@@ -55,9 +54,9 @@ data class ClaimDto(
     @SerializedName("claim_type")
     val claimType: ClaimTypeDto? = null,
     @SerializedName("created_at")
-    val createdAt: Date? = null,
+    val createdAt: String? = null,
     @SerializedName("updated_at")
-    val updatedAt: Date? = null
+    val updatedAt: String? = null
 )
 
 data class ClaimInfoDto(

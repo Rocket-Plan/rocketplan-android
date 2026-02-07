@@ -63,7 +63,8 @@ object RetrofitClient {
      * Auth interceptor to add Bearer token, Company ID, and User-Agent to requests
      */
     private val authInterceptor = Interceptor { chain ->
-        val requestBuilder = chain.request().newBuilder()
+        val original = chain.request()
+        val requestBuilder = original.newBuilder()
 
         // Add auth token if available
         val token = authToken.get()
@@ -77,7 +78,9 @@ object RetrofitClient {
         }
 
         // Add common headers
-        requestBuilder.addHeader("Content-Type", "application/json")
+        if (original.header("Content-Type") == null) {
+            requestBuilder.addHeader("Content-Type", "application/json")
+        }
         requestBuilder.addHeader("Accept", "application/json")
 
         // Add User-Agent for Laravel token naming
@@ -99,31 +102,14 @@ object RetrofitClient {
         return "RocketPlan Android/$versionName (Android $androidVersion; $deviceModel)"
     }
 
-    /**
-     * Certificate pinner for SSL pinning to prevent MITM attacks.
-     *
-     * To generate certificate hashes, run:
-     * openssl s_client -servername <hostname> -connect <hostname>:443 | \
-     *   openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | \
-     *   openssl dgst -sha256 -binary | openssl enc -base64
-     *
-     * Note: Pin both the leaf certificate and at least one backup (intermediate CA)
-     * to avoid lockout during certificate rotation.
-     */
-    private val certificatePinner: CertificatePinner? = if (AppConfig.isProduction) {
-        CertificatePinner.Builder()
-            // Production API - pin leaf and intermediate certificates
-            .add("api-public.rocketplantech.com",
-                "sha256/BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB=" // TODO: Replace with actual leaf cert hash
-            )
-            .add("api-public.rocketplantech.com",
-                "sha256/CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC=" // TODO: Replace with intermediate CA hash
-            )
-            .build()
-    } else {
-        // Disable pinning in dev/staging for easier debugging
-        null
-    }
+    // TODO: Add real certificate pins before production release.
+    // To generate certificate hashes, run:
+    // openssl s_client -servername <hostname> -connect <hostname>:443 | \
+    //   openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | \
+    //   openssl dgst -sha256 -binary | openssl enc -base64
+    // Pin both the leaf certificate and at least one backup (intermediate CA)
+    // to avoid lockout during certificate rotation.
+    private val certificatePinner: CertificatePinner? = null
 
     /**
      * OkHttp client with interceptors, timeouts, and certificate pinning

@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
@@ -95,7 +96,7 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         }.onFailure { error ->
             val errorBody = (error as? retrofit2.HttpException)?.response()?.errorBody()?.string()
             Log.w(SYNC_TAG, "⚠️ [syncPendingTimecard] Failed to push timecard ${timecard.uuid}: $errorBody", error)
-        }.getOrNull()
+        }.getOrElse { throw it }
 
         return synced
     }
@@ -107,6 +108,7 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         if (timecard.serverId == null) {
             // Never reached server; treat as resolved locally
             return timecard.copy(
+                isDeleted = true,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
                 lastSyncedAt = ctx.now()
@@ -118,23 +120,31 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         )
         return runCatching {
             ctx.api.deleteTimecard(timecard.serverId, deleteRequest)
+            // Clear tombstone now that server confirmed deletion
+            DeletionTombstoneCache.clearTombstone("timecard", timecard.serverId)
             timecard.copy(
+                isDeleted = true,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
                 lastSyncedAt = ctx.now()
             )
         }.recoverCatching { error ->
             when {
-                error.isMissingOnServer() -> timecard.copy(
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = ctx.now()
-                )
+                error.isMissingOnServer() -> {
+                    // Clear tombstone - item is already gone from server
+                    DeletionTombstoneCache.clearTombstone("timecard", timecard.serverId)
+                    timecard.copy(
+                        isDeleted = true,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastSyncedAt = ctx.now()
+                    )
+                }
                 else -> throw error
             }
         }.onFailure {
             Log.w(SYNC_TAG, "⚠️ [syncPendingTimecard] Failed to delete timecard ${timecard.uuid}", it)
-        }.getOrNull()
+        }.getOrElse { throw it }
     }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {

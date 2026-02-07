@@ -578,6 +578,7 @@ data class OfflineMoistureLogEntity(
     val materialId: Long,
     val date: Date,
     val moistureContent: Double,
+    val removed: Boolean = false,
     val location: String? = null,
     val depth: String? = null,
     val photoUrl: String? = null,
@@ -729,7 +730,50 @@ data class OfflineSyncQueueEntity(
     val completedAt: Date? = null,
     val status: SyncStatus = SyncStatus.PENDING,
     val errorMessage: String? = null
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is OfflineSyncQueueEntity) return false
+        return operationId == other.operationId &&
+            entityType == other.entityType &&
+            entityId == other.entityId &&
+            entityUuid == other.entityUuid &&
+            operationType == other.operationType &&
+            payload.contentEquals(other.payload) &&
+            priority == other.priority &&
+            retryCount == other.retryCount &&
+            maxRetries == other.maxRetries &&
+            skipCount == other.skipCount &&
+            maxSkips == other.maxSkips &&
+            createdAt == other.createdAt &&
+            scheduledAt == other.scheduledAt &&
+            lastAttemptAt == other.lastAttemptAt &&
+            completedAt == other.completedAt &&
+            status == other.status &&
+            errorMessage == other.errorMessage
+    }
+
+    override fun hashCode(): Int {
+        var result = operationId.hashCode()
+        result = 31 * result + entityType.hashCode()
+        result = 31 * result + entityId.hashCode()
+        result = 31 * result + entityUuid.hashCode()
+        result = 31 * result + operationType.hashCode()
+        result = 31 * result + payload.contentHashCode()
+        result = 31 * result + priority.hashCode()
+        result = 31 * result + retryCount
+        result = 31 * result + maxRetries
+        result = 31 * result + skipCount
+        result = 31 * result + maxSkips
+        result = 31 * result + createdAt.hashCode()
+        result = 31 * result + (scheduledAt?.hashCode() ?: 0)
+        result = 31 * result + (lastAttemptAt?.hashCode() ?: 0)
+        result = 31 * result + (completedAt?.hashCode() ?: 0)
+        result = 31 * result + status.hashCode()
+        result = 31 * result + (errorMessage?.hashCode() ?: 0)
+        return result
+    }
+}
 
 @Entity(
     tableName = "offline_conflicts",
@@ -760,7 +804,50 @@ data class OfflineConflictResolutionEntity(
     val originalOperationId: String? = null,
     val lastRequeueAt: Date? = null,
     val projectId: Long? = null // Cached for display purposes
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is OfflineConflictResolutionEntity) return false
+        return conflictId == other.conflictId &&
+            entityType == other.entityType &&
+            entityId == other.entityId &&
+            entityUuid == other.entityUuid &&
+            localVersion.contentEquals(other.localVersion) &&
+            remoteVersion.contentEquals(other.remoteVersion) &&
+            conflictType == other.conflictType &&
+            detectedAt == other.detectedAt &&
+            resolvedAt == other.resolvedAt &&
+            resolution == other.resolution &&
+            resolvedBy == other.resolvedBy &&
+            notes == other.notes &&
+            requeueAttempts == other.requeueAttempts &&
+            maxRequeueAttempts == other.maxRequeueAttempts &&
+            originalOperationId == other.originalOperationId &&
+            lastRequeueAt == other.lastRequeueAt &&
+            projectId == other.projectId
+    }
+
+    override fun hashCode(): Int {
+        var result = conflictId.hashCode()
+        result = 31 * result + entityType.hashCode()
+        result = 31 * result + entityId.hashCode()
+        result = 31 * result + entityUuid.hashCode()
+        result = 31 * result + localVersion.contentHashCode()
+        result = 31 * result + remoteVersion.contentHashCode()
+        result = 31 * result + conflictType.hashCode()
+        result = 31 * result + detectedAt.hashCode()
+        result = 31 * result + (resolvedAt?.hashCode() ?: 0)
+        result = 31 * result + (resolution?.hashCode() ?: 0)
+        result = 31 * result + (resolvedBy?.hashCode() ?: 0)
+        result = 31 * result + (notes?.hashCode() ?: 0)
+        result = 31 * result + requeueAttempts
+        result = 31 * result + maxRequeueAttempts
+        result = 31 * result + (originalOperationId?.hashCode() ?: 0)
+        result = 31 * result + (lastRequeueAt?.hashCode() ?: 0)
+        result = 31 * result + (projectId?.hashCode() ?: 0)
+        return result
+    }
+}
 
 // ============================================================================
 // Support Entities

@@ -1213,7 +1213,7 @@ interface OfflineDao {
     @Query("UPDATE offline_support_conversations SET status = :status, updatedAt = :updatedAt WHERE conversationId = :conversationId")
     suspend fun updateSupportConversationStatus(conversationId: Long, status: String, updatedAt: Date)
 
-    @Query("UPDATE offline_support_conversations SET serverId = :serverId, syncStatus = :syncStatus, lastSyncedAt = :lastSyncedAt WHERE conversationId = :conversationId")
+    @Query("UPDATE offline_support_conversations SET serverId = :serverId, isDirty = 0, syncStatus = :syncStatus, lastSyncedAt = :lastSyncedAt WHERE conversationId = :conversationId")
     suspend fun updateSupportConversationServerId(
         conversationId: Long,
         serverId: Long,
@@ -1244,7 +1244,7 @@ interface OfflineDao {
     @Query("UPDATE offline_support_messages SET isRead = 1 WHERE conversationId = :conversationId AND isRead = 0")
     suspend fun markSupportMessagesAsRead(conversationId: Long)
 
-    @Query("UPDATE offline_support_messages SET serverId = :serverId, syncStatus = :syncStatus, lastSyncedAt = :lastSyncedAt WHERE messageId = :messageId")
+    @Query("UPDATE offline_support_messages SET serverId = :serverId, isDirty = 0, syncStatus = :syncStatus, lastSyncedAt = :lastSyncedAt WHERE messageId = :messageId")
     suspend fun updateSupportMessageServerId(
         messageId: Long,
         serverId: Long,

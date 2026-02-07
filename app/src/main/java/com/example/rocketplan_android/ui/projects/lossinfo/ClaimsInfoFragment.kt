@@ -173,7 +173,7 @@ class ClaimsInfoFragment : Fragment() {
                 claimTypeId = item.claim.claimType?.id,
                 projectId = item.claim.projectId,
                 locationId = item.claim.locationId,
-                updatedAt = item.claim.updatedAt?.let(DateUtils::formatApiDate)
+                updatedAt = item.claim.updatedAt
             )
             viewModel.updateClaim(item.claim.id, request)
         }

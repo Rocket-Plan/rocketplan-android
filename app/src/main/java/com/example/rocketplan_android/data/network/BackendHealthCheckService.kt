@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -47,10 +48,16 @@ data class HealthCheckResult(
  * - Exponential backoff hint for retry scheduling
  */
 class BackendHealthCheckService(
-    private val okHttpClient: OkHttpClient,
+    okHttpClient: OkHttpClient,
     private val baseUrl: String,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+    // Use a dedicated client with callTimeout matching HEALTH_CHECK_TIMEOUT_MS so
+    // the blocking execute() call is cancelled even if withTimeoutOrNull cannot interrupt it.
+    private val okHttpClient: OkHttpClient = okHttpClient.newBuilder()
+        .callTimeout(HEALTH_CHECK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+        .build()
+
     private val _healthState = MutableStateFlow(HealthState.UNKNOWN)
     val healthState: StateFlow<HealthState> = _healthState.asStateFlow()
 

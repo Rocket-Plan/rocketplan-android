@@ -287,13 +287,11 @@ class PusherService(
      */
     fun shutdown() {
         channelBindings.keys.toList().forEach { unsubscribe(it) }
-        scope.launch {
-            stateMutex.withLock {
-                reconnectJob?.cancel()
-                reconnectJob = null
-            }
-            pusher.disconnect()
-        }
+        // Disconnect synchronously before cancelling the scope so the
+        // disconnect call is not dropped by scope cancellation.
+        reconnectJob?.cancel()
+        reconnectJob = null
+        pusher.disconnect()
         scope.cancel()
     }
 

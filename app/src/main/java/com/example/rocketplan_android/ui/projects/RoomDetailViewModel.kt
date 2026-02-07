@@ -24,6 +24,8 @@ import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import com.example.rocketplan_android.util.UuidUtils
 import java.util.Date
 import java.util.Locale
@@ -92,8 +94,8 @@ class RoomDetailViewModel(
     private val _events = MutableSharedFlow<RoomDetailEvent>(extraBufferCapacity = 1)
     val events: SharedFlow<RoomDetailEvent> = _events.asSharedFlow()
 
-    private var lastRefreshAt = 0L
-    private var isRefreshing = false
+    private val lastRefreshAt = AtomicLong(0L)
+    private val isRefreshing = AtomicBoolean(false)
     private var lastSyncedServerRoomId: Long? = null
     private var lastScopeSyncedRoomId: Long? = null
     private var lastScopeSyncAt = 0L
@@ -451,6 +453,17 @@ class RoomDetailViewModel(
                     Log.d(TAG, "🧹 Clearing legacy snapshot for localRoomId=${room.roomId}")
                     localDataService.clearRoomPhotoSnapshot(room.roomId)
                 }
+                // Force-refresh when server ID is first resolved (must run before
+                // the never-returning collect below so it isn't blocked).
+                val serverId = room.serverId
+                if (serverId != null && serverId != lastSyncedServerRoomId) {
+                    lastSyncedServerRoomId = serverId
+                    Log.d(TAG, "⚡️ Server room id resolved ($serverId); forcing photo refresh")
+                    ensureRoomPhotosFresh(force = true)
+                    ensureWorkScopesFresh(serverId, force = true)
+                    ensureDamagesFresh(serverId, force = true)
+                }
+
                 combine(
                     localDataService.observeNotes(projectId),
                     localDataService.observeAlbumsForRoom(photoLookupRoomId),
@@ -475,15 +488,6 @@ class RoomDetailViewModel(
                     )
                 }.collect { state ->
                     _uiState.value = state
-                }
-
-                val serverId = room.serverId
-                if (serverId != null && serverId != lastSyncedServerRoomId) {
-                    lastSyncedServerRoomId = serverId
-                    Log.d(TAG, "⚡️ Server room id resolved ($serverId); forcing photo refresh")
-                    ensureRoomPhotosFresh(force = true)
-                    ensureWorkScopesFresh(serverId, force = true)
-                    ensureDamagesFresh(serverId, force = true)
                 }
             }
         }
@@ -851,19 +855,19 @@ class RoomDetailViewModel(
         ignoreCheckpoint: Boolean = false
     ): Boolean {
         val now = SystemClock.elapsedRealtime()
-        if (!force && now - lastRefreshAt < ROOM_REFRESH_INTERVAL_MS) {
+        if (!force && now - lastRefreshAt.get() < ROOM_REFRESH_INTERVAL_MS) {
             return false
         }
-        if (isRefreshing) {
+        if (!isRefreshing.compareAndSet(false, true)) {
             return false
         }
 
         val remoteRoomId = _resolvedRoom.value?.serverId
         if (remoteRoomId == null) {
             Log.d(TAG, "⏭️ Skipping remote photo refresh; room $roomId has no serverId yet")
+            isRefreshing.set(false)
             return false
         }
-        isRefreshing = true
         if (notifyRefresh) {
             _isPhotoRefreshInProgress.value = true
         }
@@ -898,10 +902,10 @@ class RoomDetailViewModel(
                     )
                 )
             } finally {
-                lastRefreshAt = SystemClock.elapsedRealtime()
-                isRefreshing = false
+                lastRefreshAt.set(SystemClock.elapsedRealtime())
+                isRefreshing.set(false)
                 _isPhotoRefreshInProgress.value = false
-                Log.d(TAG, "✅ ensureRoomPhotosFresh done; lastRefreshAt=$lastRefreshAt")
+                Log.d(TAG, "✅ ensureRoomPhotosFresh done; lastRefreshAt=${lastRefreshAt.get()}")
             }
         }
         return true

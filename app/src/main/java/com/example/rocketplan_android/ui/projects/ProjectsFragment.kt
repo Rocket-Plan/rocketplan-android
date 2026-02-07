@@ -347,7 +347,7 @@ class ProjectsFragment : Fragment() {
     }
 
     private fun showCompanyPicker() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val result = authRepository.getUserCompanies()
             result.onFailure { error ->
                 Toast.makeText(
@@ -380,7 +380,7 @@ class ProjectsFragment : Fragment() {
     }
 
     private fun switchCompany(companyId: Long, name: String) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             authRepository.setActiveCompany(companyId)
             viewModel.refreshProjects()
             Toast.makeText(
@@ -392,7 +392,7 @@ class ProjectsFragment : Fragment() {
     }
 
     private fun performSignOut() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             try {
                 if (BuildConfig.ENABLE_LOGGING) {
                     Log.d(TAG, "User signing out...")

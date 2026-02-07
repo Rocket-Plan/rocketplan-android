@@ -54,7 +54,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             syncQueueManager.errors.collect { message ->
                 Log.e(TAG, "❌ Sync error: $message")
-                _isRefreshing.value = false
+                _isRefreshing.postValue(false)
                 val currentState = _uiState.value
                 if (currentState !is ProjectsUiState.Success || (currentState.myProjects.isEmpty() && currentState.projectsByStatus.values.all { it.isEmpty() })) {
                     _uiState.value = ProjectsUiState.Error(message)
@@ -93,7 +93,7 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
                 } else {
                     _uiState.value = ProjectsUiState.Success(myProjects, projectsByStatus)
                 }
-                _isRefreshing.value = false
+                _isRefreshing.postValue(false)
             }
         }
 

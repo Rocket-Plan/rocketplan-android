@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
@@ -97,7 +98,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                 uuid = log.uuid,
                 projectId = log.projectId,
                 roomId = log.roomId,
-                materialId = materialServerId,
+                materialId = log.materialId,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
                 isDeleted = false,
@@ -116,7 +117,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                         uuid = log.uuid,
                         projectId = log.projectId,
                         roomId = log.roomId,
-                        materialId = materialServerId,
+                        materialId = log.materialId,
                         isDirty = false,
                         syncStatus = SyncStatus.SYNCED,
                         isDeleted = false,
@@ -127,7 +128,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
             }
         }.onFailure { error ->
             Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLogs] Failed to push moisture log ${log.uuid}", error)
-        }.getOrNull()
+        }.getOrElse { throw it }
 
         return synced
     }
@@ -150,23 +151,31 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
         )
         return runCatching {
             ctx.api.deleteMoistureLog(log.serverId, deleteRequest)
+            // Clear tombstone now that server confirmed deletion
+            DeletionTombstoneCache.clearTombstone("moisture_log", log.serverId)
             log.copy(
+                isDeleted = true,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
                 lastSyncedAt = ctx.now()
             )
         }.recoverCatching { error ->
             when {
-                error.isMissingOnServer() -> log.copy(
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = ctx.now()
-                )
+                error.isMissingOnServer() -> {
+                    // Clear tombstone - item is already gone from server
+                    DeletionTombstoneCache.clearTombstone("moisture_log", log.serverId)
+                    log.copy(
+                        isDeleted = true,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        lastSyncedAt = ctx.now()
+                    )
+                }
                 else -> throw error
             }
         }.onFailure {
             Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLog] Failed to delete log ${log.uuid}", it)
-        }.getOrNull()
+        }.getOrElse { throw it }
     }
 
     private suspend fun ensureMaterialSynced(

@@ -21,6 +21,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.util.safeNavigate
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
 import com.example.rocketplan_android.ui.projects.ProjectRoomsAdapter.RoomStatMode
 import com.google.android.material.button.MaterialButton
@@ -77,7 +78,7 @@ class ProjectDetailFragment : Fragment() {
                             else -> "photos"
                         }
                     )
-                findNavController().navigate(action)
+                safeNavigate(action)
             }
         )
     }
@@ -174,7 +175,7 @@ class ProjectDetailFragment : Fragment() {
         noteCard.setOnClickListener {
             val action = ProjectDetailFragmentDirections
                 .actionProjectDetailFragmentToProjectNotesFragment(args.projectId)
-            findNavController().navigate(action)
+            safeNavigate(action)
         }
         addRoomCard.setOnClickListener {
             handleAddRoomClick(RoomTypePickerMode.ROOM)
@@ -190,7 +191,7 @@ class ProjectDetailFragment : Fragment() {
                 projectId = args.projectId,
                 mode = mode.name
             )
-        findNavController().navigate(action)
+        safeNavigate(action)
     }
 
     fun promptDeleteProject() {

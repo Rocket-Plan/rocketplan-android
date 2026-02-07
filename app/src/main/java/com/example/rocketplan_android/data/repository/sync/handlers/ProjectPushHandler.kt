@@ -14,7 +14,10 @@ import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.repository.mapper.PendingProjectCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.util.UuidUtils
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 
 data class PendingProjectSyncResult(
@@ -140,16 +143,103 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
             projectStatusId = statusId,
             updatedAt = lockUpdatedAt
         )
-        val dto = ctx.api.updateProject(serverId, request).data
-        val entity = dto.toEntity(existing = project).copy(
-            projectId = project.projectId,
-            uuid = project.uuid,
-            syncStatus = SyncStatus.SYNCED,
-            isDirty = false,
-            lastSyncedAt = ctx.now()
-        )
-        ctx.localDataService.saveProjects(listOf(entity))
-        return OperationOutcome.SUCCESS
+
+        try {
+            val dto = ctx.api.updateProject(serverId, request).data
+            val entity = dto.toEntity(existing = project).copy(
+                projectId = project.projectId,
+                uuid = project.uuid,
+                syncStatus = SyncStatus.SYNCED,
+                isDirty = false,
+                lastSyncedAt = ctx.now()
+            )
+            ctx.localDataService.saveProjects(listOf(entity))
+            return OperationOutcome.SUCCESS
+        } catch (error: Throwable) {
+            if (error is CancellationException) throw error
+            if (error.isConflict()) {
+                Log.w(SYNC_TAG, "\u26a0\ufe0f [handlePendingProjectUpdate] 409 conflict for project $serverId; fetching fresh and retrying")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN,
+                    SYNC_TAG,
+                    "Project update 409 conflict",
+                    mapOf(
+                        "projectServerId" to serverId.toString(),
+                        "projectUuid" to project.uuid,
+                        "usedServerTimestamp" to (project.serverUpdatedAt != null).toString(),
+                        "localUpdatedAt" to project.updatedAt.time.toString(),
+                        "serverUpdatedAt" to (project.serverUpdatedAt?.time?.toString() ?: "null")
+                    )
+                )
+                // Fetch fresh project data from server
+                val freshProject = runCatching {
+                    ctx.api.getProjectDetail(serverId).data
+                }
+                    .onFailure { if (it is CancellationException) throw it }
+                    .getOrElse { fetchError ->
+                        Log.e(SYNC_TAG, "\u274c [handlePendingProjectUpdate] Failed to fetch fresh project $serverId; will retry later", fetchError)
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Project update 409 recovery deferred - fresh fetch failed",
+                            mapOf("projectServerId" to serverId.toString(), "error" to (fetchError.message ?: "unknown"))
+                        )
+                        return OperationOutcome.SKIP
+                    }
+
+                // Retry with fresh updatedAt
+                val retryRequest = UpdateProjectRequest(
+                    alias = project.alias?.takeIf { it.isNotBlank() },
+                    projectStatusId = statusId,
+                    updatedAt = freshProject.updatedAt
+                )
+                val retryResult = runCatching { ctx.api.updateProject(serverId, retryRequest) }
+                    .onFailure { if (it is CancellationException) throw it }
+                retryResult.onFailure { retryError ->
+                    if (retryError.isConflict()) {
+                        Log.w(
+                            SYNC_TAG,
+                            "\u26a0\ufe0f [handlePendingProjectUpdate] Retry still got 409; recording conflict for user resolution"
+                        )
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Project update double-409 - recording conflict",
+                            mapOf("projectServerId" to serverId.toString(), "projectUuid" to project.uuid)
+                        )
+                        val conflict = OfflineConflictResolutionEntity(
+                            conflictId = UuidUtils.generateUuidV7(),
+                            entityType = "project",
+                            entityId = project.projectId,
+                            entityUuid = project.uuid,
+                            localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "alias" to project.alias,
+                                "status" to project.status
+                            )).toByteArray(Charsets.UTF_8),
+                            remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "alias" to freshProject.alias,
+                                "status" to freshProject.status
+                            )).toByteArray(Charsets.UTF_8),
+                            conflictType = "UPDATE_CONFLICT",
+                            detectedAt = ctx.now(),
+                            originalOperationId = operation.operationId
+                        )
+                        ctx.recordConflict(conflict)
+                        return OperationOutcome.CONFLICT_PENDING
+                    }
+                    throw retryError
+                }
+                // Retry succeeded - save the result
+                val retryDto = retryResult.getOrThrow().data
+                val entity = retryDto.toEntity(existing = project).copy(
+                    projectId = project.projectId,
+                    uuid = project.uuid,
+                    syncStatus = SyncStatus.SYNCED,
+                    isDirty = false,
+                    lastSyncedAt = ctx.now()
+                )
+                ctx.localDataService.saveProjects(listOf(entity))
+                Log.d(SYNC_TAG, "\u2705 [handlePendingProjectUpdate] Retry update succeeded for project $serverId")
+                return OperationOutcome.SUCCESS
+            }
+            throw error
+        }
     }
 
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
@@ -183,27 +273,22 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
                 val freshProject = runCatching {
                     ctx.api.getProjectDetail(serverId).data
                 }.getOrElse { error ->
+                    if (error is CancellationException) throw error
                     Log.e(
                         SYNC_TAG,
-                        "❌ [handlePendingProjectDeletion] Failed to fetch fresh project $serverId",
+                        "❌ [handlePendingProjectDeletion] Failed to fetch fresh project $serverId; will retry later",
                         error
                     )
                     ctx.remoteLogger?.log(
-                        LogLevel.ERROR,
+                        LogLevel.WARN,
                         SYNC_TAG,
-                        "Project delete conflict resolution failed",
+                        "Project delete conflict resolution deferred - fetch failed",
                         mapOf(
                             "projectServerId" to serverId.toString(),
                             "error" to (error.message ?: "unknown")
                         )
                     )
-                    val restored = project.copy(
-                        isDeleted = false,
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED
-                    )
-                    ctx.localDataService.saveProjects(listOf(restored))
-                    return OperationOutcome.DROP
+                    return OperationOutcome.SKIP
                 }
 
                 val retryRequest = DeleteProjectRequest(
@@ -239,6 +324,7 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
             }
         }
         val cleaned = project.copy(
+            isDeleted = true,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             lastSyncedAt = ctx.now()

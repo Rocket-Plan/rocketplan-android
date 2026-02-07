@@ -115,7 +115,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         }.onFailure { error ->
             val errorBody = (error as? retrofit2.HttpException)?.response()?.errorBody()?.string()
             Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Failed to push equipment ${equipment.uuid}: $errorBody", error)
-        }.getOrNull()
+        }.getOrElse { throw it }
 
         return synced
     }
@@ -127,6 +127,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         if (equipment.serverId == null) {
             // Never reached server; treat as resolved locally
             return equipment.copy(
+                isDeleted = true,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
                 lastSyncedAt = ctx.now()
@@ -141,6 +142,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             // Clear tombstone now that server confirmed deletion
             DeletionTombstoneCache.clearTombstone("equipment", equipment.serverId)
             equipment.copy(
+                isDeleted = true,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
                 lastSyncedAt = ctx.now()
@@ -151,6 +153,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
                     // Clear tombstone - item is already gone from server
                     DeletionTombstoneCache.clearTombstone("equipment", equipment.serverId)
                     equipment.copy(
+                        isDeleted = true,
                         isDirty = false,
                         syncStatus = SyncStatus.SYNCED,
                         lastSyncedAt = ctx.now()
@@ -160,7 +163,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             }
         }.onFailure {
             Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Failed to delete equipment ${equipment.uuid}", it)
-        }.getOrNull()
+        }.getOrElse { throw it }
     }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {

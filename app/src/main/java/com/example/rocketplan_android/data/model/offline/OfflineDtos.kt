@@ -653,6 +653,7 @@ data class EquipmentDto(
     val projectId: Long,
     @SerializedName("room_id")
     val roomId: Long?,
+    @SerializedName("name")
     val type: String?,
     val brand: String?,
     val model: String?,

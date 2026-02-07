@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.repository.sync
 
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
@@ -141,6 +142,9 @@ class TimecardSyncService(
             uuid != null -> localDataService.getTimecardByUuid(uuid)
             else -> null
         } ?: return@withContext null
+
+        // Record tombstone BEFORE marking as deleted to prevent resurrection during sync
+        existing.serverId?.let { DeletionTombstoneCache.recordDeletion("timecard", it) }
 
         val lockUpdatedAt = existing.serverId?.let { (existing.serverUpdatedAt ?: existing.updatedAt).toApiTimestamp() }
         val timestamp = now()

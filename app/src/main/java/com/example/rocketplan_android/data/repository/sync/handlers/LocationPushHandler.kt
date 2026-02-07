@@ -10,9 +10,11 @@ import com.example.rocketplan_android.data.model.UpdateLocationRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationUpdatePayload
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.util.UuidUtils
 import kotlinx.coroutines.CancellationException
 import java.io.File
@@ -125,8 +127,9 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             updatedAt = (location.serverUpdatedAt ?: location.updatedAt).toApiTimestamp()
         )
 
+        var responseDto: com.example.rocketplan_android.data.model.offline.LocationDto? = null
         try {
-            ctx.api.updateLocation(serverId, request)
+            responseDto = ctx.api.updateLocation(serverId, request)
         } catch (error: Throwable) {
             if (error.isConflict()) {
                 Log.w(SYNC_TAG, "⚠️ [handlePendingLocationUpdate] 409 conflict for location $serverId; fetching fresh and retrying")
@@ -146,14 +149,12 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                 // Fetch fresh location data from server
                 val freshLocation = fetchFreshLocation(location, serverId)
                 if (freshLocation == null) {
-                    Log.e(SYNC_TAG, "❌ [handlePendingLocationUpdate] Failed to fetch fresh location $serverId")
-                    // Can't fetch fresh data - restore local and drop
-                    val restored = location.copy(
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED
+                    Log.e(SYNC_TAG, "❌ [handlePendingLocationUpdate] Failed to fetch fresh location $serverId; will retry later")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Location update 409 recovery deferred - fresh fetch failed",
+                        mapOf("locationServerId" to serverId.toString())
                     )
-                    ctx.localDataService.saveLocations(listOf(restored))
-                    return OperationOutcome.DROP
+                    return OperationOutcome.SKIP
                 }
 
                 // Retry with fresh updatedAt
@@ -170,6 +171,10 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                         Log.w(
                             SYNC_TAG,
                             "⚠️ [handlePendingLocationUpdate] Retry still got 409; recording conflict for user resolution"
+                        )
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Location update double-409 - recording conflict",
+                            mapOf("locationServerId" to serverId.toString(), "locationUuid" to location.uuid)
                         )
                         // Record conflict for user resolution instead of silent server restore
                         // Note: floorNumber is included in local version from payload but server DTO
@@ -199,13 +204,16 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                     }
                     throw retryError
                 }
+                responseDto = retryResult.getOrNull()
                 Log.d(SYNC_TAG, "✅ [handlePendingLocationUpdate] Retry update succeeded for location $serverId")
             } else {
                 throw error
             }
         }
 
+        val freshServerUpdatedAt = responseDto?.updatedAt?.let { DateUtils.parseApiDate(it) }
         val synced = location.copy(
+            serverUpdatedAt = freshServerUpdatedAt ?: location.serverUpdatedAt,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             lastSyncedAt = ctx.now()
@@ -254,6 +262,8 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             }
         }
         cascadeDeleteLocation(location)
+        // Clear tombstone now that server confirmed deletion
+        DeletionTombstoneCache.clearTombstone("location", serverId)
         return OperationOutcome.SUCCESS
     }
 

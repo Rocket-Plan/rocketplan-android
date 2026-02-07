@@ -1,12 +1,14 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.AtmosphericLogRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
+import com.example.rocketplan_android.util.DateUtils
 import retrofit2.HttpException
 
 /**
@@ -73,6 +75,7 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
             serverId = dto.id,
             // Copy photoUrl from server response if available (e.g., after photo processing completed)
             photoUrl = dto.photoUrl ?: log.photoUrl,
+            serverUpdatedAt = DateUtils.parseApiDate(dto.updatedAt) ?: ctx.now(),
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             lastSyncedAt = ctx.now()
@@ -148,6 +151,8 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
             lastSyncedAt = ctx.now()
         )
         ctx.localDataService.saveAtmosphericLogs(listOf(cleaned))
+        // Clear tombstone now that server confirmed deletion
+        DeletionTombstoneCache.clearTombstone("atmospheric_log", serverId)
         return OperationOutcome.SUCCESS
     }
 }

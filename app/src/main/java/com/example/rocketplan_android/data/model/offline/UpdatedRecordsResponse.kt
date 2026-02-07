@@ -20,6 +20,8 @@ data class UpdatedRecordsResponse(
     val damageMaterialRoomLogs: List<UpdatedRecord> = emptyList(),
     @SerializedName("atmospheric_logs")
     val atmosphericLogs: List<UpdatedRecord> = emptyList(),
+    @SerializedName("moisture_logs")
+    val moistureLogs: List<UpdatedRecord> = emptyList(),
     @SerializedName("work_scope_actions")
     val workScopeActions: List<UpdatedRecord> = emptyList(),
     val claims: List<UpdatedRecord> = emptyList(),
@@ -43,6 +45,7 @@ data class UpdatedRecordsResponse(
             damageMaterials.isNotEmpty() ||
             damageMaterialRoomLogs.isNotEmpty() ||
             atmosphericLogs.isNotEmpty() ||
+            moistureLogs.isNotEmpty() ||
             workScopeActions.isNotEmpty() ||
             claims.isNotEmpty() ||
             timecards.isNotEmpty() ||

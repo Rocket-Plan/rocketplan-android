@@ -10,15 +10,13 @@ import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEnt
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageAttachmentEntity
 import com.example.rocketplan_android.data.model.offline.SupportConversationDto
 import com.example.rocketplan_android.data.model.offline.SupportMessageDto
+import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.util.UuidUtils
 import com.example.rocketplan_android.util.toDetailedErrorString
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
-import java.util.TimeZone
 
 /**
  * Handles Support feature operations including:
@@ -37,20 +35,6 @@ class SupportSyncService(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private fun now() = Date()
-
-    private val apiDateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
-        timeZone = TimeZone.getTimeZone("UTC")
-    }
-
-    private fun parseApiDate(dateStr: String?): Date? {
-        if (dateStr.isNullOrBlank()) return null
-        return try {
-            apiDateFormat.parse(dateStr)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to parse date: $dateStr", e)
-            null
-        }
-    }
 
     // ============================================================================
     // Categories
@@ -276,9 +260,9 @@ class SupportSyncService(
             subject = subject ?: "",
             status = status ?: "open",
             unreadCount = unreadCount ?: 0,
-            lastMessageAt = parseApiDate(lastMessageAt),
-            createdAt = parseApiDate(createdAt) ?: now,
-            updatedAt = parseApiDate(updatedAt) ?: now,
+            lastMessageAt = DateUtils.parseApiDate(lastMessageAt),
+            createdAt = DateUtils.parseApiDate(createdAt) ?: now,
+            updatedAt = DateUtils.parseApiDate(updatedAt) ?: now,
             lastSyncedAt = now,
             syncStatus = SyncStatus.SYNCED,
             isDirty = false
@@ -296,8 +280,8 @@ class SupportSyncService(
             senderType = senderType ?: "user",
             body = body ?: "",
             isRead = isRead ?: false,
-            createdAt = parseApiDate(createdAt) ?: now,
-            updatedAt = parseApiDate(updatedAt) ?: now,
+            createdAt = DateUtils.parseApiDate(createdAt) ?: now,
+            updatedAt = DateUtils.parseApiDate(updatedAt) ?: now,
             lastSyncedAt = now,
             syncStatus = SyncStatus.SYNCED,
             isDirty = false

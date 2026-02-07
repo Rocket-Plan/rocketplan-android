@@ -29,6 +29,7 @@ class PhotoPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val cleaned = photo.copy(
+            isDeleted = true,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             lastSyncedAt = ctx.now()

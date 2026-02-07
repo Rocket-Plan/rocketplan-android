@@ -28,6 +28,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.util.safeNavigate
 import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.logging.LogLevel
@@ -129,7 +130,7 @@ class ProjectLandingFragment : Fragment() {
         addProjectInfoCard.setOnClickListener {
             val action = ProjectLandingFragmentDirections
                 .actionProjectLandingFragmentToProjectLossInfoFragment(args.projectId)
-            findNavController().navigate(action)
+            safeNavigate(action)
         }
         rocketDryCard.setOnClickListener {
             if (!AppConfig.isRocketDryEnabled) {
@@ -137,7 +138,7 @@ class ProjectLandingFragment : Fragment() {
             }
             val action = ProjectLandingFragmentDirections
                 .actionProjectLandingFragmentToRocketDryFragment(args.projectId)
-            findNavController().navigate(action)
+            safeNavigate(action)
         }
         rocketScanCard.setOnClickListener {
             val summary = latestSummary ?: return@setOnClickListener
@@ -164,7 +165,7 @@ class ProjectLandingFragment : Fragment() {
                     )
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
-                    findNavController().navigate(action)
+                    safeNavigate(action)
                 }
                 // No property at all AND sync is complete - need to create one via type selection
                 !summary.hasProperty -> {
@@ -176,7 +177,7 @@ class ProjectLandingFragment : Fragment() {
                     )
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
-                    findNavController().navigate(action)
+                    safeNavigate(action)
                 }
                 // Property exists but no levels yet - need to select property type
                 !summary.hasLevels -> {
@@ -188,25 +189,25 @@ class ProjectLandingFragment : Fragment() {
                     )
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectTypeSelectionFragment(args.projectId)
-                    findNavController().navigate(action)
+                    safeNavigate(action)
                 }
                 else -> {
                     // Has property and levels
                     val action = ProjectLandingFragmentDirections
                         .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
-                    findNavController().navigate(action)
+                    safeNavigate(action)
                 }
             }
         }
         allNotesCard.setOnClickListener {
             val action = ProjectLandingFragmentDirections
                 .actionProjectLandingFragmentToProjectNotesFragment(args.projectId)
-            findNavController().navigate(action)
+            safeNavigate(action)
         }
         timecardCard.setOnClickListener {
             val action = ProjectLandingFragmentDirections
                 .actionProjectLandingFragmentToTimecardFragment(args.projectId)
-            findNavController().navigate(action)
+            safeNavigate(action)
         }
         statusContainer.setOnClickListener {
             showStatusSelectionDialog()

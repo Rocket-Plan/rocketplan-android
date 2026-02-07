@@ -2,7 +2,9 @@ package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
 import com.example.rocketplan_android.config.AppConfig
+import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
@@ -11,6 +13,8 @@ import com.example.rocketplan_android.data.repository.mapper.PendingPropertyUpda
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.util.DateUtils
+import com.example.rocketplan_android.util.UuidUtils
+import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
 
 /**
@@ -155,15 +159,87 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
         val updated = try {
             ctx.api.updateProperty(serverId, request).data
         } catch (error: HttpException) {
-            if (AppConfig.isLoggingEnabled) {
-                val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
-                Log.w(
+            if (error.code() == 409) {
+                Log.w(SYNC_TAG, "⚠️ [handlePendingPropertyUpdate] 409 conflict for property $serverId; fetching fresh and retrying")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN,
                     SYNC_TAG,
-                    "❌ [handlePendingPropertyUpdate] updateProperty failed: code=${error.code()} " +
-                        "body=${errorBody ?: "null"}"
+                    "Property update 409 conflict",
+                    mapOf(
+                        "propertyServerId" to serverId.toString(),
+                        "propertyUuid" to (property.uuid ?: "null"),
+                        "usedServerTimestamp" to (property.serverUpdatedAt != null).toString(),
+                        "localUpdatedAt" to property.updatedAt.time.toString(),
+                        "serverUpdatedAt" to (property.serverUpdatedAt?.time?.toString() ?: "null")
+                    )
                 )
+                // Fetch fresh property data from server
+                val freshProperty = runCatching {
+                    ctx.api.getProperty(serverId).data
+                }
+                    .onFailure { if (it is CancellationException) throw it }
+                    .getOrElse { fetchError ->
+                        Log.e(SYNC_TAG, "❌ [handlePendingPropertyUpdate] Failed to fetch fresh property $serverId; will retry later", fetchError)
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Property update 409 recovery deferred - fresh fetch failed",
+                            mapOf("propertyServerId" to serverId.toString(), "error" to (fetchError.message ?: "unknown"))
+                        )
+                        return OperationOutcome.SKIP
+                    }
+
+                // Retry with fresh updatedAt
+                val retryRequest = payload.request.copy(
+                    updatedAt = freshProperty.updatedAt,
+                    idempotencyKey = null
+                )
+                val retryResult = runCatching { ctx.api.updateProperty(serverId, retryRequest) }
+                    .onFailure { if (it is CancellationException) throw it }
+                retryResult.onFailure { retryError ->
+                    if (retryError.isConflict()) {
+                        Log.w(
+                            SYNC_TAG,
+                            "⚠️ [handlePendingPropertyUpdate] Retry still got 409; recording conflict for user resolution"
+                        )
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Property update double-409 - recording conflict",
+                            mapOf("propertyServerId" to serverId.toString(), "propertyUuid" to (property.uuid ?: "null"))
+                        )
+                        val conflict = OfflineConflictResolutionEntity(
+                            conflictId = UuidUtils.generateUuidV7(),
+                            entityType = "property",
+                            entityId = property.propertyId,
+                            entityUuid = property.uuid ?: "",
+                            localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "propertyTypeId" to request.propertyTypeId,
+                                "name" to request.name
+                            )).toByteArray(Charsets.UTF_8),
+                            remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                                "propertyTypeId" to freshProperty.propertyTypeId,
+                                "name" to freshProperty.name
+                            )).toByteArray(Charsets.UTF_8),
+                            conflictType = "UPDATE_CONFLICT",
+                            detectedAt = ctx.now(),
+                            originalOperationId = operation.operationId
+                        )
+                        ctx.recordConflict(conflict)
+                        return OperationOutcome.CONFLICT_PENDING
+                    }
+                    throw retryError
+                }
+                Log.d(SYNC_TAG, "✅ [handlePendingPropertyUpdate] Retry update succeeded for property $serverId")
+                // Retry succeeded - use its result
+                retryResult.getOrThrow().data
+            } else {
+                if (AppConfig.isLoggingEnabled) {
+                    val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                    Log.w(
+                        SYNC_TAG,
+                        "❌ [handlePendingPropertyUpdate] updateProperty failed: code=${error.code()} " +
+                            "body=${errorBody ?: "null"}"
+                    )
+                }
+                throw error
             }
-            throw error
         }
 
         if (AppConfig.isLoggingEnabled) {
@@ -219,6 +295,8 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             }
         }
         cascadeDeleteProperty(property.propertyId)
+        // Clear tombstone now that server confirmed deletion
+        DeletionTombstoneCache.clearTombstone("property", serverId)
         return OperationOutcome.SUCCESS
     }
 

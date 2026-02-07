@@ -112,9 +112,11 @@ object DeletionTombstoneCache {
                     pruned++
                 }
             }
-            // Remove empty type maps
+            // Remove empty type maps atomically to avoid racing with getOrPut
             if (typeMap.isEmpty()) {
-                tombstones.remove(entityType)
+                tombstones.computeIfPresent(entityType) { _, existing ->
+                    if (existing.isEmpty()) null else existing
+                }
             }
         }
         if (pruned > 0) {

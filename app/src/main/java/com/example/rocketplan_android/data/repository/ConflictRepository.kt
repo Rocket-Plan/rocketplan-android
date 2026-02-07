@@ -114,21 +114,23 @@ class ConflictRepository(
         // Generate current timestamp for the lock field
         val timestamp = formatTimestamp(Date())
 
-        // Mark conflict as resolved
-        val resolved = conflict.copy(
-            resolvedAt = Date(),
-            resolution = "KEEP_LOCAL"
-        )
-        localDataService.upsertConflict(resolved)
+        localDataService.runInTransaction {
+            // Mark conflict as resolved
+            val resolved = conflict.copy(
+                resolvedAt = Date(),
+                resolution = "KEEP_LOCAL"
+            )
+            localDataService.upsertConflict(resolved)
 
-        // Re-enqueue with properly rebuilt payload from entity
-        reEnqueueEntityWithTimestamp(conflict, timestamp)
+            // Re-enqueue with properly rebuilt payload from entity
+            reEnqueueEntityWithTimestamp(conflict, timestamp)
 
-        // Clean up the original operation that caused the conflict
-        cleanupOriginalOperation(conflict)
+            // Clean up the original operation that caused the conflict
+            cleanupOriginalOperation(conflict)
 
-        // Delete the conflict record after successful resolution
-        localDataService.resolveConflict(conflictId)
+            // Delete the conflict record after successful resolution
+            localDataService.resolveConflict(conflictId)
+        }
         true
     }
 
@@ -148,29 +150,31 @@ class ConflictRepository(
     suspend fun resolveKeepServer(conflictId: String) = withContext(ioDispatcher) {
         val conflict = localDataService.getConflict(conflictId) ?: return@withContext
 
-        // Apply server version to local database based on entity type
-        when (conflict.entityType) {
-            "room" -> applyServerRoom(conflict)
-            "location" -> applyServerLocation(conflict)
-            "project" -> applyServerProject(conflict)
-            "property" -> applyServerProperty(conflict)
-            "note" -> applyServerNote(conflict)
-            "equipment" -> applyServerEquipment(conflict)
-            "atmospheric_log" -> applyServerAtmosphericLog(conflict)
-            "moisture_log" -> applyServerMoistureLog(conflict)
+        localDataService.runInTransaction {
+            // Apply server version to local database based on entity type
+            when (conflict.entityType) {
+                "room" -> applyServerRoom(conflict)
+                "location" -> applyServerLocation(conflict)
+                "project" -> applyServerProject(conflict)
+                "property" -> applyServerProperty(conflict)
+                "note" -> applyServerNote(conflict)
+                "equipment" -> applyServerEquipment(conflict)
+                "atmospheric_log" -> applyServerAtmosphericLog(conflict)
+                "moisture_log" -> applyServerMoistureLog(conflict)
+            }
+
+            // Mark conflict as resolved and delete
+            val resolved = conflict.copy(
+                resolvedAt = Date(),
+                resolution = "KEEP_SERVER"
+            )
+            localDataService.upsertConflict(resolved)
+
+            // Clean up the original operation that caused the conflict
+            cleanupOriginalOperation(conflict)
+
+            localDataService.resolveConflict(conflictId)
         }
-
-        // Mark conflict as resolved and delete
-        val resolved = conflict.copy(
-            resolvedAt = Date(),
-            resolution = "KEEP_SERVER"
-        )
-        localDataService.upsertConflict(resolved)
-
-        // Clean up the original operation that caused the conflict
-        cleanupOriginalOperation(conflict)
-
-        localDataService.resolveConflict(conflictId)
     }
 
     /**
@@ -217,22 +221,24 @@ class ConflictRepository(
 
         Log.d(TAG, "Resolving conflict $conflictId with timestamp: $timestamp (fresh: ${freshTimestamp != null})")
 
-        // Mark conflict as resolved
-        val resolved = conflict.copy(
-            resolvedAt = Date(),
-            resolution = "KEEP_LOCAL_WITH_FRESH_TIMESTAMP",
-            lastRequeueAt = Date()
-        )
-        localDataService.upsertConflict(resolved)
+        localDataService.runInTransaction {
+            // Mark conflict as resolved
+            val resolved = conflict.copy(
+                resolvedAt = Date(),
+                resolution = "KEEP_LOCAL_WITH_FRESH_TIMESTAMP",
+                lastRequeueAt = Date()
+            )
+            localDataService.upsertConflict(resolved)
 
-        // Re-enqueue with properly rebuilt payload from entity
-        reEnqueueEntityWithTimestamp(conflict, timestamp)
+            // Re-enqueue with properly rebuilt payload from entity
+            reEnqueueEntityWithTimestamp(conflict, timestamp)
 
-        // Clean up the original operation that caused the conflict
-        cleanupOriginalOperation(conflict)
+            // Clean up the original operation that caused the conflict
+            cleanupOriginalOperation(conflict)
 
-        // Delete the conflict record after successful resolution
-        localDataService.resolveConflict(conflictId)
+            // Delete the conflict record after successful resolution
+            localDataService.resolveConflict(conflictId)
+        }
         true
     }
 
@@ -248,18 +254,20 @@ class ConflictRepository(
 
         Log.d(TAG, "Dismissing conflict $conflictId for ${conflict.entityType}:${conflict.entityId}")
 
-        // Mark conflict as resolved with DISMISS resolution
-        val resolved = conflict.copy(
-            resolvedAt = Date(),
-            resolution = "DISMISS",
-            notes = (conflict.notes ?: "") + "\nDismissed by user at ${Date()}"
-        )
-        localDataService.upsertConflict(resolved)
+        localDataService.runInTransaction {
+            // Mark conflict as resolved with DISMISS resolution
+            val resolved = conflict.copy(
+                resolvedAt = Date(),
+                resolution = "DISMISS",
+                notes = (conflict.notes ?: "") + "\nDismissed by user at ${Date()}"
+            )
+            localDataService.upsertConflict(resolved)
 
-        // Clean up the original operation that caused the conflict
-        cleanupOriginalOperation(conflict)
+            // Clean up the original operation that caused the conflict
+            cleanupOriginalOperation(conflict)
 
-        localDataService.resolveConflict(conflictId)
+            localDataService.resolveConflict(conflictId)
+        }
     }
 
     /**

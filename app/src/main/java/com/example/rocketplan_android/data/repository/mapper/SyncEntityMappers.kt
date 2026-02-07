@@ -289,6 +289,28 @@ internal fun PropertyDto.toEntity(
         zipCode = resolvedZip,
         latitude = resolvedLat,
         longitude = resolvedLng,
+        // Property info fields
+        yearBuilt = yearBuilt ?: existing?.yearBuilt,
+        buildingName = name ?: existing?.buildingName,
+        referredByName = referredByName ?: existing?.referredByName,
+        referredByPhone = referredByPhone ?: existing?.referredByPhone,
+        isPlatinumAgent = isPlatinumAgent ?: existing?.isPlatinumAgent,
+        isResidential = isResidential ?: existing?.isResidential,
+        isCommercial = isCommercial ?: existing?.isCommercial,
+        propertyTypeId = propertyTypeId ?: propertyTypeData?.id ?: existing?.propertyTypeId,
+        propertyTypeName = propertyTypeData?.name ?: existing?.propertyTypeName,
+        asbestosStatusId = asbestosStatusId ?: asbestosStatus?.id ?: existing?.asbestosStatusId,
+        asbestosStatusName = asbestosStatus?.name ?: existing?.asbestosStatusName,
+        // Loss info fields
+        damageCategory = damageCategory ?: existing?.damageCategory,
+        lossClass = lossClass ?: existing?.lossClass,
+        lossDate = lossDate ?: existing?.lossDate,
+        callReceived = callReceived ?: existing?.callReceived,
+        crewDispatched = crewDispatched ?: existing?.crewDispatched,
+        arrivedOnSite = arrivedOnSite ?: existing?.arrivedOnSite,
+        damageCauseId = damageCause?.id ?: existing?.damageCauseId,
+        damageCauseName = damageCause?.name ?: existing?.damageCauseName,
+        // Sync fields
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
         createdAt = existing?.createdAt ?: DateUtils.parseApiDate(createdAt) ?: timestamp,
@@ -599,6 +621,7 @@ internal fun MoistureLogDto.toEntity(
         materialId = material,
         date = DateUtils.parseApiDate(date) ?: timestamp,
         moistureContent = resolvedReading ?: 0.0,
+        removed = removed ?: existing?.removed ?: false,
         location = location,
         depth = depth,
         photoUrl = photoUrl ?: existing?.photoUrl,
@@ -620,6 +643,7 @@ internal fun OfflineMoistureLogEntity.toRequest(
 ): MoistureLogRequest =
     MoistureLogRequest(
         reading = moistureContent,
+        removed = removed,
         location = location,
         idempotencyKey = uuid,
         updatedAt = updatedAtOverride ?: updatedAt.toApiTimestamp()

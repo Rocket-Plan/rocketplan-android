@@ -18,6 +18,7 @@ import com.example.rocketplan_android.data.repository.mapper.PendingRoomUpdatePa
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.util.UuidUtils
 import kotlinx.coroutines.CancellationException
 import retrofit2.HttpException
@@ -348,8 +349,9 @@ class RoomPushHandler(
             updatedAt = (room.serverUpdatedAt ?: room.updatedAt).toApiTimestamp()
         )
 
+        var responseDto: RoomDto? = null
         try {
-            ctx.api.updateRoom(serverId, request)
+            responseDto = ctx.api.updateRoom(serverId, request)
         } catch (error: Throwable) {
             if (error.isConflict()) {
                 Log.w(SYNC_TAG, "⚠️ [handlePendingRoomUpdate] 409 conflict for room $serverId; fetching fresh and retrying")
@@ -372,14 +374,12 @@ class RoomPushHandler(
                 }
                     .onFailure { if (it is CancellationException) throw it }
                     .getOrElse { fetchError ->
-                        Log.e(SYNC_TAG, "❌ [handlePendingRoomUpdate] Failed to fetch fresh room $serverId", fetchError)
-                        // Can't fetch fresh data - restore local and drop
-                        val restored = room.copy(
-                            isDirty = false,
-                            syncStatus = SyncStatus.SYNCED
+                        Log.e(SYNC_TAG, "❌ [handlePendingRoomUpdate] Failed to fetch fresh room $serverId; will retry later", fetchError)
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Room update 409 recovery deferred - fresh fetch failed",
+                            mapOf("roomServerId" to serverId.toString(), "error" to (fetchError.message ?: "unknown"))
                         )
-                        ctx.localDataService.saveRooms(listOf(restored))
-                        return OperationOutcome.DROP
+                        return OperationOutcome.SKIP
                     }
 
                 // Retry with fresh updatedAt
@@ -396,6 +396,10 @@ class RoomPushHandler(
                         Log.w(
                             SYNC_TAG,
                             "⚠️ [handlePendingRoomUpdate] Retry still got 409; recording conflict for user resolution"
+                        )
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Room update double-409 - recording conflict",
+                            mapOf("roomServerId" to serverId.toString(), "roomUuid" to room.uuid)
                         )
                         // Record conflict for user resolution instead of silent server restore
                         // Note: Server doesn't return is_source in room detail response, only is_accessible.
@@ -426,13 +430,16 @@ class RoomPushHandler(
                     }
                     throw retryError
                 }
+                responseDto = retryResult.getOrNull()
                 Log.d(SYNC_TAG, "✅ [handlePendingRoomUpdate] Retry update succeeded for room $serverId")
             } else {
                 throw error
             }
         }
 
+        val freshServerUpdatedAt = responseDto?.updatedAt?.let { DateUtils.parseApiDate(it) }
         val synced = room.copy(
+            serverUpdatedAt = freshServerUpdatedAt ?: room.serverUpdatedAt,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             lastSyncedAt = ctx.now()
@@ -455,6 +462,7 @@ class RoomPushHandler(
             }
         }
         val cleaned = room.copy(
+            isDeleted = true,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             lastSyncedAt = ctx.now()

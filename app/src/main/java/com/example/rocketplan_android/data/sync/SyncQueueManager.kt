@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
@@ -432,6 +433,11 @@ class SyncQueueManager(
                 pendingPhotoSyncs.clear()
                 updatePhotoSyncingProjectsLocked()
                 initialSyncStarted.set(false)
+                _initialSyncCompleted.value = false
+                assignedProjectIds.value = emptySet()
+                _assignedProjectsLoaded.value = false
+                pendingUpdatedProjectIds.clear()
+                lastForegroundSyncAt = 0L
             }
             projectRealtimeManager?.clear()
             _isActive.value = false
@@ -833,7 +839,7 @@ class SyncQueueManager(
                 }
                 _currentSyncProgress.value = SyncProgress(job, projectUid, displayText)
                 var syncSucceeded = false
-                val syncJob = scope.launch {
+                val syncJob = scope.launch(start = CoroutineStart.LAZY) {
                     try {
                         when (mode) {
                             SyncJob.ProjectSyncMode.ESSENTIALS_ONLY -> {
@@ -909,11 +915,14 @@ class SyncQueueManager(
                     }
                 }
 
+                // Register the job BEFORE starting so clear() can always find it.
+                // LAZY start ensures no execution happens until after registration.
                 mutex.withLock {
                     activeProjectSyncJobs[job.projectId] = syncJob
                     activeProjectModes[job.projectId] = mode
                     updateProjectSyncingProjectsLocked()
                 }
+                syncJob.start()
 
                 // Wait for completion
                 syncJob.join()

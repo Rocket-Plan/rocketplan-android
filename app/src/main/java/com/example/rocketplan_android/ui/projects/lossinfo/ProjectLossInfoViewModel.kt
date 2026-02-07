@@ -1124,8 +1124,8 @@ private fun ClaimDto.toEntity(): OfflineClaimEntity {
         adjusterEmail = adjusterEmail ?: claimInfo?.adjusterEmail,
         claimTypeId = claimType?.id,
         claimTypeName = claimType?.name,
-        createdAt = createdAt,
-        updatedAt = updatedAt,
+        createdAt = createdAt?.let { com.example.rocketplan_android.util.DateUtils.parseApiDate(it) },
+        updatedAt = updatedAt?.let { com.example.rocketplan_android.util.DateUtils.parseApiDate(it) },
         lastSyncedAt = Date()
     )
 }
@@ -1150,7 +1150,7 @@ private fun OfflineClaimEntity.toDto(): ClaimDto {
         claimType = claimTypeId?.let { id ->
             com.example.rocketplan_android.data.model.ClaimTypeDto(id = id, name = claimTypeName)
         },
-        createdAt = createdAt,
-        updatedAt = updatedAt
+        createdAt = createdAt?.let { com.example.rocketplan_android.util.DateUtils.formatApiDate(it) },
+        updatedAt = updatedAt?.let { com.example.rocketplan_android.util.DateUtils.formatApiDate(it) }
     )
 }
