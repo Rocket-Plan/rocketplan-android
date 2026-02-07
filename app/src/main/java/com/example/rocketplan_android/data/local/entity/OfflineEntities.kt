@@ -60,7 +60,8 @@ data class OfflineUserEntity(
     tableName = "offline_properties",
     indices = [
         Index(value = ["uuid"], unique = true),
-        Index(value = ["serverId"], unique = false)
+        Index(value = ["serverId"], unique = false),
+        Index(value = ["isDirty"])
     ]
 )
 data class OfflinePropertyEntity(
@@ -98,6 +99,8 @@ data class OfflinePropertyEntity(
     // Sync fields
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
+    val isDirty: Boolean = false,
+    val isDeleted: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
     val serverUpdatedAt: Date? = null,
@@ -419,7 +422,6 @@ data class OfflineAlbumEntity(
     val thumbnailUrl: String? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
-    val isDirty: Boolean = false,
     val isDeleted: Boolean = false,
     val createdAt: Date = Date(),
     val updatedAt: Date = Date(),
@@ -654,7 +656,6 @@ data class OfflineDamageEntity(
     val lastSyncedAt: Date? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
-    val isDirty: Boolean = false,
     val isDeleted: Boolean = false
 )
 

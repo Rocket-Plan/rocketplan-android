@@ -688,10 +688,10 @@ interface OfflineDao {
             a.thumbnailUrl,
             a.syncStatus,
             a.syncVersion,
-            a.isDirty,
             a.isDeleted,
             a.createdAt,
             a.updatedAt,
+            a.serverUpdatedAt,
             a.lastSyncedAt
         FROM offline_albums a
         LEFT JOIN offline_album_photos ap ON a.albumId = ap.albumId
@@ -715,10 +715,10 @@ interface OfflineDao {
             a.thumbnailUrl,
             a.syncStatus,
             a.syncVersion,
-            a.isDirty,
             a.isDeleted,
             a.createdAt,
             a.updatedAt,
+            a.serverUpdatedAt,
             a.lastSyncedAt
         FROM offline_albums a
         LEFT JOIN offline_album_photos ap ON a.albumId = ap.albumId
@@ -881,7 +881,7 @@ interface OfflineDao {
     @Query("UPDATE offline_damages SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateDamageRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
-    @Query("UPDATE offline_damages SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
+    @Query("UPDATE offline_damages SET isDeleted = 1 WHERE serverId IN (:serverIds)")
     suspend fun markDamagesDeleted(serverIds: List<Long>)
 
     @Query("UPDATE offline_damages SET isDeleted = 1 WHERE projectId = :projectId")
@@ -939,22 +939,22 @@ interface OfflineDao {
     @Query("DELETE FROM offline_properties WHERE propertyId = :propertyId")
     suspend fun deleteProperty(propertyId: Long)
 
-    @Query("DELETE FROM offline_properties WHERE serverId IN (:serverIds)")
-    suspend fun deletePropertiesByServerIds(serverIds: List<Long>)
+    @Query("UPDATE offline_properties SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
+    suspend fun markPropertiesDeletedByServerIds(serverIds: List<Long>)
 
     @Query("SELECT * FROM offline_users WHERE companyId = :companyId")
     fun observeUsersForCompany(companyId: Long): Flow<List<OfflineUserEntity>>
 
-    @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId LIMIT 1")
+    @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId AND isDeleted = 0 LIMIT 1")
     suspend fun getProperty(propertyId: Long): OfflinePropertyEntity?
 
-    @Query("SELECT * FROM offline_properties WHERE serverId = :serverId LIMIT 1")
+    @Query("SELECT * FROM offline_properties WHERE serverId = :serverId AND isDeleted = 0 LIMIT 1")
     suspend fun getPropertyByServerId(serverId: Long): OfflinePropertyEntity?
 
-    @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId LIMIT 1")
+    @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId AND isDeleted = 0 LIMIT 1")
     fun observeProperty(propertyId: Long): Flow<OfflinePropertyEntity?>
 
-    @Query("SELECT * FROM offline_properties WHERE serverId = :serverId LIMIT 1")
+    @Query("SELECT * FROM offline_properties WHERE serverId = :serverId AND isDeleted = 0 LIMIT 1")
     fun observePropertyByServerId(serverId: Long): Flow<OfflinePropertyEntity?>
 
     @Query(
@@ -965,6 +965,7 @@ interface OfflineDao {
                 FROM offline_properties
                 WHERE address IS NOT NULL
                   AND TRIM(address) != ''
+                  AND isDeleted = 0
                 GROUP BY TRIM(address)
                 UNION ALL
                 SELECT TRIM(
@@ -1252,8 +1253,11 @@ interface OfflineDao {
         lastSyncedAt: Date
     )
 
-    @Query("DELETE FROM offline_support_messages WHERE conversationId = :conversationId")
+    @Query("UPDATE offline_support_messages SET isDeleted = 1 WHERE conversationId = :conversationId AND isDirty = 0")
     suspend fun deleteSupportMessagesForConversation(conversationId: Long)
+
+    @Query("DELETE FROM offline_support_messages WHERE conversationId = :conversationId AND isDeleted = 1")
+    suspend fun purgeSupportMessagesForConversation(conversationId: Long)
     // endregion
 
     // region Support Message Attachments

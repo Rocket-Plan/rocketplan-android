@@ -148,7 +148,8 @@ class PropertySyncService(
             val updated = property.copy(
                 updatedAt = now(),
                 syncStatus = SyncStatus.PENDING,
-                syncVersion = property.syncVersion + 1
+                syncVersion = property.syncVersion + 1,
+                isDirty = true
             )
             localDataService.saveProperty(updated)
             localDataService.attachPropertyToProject(
@@ -330,6 +331,7 @@ class PropertySyncService(
             longitude = null,
             syncStatus = SyncStatus.PENDING,
             syncVersion = 0,
+            isDirty = true,
             createdAt = timestamp,
             updatedAt = timestamp,
             lastSyncedAt = null

@@ -313,6 +313,8 @@ internal fun PropertyDto.toEntity(
         // Sync fields
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
+        isDirty = false,
+        isDeleted = existing?.isDeleted ?: false,
         createdAt = existing?.createdAt ?: DateUtils.parseApiDate(createdAt) ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
@@ -763,7 +765,6 @@ internal fun DamageMaterialDto.toEntity(
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
-        isDirty = false,
         isDeleted = existing?.isDeleted ?: false
     )
 }

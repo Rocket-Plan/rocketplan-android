@@ -324,7 +324,15 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
                 throw error
             }
         }
-        cascadeDeleteProperty(property.propertyId)
+        // Mark as soft-deleted following Room/Photo pattern
+        val cleaned = property.copy(
+            isDirty = false,
+            isDeleted = true,
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncedAt = ctx.now()
+        )
+        ctx.localDataService.saveProperty(cleaned)
+        ctx.localDataService.clearProjectPropertyId(property.propertyId)
         // Clear tombstone now that server confirmed deletion
         DeletionTombstoneCache.clearTombstone("property", serverId)
         return OperationOutcome.SUCCESS

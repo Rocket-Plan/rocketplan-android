@@ -215,7 +215,6 @@ abstract class OfflineDatabase : RoomDatabase() {
         private val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Add soft-delete support to albums for consistency with other entities
-                database.execSQL("ALTER TABLE offline_albums ADD COLUMN isDirty INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE offline_albums ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_albums_isDeleted ON offline_albums(isDeleted)")
             }
