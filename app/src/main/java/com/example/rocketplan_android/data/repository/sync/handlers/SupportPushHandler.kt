@@ -75,6 +75,13 @@ class SupportPushHandler(private val ctx: PushHandlerContext) {
                     "error" to (e.message ?: "unknown")
                 )
             )
+            if (e.isValidationError()) {
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Support conversation dropped - 422 validation error",
+                    mapOf("conversationUuid" to operation.entityUuid)
+                )
+                return OperationOutcome.DROP
+            }
             throw e
         }
     }
@@ -160,6 +167,13 @@ class SupportPushHandler(private val ctx: PushHandlerContext) {
                     "error" to (e.message ?: "unknown")
                 )
             )
+            if (e.isValidationError()) {
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Support message dropped - 422 validation error",
+                    mapOf("messageUuid" to operation.entityUuid)
+                )
+                return OperationOutcome.DROP
+            }
             throw e
         }
     }

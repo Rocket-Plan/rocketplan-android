@@ -8,6 +8,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.AtmosphericLogRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
+import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.util.DateUtils
 import retrofit2.HttpException
 
@@ -59,16 +60,28 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
             updatedAt = lockUpdatedAt
         )
 
-        val dto = if (log.serverId == null) {
-            // CREATE - route to room or project
-            if (roomServerId != null) {
-                ctx.api.createRoomAtmosphericLog(roomServerId, request)
+        val dto = try {
+            if (log.serverId == null) {
+                // CREATE - route to room or project
+                if (roomServerId != null) {
+                    ctx.api.createRoomAtmosphericLog(roomServerId, request)
+                } else {
+                    ctx.api.createProjectAtmosphericLog(projectServerId, request)
+                }
             } else {
-                ctx.api.createProjectAtmosphericLog(projectServerId, request)
+                // UPDATE
+                ctx.api.updateAtmosphericLog(log.serverId, request)
             }
-        } else {
-            // UPDATE
-            ctx.api.updateAtmosphericLog(log.serverId, request)
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(TAG, "Dropping atmospheric log ${log.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, TAG, "Atmospheric log dropped - 422 validation error",
+                    mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
+                )
+                return OperationOutcome.DROP
+            }
+            throw e
         }
 
         val synced = log.copy(
@@ -139,6 +152,14 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
                 throw HttpException(response)
             }
         } catch (error: Throwable) {
+            if (error.isValidationError()) {
+                Log.w(TAG, "Dropping atmospheric log delete ${log.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, TAG, "Atmospheric log delete dropped - 422 validation error",
+                    mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
+                )
+                return OperationOutcome.DROP
+            }
             if (!error.isMissingOnServer()) {
                 throw error
             }

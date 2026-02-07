@@ -90,7 +90,19 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             idempotencyKey = payload.idempotencyKey
         )
 
-        val dto = ctx.api.createLocation(propertyServerId, request)
+        val dto = try {
+            ctx.api.createLocation(propertyServerId, request)
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping location creation '${payload.locationName}': server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Location creation dropped - 422 validation error",
+                    mapOf("locationName" to payload.locationName, "propertyServerId" to propertyServerId.toString())
+                )
+                return OperationOutcome.DROP
+            }
+            throw e
+        }
         val existing = ctx.localDataService.getLocations(payload.projectId)
             .firstOrNull { it.uuid == payload.locationUuid || it.locationId == payload.localLocationId }
         val entity = dto.toEntity(defaultProjectId = payload.projectId).copy(
@@ -202,10 +214,25 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                         ctx.recordConflict(conflict)
                         return OperationOutcome.CONFLICT_PENDING
                     }
+                    if (retryError.isValidationError()) {
+                        Log.w(SYNC_TAG, "Dropping location update $serverId: server validation error (422)")
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Location update dropped - 422 validation error",
+                            mapOf("locationServerId" to serverId.toString(), "locationUuid" to location.uuid)
+                        )
+                        return OperationOutcome.DROP
+                    }
                     throw retryError
                 }
                 responseDto = retryResult.getOrNull()
                 Log.d(SYNC_TAG, "✅ [handlePendingLocationUpdate] Retry update succeeded for location $serverId")
+            } else if (error.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping location update $serverId: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Location update dropped - 422 validation error",
+                    mapOf("locationServerId" to serverId.toString(), "locationUuid" to location.uuid)
+                )
+                return OperationOutcome.DROP
             } else {
                 throw error
             }
@@ -257,6 +284,14 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
         try {
             ctx.api.deleteLocation(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {
+            if (error.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping location delete $serverId: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Location delete dropped - 422 validation error",
+                    mapOf("locationServerId" to serverId.toString(), "locationUuid" to location.uuid)
+                )
+                return OperationOutcome.DROP
+            }
             if (!error.isMissingOnServer()) {
                 throw error
             }

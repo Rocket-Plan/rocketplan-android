@@ -10,6 +10,8 @@ internal fun Throwable.isConflict(): Boolean = (this as? HttpException)?.code() 
 
 internal fun Throwable.isMissingOnServer(): Boolean = (this as? HttpException)?.code() in listOf(404, 410)
 
+internal fun Throwable.isValidationError(): Boolean = (this as? HttpException)?.code() == 422
+
 /**
  * Attempts to extract the `updated_at` timestamp from a 409 error response body.
  * Useful for entities that lack a direct GET-by-ID endpoint (notes, equipment, etc.).

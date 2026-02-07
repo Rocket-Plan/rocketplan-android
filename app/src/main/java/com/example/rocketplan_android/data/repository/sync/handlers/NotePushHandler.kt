@@ -85,13 +85,14 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
             updatedAt = lockUpdatedAt
         )
 
-        val dto = if (note.serverId == null) {
-            ctx.api.createProjectNote(projectServerId, request.copy(updatedAt = null)).data
-        } else {
-            try {
-                ctx.api.updateNote(note.serverId, request).data
-            } catch (error: HttpException) {
-                if (error.code() == 409) {
+        val dto = try {
+            if (note.serverId == null) {
+                ctx.api.createProjectNote(projectServerId, request.copy(updatedAt = null)).data
+            } else {
+                try {
+                    ctx.api.updateNote(note.serverId, request).data
+                } catch (error: HttpException) {
+                    if (error.code() == 409) {
                     Log.w(SYNC_TAG, "⚠️ [handlePendingNoteUpsert] 409 conflict for note ${note.serverId}; extracting fresh timestamp and retrying")
                     ctx.remoteLogger?.log(
                         LogLevel.WARN, SYNC_TAG, "Note update 409 conflict",
@@ -149,6 +150,17 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
                 }
             }
         }
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping note ${note.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Note dropped - 422 validation error",
+                    mapOf("noteUuid" to note.uuid, "serverId" to (note.serverId?.toString() ?: "null"))
+                )
+                return OperationOutcome.DROP
+            }
+            throw e
+        }
 
         val entity = dto.toEntity()?.copy(
             noteId = note.noteId,
@@ -177,6 +189,14 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
             DeleteWithTimestampRequest(updatedAt = lockUpdatedAt)
         )
         if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
+            if (response.code() == 422) {
+                Log.w(SYNC_TAG, "Dropping note delete ${note.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Note delete dropped - 422 validation error",
+                    mapOf("noteUuid" to note.uuid, "serverId" to (note.serverId?.toString() ?: "null"))
+                )
+                return OperationOutcome.DROP
+            }
             throw HttpException(response)
         }
 

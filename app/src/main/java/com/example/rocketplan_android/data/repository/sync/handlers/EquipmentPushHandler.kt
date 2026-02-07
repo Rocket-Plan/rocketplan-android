@@ -52,18 +52,40 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val lockUpdatedAt = (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
-        val synced = pushPendingEquipmentUpsert(equipment, projectServerId, roomServerId, lockUpdatedAt)
-        synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        return try {
+            val synced = pushPendingEquipmentUpsert(equipment, projectServerId, roomServerId, lockUpdatedAt)
+            synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
+            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping equipment ${equipment.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Equipment dropped - 422 validation error",
+                    mapOf("equipmentUuid" to equipment.uuid, "serverId" to (equipment.serverId?.toString() ?: "null"))
+                )
+                OperationOutcome.DROP
+            } else throw e
+        }
     }
 
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val equipment = ctx.localDataService.getEquipmentByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         val lockUpdatedAt = (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
-        val synced = pushPendingEquipmentDeletion(equipment, lockUpdatedAt)
-        synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        return try {
+            val synced = pushPendingEquipmentDeletion(equipment, lockUpdatedAt)
+            synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
+            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping equipment delete ${equipment.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Equipment delete dropped - 422 validation error",
+                    mapOf("equipmentUuid" to equipment.uuid, "serverId" to (equipment.serverId?.toString() ?: "null"))
+                )
+                OperationOutcome.DROP
+            } else throw e
+        }
     }
 
     private suspend fun pushPendingEquipmentUpsert(

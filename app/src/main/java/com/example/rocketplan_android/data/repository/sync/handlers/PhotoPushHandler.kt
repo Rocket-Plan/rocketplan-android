@@ -1,10 +1,12 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
+import android.util.Log
 import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
+import com.example.rocketplan_android.logging.LogLevel
 import retrofit2.HttpException
 
 /**
@@ -25,6 +27,14 @@ class PhotoPushHandler(private val ctx: PushHandlerContext) {
             DeleteWithTimestampRequest(updatedAt = lockUpdatedAt)
         )
         if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
+            if (response.code() == 422) {
+                Log.w(SYNC_TAG, "Dropping photo delete ${photo.serverId}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Photo delete dropped - 422 validation error",
+                    mapOf("serverId" to photo.serverId.toString())
+                )
+                return OperationOutcome.DROP
+            }
             throw HttpException(response)
         }
 

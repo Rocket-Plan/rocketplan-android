@@ -37,18 +37,40 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
         }
 
         val lockUpdatedAt = (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
-        val synced = pushPendingTimecardUpsert(timecard, projectServerId, lockUpdatedAt)
-        synced?.let { ctx.localDataService.saveTimecard(it) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        return try {
+            val synced = pushPendingTimecardUpsert(timecard, projectServerId, lockUpdatedAt)
+            synced?.let { ctx.localDataService.saveTimecard(it) }
+            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping timecard ${timecard.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Timecard dropped - 422 validation error",
+                    mapOf("timecardUuid" to timecard.uuid, "serverId" to (timecard.serverId?.toString() ?: "null"))
+                )
+                OperationOutcome.DROP
+            } else throw e
+        }
     }
 
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val timecard = ctx.localDataService.getTimecardByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         val lockUpdatedAt = (timecard.serverUpdatedAt ?: timecard.updatedAt).toApiTimestamp()
-        val synced = pushPendingTimecardDeletion(timecard, lockUpdatedAt)
-        synced?.let { ctx.localDataService.saveTimecard(it) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        return try {
+            val synced = pushPendingTimecardDeletion(timecard, lockUpdatedAt)
+            synced?.let { ctx.localDataService.saveTimecard(it) }
+            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping timecard delete ${timecard.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Timecard delete dropped - 422 validation error",
+                    mapOf("timecardUuid" to timecard.uuid, "serverId" to (timecard.serverId?.toString() ?: "null"))
+                )
+                OperationOutcome.DROP
+            } else throw e
+        }
     }
 
     private suspend fun pushPendingTimecardUpsert(

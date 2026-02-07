@@ -59,6 +59,13 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
                 "❌ [handlePendingPropertyCreation] createProperty failed: code=${error.code()} " +
                     "body=${errorBody ?: "null"}"
             )
+            if (error.isValidationError()) {
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Property creation dropped - 422 validation error",
+                    mapOf("projectServerId" to projectServerId.toString())
+                )
+                return OperationOutcome.DROP
+            }
             throw error
         }
 
@@ -224,6 +231,14 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
                         ctx.recordConflict(conflict)
                         return OperationOutcome.CONFLICT_PENDING
                     }
+                    if (retryError.isValidationError()) {
+                        Log.w(SYNC_TAG, "Dropping property update $serverId: server validation error (422)")
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Property update dropped - 422 validation error",
+                            mapOf("propertyServerId" to serverId.toString())
+                        )
+                        return OperationOutcome.DROP
+                    }
                     throw retryError
                 }
                 Log.d(SYNC_TAG, "✅ [handlePendingPropertyUpdate] Retry update succeeded for property $serverId")
@@ -237,6 +252,13 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
                         "❌ [handlePendingPropertyUpdate] updateProperty failed: code=${error.code()} " +
                             "body=${errorBody ?: "null"}"
                     )
+                }
+                if (error.isValidationError()) {
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Property update dropped - 422 validation error",
+                        mapOf("propertyServerId" to serverId.toString())
+                    )
+                    return OperationOutcome.DROP
                 }
                 throw error
             }
@@ -290,6 +312,14 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
         try {
             ctx.api.deleteProperty(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {
+            if (error.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping property delete $serverId: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Property delete dropped - 422 validation error",
+                    mapOf("propertyServerId" to serverId.toString())
+                )
+                return OperationOutcome.DROP
+            }
             if (!error.isMissingOnServer()) {
                 throw error
             }

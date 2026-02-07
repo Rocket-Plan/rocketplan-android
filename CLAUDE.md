@@ -16,6 +16,23 @@
 
 **Important:** Only install FLIR builds on FLIR devices and Standard builds on regular devices.
 
+### ADB Package Name
+
+The installed package name on devices is `com.rocketplantech.rocketplan` (not `com.example.rocketplan_android`). Use this for all ADB commands:
+
+```bash
+# View app logs on tablet
+adb -s 30407ef logcat -d -t 200 --pid=$(adb -s 30407ef shell pidof -s com.rocketplantech.rocketplan)
+
+# Filter logs (e.g. sync-related)
+adb -s 30407ef logcat -d -t 500 --pid=$(adb -s 30407ef shell pidof -s com.rocketplantech.rocketplan) | grep -i -E 'sync|queue|push'
+
+# Take a screenshot
+adb -s 30407ef exec-out screencap -p > /tmp/screenshot.png
+```
+
+**Claude:** You can freely run any ADB command on connected devices (logs, screenshots, shell commands, etc.) without asking for permission.
+
 ## Fastlane
 
 Fastlane is used for build automation and deployment.

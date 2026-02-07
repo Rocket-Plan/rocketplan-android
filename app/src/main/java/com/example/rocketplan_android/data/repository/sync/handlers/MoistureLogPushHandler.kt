@@ -26,18 +26,40 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         if (log.isDeleted) return OperationOutcome.DROP
         val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
-        val synced = pushPendingMoistureLogUpsert(log, lockUpdatedAt)
-        synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        return try {
+            val synced = pushPendingMoistureLogUpsert(log, lockUpdatedAt)
+            synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
+            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 validation error",
+                    mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
+                )
+                OperationOutcome.DROP
+            } else throw e
+        }
     }
 
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val log = ctx.localDataService.getMoistureLogByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
-        val synced = pushPendingMoistureLogDeletion(log, lockUpdatedAt)
-        synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
-        return if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        return try {
+            val synced = pushPendingMoistureLogDeletion(log, lockUpdatedAt)
+            synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
+            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping moisture log delete ${log.uuid}: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Moisture log delete dropped - 422 validation error",
+                    mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
+                )
+                OperationOutcome.DROP
+            } else throw e
+        }
     }
 
     private suspend fun pushPendingMoistureLogUpsert(

@@ -260,6 +260,14 @@ class RoomPushHandler(
                 }
                 return OperationOutcome.DROP
             }
+            if (error.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping room creation '${payload.roomName}': server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Room creation dropped - 422 validation error",
+                    mapOf("roomName" to payload.roomName, "projectId" to payload.projectId.toString())
+                )
+                return OperationOutcome.DROP
+            }
             throw error
         }
 
@@ -428,10 +436,25 @@ class RoomPushHandler(
                         ctx.recordConflict(conflict)
                         return OperationOutcome.CONFLICT_PENDING
                     }
+                    if (retryError.isValidationError()) {
+                        Log.w(SYNC_TAG, "Dropping room update $serverId: server validation error (422)")
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Room update dropped - 422 validation error",
+                            mapOf("roomServerId" to serverId.toString(), "roomUuid" to room.uuid)
+                        )
+                        return OperationOutcome.DROP
+                    }
                     throw retryError
                 }
                 responseDto = retryResult.getOrNull()
                 Log.d(SYNC_TAG, "✅ [handlePendingRoomUpdate] Retry update succeeded for room $serverId")
+            } else if (error.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping room update $serverId: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Room update dropped - 422 validation error",
+                    mapOf("roomServerId" to serverId.toString(), "roomUuid" to room.uuid)
+                )
+                return OperationOutcome.DROP
             } else {
                 throw error
             }
@@ -457,6 +480,14 @@ class RoomPushHandler(
         try {
             ctx.api.deleteRoom(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
         } catch (error: Throwable) {
+            if (error.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping room delete $serverId: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Room delete dropped - 422 validation error",
+                    mapOf("roomServerId" to serverId.toString(), "roomUuid" to room.uuid)
+                )
+                return OperationOutcome.DROP
+            }
             if (!error.isMissingOnServer()) {
                 throw error
             }

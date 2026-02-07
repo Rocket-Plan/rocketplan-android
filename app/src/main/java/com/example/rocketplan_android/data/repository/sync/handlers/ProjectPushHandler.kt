@@ -41,7 +41,19 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
         val existing = ctx.localDataService.getProject(payload.localProjectId)
             ?: return null
 
-        val addressDto = ctx.api.createAddress(payload.addressRequest).data
+        val addressDto = try {
+            ctx.api.createAddress(payload.addressRequest).data
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping project creation ${payload.projectUuid}: address validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Project creation dropped - address 422 validation error",
+                    mapOf("projectUuid" to (payload.projectUuid ?: "null"))
+                )
+                return null
+            }
+            throw e
+        }
         val addressId = addressDto.id
             ?: throw IllegalStateException("Address creation succeeded but returned null id")
 
@@ -52,7 +64,19 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
             idempotencyKey = idempotencyKey
         )
 
-        val dto = ctx.api.createCompanyProject(payload.companyId, projectRequest).data
+        val dto = try {
+            ctx.api.createCompanyProject(payload.companyId, projectRequest).data
+        } catch (e: Exception) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping project creation ${payload.projectUuid}: project validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Project creation dropped - 422 validation error",
+                    mapOf("projectUuid" to (payload.projectUuid ?: "null"))
+                )
+                return null
+            }
+            throw e
+        }
 
         Log.d(
             SYNC_TAG,
@@ -223,6 +247,14 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
                         ctx.recordConflict(conflict)
                         return OperationOutcome.CONFLICT_PENDING
                     }
+                    if (retryError.isValidationError()) {
+                        Log.w(SYNC_TAG, "Dropping project update $serverId: server validation error (422)")
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Project update dropped - 422 validation error",
+                            mapOf("projectServerId" to serverId.toString(), "projectUuid" to project.uuid)
+                        )
+                        return OperationOutcome.DROP
+                    }
                     throw retryError
                 }
                 // Retry succeeded - save the result
@@ -237,6 +269,14 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
                 ctx.localDataService.saveProjects(listOf(entity))
                 Log.d(SYNC_TAG, "\u2705 [handlePendingProjectUpdate] Retry update succeeded for project $serverId")
                 return OperationOutcome.SUCCESS
+            }
+            if (error.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping project update $serverId: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Project update dropped - 422 validation error",
+                    mapOf("projectServerId" to serverId.toString(), "projectUuid" to project.uuid)
+                )
+                return OperationOutcome.DROP
             }
             throw error
         }
@@ -297,6 +337,14 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
                 )
                 val retryResponse = ctx.api.deleteProject(serverId, retryRequest)
                 if (!retryResponse.isSuccessful && retryResponse.code() !in listOf(404, 409, 410)) {
+                    if (retryResponse.code() == 422) {
+                        Log.w(SYNC_TAG, "Dropping project delete retry $serverId: server validation error (422)")
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Project delete dropped - 422 validation error",
+                            mapOf("projectServerId" to serverId.toString())
+                        )
+                        return OperationOutcome.DROP
+                    }
                     throw HttpException(retryResponse)
                 }
                 if (retryResponse.code() == 409) {
@@ -319,6 +367,13 @@ class ProjectPushHandler(private val ctx: PushHandlerContext) {
                     SYNC_TAG,
                     "✅ [handlePendingProjectDeletion] Retry delete succeeded for project $serverId"
                 )
+            } else if (response.code() == 422) {
+                Log.w(SYNC_TAG, "Dropping project delete $serverId: server validation error (422)")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Project delete dropped - 422 validation error",
+                    mapOf("projectServerId" to serverId.toString())
+                )
+                return OperationOutcome.DROP
             } else if (response.code() !in listOf(404, 410)) {
                 throw HttpException(response)
             }
