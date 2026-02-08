@@ -355,8 +355,8 @@
                                 android:layout_height="@dimen/icon_size_list_large"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
-                                android:src="@drawable/ic_water_drop"
-                                android:tint="@color/white" />
+                                android:scaleType="centerInside"
+                                android:src="@drawable/icon_water" />
                         </FrameLayout>
 
                         <LinearLayout
@@ -416,8 +416,8 @@
                                 android:layout_height="@dimen/icon_size_list_large"
                                 android:layout_gravity="center"
                                 android:contentDescription="@null"
-                                android:src="@android:drawable/ic_menu_recent_history"
-                                android:tint="@color/white" />
+                                android:scaleType="centerInside"
+                                android:src="@drawable/icon_clock_in" />
                         </FrameLayout>
 
                         <LinearLayout
