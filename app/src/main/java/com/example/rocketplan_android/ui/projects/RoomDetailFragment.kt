@@ -493,8 +493,9 @@ class RoomDetailFragment : Fragment() {
 
     private fun showScopeEditDialog(item: RoomScopeItem) {
         val dialogView = layoutInflater.inflate(R.layout.dialog_edit_scope_item, null)
-        val quantityLayout = dialogView.findViewById<TextInputLayout>(R.id.scopeEditQuantityLayout)
-        val quantityInput = dialogView.findViewById<TextInputEditText>(R.id.scopeEditQuantityInput)
+        val quantityDisplay = dialogView.findViewById<TextView>(R.id.scopeEditQuantityDisplay)
+        val minusButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.scopeEditMinusButton)
+        val plusButton = dialogView.findViewById<com.google.android.material.button.MaterialButton>(R.id.scopeEditPlusButton)
         val itemTitleView = dialogView.findViewById<TextView>(R.id.scopeEditItemTitle)
         val itemDescriptionView = dialogView.findViewById<TextView>(R.id.scopeEditItemDescription)
         val itemMetaView = dialogView.findViewById<TextView>(R.id.scopeEditItemMeta)
@@ -515,8 +516,23 @@ class RoomDetailFragment : Fragment() {
         itemMetaView.text = metaText
         itemMetaView.isVisible = metaText.isNotBlank()
 
-        quantityInput.setText(formatQuantityInput(item.quantity))
-        quantityInput.setSelection(quantityInput.text?.length ?: 0)
+        var currentQuantity = (item.quantity ?: 1.0).coerceAtLeast(1.0)
+        fun updateQuantityDisplay() {
+            quantityDisplay.text = formatQuantityInput(currentQuantity)
+            minusButton.isEnabled = currentQuantity > 1.0
+        }
+        updateQuantityDisplay()
+
+        minusButton.setOnClickListener {
+            if (currentQuantity > 1.0) {
+                currentQuantity -= 1.0
+                updateQuantityDisplay()
+            }
+        }
+        plusButton.setOnClickListener {
+            currentQuantity += 1.0
+            updateQuantityDisplay()
+        }
 
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setTitle(getString(R.string.scope_line_item_edit))
@@ -528,19 +544,11 @@ class RoomDetailFragment : Fragment() {
 
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val quantityText = quantityInput.text?.toString()?.trim()
-                val quantity = quantityText?.toDoubleOrNull()
-                if (quantity == null || quantity <= 0.0) {
-                    quantityLayout.error = getString(R.string.scope_edit_invalid_quantity)
-                    return@setOnClickListener
-                }
-                quantityLayout.error = null
-
                 viewModel.updateScopeItem(
                     itemId = item.id,
                     title = resolvedTitle,
                     description = item.description,
-                    quantity = quantity,
+                    quantity = currentQuantity,
                     unit = item.unit,
                     rate = item.rate
                 )
