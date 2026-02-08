@@ -3,6 +3,7 @@ package com.example.rocketplan_android.data.repository.sync.handlers
 import android.util.Log
 import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
@@ -10,6 +11,9 @@ import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toRequest
 import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.util.UuidUtils
+import retrofit2.HttpException
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Handles pushing equipment upsert/delete operations to the server.
@@ -57,6 +61,10 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
             if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (e.isConflict() && equipment.serverId != null) {
+                return handle409Conflict(e as HttpException, equipment, projectServerId, roomServerId, operation)
+            }
             if (e.isValidationError()) {
                 Log.w(SYNC_TAG, "Dropping equipment ${equipment.uuid}: server validation error (422)")
                 ctx.remoteLogger?.log(
@@ -86,6 +94,79 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
                 OperationOutcome.DROP
             } else throw e
         }
+    }
+
+    private suspend fun handle409Conflict(
+        error: HttpException,
+        equipment: OfflineEquipmentEntity,
+        projectServerId: Long,
+        roomServerId: Long?,
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] 409 conflict for equipment ${equipment.serverId}; extracting fresh timestamp and retrying")
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, SYNC_TAG, "Equipment update 409 conflict",
+            mapOf("equipmentServerId" to (equipment.serverId?.toString() ?: "null"), "equipmentUuid" to equipment.uuid)
+        )
+
+        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        if (freshUpdatedAt == null) {
+            Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Could not extract updated_at from 409 body for equipment ${equipment.serverId}; will retry later")
+            return OperationOutcome.SKIP
+        }
+
+        // Retry with fresh timestamp
+        val request = equipment.toRequest(projectServerId, roomServerId, freshUpdatedAt)
+        val retryResult = runCatching { ctx.api.updateEquipment(equipment.serverId!!, request) }
+            .onFailure { if (it is CancellationException) throw it }
+
+        retryResult.onFailure { retryError ->
+            if (retryError.isConflict()) {
+                Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Retry still got 409; recording conflict for user resolution")
+                val conflict = OfflineConflictResolutionEntity(
+                    conflictId = UuidUtils.generateUuidV7(),
+                    entityType = "equipment",
+                    entityId = equipment.equipmentId,
+                    entityUuid = equipment.uuid,
+                    localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                        "type" to equipment.type,
+                        "brand" to equipment.brand,
+                        "model" to equipment.model,
+                        "quantity" to equipment.quantity,
+                        "status" to equipment.status
+                    )).toByteArray(Charsets.UTF_8),
+                    remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                        "updatedAt" to freshUpdatedAt
+                    )).toByteArray(Charsets.UTF_8),
+                    conflictType = "UPDATE_CONFLICT",
+                    detectedAt = ctx.now(),
+                    originalOperationId = operation.operationId
+                )
+                ctx.recordConflict(conflict)
+                return OperationOutcome.CONFLICT_PENDING
+            }
+            if (retryError.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping equipment ${equipment.uuid}: server validation error (422)")
+                return OperationOutcome.DROP
+            }
+            throw retryError
+        }
+
+        // Retry succeeded - save
+        val dto = retryResult.getOrThrow()
+        val synced = dto.toEntity().copy(
+            equipmentId = equipment.equipmentId,
+            uuid = equipment.uuid,
+            projectId = equipment.projectId,
+            roomId = equipment.roomId ?: dto.roomId,
+            isDirty = false,
+            syncStatus = SyncStatus.SYNCED,
+            isDeleted = false,
+            lastSyncedAt = ctx.now()
+        )
+        ctx.localDataService.saveEquipment(listOf(synced))
+        Log.d(SYNC_TAG, "✅ [syncPendingEquipment] Retry update succeeded for equipment ${equipment.serverId}")
+        return OperationOutcome.SUCCESS
     }
 
     private suspend fun pushPendingEquipmentUpsert(

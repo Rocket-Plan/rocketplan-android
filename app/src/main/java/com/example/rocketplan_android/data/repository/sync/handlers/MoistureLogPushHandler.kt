@@ -8,11 +8,15 @@ import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toRequest
 import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.util.UuidUtils
 import com.example.rocketplan_android.util.parseTargetMoisture
+import retrofit2.HttpException
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val DEFAULT_DAMAGE_TYPE_ID: Long = 1L
 
@@ -31,6 +35,10 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
             synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
             if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (e.isConflict() && log.serverId != null) {
+                return handle409Conflict(e as HttpException, log, operation)
+            }
             if (e.isValidationError()) {
                 Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422)")
                 ctx.remoteLogger?.log(
@@ -60,6 +68,76 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                 OperationOutcome.DROP
             } else throw e
         }
+    }
+
+    private suspend fun handle409Conflict(
+        error: HttpException,
+        log: OfflineMoistureLogEntity,
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLogs] 409 conflict for moisture log ${log.serverId}; extracting fresh timestamp and retrying")
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, SYNC_TAG, "Moisture log update 409 conflict",
+            mapOf("logServerId" to (log.serverId?.toString() ?: "null"), "logUuid" to log.uuid)
+        )
+
+        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        if (freshUpdatedAt == null) {
+            Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLogs] Could not extract updated_at from 409 body for log ${log.serverId}; will retry later")
+            return OperationOutcome.SKIP
+        }
+
+        // Retry with fresh timestamp
+        val request = log.toRequest(freshUpdatedAt)
+        val retryResult = runCatching { ctx.api.updateMoistureLog(log.serverId!!, request) }
+            .onFailure { if (it is CancellationException) throw it }
+
+        retryResult.onFailure { retryError ->
+            if (retryError.isConflict()) {
+                Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLogs] Retry still got 409; recording conflict for user resolution")
+                val conflict = OfflineConflictResolutionEntity(
+                    conflictId = UuidUtils.generateUuidV7(),
+                    entityType = "moisture_log",
+                    entityId = log.logId,
+                    entityUuid = log.uuid,
+                    localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                        "moistureContent" to log.moistureContent,
+                        "depth" to log.depth,
+                        "materialId" to log.materialId
+                    )).toByteArray(Charsets.UTF_8),
+                    remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                        "updatedAt" to freshUpdatedAt
+                    )).toByteArray(Charsets.UTF_8),
+                    conflictType = "UPDATE_CONFLICT",
+                    detectedAt = ctx.now(),
+                    originalOperationId = operation.operationId
+                )
+                ctx.recordConflict(conflict)
+                return OperationOutcome.CONFLICT_PENDING
+            }
+            if (retryError.isValidationError()) {
+                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422)")
+                return OperationOutcome.DROP
+            }
+            throw retryError
+        }
+
+        // Retry succeeded - save
+        val dto = retryResult.getOrThrow()
+        val synced = dto.toEntity()?.copy(
+            logId = log.logId,
+            uuid = log.uuid,
+            projectId = log.projectId,
+            roomId = log.roomId,
+            materialId = log.materialId,
+            isDirty = false,
+            syncStatus = SyncStatus.SYNCED,
+            isDeleted = false,
+            lastSyncedAt = ctx.now()
+        ) ?: return OperationOutcome.SKIP
+        ctx.localDataService.saveMoistureLogs(listOf(synced))
+        Log.d(SYNC_TAG, "✅ [syncPendingMoistureLogs] Retry update succeeded for log ${log.serverId}")
+        return OperationOutcome.SUCCESS
     }
 
     private suspend fun pushPendingMoistureLogUpsert(

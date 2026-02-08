@@ -96,6 +96,13 @@ class NetworkErrorUtilsTest {
     }
 
     @Test
+    fun `isRetryable returns true for generic IOException`() {
+        val error = IOException("Connection reset")
+
+        assertThat(NetworkErrorUtils.isRetryable(error)).isTrue()
+    }
+
+    @Test
     fun `isRetryable returns true for server errors`() {
         val response = Response.error<Any>(502, "".toResponseBody("application/json".toMediaType()))
         val error = HttpException(response)

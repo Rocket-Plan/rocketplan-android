@@ -19,6 +19,10 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("com.example.rocketplan_android", appContext.packageName)
+        // applicationId is com.rocketplantech.rocketplan with .dev suffix for dev builds
+        assertTrue(
+            "Package should start with com.rocketplantech.rocketplan",
+            appContext.packageName.startsWith("com.rocketplantech.rocketplan")
+        )
     }
 }

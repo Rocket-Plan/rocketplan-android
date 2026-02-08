@@ -261,51 +261,5 @@ class ProjectDetailViewModelTest {
         viewModel.viewModelScope.cancel()
     }
 
-    @Test
-    fun `filterRoomScopedAlbums keeps only room albums`() {
-        val projectAlbum = OfflineAlbumEntity(
-            albumId = 26740L,
-            projectId = projectId,
-            roomId = null,
-            name = "Betterments",
-            albumableType = "App\\Models\\Project",
-            albumableId = projectId,
-            photoCount = 12,
-            thumbnailUrl = "https://example.com/betterments_thumb.jpg",
-            syncStatus = SyncStatus.SYNCED,
-            syncVersion = 1,
-            createdAt = now(),
-            updatedAt = now(),
-            lastSyncedAt = now()
-        )
-
-        val roomAlbum = OfflineAlbumEntity(
-            albumId = 300L,
-            projectId = projectId,
-            roomId = 100L,
-            name = "Kitchen",
-            albumableType = "App\\Models\\Room",
-            albumableId = 100L,
-            photoCount = 4,
-            thumbnailUrl = "https://example.com/kitchen_thumb.jpg",
-            syncStatus = SyncStatus.SYNCED,
-            syncVersion = 1,
-            createdAt = now(),
-            updatedAt = now(),
-            lastSyncedAt = now()
-        )
-
-        val filtered = listOf(projectAlbum, roomAlbum).filterRoomScopedAlbums()
-        assertThat(filtered).containsExactly(roomAlbum)
-    }
-
     private fun now(): Date = Date()
-}
-
-private fun List<OfflineAlbumEntity>.filterRoomScopedAlbums(): List<OfflineAlbumEntity> {
-    return filter { album ->
-        val isRoomScopedById = album.roomId != null
-        val isRoomScopedByType = album.albumableType?.contains("Room") == true
-        isRoomScopedById || isRoomScopedByType
-    }
 }

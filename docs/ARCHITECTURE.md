@@ -204,12 +204,12 @@ Room DB → Flow<List<Entity>> → ViewModel (map/filter) → StateFlow → Frag
 
 ### Room Database
 
-**Class:** `OfflineDatabase` (version 24)
+**Class:** `OfflineDatabase` (version 25)
 **Database name:** `rocketplan_offline.db`
 **DAOs:** `OfflineDao` (main), `ImageProcessorDao` (assemblies)
 **Fallback:** Destructive migration in DEBUG builds only
 
-**30 entities across these categories:**
+**37 entities across these categories:**
 
 | Category | Entities |
 |----------|----------|
@@ -225,9 +225,98 @@ Room DB → Flow<List<Entity>> → ViewModel (map/filter) → StateFlow → Frag
 | **Image processor** | ImageProcessorAssembly, ImageProcessorPhoto |
 
 **Files:**
-- `data/local/OfflineDatabase.kt` - Database definition, migrations (10→24)
+- `data/local/OfflineDatabase.kt` - Database definition, migrations (10→25)
 - `data/local/entity/OfflineEntities.kt` - All entity data classes
 - `data/local/dao/OfflineDao.kt` - Single DAO with all queries
+
+### Data Classification: Static vs Dynamic
+
+#### Static Data (reference/catalog, fetched once or infrequently)
+
+Loaded at startup or lazily on first use. Changes rarely (per-company configuration).
+
+| Data | Storage | How Loaded | Refresh |
+|------|---------|-----------|---------|
+| Room Types & Levels (Catalog) | DataStore (`OfflineRoomTypeCatalogStore`) + Room DB (`CatalogRoomType`, `CatalogLevel`, `CatalogPropertyType`) | `MainActivity.prefetchOfflineCatalog()` on first auth | App startup (best-effort) |
+| Damage Types | Room DB (`DamageType`) — per-project scoped (composite key `[projectServerId, damageTypeId]`) | Fetched as part of property sync / loss info | On project sync |
+| Damage Causes | Room DB (`DamageCause`) — per-project scoped (composite key `[projectServerId, damageCauseId]`) | Fetched on-demand with loss info | On project sync |
+| Work Scope Catalog | Room DB (`WorkScopeCatalogItem`) — per-company scoped (composite key `[companyId, itemId]`) | `WorkScopeSyncService.fetchWorkScopeCatalog()` | Per-company fetch |
+| Materials | Room DB (`Material`) | Embedded in project data | On project sync |
+| Support Categories | Room DB (`SupportCategory`) | `SupportSyncService.syncCategories()` | Lazy, on support screen open |
+| Timecard Types | Room DB (`TimecardType`) | `TimecardSyncService.syncTimecardTypes()`, triggered from `TimecardViewModel` | Lazy, on timecard screen open (falls back to hardcoded default ID=1 "Standard" if empty) |
+| Roles | Room DB (`Role`, `UserRole`) | Part of user context fetch | On login / user context refresh |
+| Feature Flags | **Not persisted** | `getFeatureFlags()` API exists but not called | Not implemented yet |
+| Countries | **Not implemented** | No endpoint or entity in Android | N/A (iOS-only currently) |
+
+#### User Session Data (auth context, persisted across launches)
+
+Stored in `SecureStorage` (EncryptedSharedPreferences + encrypted DataStore). Survives app restarts.
+
+| Data | Storage | Access |
+|------|---------|--------|
+| JWT Auth Token | SecureStorage (EncryptedSharedPreferences) | `AuthRepository.getAuthToken()` |
+| User ID | SecureStorage (DataStore) | `AuthRepository.getStoredUserId()` |
+| User Email | SecureStorage (DataStore) | `AuthRepository.getSavedEmail()` |
+| User Name | SecureStorage (DataStore) | `AuthRepository.getStoredUserName()` |
+| Company ID | SecureStorage (DataStore) | `AuthRepository.getStoredCompanyId()` |
+| Company Name | SecureStorage (DataStore) | `AuthRepository.getStoredCompanyName()` |
+| Remember Me Flag | SecureStorage (DataStore) | `AuthRepository.isRememberMeEnabled()` |
+| Encrypted Password | SecureStorage (EncryptedSharedPreferences) | `AuthRepository.getSavedCredentials()` (only if Remember Me) |
+| Cached User/Company | Room DB (`Company`, `User`) | Used for offline login fallback |
+
+Refreshed via `SyncJob.EnsureUserContext` → `GET /auth/user` → stores user ID, name, email, company ID/name in SecureStorage.
+
+#### Dynamic Data (per-project, synced regularly)
+
+Stored in Room DB, synced via `SyncQueueManager` and per-entity sync services. Each entity has `isDirty`, `isDeleted`, and `syncStatus` fields for change tracking.
+
+**Per-Project entities:**
+
+| Entity | Parent | Notes |
+|--------|--------|-------|
+| `Project` | Company | Top-level, has full sync tracking |
+| `Property` | Project | Address, coordinates for map pins |
+| `Location` | Project | Building/structure within property (has `projectId`, supports hierarchy via `parentLocationId`) |
+| `Room` | Location | Individual room |
+| `Photo` | Room | Includes local cache path + upload status |
+| `AtmosphericLog` | Project/Room | Environmental readings |
+| `MoistureLog` | Room | Moisture readings with material reference |
+| `Equipment` | Project/Room | Dehumidifiers, fans, etc. |
+| `Damage` | Room | Damage assessments |
+| `Note` | Project/Room/Photo | Polymorphic parent (has `projectId`, optional `roomId`, optional `photoId`) |
+| `WorkScope` | Room | Scope of work items |
+| `Timecard` | Project | Clock in/out records |
+| `Album` | Project | Photo albums (many-to-many with photos via `AlbumPhoto`) |
+| `Claim` | Project | Insurance claims (loss info) |
+
+**Company-level entities (not per-project):**
+
+| Entity | Scope | Notes |
+|--------|-------|-------|
+| `User` | Company | Employees; also cached in SecureStorage for offline login |
+| `Company` | Global | Company info for offline login |
+| `SupportConversation` | User | In-app support threads |
+| `SupportMessage` | Conversation | Messages within support threads |
+| `SupportMessageAttachment` | Message | File attachments on support messages |
+
+#### Sync Infrastructure (internal, not user data)
+
+| Entity | Purpose |
+|--------|---------|
+| `OfflineSyncQueueEntity` | Pending create/update/delete operations for push to server |
+| `OfflineConflictResolutionEntity` | 409 conflict records awaiting user resolution |
+| `ImageProcessorAssembly` | Photo upload batch tracking |
+| `ImageProcessorPhoto` | Individual photo upload status within an assembly |
+| `RoomPhotoSnapshot` | Ordered photo snapshots per room (photoId, URLs, thumbnails, order index) for UI display |
+
+#### Persistence Layers
+
+| Layer | Format | Location | Survives Reinstall |
+|-------|--------|----------|:------------------:|
+| SecureStorage | EncryptedSharedPreferences + DataStore | App private storage | No |
+| Room DB | SQLite | `rocketplan_offline.db` | No |
+| DataStore (Catalog) | Proto/Preferences | `OfflineRoomTypeCatalogStore` | No |
+| Photo Cache | JPEG files | `PhotoCacheManager` directories | No |
 
 ### Entity Lifecycle Fields
 
@@ -286,8 +375,7 @@ Server JSON is deserialized into DTO classes (`*Dto`), then mapped to Room entit
 **Features:**
 - Base URL determined by build variant (`AppConfig`)
 - Auth interceptor adds `Bearer <token>` header
-- 30-second timeout for standard calls
-- 120-second timeout for photo uploads
+- 30-second timeout in production, 60-second in dev/staging (configured via `AppConfig.apiTimeout`)
 - JSON serialization via Gson with `@SerializedName` mapping
 
 ### API Interface
@@ -384,7 +472,7 @@ Central orchestrator. Runs a processing loop that dequeues and executes `SyncJob
 - `refreshProjects()` - Full refresh (force sync all)
 - `refreshProjectsIncremental()` - Incremental (only changed)
 - `syncOnForeground()` - Called when app resumes
-- `syncProjectInForeground(projectId)` - Priority sync for current project
+- `focusProjectSync(projectId)` - Priority sync for current project
 
 **State exposed to UI:**
 - `isActive: StateFlow<Boolean>` - Processing queue
@@ -564,14 +652,12 @@ When the server returns HTTP 409 (conflict), the entity's `serverUpdatedAt` does
 
 **Resolution flow:**
 1. Push handler receives 409
-2. Calls `FreshTimestampService.fetchFreshTimestamp(entityType, serverId)`
-3. Updates the operation's payload with the fresh timestamp
-4. Retries the push
-5. If still unresolvable, creates `OfflineConflictResolutionEntity` for user resolution
+2. Extracts `updated_at` from 409 response body via `error.extractUpdatedAt(gson)` (in `SyncHandlerUtils.kt`)
+3. Retries the push with the fresh timestamp
+4. If retry still gets 409, creates `OfflineConflictResolutionEntity` for user resolution
+5. Returns `OperationOutcome.CONFLICT_PENDING`
 
-**FreshTimestampService limitations:** Only works for entities with direct GET-by-ID endpoints (project, property, room, location). Equipment, notes, and logs don't have direct endpoints, so fresh timestamp fetch returns null.
-
-**File:** `data/repository/sync/FreshTimestampService.kt`
+**File:** `data/repository/sync/handlers/SyncHandlerUtils.kt`
 
 ### Error Handling by HTTP Status
 
@@ -606,7 +692,7 @@ ImageProcessorQueueManager picks up assembly
 Create assembly on backend (POST /api/image-processor/assemblies)
     │
     ▼
-Upload photos via TUS (chunked upload protocol)
+Upload photos via HTTP POST (direct upload with Content-Type header)
     │
     ▼
 Trigger processing (PATCH /api/image-processor/assemblies/{id}/trigger)
@@ -644,15 +730,34 @@ Sequential processing - one assembly at a time (matches iOS behavior).
 - `data/local/entity/ImageProcessorPhotoEntity.kt`
 - `data/local/dao/ImageProcessorDao.kt`
 
-### Photo States
+### Assembly States
 
 | Status | Meaning |
 |--------|---------|
-| `PENDING` | Queued for upload |
-| `UPLOADING` | TUS upload in progress |
+| `QUEUED` | Queued for processing |
+| `PENDING` | Awaiting upload |
+| `CREATING` | Creating assembly on backend |
+| `CREATED` | Assembly created, ready for photo upload |
+| `UPLOADING` | Photo upload in progress |
 | `PROCESSING` | Server processing images |
 | `COMPLETED` | Processing done, outputs available |
 | `FAILED` | Processing or upload failed |
+| `CANCELLED` | Upload cancelled |
+| `RETRYING` | Retrying after failure |
+| `WAITING_FOR_CONNECTIVITY` | Waiting for network |
+| `WAITING_FOR_ROOM` | Waiting for room to get serverId |
+| `WAITING_FOR_ENTITY` | Waiting for parent entity to get serverId |
+
+### Photo States (within an assembly)
+
+| Status | Meaning |
+|--------|---------|
+| `PENDING` | Awaiting upload |
+| `UPLOADING` | Upload in progress |
+| `PROCESSING` | Server processing |
+| `COMPLETED` | Upload/processing done |
+| `FAILED` | Upload/processing failed |
+| `CANCELLED` | Upload cancelled |
 
 ### Assembly / Photo Relationship
 

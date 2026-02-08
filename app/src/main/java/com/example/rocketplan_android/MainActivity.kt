@@ -576,6 +576,14 @@ class MainActivity : AppCompatActivity() {
                 authRepository.logout()
                 imageProcessingConfigurationRepository.clearCachedConfiguration()
                 syncQueueManager.clear()
+
+                // Clean up realtime subscriptions and Pusher connection
+                val rocketPlanApp = application as RocketPlanApplication
+                rocketPlanApp.photoSyncRealtimeManager.unsubscribe()
+                rocketPlanApp.notesRealtimeManager.clear()
+                rocketPlanApp.imageProcessorRealtimeManager.clear()
+                rocketPlanApp.pusherService.disconnect()
+
                 val navController = findNavController(R.id.nav_host_fragment_content_main)
                 navController.navigate(
                     R.id.emailCheckFragment,

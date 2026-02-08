@@ -50,6 +50,10 @@ class ImageProcessorRealtimeManager(
         }
     }
 
+    fun clear() {
+        trackedAssemblies.toList().forEach { stopTracking(it) }
+    }
+
     fun trackAssembly(assemblyId: String) {
         scope.launch { ensureSubscribed(assemblyId) }
     }
@@ -222,10 +226,9 @@ class ImageProcessorRealtimeManager(
     ): Boolean {
         val localStatus = AssemblyStatus.fromValue(assembly.status)
         val backendStatus = update.status?.lowercase(Locale.US) ?: return false
+        val ignore = shouldIgnoreUpdate(localStatus, backendStatus)
 
-        // Only ignore "processing" updates if we've already completed locally
-        // (prevents going backward from completed -> processing)
-        if (localStatus == AssemblyStatus.COMPLETED && backendStatus == "processing") {
+        if (ignore) {
             Log.d(
                 TAG,
                 "⏭️ Ignoring stale Pusher update for assembly ${assembly.assemblyId} " +
@@ -241,22 +244,17 @@ class ImageProcessorRealtimeManager(
                     "backend_status" to backendStatus
                 )
             )
-            return true
-        }
-
-        // Accept "processing" updates from backend when local is in earlier stages
-        // This allows the UI to show spinner while server processes photos
-        if (backendStatus == "processing") {
+        } else if (backendStatus == "processing") {
             Log.d(
                 TAG,
                 "📡 Accepting processing update for assembly ${assembly.assemblyId} " +
                     "(local=${assembly.status}, backend=$backendStatus)"
             )
-            return false
         }
 
-        return false
+        return ignore
     }
+
 
     private suspend fun handleAssemblyResult(
         assemblyId: String,
@@ -322,5 +320,14 @@ class ImageProcessorRealtimeManager(
 
     companion object {
         private const val TAG = "ImageProcessorRealtimeManager"
+
+        /**
+         * Pure logic for whether a Pusher update should be ignored based on local vs backend status.
+         * Extracted for testability.
+         */
+        @JvmStatic
+        internal fun shouldIgnoreUpdate(localStatus: AssemblyStatus?, backendStatus: String): Boolean {
+            return localStatus == AssemblyStatus.COMPLETED && backendStatus == "processing"
+        }
     }
 }

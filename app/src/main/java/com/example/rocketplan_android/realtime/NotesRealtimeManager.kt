@@ -33,6 +33,13 @@ class NotesRealtimeManager(
     }
 
     @Synchronized
+    fun clear() {
+        projectChannels.toList().forEach { projectId ->
+            clearProject(projectId)
+        }
+    }
+
+    @Synchronized
     fun clearProject(projectId: Long) {
         if (projectChannels.remove(projectId)) {
             val channel = PusherConfig.noteCreatedChannel(projectId)

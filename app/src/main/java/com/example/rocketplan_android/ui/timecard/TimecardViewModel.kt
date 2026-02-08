@@ -65,16 +65,33 @@ class TimecardViewModel(
 
     private var currentUserId: Long = 0L
     private var currentCompanyId: Long = 0L
+    private var userContextLoaded = false
 
     init {
         loadUserContext()
+        syncTimecardTypes()
         observeTimecards()
+    }
+
+    private fun syncTimecardTypes() {
+        viewModelScope.launch(Dispatchers.IO) {
+            timecardSyncService.syncTimecardTypes()
+        }
     }
 
     private fun loadUserContext() {
         viewModelScope.launch(Dispatchers.IO) {
             currentUserId = secureStorage.getUserIdSync() ?: 0L
             currentCompanyId = secureStorage.getCompanyIdSync() ?: 0L
+            userContextLoaded = true
+        }
+    }
+
+    private suspend fun ensureUserContext() {
+        if (!userContextLoaded) {
+            currentUserId = secureStorage.getUserIdSync() ?: 0L
+            currentCompanyId = secureStorage.getCompanyIdSync() ?: 0L
+            userContextLoaded = true
         }
     }
 
@@ -131,6 +148,7 @@ class TimecardViewModel(
 
     fun clockIn(timecardTypeId: Int = 1, notes: String? = null) {
         viewModelScope.launch(Dispatchers.IO) {
+            ensureUserContext()
             val types = localDataService.getTimecardTypes()
             val typeName = types.firstOrNull { it.typeId == timecardTypeId }?.name ?: "Standard"
             timecardSyncService.clockIn(

@@ -960,15 +960,18 @@ class OfflineSyncRepositoryTest {
 
         val body = DeletedRecordsResponse(
             projects = listOf(1L),
+            properties = listOf(11L),
             rooms = listOf(2L),
             locations = listOf(3L),
             photos = listOf(4L),
             notes = listOf(5L),
             equipment = listOf(6L),
             damageMaterials = listOf(7L),
+            damageMaterialRoomLogs = listOf(12L),
             atmosphericLogs = listOf(8L),
             moistureLogs = listOf(9L),
-            workScopeActions = listOf(10L)
+            workScopeActions = listOf(10L),
+            timecards = listOf(13L)
         )
         coEvery { api.getDeletedRecords(any(), any()) } returns Response.success(body, Headers.headersOf())
 
@@ -983,6 +986,7 @@ class OfflineSyncRepositoryTest {
         repository.syncDeletedRecords()
 
         coVerify { localDataService.cascadeDeleteProjectsByServerIds(body.projects, null) }
+        coVerify { localDataService.markPropertiesDeleted(body.properties) }
         coVerify { localDataService.markRoomsDeleted(body.rooms) }
         coVerify { localDataService.markLocationsDeleted(body.locations) }
         coVerify { localDataService.markPhotosDeleted(body.photos) }
@@ -990,8 +994,9 @@ class OfflineSyncRepositoryTest {
         coVerify { localDataService.markEquipmentDeleted(body.equipment) }
         coVerify { localDataService.markDamagesDeleted(body.damageMaterials) }
         coVerify { localDataService.markAtmosphericLogsDeleted(body.atmosphericLogs) }
-        coVerify { localDataService.markMoistureLogsDeleted(body.moistureLogs) }
+        coVerify { localDataService.markMoistureLogsDeleted(match { it.containsAll(listOf(9L, 12L)) }) }
         coVerify { localDataService.markWorkScopesDeleted(body.workScopeActions) }
+        coVerify { localDataService.markTimecardsDeleted(body.timecards) }
     }
 
     @Test

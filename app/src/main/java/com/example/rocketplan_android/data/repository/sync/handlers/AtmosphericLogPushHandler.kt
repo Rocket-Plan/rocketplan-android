@@ -7,10 +7,13 @@ import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEnt
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.AtmosphericLogRequest
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
+import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.util.DateUtils
+import com.example.rocketplan_android.util.UuidUtils
 import retrofit2.HttpException
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Handles pushing atmospheric log upsert/delete operations to the server.
@@ -73,6 +76,10 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
                 ctx.api.updateAtmosphericLog(log.serverId, request)
             }
         } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            if (e.isConflict() && log.serverId != null) {
+                return handle409Conflict(e as HttpException, log, request, operation)
+            }
             if (e.isValidationError()) {
                 Log.w(TAG, "Dropping atmospheric log ${log.uuid}: server validation error (422)")
                 ctx.remoteLogger?.log(
@@ -100,6 +107,74 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
             promoteWaitingAssembly(synced)
         }
 
+        return OperationOutcome.SUCCESS
+    }
+
+    private suspend fun handle409Conflict(
+        error: HttpException,
+        log: OfflineAtmosphericLogEntity,
+        request: AtmosphericLogRequest,
+        operation: OfflineSyncQueueEntity
+    ): OperationOutcome {
+        Log.w(TAG, "⚠️ [syncPendingAtmosphericLog] 409 conflict for log ${log.serverId}; extracting fresh timestamp and retrying")
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, TAG, "Atmospheric log update 409 conflict",
+            mapOf("logServerId" to (log.serverId?.toString() ?: "null"), "logUuid" to log.uuid)
+        )
+
+        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        if (freshUpdatedAt == null) {
+            Log.w(TAG, "⚠️ [syncPendingAtmosphericLog] Could not extract updated_at from 409 body for log ${log.serverId}; will retry later")
+            return OperationOutcome.SKIP
+        }
+
+        // Retry with fresh timestamp
+        val retryRequest = request.copy(updatedAt = freshUpdatedAt)
+        val retryResult = runCatching { ctx.api.updateAtmosphericLog(log.serverId!!, retryRequest) }
+            .onFailure { if (it is CancellationException) throw it }
+
+        retryResult.onFailure { retryError ->
+            if (retryError.isConflict()) {
+                Log.w(TAG, "⚠️ [syncPendingAtmosphericLog] Retry still got 409; recording conflict for user resolution")
+                val conflict = OfflineConflictResolutionEntity(
+                    conflictId = UuidUtils.generateUuidV7(),
+                    entityType = "atmospheric_log",
+                    entityId = log.logId,
+                    entityUuid = log.uuid,
+                    localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                        "temperature" to log.temperature,
+                        "relativeHumidity" to log.relativeHumidity,
+                        "dewPoint" to log.dewPoint
+                    )).toByteArray(Charsets.UTF_8),
+                    remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                        "updatedAt" to freshUpdatedAt
+                    )).toByteArray(Charsets.UTF_8),
+                    conflictType = "UPDATE_CONFLICT",
+                    detectedAt = ctx.now(),
+                    originalOperationId = operation.operationId
+                )
+                ctx.recordConflict(conflict)
+                return OperationOutcome.CONFLICT_PENDING
+            }
+            if (retryError.isValidationError()) {
+                Log.w(TAG, "Dropping atmospheric log ${log.uuid}: server validation error (422)")
+                return OperationOutcome.DROP
+            }
+            throw retryError
+        }
+
+        // Retry succeeded - save
+        val dto = retryResult.getOrThrow()
+        val synced = log.copy(
+            serverId = dto.id,
+            photoUrl = dto.photoUrl ?: log.photoUrl,
+            serverUpdatedAt = DateUtils.parseApiDate(dto.updatedAt) ?: ctx.now(),
+            isDirty = false,
+            syncStatus = SyncStatus.SYNCED,
+            lastSyncedAt = ctx.now()
+        )
+        ctx.localDataService.saveAtmosphericLogs(listOf(synced))
+        Log.d(TAG, "✅ [syncPendingAtmosphericLog] Retry update succeeded for log ${log.serverId}")
         return OperationOutcome.SUCCESS
     }
 

@@ -1,10 +1,14 @@
 package com.example.rocketplan_android.data.repository.sync
 
+import android.util.Log
+import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
+import com.example.rocketplan_android.data.repository.mapper.toEntity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -15,12 +19,30 @@ import com.example.rocketplan_android.util.UuidUtils
  * Handles timecard CRUD operations and queues sync work via SyncQueueProcessor.
  */
 class TimecardSyncService(
+    private val api: OfflineSyncApi,
     private val localDataService: LocalDataService,
     private val syncQueueEnqueuer: () -> SyncQueueEnqueuer,
     private val logLocalDeletion: (String, Long, String?) -> Unit,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private fun now() = Date()
+
+    /**
+     * Fetches timecard types from server and caches them locally.
+     */
+    suspend fun syncTimecardTypes(): Result<List<OfflineTimecardTypeEntity>> = withContext(ioDispatcher) {
+        try {
+            Log.d(TAG, "Syncing timecard types...")
+            val response = api.getTimecardTypes()
+            val entities = response.data.map { it.toEntity() }
+            localDataService.replaceTimecardTypes(entities)
+            Log.d(TAG, "Synced ${entities.size} timecard types")
+            Result.success(entities)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sync timecard types: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
 
     /**
      * Clock in: Create a new timecard with the current time as timeIn.
@@ -33,6 +55,13 @@ class TimecardSyncService(
         timecardTypeName: String = "Standard",
         notes: String? = null
     ): OfflineTimecardEntity = withContext(ioDispatcher) {
+        // Guard against double clock-in
+        val active = localDataService.getActiveTimecard(userId)
+        if (active != null && !active.isDeleted) {
+            Log.w(TAG, "Clock-in rejected: user $userId already has active timecard ${active.timecardId}")
+            return@withContext active
+        }
+
         val timestamp = now()
         val uuid = UuidUtils.generateUuidV7()
 
@@ -171,5 +200,9 @@ class TimecardSyncService(
 
         syncQueueEnqueuer().enqueueTimecardDeletion(updated, lockUpdatedAt)
         updated
+    }
+
+    companion object {
+        private const val TAG = "TimecardSyncService"
     }
 }

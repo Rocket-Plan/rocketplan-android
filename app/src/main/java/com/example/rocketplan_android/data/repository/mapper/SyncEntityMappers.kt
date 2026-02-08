@@ -297,6 +297,7 @@ internal fun PropertyDto.toEntity(
         isPlatinumAgent = isPlatinumAgent ?: existing?.isPlatinumAgent,
         isResidential = isResidential ?: existing?.isResidential,
         isCommercial = isCommercial ?: existing?.isCommercial,
+        isMultiUnit = isMultiUnit ?: existing?.isMultiUnit,
         propertyTypeId = propertyTypeId ?: propertyTypeData?.id ?: existing?.propertyTypeId,
         propertyTypeName = propertyTypeData?.name ?: existing?.propertyTypeName,
         asbestosStatusId = asbestosStatusId ?: asbestosStatus?.id ?: existing?.asbestosStatusId,
@@ -909,7 +910,7 @@ internal fun TimecardDto.toEntity(
         lastSyncedAt = timestamp,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
-        isDirty = false,
+        isDirty = existing?.isDirty ?: false,
         isDeleted = existing?.isDeleted ?: false
     )
 }

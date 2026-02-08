@@ -108,6 +108,7 @@ class DeletedRecordsSyncService(
             put("moistureLogs", body.moistureLogs.size)
             put("atmosphericLogs", body.atmosphericLogs.size)
             put("workScopeActions", body.workScopeActions.size)
+            put("timecards", body.timecards.size)
         }
         val totalDeleted = summary.values.sum()
         Log.d(
@@ -264,6 +265,10 @@ class DeletedRecordsSyncService(
             localDataService.markWorkScopesDeleted(response.workScopeActions)
             count += response.workScopeActions.size
         }
+        if (response.timecards.isNotEmpty()) {
+            localDataService.markTimecardsDeleted(response.timecards)
+            count += response.timecards.size
+        }
 
         return count
     }
@@ -292,6 +297,7 @@ class DeletedRecordsSyncService(
         val allMoistureLogs = (response.moistureLogs + response.damageMaterialRoomLogs).distinct()
         localDataService.markMoistureLogsDeleted(allMoistureLogs)
         localDataService.markWorkScopesDeleted(response.workScopeActions)
+        localDataService.markTimecardsDeleted(response.timecards)
     }
 
     companion object {
@@ -306,7 +312,8 @@ class DeletedRecordsSyncService(
             "equipment",
             "damage_materials",
             "damage_material_room_logs",
-            "work_scope_actions"
+            "work_scope_actions",
+            "timecards"
         )
         // Types to check for project-level deletion sync (excludes "projects" since we're syncing it)
         private val PROJECT_CHILD_TYPES = listOf(
@@ -318,7 +325,8 @@ class DeletedRecordsSyncService(
             "equipment",
             "damage_materials",
             "damage_material_room_logs",
-            "work_scope_actions"
+            "work_scope_actions",
+            "timecards"
         )
         private val DEFAULT_DELETION_LOOKBACK_MS = TimeUnit.DAYS.toMillis(30)
         private const val DELETED_RECORDS_CHECKPOINT_KEY = "deleted_records_global"

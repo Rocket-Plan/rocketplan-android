@@ -83,6 +83,7 @@ data class OfflinePropertyEntity(
     val isPlatinumAgent: Boolean? = null,
     val isResidential: Boolean? = null,
     val isCommercial: Boolean? = null,
+    val isMultiUnit: Boolean? = null,
     val propertyTypeId: Long? = null,
     val propertyTypeName: String? = null,
     val asbestosStatusId: Long? = null,

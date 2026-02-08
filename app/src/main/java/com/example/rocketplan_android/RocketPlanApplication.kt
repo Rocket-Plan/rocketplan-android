@@ -110,7 +110,8 @@ class RocketPlanApplication : Application() {
     lateinit var notesRealtimeManager: NotesRealtimeManager
         private set
 
-    private lateinit var pusherService: PusherService
+    lateinit var pusherService: PusherService
+        private set
 
     private lateinit var imageProcessorNetworkMonitor: com.example.rocketplan_android.data.network.ImageProcessorNetworkMonitor
 
@@ -160,6 +161,7 @@ class RocketPlanApplication : Application() {
         )
 
         timecardSyncService = TimecardSyncService(
+            api = offlineSyncApi,
             localDataService = localDataService,
             syncQueueEnqueuer = { offlineSyncRepository.syncQueueEnqueuer },
             logLocalDeletion = { entityType, entityId, uuid ->
