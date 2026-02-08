@@ -615,6 +615,8 @@ data class MoistureLogDto(
     @SerializedName("photo_upload_status")
     val photoUploadStatus: String? = null,
     val photo: LogPhotoDto? = null,
+    @SerializedName("drying_goal")
+    val dryingGoal: Double? = null,
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")

@@ -21,6 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -69,8 +70,7 @@ class RocketDryRoomViewModel(
                         materialGoals = buildMaterialGoals(
                             materials = resolveMaterialsForLogs(data.materials, data.moistureLogs),
                             moistureLogs = data.moistureLogs
-                        ),
-                        materialOptions = buildMaterialOptions(data.materials)
+                        )
                     )
                 }
             }
@@ -243,7 +243,8 @@ class RocketDryRoomViewModel(
             syncStatus = SyncStatus.PENDING,
             syncVersion = 0,
             isDirty = true,
-            isDeleted = false
+            isDeleted = false,
+            dryingGoal = targetMoisture
         )
         runCatching { offlineSyncRepository.upsertMoistureLogOffline(log) }
             .onFailure {
@@ -260,28 +261,83 @@ class RocketDryRoomViewModel(
     suspend fun addMaterialMoistureLog(
         materialId: Long,
         moistureContent: Double,
-        location: String?
+        location: String?,
+        dryingGoal: Double? = null,
+        photoLocalPath: String? = null,
+        removed: Boolean = false
     ): Boolean = withContext(Dispatchers.IO) {
         val material = localDataService.getMaterial(materialId) ?: return@withContext false
         val now = Date()
+        val logUuid = UuidUtils.generateUuidV7()
+
+        // Create photo assembly if needed
+        if (!photoLocalPath.isNullOrBlank()) {
+            createMoistureLogAssembly(logUuid, photoLocalPath)
+        }
+
         val log = OfflineMoistureLogEntity(
             logId = -System.currentTimeMillis(),
-            uuid = UuidUtils.generateUuidV7(),
+            uuid = logUuid,
             projectId = projectId,
             roomId = roomId,
             materialId = material.materialId,
             date = now,
             moistureContent = moistureContent,
-            location = location ?: rocketPlanApp.getString(R.string.rocketdry_material_reading_location),
+            location = if (removed) "Removed" else (location ?: rocketPlanApp.getString(R.string.rocketdry_material_reading_location)),
             createdAt = now,
             updatedAt = now,
             syncStatus = SyncStatus.PENDING,
             syncVersion = 0,
             isDirty = true,
-            isDeleted = false
+            isDeleted = removed,
+            dryingGoal = dryingGoal
         )
         offlineSyncRepository.upsertMoistureLogOffline(log)
         true
+    }
+
+    suspend fun addMaterialMoistureLogByName(
+        materialName: String,
+        moistureContent: Double,
+        location: String?,
+        dryingGoal: Double? = null,
+        photoLocalPath: String? = null,
+        removed: Boolean = false
+    ): Boolean = withContext(Dispatchers.IO) {
+        // Find the material by name (just created)
+        val materials = localDataService.observeMaterials().first()
+        val material = materials.firstOrNull { it.name.equals(materialName, ignoreCase = true) }
+            ?: return@withContext false
+        addMaterialMoistureLog(
+            materialId = material.materialId,
+            moistureContent = moistureContent,
+            location = location,
+            dryingGoal = dryingGoal,
+            photoLocalPath = photoLocalPath,
+            removed = removed
+        )
+    }
+
+    private suspend fun createMoistureLogAssembly(logUuid: String, photoLocalPath: String) {
+        val filename = "moisture_${logUuid}_${System.currentTimeMillis()}.jpg"
+        val fileToUpload = FileToUpload(
+            uri = Uri.parse(photoLocalPath),
+            filename = filename,
+            deleteOnCompletion = false
+        )
+        imageProcessorRepository.createAssembly(
+            roomId = roomId,
+            projectId = projectId,
+            filesToUpload = listOf(fileToUpload),
+            templateId = "moisture_log",
+            entityType = "MoistureLog",
+            entityId = null,
+            entityUuid = logUuid
+        ).onSuccess { assemblyId ->
+            android.util.Log.d("RocketDryRoomVM", "Created assembly for moisture log photo: assemblyId=$assemblyId logUuid=$logUuid")
+        }.onFailure { error ->
+            android.util.Log.e("RocketDryRoomVM", "Failed to create assembly for moisture log photo: logUuid=$logUuid", error)
+        }
     }
 
     private fun resolveMaterialsForLogs(
@@ -308,32 +364,6 @@ class RocketDryRoomViewModel(
     private fun resolveRoomIcon(room: OfflineRoomEntity): Int {
         val iconName = room.roomType?.takeIf { it.isNotBlank() } ?: room.title
         return RoomTypeCatalog.resolveIconRes(rocketPlanApp, room.roomTypeId, iconName)
-    }
-
-    private fun buildMaterialOptions(materials: List<OfflineMaterialEntity>): List<String> {
-        // Default materials commonly used in water damage restoration
-        val defaultMaterials = listOf(
-            "Drywall",
-            "Hardwood",
-            "Carpet",
-            "Concrete",
-            "Plywood",
-            "Subfloor",
-            "Insulation",
-            "Ceiling Tile",
-            "Baseboard",
-            "OSB",
-            "Plaster",
-            "Laminate"
-        )
-
-        val dbMaterials = materials.mapNotNull { material ->
-            material.name.trim().takeIf { it.isNotEmpty() }
-        }
-
-        return (defaultMaterials + dbMaterials)
-            .distinctBy { it.lowercase(Locale.getDefault()) }
-            .sortedBy { it.lowercase(Locale.getDefault()) }
     }
 
     private fun OfflineAtmosphericLogEntity.toUiItem(roomName: String): AtmosphericLogItem =
@@ -371,7 +401,11 @@ class RocketDryRoomViewModel(
             val materialName = material?.name?.takeIf { it.isNotBlank() }
                 ?: rocketPlanApp.getString(R.string.rocketdry_material_fallback_name)
             val logs = logsByMaterial[materialId].orEmpty()
-            val target = material?.description?.let { parseTargetMoisture(it) }
+            // Resolve goal: prefer dryingGoal field from latest log, fall back to description (legacy)
+            val latestLogWithGoal = logs.sortedByDescending { it.date.time }
+                .firstOrNull { it.dryingGoal != null }
+            val target = latestLogWithGoal?.dryingGoal
+                ?: material?.description?.let { parseTargetMoisture(it) }
                 ?: logs.firstOrNull { it.location == goalLocation }?.moistureContent
             val readingLogs = logs.filterNot { it.location == goalLocation }
             val latestReading = readingLogs.maxByOrNull { it.date.time }
@@ -385,9 +419,21 @@ class RocketDryRoomViewModel(
                         .replace("AM", "am")
                         .replace("PM", "pm")
                 },
-                logsCount = readingLogs.size
+                logsCount = readingLogs.size,
+                dryingStatus = computeDryingStatus(target, latestReading?.moistureContent)
             )
         }.sortedBy { it.name.lowercase(Locale.getDefault()) }
+    }
+
+    private fun computeDryingStatus(goal: Double?, latest: Double?): DryingStatus {
+        if (goal == null || latest == null) return DryingStatus.UNKNOWN
+        // Matches iOS: absolute difference thresholds (DryingGoalsLogBox.swift)
+        return when {
+            latest > goal + 60 -> DryingStatus.FAR
+            latest > goal + 25 -> DryingStatus.IN_PROGRESS
+            latest > goal + 5 -> DryingStatus.APPROACHING
+            else -> DryingStatus.ON_TARGET
+        }
     }
 
     private fun formatDateTime(date: Date): String {

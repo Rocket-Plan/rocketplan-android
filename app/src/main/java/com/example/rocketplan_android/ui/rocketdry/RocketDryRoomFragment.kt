@@ -5,8 +5,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
-import android.widget.ArrayAdapter
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
@@ -24,10 +22,6 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.ui.common.SinglePhotoCaptureFragment
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.textfield.MaterialAutoCompleteTextView
-import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -58,11 +52,11 @@ class RocketDryRoomFragment : Fragment() {
     private lateinit var materialGoalsRecyclerView: RecyclerView
 
     private lateinit var atmosphericLogAdapter: AtmosphericLogAdapter
-    private val materialGoalAdapter = MaterialGoalsAdapter { item ->
-        showAddMaterialLogDialog(item)
-    }
+    private val materialGoalAdapter = MaterialGoalsAdapter(
+        onCardTapped = { item -> onMaterialCardTapped(item) },
+        onAddLogTapped = { item -> onMaterialCardTapped(item) }
+    )
     private var latestRoomName: String = ""
-    private var materialOptions: List<String> = emptyList()
 
     // Photo capture callback - stored while navigating to camera
     private var pendingPhotoCallback: ((Uri?) -> Unit)? = null
@@ -105,12 +99,47 @@ class RocketDryRoomFragment : Fragment() {
 
     private fun setupClickListeners() {
         startAtmosphericButton.setOnClickListener {
-            Log.d(TAG, "🧪 Start room atmospheric log tapped (roomId=${args.roomId})")
+            Log.d(TAG, "Start room atmospheric log tapped (roomId=${args.roomId})")
             openAtmosphericLogDialog()
         }
         addMaterialGoalCard.setOnClickListener {
-            Log.d(TAG, "🎯 Add material goal tapped (roomId=${args.roomId})")
-            showAddMaterialGoalDialog()
+            Log.d(TAG, "Add material tapped — navigating to area selection (roomId=${args.roomId})")
+            findNavController().navigate(
+                RocketDryRoomFragmentDirections
+                    .actionRocketDryRoomFragmentToMaterialDryingAreaFragment(
+                        projectId = args.projectId,
+                        roomId = args.roomId
+                    )
+            )
+        }
+    }
+
+    private fun onMaterialCardTapped(item: MaterialDryingGoalItem) {
+        if (item.targetMoisture == null) {
+            // No goal yet → go to Set Goal Average
+            Log.d(TAG, "Material '${item.name}' has no goal — navigating to Set Goal Average")
+            findNavController().navigate(
+                RocketDryRoomFragmentDirections
+                    .actionRocketDryRoomFragmentToMaterialDryingGoalFragment(
+                        projectId = args.projectId,
+                        roomId = args.roomId,
+                        materialName = item.name,
+                        materialId = item.materialId
+                    )
+            )
+        } else {
+            // Has goal → go directly to Set Latest Average
+            Log.d(TAG, "Material '${item.name}' has goal=${item.targetMoisture} — navigating to Set Latest Average")
+            findNavController().navigate(
+                RocketDryRoomFragmentDirections
+                    .actionRocketDryRoomFragmentToMaterialDryingReadingFragment(
+                        projectId = args.projectId,
+                        roomId = args.roomId,
+                        materialName = item.name,
+                        materialId = item.materialId,
+                        goalValue = item.targetMoisture.toFloat()
+                    )
+            )
         }
     }
 
@@ -129,7 +158,7 @@ class RocketDryRoomFragment : Fragment() {
             ?.getLiveData<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
             ?.observe(viewLifecycleOwner) { photoPath ->
                 if (!photoPath.isNullOrBlank()) {
-                    Log.d(TAG, "📸 Received photo from camera: $photoPath")
+                    Log.d(TAG, "Received photo from camera: $photoPath")
                     val file = File(photoPath)
                     if (file.exists()) {
                         pendingPhotoCallback?.invoke(Uri.fromFile(file))
@@ -147,21 +176,19 @@ class RocketDryRoomFragment : Fragment() {
     private fun render(state: RocketDryRoomUiState) {
         when (state) {
             RocketDryRoomUiState.Loading -> {
-            Log.d(TAG, "🎨 render: Loading state")
+            Log.d(TAG, "render: Loading state")
             startAtmosphericButton.isEnabled = false
             addMaterialGoalCard.isEnabled = false
             updateAtmosphericLogs(emptyList())
             materialGoalsRecyclerView.isVisible = false
-            materialOptions = emptyList()
         }
 
         is RocketDryRoomUiState.Ready -> {
             Log.d(
                 TAG,
-                "🎨 render: Ready state room='${state.roomName}' atmosphericLogs=${state.atmosphericLogCount} materialGoals=${state.materialGoals.size}"
+                "render: Ready state room='${state.roomName}' atmosphericLogs=${state.atmosphericLogCount} materialGoals=${state.materialGoals.size}"
             )
             latestRoomName = state.roomName
-            materialOptions = state.materialOptions
             projectAddress.text = state.projectAddress
             roomTitle.text = state.roomName
             roomIcon.setImageResource(state.roomIconRes)
@@ -205,7 +232,7 @@ class RocketDryRoomFragment : Fragment() {
         ) { humidity, temperature, pressure, windSpeed, photoLocalPath ->
             Log.d(
                 TAG,
-                "📩 Room atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$photoLocalPath room='${latestRoomName}' roomId=${args.roomId}"
+                "Room atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$photoLocalPath room='${latestRoomName}' roomId=${args.roomId}"
             )
             viewModel.addRoomAtmosphericLog(
                 humidity = humidity,
@@ -224,200 +251,11 @@ class RocketDryRoomFragment : Fragment() {
 
     private fun launchCamera(callback: (Uri?) -> Unit) {
         pendingPhotoCallback = callback
-        Log.d(TAG, "📷 Navigating to camera screen")
+        Log.d(TAG, "Navigating to camera screen")
         findNavController().navigate(
             RocketDryRoomFragmentDirections
                 .actionRocketDryRoomFragmentToSinglePhotoCaptureFragment()
         )
-    }
-
-    @Suppress("DEPRECATION") // SOFT_INPUT_ADJUST_RESIZE still needed for dialog keyboard behavior
-    private fun showAddMaterialGoalDialog() {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_material_goal, null)
-        val materialNameInputLayout =
-            dialogView.findViewById<TextInputLayout>(R.id.materialNameInputLayout)
-        val materialNameInput =
-            dialogView.findViewById<MaterialAutoCompleteTextView>(R.id.materialNameInput)
-        val targetInputLayout =
-            dialogView.findViewById<TextInputLayout>(R.id.targetMoistureInputLayout)
-        val targetInput =
-            dialogView.findViewById<TextInputEditText>(R.id.targetMoistureInput)
-        val cancelButton =
-            dialogView.findViewById<MaterialButton>(R.id.cancelMaterialGoalButton)
-        val saveButton =
-            dialogView.findViewById<MaterialButton>(R.id.saveMaterialGoalButton)
-
-        // Make material field tap to show picker popup (iOS-style)
-        materialNameInput.isFocusable = false
-        materialNameInput.isFocusableInTouchMode = false
-        materialNameInputLayout.isEndIconVisible = true
-        materialNameInputLayout.endIconMode = TextInputLayout.END_ICON_DROPDOWN_MENU
-
-        val showMaterialPicker = {
-            showMaterialPickerDialog { selectedMaterial ->
-                materialNameInput.setText(selectedMaterial)
-            }
-        }
-
-        materialNameInput.setOnClickListener { showMaterialPicker() }
-        materialNameInputLayout.setEndIconOnClickListener { showMaterialPicker() }
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-
-        dialog.window?.setSoftInputMode(
-            WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-        )
-
-        cancelButton.setOnClickListener { dialog.dismiss() }
-        saveButton.setOnClickListener {
-            materialNameInputLayout.error = null
-            targetInputLayout.error = null
-
-            val name = materialNameInput.text?.toString().orEmpty().trim()
-            if (name.isBlank()) {
-                materialNameInputLayout.error = getString(R.string.rocketdry_goal_material_required)
-                Log.w(TAG, "⚠️ Material goal validation failed: name is blank")
-                return@setOnClickListener
-            }
-            val targetRaw = targetInput.text?.toString()?.trim().orEmpty()
-            val target = targetRaw.toDoubleOrNull()
-            if (targetRaw.isNotBlank() && target == null) {
-                targetInputLayout.error = getString(R.string.rocketdry_goal_target_invalid)
-                Log.w(TAG, "⚠️ Material goal validation failed: invalid target '$targetRaw'")
-                return@setOnClickListener
-            }
-
-            viewLifecycleOwner.lifecycleScope.launch {
-                Log.d(
-                    TAG,
-                    "📤 Saving material goal name='$name' target=$target roomId=${args.roomId}"
-                )
-                val success = viewModel.addMaterialDryingGoal(name, target)
-                if (success) {
-                    Log.d(TAG, "✅ Material goal saved: name='$name'")
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.rocketdry_material_goal_added, name),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    dialog.dismiss()
-                } else {
-                    Log.e(TAG, "❌ Failed to save material goal: name='$name'")
-                    Toast.makeText(
-                        requireContext(),
-                        R.string.rocketdry_material_goal_error,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
-
-        dialog.show()
-    }
-
-    private fun showMaterialPickerDialog(onMaterialSelected: (String) -> Unit) {
-        val pickerView = layoutInflater.inflate(R.layout.dialog_material_picker, null)
-        val recyclerView = pickerView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.materialList)
-
-        val pickerDialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(pickerView)
-            .setCancelable(true)
-            .create()
-
-        recyclerView.adapter = MaterialPickerAdapter(materialOptions) { selectedMaterial ->
-            onMaterialSelected(selectedMaterial)
-            pickerDialog.dismiss()
-        }
-
-        pickerDialog.show()
-    }
-
-    private class MaterialPickerAdapter(
-        private val materials: List<String>,
-        private val onItemClick: (String) -> Unit
-    ) : androidx.recyclerview.widget.RecyclerView.Adapter<MaterialPickerAdapter.ViewHolder>() {
-
-        class ViewHolder(itemView: android.view.View) : androidx.recyclerview.widget.RecyclerView.ViewHolder(itemView) {
-            val materialName: android.widget.TextView = itemView.findViewById(R.id.materialName)
-        }
-
-        override fun onCreateViewHolder(parent: android.view.ViewGroup, viewType: Int): ViewHolder {
-            val view = android.view.LayoutInflater.from(parent.context)
-                .inflate(R.layout.item_material_picker, parent, false)
-            return ViewHolder(view)
-        }
-
-        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val material = materials[position]
-            holder.materialName.text = material
-            holder.itemView.setOnClickListener { onItemClick(material) }
-        }
-
-        override fun getItemCount(): Int = materials.size
-    }
-
-    @Suppress("DEPRECATION") // SOFT_INPUT_ADJUST_RESIZE still needed for dialog keyboard behavior
-    private fun showAddMaterialLogDialog(item: MaterialDryingGoalItem) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_add_moisture_log, null)
-        val readingInputLayout =
-            dialogView.findViewById<TextInputLayout>(R.id.moistureReadingInputLayout)
-        val readingInput =
-            dialogView.findViewById<TextInputEditText>(R.id.moistureReadingInput)
-        val locationInput =
-            dialogView.findViewById<TextInputEditText>(R.id.moistureLocationInput)
-        val cancelButton =
-            dialogView.findViewById<MaterialButton>(R.id.cancelMoistureLogButton)
-        val saveButton =
-            dialogView.findViewById<MaterialButton>(R.id.saveMoistureLogButton)
-
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setTitle(getString(R.string.rocketdry_material_add_log_title, item.name))
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-
-        dialog.window?.setSoftInputMode(
-            WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-        )
-
-        cancelButton.setOnClickListener { dialog.dismiss() }
-        saveButton.setOnClickListener {
-            readingInputLayout.error = null
-
-            val readingRaw = readingInput.text?.toString()?.trim().orEmpty()
-            val reading = readingRaw.toDoubleOrNull()
-            if (reading == null) {
-                readingInputLayout.error = getString(R.string.rocketdry_material_invalid_reading)
-                return@setOnClickListener
-            }
-            val location = locationInput.text?.toString()?.trim().orEmpty().ifBlank { null }
-
-            viewLifecycleOwner.lifecycleScope.launch {
-                val success = viewModel.addMaterialMoistureLog(item.materialId, reading, location)
-                if (success) {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.rocketdry_material_log_added, item.name),
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    dialog.dismiss()
-                } else {
-                    Toast.makeText(
-                        requireContext(),
-                        R.string.rocketdry_material_save_error,
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
-            }
-        }
-
-        dialog.show()
-        readingInput.requestFocus()
     }
 
     private fun formatLogDate(date: Date): String {

@@ -637,7 +637,8 @@ internal fun MoistureLogDto.toEntity(
         syncStatus = SyncStatus.SYNCED,
         syncVersion = (existing?.syncVersion ?: 0) + 1,
         isDirty = false,
-        isDeleted = existing?.isDeleted ?: false
+        isDeleted = existing?.isDeleted ?: false,
+        dryingGoal = dryingGoal ?: existing?.dryingGoal
     )
 }
 

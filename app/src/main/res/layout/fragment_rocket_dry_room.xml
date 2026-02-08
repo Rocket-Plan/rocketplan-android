@@ -151,11 +151,20 @@
                     android:textStyle="bold" />
             </LinearLayout>
 
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/materialGoalsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:nestedScrollingEnabled="false"
+                tools:itemCount="2"
+                tools:listitem="@layout/item_material_goal" />
+
             <LinearLayout
                 android:id="@+id/addMaterialGoalCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="8dp"
                 android:background="@drawable/bg_dashed_border"
                 android:clickable="true"
                 android:focusable="true"
@@ -182,15 +191,6 @@
                     android:textSize="@dimen/text_size_title"
                     android:textStyle="bold" />
             </LinearLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/materialGoalsRecyclerView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:nestedScrollingEnabled="false"
-                tools:itemCount="2"
-                tools:listitem="@layout/item_material_goal" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

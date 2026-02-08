@@ -292,8 +292,8 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
             idempotencyKey = material.uuid
         )
 
-        val created = runCatching {
-            ctx.api.createProjectDamageMaterial(projectServerId, request.copy(updatedAt = null))
+        val createdDto = runCatching {
+            ctx.api.createProjectDamageMaterial(projectServerId, request.copy(updatedAt = null)).data
         }.recoverCatching { error ->
             if (error.isConflict()) {
                 val existing = runCatching { ctx.api.getProjectDamageMaterials(projectServerId).data }
@@ -316,7 +316,7 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
 
         val timestamp = ctx.now()
         val updated = material.copy(
-            serverId = created.id,
+            serverId = createdDto.id,
             syncStatus = SyncStatus.SYNCED,
             syncVersion = (material.syncVersion + 1),
             lastSyncedAt = timestamp,

@@ -34,6 +34,7 @@ import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.DeleteProjectRequest
 import com.example.rocketplan_android.data.model.PropertyResourceResponse
 import com.example.rocketplan_android.data.model.ProjectResourceResponse
+import com.example.rocketplan_android.data.model.SingleResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
 import com.example.rocketplan_android.data.model.CreateRoomRequest
@@ -381,13 +382,13 @@ interface OfflineSyncApi {
     suspend fun createProjectDamageMaterial(
         @Path("projectId") projectId: Long,
         @Body body: DamageMaterialRequest
-    ): DamageMaterialDto
+    ): SingleResourceResponse<DamageMaterialDto>
 
     @PUT("/api/damage-materials/{damageMaterialId}")
     suspend fun updateDamageMaterial(
         @Path("damageMaterialId") damageMaterialId: Long,
         @Body body: DamageMaterialRequest
-    ): DamageMaterialDto
+    ): SingleResourceResponse<DamageMaterialDto>
 
     @HTTP(method = "DELETE", path = "/api/damage-materials/{damageMaterialId}", hasBody = true)
     suspend fun deleteDamageMaterial(

@@ -253,12 +253,12 @@ fun Fragment.showAtmosphericLogDialog(
             previousStepButton.isEnabled = true
             previousStepButton.text = getString(R.string.cancel)
             previousStepButton.icon = null
-            cancelWizardButton.isVisible = false
+            cancelWizardButton.visibility = View.INVISIBLE
         } else {
             previousStepButton.isEnabled = true
             previousStepButton.text = getString(R.string.rocketdry_back)
             previousStepButton.setIconResource(R.drawable.chevron_left)
-            cancelWizardButton.isVisible = true
+            cancelWizardButton.visibility = View.VISIBLE
         }
 
         // Show "Next" for all input steps (photo step or save handled separately)
@@ -625,12 +625,12 @@ fun Fragment.showAtmosphericLogDialogWithValueTracking(
             previousStepButton.isEnabled = true
             previousStepButton.text = getString(R.string.cancel)
             previousStepButton.icon = null
-            cancelWizardButton.isVisible = false
+            cancelWizardButton.visibility = View.INVISIBLE
         } else {
             previousStepButton.isEnabled = true
             previousStepButton.text = getString(R.string.rocketdry_back)
             previousStepButton.setIconResource(R.drawable.chevron_left)
-            cancelWizardButton.isVisible = true
+            cancelWizardButton.visibility = View.VISIBLE
         }
 
         nextStepButton.text = if (currentStep == inputSteps.lastIndex && !hasPhotoStep) {

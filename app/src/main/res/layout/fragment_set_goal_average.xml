@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@color/white"
+    android:orientation="vertical">
+
+    <!-- Drag handle -->
+    <View
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="12dp"
+        android:background="@color/placeholder" />
+
+    <!-- Title -->
+    <TextView
+        android:id="@+id/goalTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="@string/drying_set_goal_title"
+        android:textColor="@color/dark_text_rp"
+        android:textSize="22sp"
+        android:textStyle="bold" />
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="12dp"
+        android:background="@color/light_border" />
+
+    <!-- Description -->
+    <TextView
+        android:id="@+id/goalDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:textColor="@color/light_text_rp"
+        android:textSize="14sp"
+        tools:text="Set your drying goal for Baseboard Carpentry" />
+
+    <!-- Centered goal input section -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:paddingTop="24dp"
+        android:paddingBottom="16dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/drying_goal_average_label"
+            android:textColor="@color/light_text_rp"
+            android:textSize="14sp" />
+
+        <EditText
+            android:id="@+id/goalInput"
+            android:layout_width="200dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@android:color/transparent"
+            android:gravity="center"
+            android:hint="0.0"
+            android:imeOptions="actionDone"
+            android:inputType="numberDecimal"
+            android:textColor="@color/dark_text_rp"
+            android:textSize="48sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Set Goal button -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/setGoalButton"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginStart="20dp"
+        android:layout_marginEnd="20dp"
+        android:layout_marginBottom="16dp"
+        android:text="@string/drying_set_goal_button"
+        android:textAllCaps="false"
+        android:textColor="@color/white"
+        android:textSize="16sp"
+        app:backgroundTint="@color/main_purple"
+        app:cornerRadius="5dp" />
+
+</LinearLayout>

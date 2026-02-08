@@ -594,7 +594,8 @@ data class OfflineMoistureLogEntity(
     val syncStatus: SyncStatus = SyncStatus.PENDING,
     val syncVersion: Int = 0,
     val isDirty: Boolean = false,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val dryingGoal: Double? = null
 )
 
 @Entity(

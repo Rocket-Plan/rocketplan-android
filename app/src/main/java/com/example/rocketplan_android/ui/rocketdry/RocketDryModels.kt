@@ -59,13 +59,16 @@ data class EquipmentLevel(
     val rooms: List<EquipmentRoomSummary>
 )
 
+enum class DryingStatus { ON_TARGET, APPROACHING, IN_PROGRESS, FAR, UNKNOWN }
+
 data class MaterialDryingGoalItem(
     val materialId: Long,
     val name: String,
     val targetMoisture: Double?,
     val latestReading: Double?,
     val lastUpdatedLabel: String?,
-    val logsCount: Int
+    val logsCount: Int,
+    val dryingStatus: DryingStatus = DryingStatus.UNKNOWN
 )
 
 sealed class RocketDryUiState {
@@ -90,7 +93,6 @@ sealed class RocketDryRoomUiState {
         val roomIconRes: Int,
         val atmosphericLogCount: Int,
         val atmosphericLogs: List<AtmosphericLogItem>,
-        val materialGoals: List<MaterialDryingGoalItem>,
-        val materialOptions: List<String>
+        val materialGoals: List<MaterialDryingGoalItem>
     ) : RocketDryRoomUiState()
 }

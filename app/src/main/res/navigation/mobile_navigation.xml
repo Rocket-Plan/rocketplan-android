@@ -309,6 +309,133 @@
         <action
             android:id="@+id/action_rocketDryRoomFragment_to_singlePhotoCaptureFragment"
             app:destination="@id/singlePhotoCaptureFragment" />
+
+        <action
+            android:id="@+id/action_rocketDryRoomFragment_to_materialDryingAreaFragment"
+            app:destination="@id/materialDryingAreaFragment" />
+
+        <action
+            android:id="@+id/action_rocketDryRoomFragment_to_materialDryingGoalFragment"
+            app:destination="@id/materialDryingGoalFragment" />
+
+        <action
+            android:id="@+id/action_rocketDryRoomFragment_to_materialDryingReadingFragment"
+            app:destination="@id/materialDryingReadingFragment" />
+    </fragment>
+
+    <!-- Material Drying Flow: Select Damaged Area -->
+    <fragment
+        android:id="@+id/materialDryingAreaFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.MaterialDryingAreaFragment"
+        android:label="Select Damaged Area"
+        tools:layout="@layout/fragment_material_drying_area">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/action_materialDryingAreaFragment_to_materialDryingSelectFragment"
+            app:destination="@id/materialDryingSelectFragment" />
+    </fragment>
+
+    <!-- Material Drying Flow: Select Material -->
+    <fragment
+        android:id="@+id/materialDryingSelectFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.MaterialDryingSelectFragment"
+        android:label="Select Material"
+        tools:layout="@layout/fragment_material_drying_select">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
+
+        <argument
+            android:name="areaName"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_materialDryingSelectFragment_to_materialDryingGoalFragment"
+            app:destination="@id/materialDryingGoalFragment" />
+    </fragment>
+
+    <!-- Material Drying Flow: Set Goal Average (modal) -->
+    <dialog
+        android:id="@+id/materialDryingGoalFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SetGoalAverageFragment"
+        android:label="Set Goal Average">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
+
+        <argument
+            android:name="materialName"
+            app:argType="string" />
+
+        <argument
+            android:name="materialId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <argument
+            android:name="areaName"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_materialDryingGoalFragment_to_materialDryingReadingFragment"
+            app:destination="@id/materialDryingReadingFragment" />
+    </dialog>
+
+    <!-- Material Drying Flow: Set Latest Average (full-screen, needs camera) -->
+    <fragment
+        android:id="@+id/materialDryingReadingFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SetLatestAverageFragment"
+        android:label="Set Latest Average"
+        tools:layout="@layout/fragment_set_latest_average">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
+
+        <argument
+            android:name="materialName"
+            app:argType="string" />
+
+        <argument
+            android:name="materialId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <argument
+            android:name="goalValue"
+            app:argType="float" />
+
+        <argument
+            android:name="areaName"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_materialDryingReadingFragment_to_singlePhotoCaptureFragment"
+            app:destination="@id/singlePhotoCaptureFragment" />
     </fragment>
 
     <fragment

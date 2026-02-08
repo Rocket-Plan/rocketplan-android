@@ -18,61 +18,105 @@
         android:orientation="horizontal"
         android:padding="14dp">
 
-        <ImageView
-            android:id="@+id/goalIcon"
-            android:layout_width="@dimen/icon_size_card_large"
-            android:layout_height="@dimen/icon_size_card_large"
-            android:background="@drawable/bg_icon_circle_purple"
-            android:contentDescription="@string/location_icon"
-            android:padding="12dp"
-            android:src="@drawable/ic_material" />
-
+        <!-- Left: Name + Date -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/goalName"
-                android:layout_width="match_parent"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
-                android:maxLines="1"
+                android:maxLines="2"
                 android:textColor="@color/dark_text_rp"
                 android:textSize="@dimen/text_size_body_large"
                 android:textStyle="bold"
-                tools:text="Drywall" />
-
-            <TextView
-                android:id="@+id/goalTarget"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/main_purple"
-                android:textSize="@dimen/text_size_body_small"
-                tools:text="Target 12%" />
+                tools:text="Baseboard - East Wall" />
 
             <TextView
                 android:id="@+id/goalUpdated"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="2dp"
+                android:layout_marginTop="4dp"
                 android:textColor="@color/light_text_rp"
                 android:textSize="@dimen/text_size_caption"
-                tools:text="Updated Mar 6, 3:30pm" />
+                tools:text="Feb 6, 3:30pm" />
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/goalLogsCount"
+        <!-- Vertical divider -->
+        <View
+            android:layout_width="1dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="12dp"
+            android:background="@color/light_border" />
+
+        <!-- Goal Average column -->
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:textColor="@color/light_text_rp"
-            android:textSize="@dimen/text_size_caption"
-            tools:text="2 logs" />
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/goalTarget"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:text="5" />
+
+            <TextView
+                android:id="@+id/goalLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/rocketdry_goal_average_short"
+                android:textColor="@color/light_text_rp"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Latest Average column -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/goalLatestValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                tools:text="4"
+                tools:textColor="@color/main_purple" />
+
+            <TextView
+                android:id="@+id/latestLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/rocketdry_latest_average_short"
+                android:textColor="@color/light_text_rp"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Add log (+) button -->
+        <ImageView
+            android:id="@+id/addLogButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/rocketdry_add_log"
+            android:padding="4dp"
+            android:src="@drawable/ic_add_circle_outline"
+            app:tint="@color/light_text_rp" />
+
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

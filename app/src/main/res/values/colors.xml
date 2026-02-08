@@ -56,6 +56,12 @@
     <color name="success_rp">#007760</color>
     <color name="error_rp">#C50000</color>
 
+    <!-- Drying status colors -->
+    <color name="drying_on_target">@color/dark_green</color>
+    <color name="drying_approaching">@color/moss_green</color>
+    <color name="drying_in_progress">@color/secondary_brown</color>
+    <color name="drying_far">@color/dark_red</color>
+
     <!-- Sync status banner colors -->
     <color name="sync_banner_offline_bg">#FFF3F3</color>
     <color name="sync_banner_offline_stroke">#E82828</color>

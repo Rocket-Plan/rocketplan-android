@@ -391,6 +391,15 @@
     <string name="rocketdry_material_save_error">Unable to save material. Please try again.</string>
     <string name="rocketdry_material_target_missing">Target not set</string>
     <string name="rocketdry_material_no_readings">No readings yet.</string>
+    <string name="rocketdry_material_goal_hint">Drying goal (%)</string>
+    <string name="rocketdry_material_goal_helper">Set a moisture target to track drying progress</string>
+    <string name="rocketdry_goal_label">Goal</string>
+    <string name="rocketdry_latest_label">Latest</string>
+    <string name="rocketdry_goal_average_short">Goal\nAverage</string>
+    <string name="rocketdry_latest_average_short">Latest\nAverage</string>
+    <string name="rocketdry_add_log">Add log</string>
+    <string name="rocketdry_goal_percent_value">%.1f%%</string>
+    <string name="rocketdry_material_no_data">\u2014</string>
     <string name="rocketdry_material_latest_reading">Latest %1$.1f%% · %2$s</string>
     <plurals name="damage_count">
         <item quantity="one">%d Damage</item>
@@ -800,6 +809,24 @@
     <string name="temperature_value_format">%1$d°F</string>
     <string name="pressure_value_format">%1$d kPa</string>
     <string name="wind_speed_value_format">%1$d mph</string>
+
+    <!-- Material Drying Flow -->
+    <string name="drying_select_area_title">Select Damaged Area</string>
+    <string name="drying_select_materials_title">Select %1$s Materials</string>
+    <string name="drying_search_materials_hint">Search materials</string>
+    <string name="drying_select_material_button">Select Material</string>
+    <string name="drying_set_goal_title">Set Goal Average</string>
+    <string name="drying_set_goal_description">Set your drying goal for %1$s %2$s</string>
+    <string name="drying_goal_average_label">Goal Average</string>
+    <string name="drying_set_goal_button">Set Goal Average</string>
+    <string name="drying_set_latest_title">Set Latest Average</string>
+    <string name="drying_set_latest_description">Record the current dryness of the %1$s %2$s</string>
+    <string name="drying_latest_average_label">Latest Average</string>
+    <string name="drying_take_photo">Take Photo</string>
+    <string name="drying_save_without">Save Without</string>
+    <string name="drying_remove">Remove</string>
+    <string name="drying_color_hint">Your latest average will be coloured from Red to Green based on how far it is from your drying goal.</string>
+    <string name="drying_back_label">%1$s damages</string>
 
     <!-- Accessibility -->
     <string name="photo_content_description">Photo taken on %1$s</string>

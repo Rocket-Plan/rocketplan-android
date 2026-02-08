@@ -141,7 +141,7 @@
                 android:imeOptions="actionNext"
                 android:inputType="numberDecimal"
                 android:maxLines="1"
-                android:textSize="@dimen/text_size_body_large" />
+                android:textSize="22sp" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
