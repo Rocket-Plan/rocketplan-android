@@ -253,7 +253,14 @@ class PropertySyncService(
         }
         val response = result.getOrNull()
         Log.d(TAG, "[fetchProjectProperty] Response for project $projectId: ${response?.data?.size ?: 0} properties returned")
-        val property = response?.data?.firstOrNull()
+        response?.data?.forEachIndexed { idx, p ->
+            Log.d(TAG, "[fetchProjectProperty] [$idx] id=${p.id}, propertyTypeId=${p.propertyTypeId}, propertyType=${p.resolvedPropertyType()}, address=${p.address}, city=${p.city}")
+        }
+        // Prefer the property that has a propertyType set (bad server data may include empty duplicates)
+        val property = response?.data?.let { properties ->
+            properties.firstOrNull { it.propertyTypeId != null || it.resolvedPropertyType() != null }
+                ?: properties.firstOrNull()
+        }
         if (property != null) {
             Log.d(
                 TAG,
