@@ -11,7 +11,8 @@
 
 | Device | ADB Serial | Build Variant | Install Command |
 |--------|------------|---------------|-----------------|
-| FLIR ixx | `b7045238` | `devFlirDebug` | `./gradlew assembleDevFlirDebug && adb -s b7045238 install -r app/build/outputs/apk/devFlir/debug/app-dev-flir-debug.apk` |
+| FLIR ixx #1 | `b7045238` | `devFlirDebug` | `./gradlew assembleDevFlirDebug && adb -s b7045238 install -r app/build/outputs/apk/devFlir/debug/app-dev-flir-debug.apk` |
+| FLIR ixx #2 | `b704563c` | `devFlirDebug` | `./gradlew assembleDevFlirDebug && adb -s b704563c install -r app/build/outputs/apk/devFlir/debug/app-dev-flir-debug.apk` |
 | Tablet (9024O) | `30407ef` | `devStandardDebug` | `./gradlew assembleDevStandardDebug && adb -s 30407ef install -r app/build/outputs/apk/devStandard/debug/app-dev-standard-debug.apk` |
 
 **Important:** Only install FLIR builds on FLIR devices and Standard builds on regular devices.

@@ -2,7 +2,6 @@ package com.example.rocketplan_android.ui.projects.batchcapture
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Matrix
 import android.graphics.SurfaceTexture
 import android.os.Bundle
 import android.opengl.GLSurfaceView
@@ -137,10 +136,6 @@ class BatchCaptureFragment : Fragment() {
             // Attach for all FLIR modes (IR and all DUAL variants use same texture view)
             if (isFlirMode(captureMode)) {
                 flirController.attachTextureSurface(surface, width, height)
-                // Defer transform until view is fully laid out
-                flirTextureView.post {
-                    applyCenterCropTransform(flirTextureView, FLIR_CAMERA_WIDTH, FLIR_CAMERA_HEIGHT)
-                }
                 if (hasCameraPermission()) {
                     startActiveMode()
                 }
@@ -150,9 +145,6 @@ class BatchCaptureFragment : Fragment() {
         override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) {
             if (isFlirMode(captureMode)) {
                 flirController.updateTextureSurfaceSize(width, height)
-                flirTextureView.post {
-                    applyCenterCropTransform(flirTextureView, FLIR_CAMERA_WIDTH, FLIR_CAMERA_HEIGHT)
-                }
             }
         }
 
@@ -321,7 +313,6 @@ class BatchCaptureFragment : Fragment() {
                     flirTextureView.width,
                     flirTextureView.height
                 )
-                applyCenterCropTransform(flirTextureView, FLIR_CAMERA_WIDTH, FLIR_CAMERA_HEIGHT)
             }
 
             // Set up dual mode FLIR texture view
@@ -1067,49 +1058,11 @@ class BatchCaptureFragment : Fragment() {
         super.onPause()
     }
 
-    /**
-     * Apply center-crop transform to TextureView so FLIR preview fills the screen.
-     * The FLIR camera outputs at a fixed aspect ratio (typically 4:3), so we scale
-     * to fill and crop the excess.
-     */
-    private fun applyCenterCropTransform(textureView: TextureView, cameraWidth: Int, cameraHeight: Int) {
-        val viewWidth = textureView.width.toFloat()
-        val viewHeight = textureView.height.toFloat()
-        Log.d(TAG, "applyCenterCropTransform called: view=${viewWidth}x${viewHeight}, camera=${cameraWidth}x${cameraHeight}")
-        if (viewWidth == 0f || viewHeight == 0f || cameraWidth == 0 || cameraHeight == 0) {
-            Log.w(TAG, "applyCenterCropTransform: skipping due to zero dimensions")
-            return
-        }
-
-        val cameraAspect = cameraWidth.toFloat() / cameraHeight
-        val viewAspect = viewWidth / viewHeight
-
-        val scaleX: Float
-        val scaleY: Float
-        if (cameraAspect > viewAspect) {
-            // Camera is wider (landscape) than view (portrait) - scale Y to fill height
-            scaleX = 1f
-            scaleY = cameraAspect / viewAspect
-        } else {
-            // Camera is taller than view - scale X to fill width
-            scaleX = viewAspect / cameraAspect
-            scaleY = 1f
-        }
-
-        val matrix = Matrix()
-        matrix.setScale(scaleX, scaleY, viewWidth / 2f, viewHeight / 2f)
-        textureView.setTransform(matrix)
-        Log.d(TAG, "Applied center-crop transform: scaleX=$scaleX, scaleY=$scaleY")
-    }
-
     companion object {
         private const val TAG = "BatchCaptureFrag"
         private const val REGULAR_CAPTURE_TIMEOUT_MS = 10000L  // 10 seconds for regular camera
         private const val FLIR_CAPTURE_TIMEOUT_MS = 5000L     // 5 seconds for FLIR
         private const val DUAL_CAPTURE_TIMEOUT_MS = 15000L    // 15 seconds for dual capture (both)
-        // FLIR ACE camera resolution - adjust if your camera has different specs
-        private const val FLIR_CAMERA_WIDTH = 640
-        private const val FLIR_CAMERA_HEIGHT = 480
     }
 }
 
