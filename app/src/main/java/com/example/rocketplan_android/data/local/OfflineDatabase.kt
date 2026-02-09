@@ -47,6 +47,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
 import com.example.rocketplan_android.data.local.entity.OfflineTimecardTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
+import com.example.rocketplan_android.data.local.entity.OfflineProjectUserEntity
 
 @Database(
     entities = [
@@ -86,9 +87,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
         OfflineUserRoleEntity::class,
         OfflineTimecardEntity::class,
         OfflineTimecardTypeEntity::class,
-        OfflineClaimEntity::class
+        OfflineClaimEntity::class,
+        OfflineProjectUserEntity::class
     ],
-    version = 26,
+    version = 27,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -454,6 +456,28 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_26_27 = object : Migration(26, 27) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_project_users (
+                        id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        projectServerId INTEGER NOT NULL,
+                        userServerId INTEGER NOT NULL,
+                        firstName TEXT,
+                        lastName TEXT,
+                        email TEXT NOT NULL DEFAULT '',
+                        isAdmin INTEGER NOT NULL DEFAULT 0,
+                        isPendingAdd INTEGER NOT NULL DEFAULT 0,
+                        isPendingRemove INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_offline_project_users_projectServerId_userServerId ON offline_project_users(projectServerId, userServerId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_project_users_projectServerId ON offline_project_users(projectServerId)")
+            }
+        }
+
         private val MIGRATION_21_22 = object : Migration(21, 22) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Add property info fields to offline_properties
@@ -517,7 +541,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27)
                 .apply {
                     // Only allow destructive migrations in debug builds to avoid data loss in prod.
                     if (BuildConfig.DEBUG) {

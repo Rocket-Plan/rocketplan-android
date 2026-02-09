@@ -224,4 +224,18 @@ interface SyncQueueEnqueuer {
         timecard: OfflineTimecardEntity,
         lockUpdatedAt: String? = null
     )
+
+    // ============================================================================
+    // Crew (Project-User) Operations
+    // ============================================================================
+
+    suspend fun enqueueProjectUserAdd(
+        projectServerId: Long,
+        userServerId: Long
+    )
+
+    suspend fun enqueueProjectUserRemove(
+        projectServerId: Long,
+        userServerId: Long
+    )
 }

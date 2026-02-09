@@ -19,8 +19,10 @@ import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CategoryAlbums
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import java.io.File
+import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -32,6 +34,12 @@ import kotlinx.coroutines.launch
 import com.example.rocketplan_android.data.repository.SyncSegment
 import com.example.rocketplan_android.logging.LogLevel
 
+data class ProjectDetailScreenState(
+    val ui: ProjectDetailUiState = ProjectDetailUiState.Loading,
+    val isSyncBlocking: Boolean = false,
+    val essentialsSyncFailed: Boolean = false
+)
+
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class ProjectDetailViewModel(
     application: Application,
@@ -41,20 +49,40 @@ class ProjectDetailViewModel(
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
     private val syncQueueManager = rocketPlanApp.syncQueueManager
+    private val syncNetworkMonitor = rocketPlanApp.syncNetworkMonitor
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
     private val imageProcessorDao = rocketPlanApp.imageProcessorDao
     private val remoteLogger = rocketPlanApp.remoteLogger
 
-    private val _uiState = MutableStateFlow<ProjectDetailUiState>(ProjectDetailUiState.Loading)
-    val uiState: StateFlow<ProjectDetailUiState> = _uiState
+    private val _screenState = MutableStateFlow(ProjectDetailScreenState())
+    val screenState: StateFlow<ProjectDetailScreenState> = _screenState
 
     private val _selectedTab = MutableStateFlow(ProjectDetailTab.PHOTOS)
     val selectedTab: StateFlow<ProjectDetailTab> = _selectedTab
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
+    private val syncTimeout = MutableStateFlow(false)
+
     @Volatile
     private var lastIsBackgroundSyncing: Boolean? = null
+
+    companion object {
+        internal const val SYNC_TIMEOUT_MS = 15_000L
+
+        fun provideFactory(
+            application: Application,
+            projectId: Long
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                require(modelClass.isAssignableFrom(ProjectDetailViewModel::class.java)) {
+                    "Unknown ViewModel class"
+                }
+                return ProjectDetailViewModel(application, projectId) as T
+            }
+        }
+    }
 
     init {
         // Prioritize this project in the sync queue
@@ -62,6 +90,18 @@ class ProjectDetailViewModel(
         syncQueueManager.prioritizeProject(projectId)
 
         viewModelScope.launch {
+            // One-shot check: did we already have essentials cached at entry?
+            val hadEssentialsAtEntry = localDataService.getLocations(projectId).isNotEmpty()
+
+            // Only start timeout for uncached projects
+            if (!hadEssentialsAtEntry) {
+                launch { delay(SYNC_TIMEOUT_MS); syncTimeout.value = true }
+            }
+
+            // Sticky latches for the blocking state machine
+            var sawSyncing = false
+            var blockingResolved = hadEssentialsAtEntry
+
             combine(
                 localDataService.observeProjects(),
                 localDataService.observeRooms(projectId),
@@ -85,18 +125,36 @@ class ProjectDetailViewModel(
                     SyncExtras(photoSyncingProjects, projectSyncingProjects, damages, workScopes, progressMap)
                 }
             ) { data, extra -> data to extra }
-            .mapLatest { (data, extra) ->
+            .combine(
+                combine(
+                    localDataService.observeLocations(projectId),
+                    syncQueueManager.projectEssentialsFailed,
+                    syncNetworkMonitor.isOnline,
+                    syncTimeout
+                ) { locations, essentialsFailed, online, timeout ->
+                    BlockingInputs(locations, essentialsFailed, online, timeout)
+                }
+            ) { pair, blockingInputs -> Triple(pair.first, pair.second, blockingInputs) }
+            .mapLatest { (data, extra, blockingInputs) ->
                 val (projects, rooms, photos, notes, albums) = data
                 val (photoSyncingProjects, projectSyncingProjects, damages, workScopes, processingProgressMap) = extra
+                val locations = blockingInputs.locations
+                val essentialsFailed = blockingInputs.essentialsFailed.contains(projectId)
+                val isOnline = blockingInputs.isOnline
+                val timedOut = blockingInputs.timedOut
 
                 Log.d("ProjectDetailVM", "📊 Data update for project $projectId: ${rooms.size} rooms, ${albums.size} albums, ${photos.size} photos")
                 val project = projects.firstOrNull { it.projectId == projectId }
-                if (project == null) {
+                val isProjectSyncing = projectSyncingProjects.contains(projectId)
+
+                // Track if we ever saw syncing start
+                if (isProjectSyncing) sawSyncing = true
+
+                val uiState = if (project == null) {
                     Log.d("ProjectDetailVM", "⚠️ Project $projectId not found in database")
                     ProjectDetailUiState.Loading
                 } else {
                     Log.d("ProjectDetailVM", "✅ Project found: ${project.title}")
-                    val isProjectSyncing = projectSyncingProjects.contains(projectId)
                     if (lastIsBackgroundSyncing != isProjectSyncing) {
                         Log.d("ProjectDetailVM", "🔄 isBackgroundSyncing changed: $lastIsBackgroundSyncing → $isProjectSyncing for project $projectId")
                         lastIsBackgroundSyncing = isProjectSyncing
@@ -131,35 +189,55 @@ class ProjectDetailViewModel(
                         isBackgroundSyncing = isProjectSyncing
                     )
                 }
+
+                // Compute blocking state
+                if (!blockingResolved) {
+                    val escape = locations.isNotEmpty() || rooms.isNotEmpty() ||
+                        (sawSyncing && !isProjectSyncing) ||
+                        (project != null && project.serverId == null) ||
+                        !isOnline ||
+                        timedOut
+                    if (escape) blockingResolved = true
+                }
+
+                ProjectDetailScreenState(
+                    ui = uiState,
+                    isSyncBlocking = !blockingResolved,
+                    essentialsSyncFailed = essentialsFailed && !isProjectSyncing
+                )
             }
             // Smooth out bursts while batched photos land
             .debounce(200)
             // Only emit when visible content meaningfully changes
             .distinctUntilChanged { old, new ->
+                if (old.isSyncBlocking != new.isSyncBlocking) return@distinctUntilChanged false
+                if (old.essentialsSyncFailed != new.essentialsSyncFailed) return@distinctUntilChanged false
+                val oldUi = old.ui
+                val newUi = new.ui
                 when {
-                    old is ProjectDetailUiState.Ready && new is ProjectDetailUiState.Ready -> {
-                        val oldPhotoTotal = old.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
-                        val newPhotoTotal = new.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
-                        val oldLoadingCount = old.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
-                        val newLoadingCount = new.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
-                        val oldDamageTotal = old.levelSections.sumOf { it.rooms.sumOf { r -> r.damageCount } }
-                        val newDamageTotal = new.levelSections.sumOf { it.rooms.sumOf { r -> r.damageCount } }
+                    oldUi is ProjectDetailUiState.Ready && newUi is ProjectDetailUiState.Ready -> {
+                        val oldPhotoTotal = oldUi.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
+                        val newPhotoTotal = newUi.levelSections.sumOf { it.rooms.sumOf { r -> r.photoCount } }
+                        val oldLoadingCount = oldUi.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
+                        val newLoadingCount = newUi.levelSections.sumOf { it.rooms.count { r -> r.isLoadingPhotos } }
+                        val oldDamageTotal = oldUi.levelSections.sumOf { it.rooms.sumOf { r -> r.damageCount } }
+                        val newDamageTotal = newUi.levelSections.sumOf { it.rooms.sumOf { r -> r.damageCount } }
 
-                        old.levelSections.size == new.levelSections.size &&
-                            old.levelSections == new.levelSections &&
-                            old.albums.size == new.albums.size &&
+                        oldUi.levelSections.size == newUi.levelSections.size &&
+                            oldUi.levelSections == newUi.levelSections &&
+                            oldUi.albums.size == newUi.albums.size &&
                             oldPhotoTotal == newPhotoTotal &&
                             oldLoadingCount == newLoadingCount &&
                             oldDamageTotal == newDamageTotal &&
-                            old.roomCreationStatus == new.roomCreationStatus &&
-                            old.isBackgroundSyncing == new.isBackgroundSyncing
+                            oldUi.roomCreationStatus == newUi.roomCreationStatus &&
+                            oldUi.isBackgroundSyncing == newUi.isBackgroundSyncing
                     }
-                    old is ProjectDetailUiState.Loading && new is ProjectDetailUiState.Loading -> true
+                    oldUi is ProjectDetailUiState.Loading && newUi is ProjectDetailUiState.Loading -> true
                     else -> false
                 }
             }
             .collect { state ->
-                _uiState.value = state
+                _screenState.value = state
             }
         }
     }
@@ -372,20 +450,6 @@ class ProjectDetailViewModel(
         return populatedAlbums.sortedBy { it.name }
     }
 
-    companion object {
-        fun provideFactory(
-            application: Application,
-            projectId: Long
-        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
-            @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                require(modelClass.isAssignableFrom(ProjectDetailViewModel::class.java)) {
-                    "Unknown ViewModel class"
-                }
-                return ProjectDetailViewModel(application, projectId) as T
-            }
-        }
-    }
 }
 
 sealed class ProjectDetailUiState {
@@ -501,6 +565,13 @@ private data class DetailData(
     val photos: List<OfflinePhotoEntity>,
     val notes: List<OfflineNoteEntity>,
     val albums: List<OfflineAlbumEntity>
+)
+
+private data class BlockingInputs(
+    val locations: List<OfflineLocationEntity>,
+    val essentialsFailed: Set<Long>,
+    val isOnline: Boolean,
+    val timedOut: Boolean
 )
 
 private data class SyncExtras(

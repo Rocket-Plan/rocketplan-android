@@ -32,6 +32,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
+import com.example.rocketplan_android.data.local.entity.OfflineProjectUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogItemEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
@@ -944,6 +945,34 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_users WHERE companyId = :companyId")
     fun observeUsersForCompany(companyId: Long): Flow<List<OfflineUserEntity>>
+
+    @Query("SELECT * FROM offline_users WHERE companyId = :companyId ORDER BY firstName ASC, lastName ASC")
+    suspend fun getUsersForCompany(companyId: Long): List<OfflineUserEntity>
+
+    // Project Users (crew)
+    @Query("SELECT * FROM offline_project_users WHERE projectServerId = :projectServerId AND isPendingRemove = 0 ORDER BY firstName ASC, lastName ASC")
+    fun observeProjectUsers(projectServerId: Long): Flow<List<OfflineProjectUserEntity>>
+
+    @Query("SELECT * FROM offline_project_users WHERE projectServerId = :projectServerId AND isPendingRemove = 0")
+    suspend fun getProjectUsersSync(projectServerId: Long): List<OfflineProjectUserEntity>
+
+    @Upsert
+    suspend fun upsertProjectUser(entity: OfflineProjectUserEntity)
+
+    @Upsert
+    suspend fun upsertProjectUsers(entities: List<OfflineProjectUserEntity>)
+
+    @Query("DELETE FROM offline_project_users WHERE projectServerId = :projectServerId AND isPendingAdd = 0")
+    suspend fun deleteServerProjectUsers(projectServerId: Long)
+
+    @Query("DELETE FROM offline_project_users WHERE projectServerId = :projectServerId AND userServerId = :userServerId")
+    suspend fun deleteProjectUser(projectServerId: Long, userServerId: Long)
+
+    @Query("UPDATE offline_project_users SET isPendingRemove = 1 WHERE projectServerId = :projectServerId AND userServerId = :userServerId")
+    suspend fun markProjectUserPendingRemove(projectServerId: Long, userServerId: Long)
+
+    @Query("UPDATE offline_project_users SET isPendingAdd = 0 WHERE projectServerId = :projectServerId AND userServerId = :userServerId")
+    suspend fun clearProjectUserPendingAdd(projectServerId: Long, userServerId: Long)
 
     @Query("SELECT * FROM offline_properties WHERE propertyId = :propertyId AND isDeleted = 0 LIMIT 1")
     suspend fun getProperty(propertyId: Long): OfflinePropertyEntity?

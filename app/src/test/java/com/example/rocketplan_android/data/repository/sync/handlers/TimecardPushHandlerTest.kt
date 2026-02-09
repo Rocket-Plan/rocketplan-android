@@ -5,6 +5,7 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.model.offline.CreateTimecardRequest
 import com.example.rocketplan_android.data.model.offline.TimecardDto
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
@@ -16,6 +17,7 @@ import io.mockk.coVerify
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
+import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -176,6 +178,32 @@ class TimecardPushHandlerTest {
 
         assertThat(result).isEqualTo(OperationOutcome.DROP)
         coVerify(exactly = 0) { localDataService.saveTimecard(any()) }
+    }
+
+    @Test
+    fun `handleUpsert create includes timeOut when timecard was clocked out offline`() = runTest {
+        val clockOutTime = java.util.Date(System.currentTimeMillis() - 3600_000) // 1 hour ago
+        val timecard = PushHandlerTestFixtures.createTimecard(
+            serverId = null,
+            uuid = "timecard-uuid",
+            projectId = 100L
+        ).copy(timeOut = clockOutTime, elapsed = 3600L)
+        val project = PushHandlerTestFixtures.createProject(projectId = 100L, serverId = 1000L)
+        val operation = createOperation(entityUuid = "timecard-uuid")
+        val responseDto = createTimecardDto()
+
+        coEvery { localDataService.getTimecardByUuid("timecard-uuid") } returns timecard
+        coEvery { localDataService.getProject(100L) } returns project
+
+        val requestSlot = slot<CreateTimecardRequest>()
+        coEvery { api.createTimecard(1000L, capture(requestSlot)) } returns responseDto
+        coEvery { localDataService.saveTimecard(any()) } just runs
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        assertThat(requestSlot.captured.timeOut).isNotNull()
+        assertThat(requestSlot.captured.elapsed).isEqualTo(3600L)
     }
 
     // ===== handleUpsert - Update Tests (serverId != null) =====

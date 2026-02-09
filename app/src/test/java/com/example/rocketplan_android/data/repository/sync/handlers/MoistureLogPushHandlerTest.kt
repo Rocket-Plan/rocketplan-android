@@ -227,7 +227,7 @@ class MoistureLogPushHandlerTest {
 
         coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
         coEvery { localDataService.getMaterial(800L) } returns materialNoServerId
-        coEvery { api.createProjectDamageMaterial(1000L, any()) } returns createdMaterialDto
+        coEvery { api.createProjectDamageMaterial(1000L, any()) } returns com.example.rocketplan_android.data.model.SingleResourceResponse(createdMaterialDto)
         coEvery { localDataService.saveMaterials(any()) } just runs
         // After material sync, the handler uses the returned serverId (9000L)
         coEvery { api.createMoistureLog(4000L, 9000L, any()) } returns dto

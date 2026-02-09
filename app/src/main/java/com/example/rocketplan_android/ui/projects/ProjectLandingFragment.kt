@@ -69,8 +69,11 @@ class ProjectLandingFragment : Fragment() {
     private lateinit var allNotesIcon: ImageView
     private lateinit var allNotesSubtitle: TextView
     private lateinit var timecardCard: View
+    private lateinit var crewCard: View
+    private lateinit var syncBlockingOverlay: View
 
     private var latestSummary: ProjectLandingSummary? = null
+    private var essentialsSyncFailed = false
     private var statusDialog: AlertDialog? = null
 
     override fun onCreateView(
@@ -114,6 +117,8 @@ class ProjectLandingFragment : Fragment() {
         allNotesIcon = root.findViewById(R.id.allNotesIcon)
         allNotesSubtitle = root.findViewById(R.id.allNotesSubtitle)
         timecardCard = root.findViewById(R.id.timecardCard)
+        crewCard = root.findViewById(R.id.crewCard)
+        syncBlockingOverlay = root.findViewById(R.id.syncBlockingOverlay)
     }
 
     private fun bindListeners() {
@@ -167,6 +172,20 @@ class ProjectLandingFragment : Fragment() {
                         .actionProjectLandingFragmentToProjectDetailFragment(args.projectId)
                     safeNavigate(action)
                 }
+                // No property AND essentials sync failed - don't navigate to picker, show error
+                !summary.hasProperty && essentialsSyncFailed -> {
+                    remoteLogger.log(
+                        level = LogLevel.WARN,
+                        tag = "ProjectLanding",
+                        message = "Essentials sync failed - blocking type selection navigation",
+                        metadata = mapOf("project_id" to args.projectId.toString())
+                    )
+                    Toast.makeText(
+                        requireContext(),
+                        R.string.essentials_sync_failed_message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
                 // No property at all AND sync is complete - need to create one via type selection
                 !summary.hasProperty -> {
                     remoteLogger.log(
@@ -209,6 +228,11 @@ class ProjectLandingFragment : Fragment() {
                 .actionProjectLandingFragmentToTimecardFragment(args.projectId)
             safeNavigate(action)
         }
+        crewCard.setOnClickListener {
+            val action = ProjectLandingFragmentDirections
+                .actionProjectLandingFragmentToCrewFragment(args.projectId)
+            safeNavigate(action)
+        }
         statusContainer.setOnClickListener {
             showStatusSelectionDialog()
         }
@@ -217,10 +241,12 @@ class ProjectLandingFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    when (state) {
+                viewModel.screenState.collect { screenState ->
+                    syncBlockingOverlay.isVisible = screenState.isSyncBlocking
+                    essentialsSyncFailed = screenState.essentialsSyncFailed
+                    when (screenState.ui) {
                         ProjectLandingUiState.Loading -> showLoadingState()
-                        is ProjectLandingUiState.Ready -> renderState(state.summary)
+                        is ProjectLandingUiState.Ready -> renderState(screenState.ui.summary)
                     }
                 }
             }
@@ -316,6 +342,7 @@ class ProjectLandingFragment : Fragment() {
 
         rocketDryCard.isVisible = AppConfig.isRocketDryEnabled
         timecardCard.isVisible = true
+        crewCard.isVisible = true
     }
 
     private fun showAliasInputDialog() {

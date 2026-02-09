@@ -37,6 +37,7 @@ import com.example.rocketplan_android.data.repository.mapper.PendingRoomCreation
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationUpdatePayload
 import com.example.rocketplan_android.data.repository.mapper.PendingRoomUpdatePayload
 import com.example.rocketplan_android.data.repository.mapper.PendingAtmosphericLogCreationPayload
+import com.example.rocketplan_android.data.repository.mapper.PendingProjectUserPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingSupportConversationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingSupportMessagePayload
 import com.example.rocketplan_android.logging.LogLevel
@@ -66,6 +67,7 @@ import com.example.rocketplan_android.data.repository.sync.handlers.PushHandlerC
 import com.example.rocketplan_android.data.repository.sync.handlers.RoomPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.SupportPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.TimecardPushHandler
+import com.example.rocketplan_android.data.repository.sync.handlers.CrewPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.PendingProjectSyncResult
 
 data class PendingOperationResult(
@@ -123,6 +125,7 @@ class SyncQueueProcessor(
     private val atmosphericLogHandler by lazy { AtmosphericLogPushHandler(handlerContext) }
     private val supportHandler by lazy { SupportPushHandler(handlerContext) }
     private val timecardHandler by lazy { TimecardPushHandler(handlerContext) }
+    private val crewHandler by lazy { CrewPushHandler(handlerContext) }
 
     private enum class OperationOutcome {
         SUCCESS,
@@ -423,6 +426,13 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> timecardHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> timecardHandler.handleDelete(operation).toLocal()
+                    }
+                }
+                "project_user" -> handleOperation(operation, "pending:crew") {
+                    when (operation.operationType) {
+                        SyncOperationType.CREATE -> crewHandler.handleAdd(operation).toLocal()
+                        SyncOperationType.DELETE -> crewHandler.handleRemove(operation).toLocal()
+                        SyncOperationType.UPDATE -> OperationOutcome.DROP
                     }
                 }
                 else -> {
@@ -1105,6 +1115,7 @@ class SyncQueueProcessor(
             "support_conversation" -> "Support conversation sync waiting for server connection"
             "support_message" -> "Support message sync waiting for conversation to sync"
             "timecard" -> "Timecard sync waiting for project to sync"
+            "project_user" -> "Crew sync waiting for project to sync"
             else -> "Sync operation waiting for dependencies to resolve"
         }
     }
@@ -1237,6 +1248,48 @@ class SyncQueueProcessor(
             payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
             priority = SyncPriority.MEDIUM
         )
+    }
+
+    override suspend fun enqueueProjectUserAdd(
+        projectServerId: Long,
+        userServerId: Long
+    ) {
+        val payload = PendingProjectUserPayload(
+            projectServerId = projectServerId,
+            userServerId = userServerId
+        )
+        val operationId = "project_user-add-${projectServerId}-${userServerId}-${UuidUtils.generateUuidV7()}"
+        val operation = OfflineSyncQueueEntity(
+            operationId = operationId,
+            entityType = "project_user",
+            entityId = userServerId,
+            entityUuid = "$projectServerId-$userServerId",
+            operationType = SyncOperationType.CREATE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+        localDataService.enqueueSyncOperation(operation)
+    }
+
+    override suspend fun enqueueProjectUserRemove(
+        projectServerId: Long,
+        userServerId: Long
+    ) {
+        val payload = PendingProjectUserPayload(
+            projectServerId = projectServerId,
+            userServerId = userServerId
+        )
+        val operationId = "project_user-remove-${projectServerId}-${userServerId}-${UuidUtils.generateUuidV7()}"
+        val operation = OfflineSyncQueueEntity(
+            operationId = operationId,
+            entityType = "project_user",
+            entityId = userServerId,
+            entityUuid = "$projectServerId-$userServerId",
+            operationType = SyncOperationType.DELETE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+        localDataService.enqueueSyncOperation(operation)
     }
 
     companion object {

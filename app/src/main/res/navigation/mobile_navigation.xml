@@ -181,6 +181,10 @@
         <action
             android:id="@+id/action_projectLandingFragment_to_timecardFragment"
             app:destination="@id/timecardFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_crewFragment"
+            app:destination="@id/crewFragment" />
     </fragment>
 
     <fragment
@@ -738,6 +742,17 @@
         android:name="com.example.rocketplan_android.ui.timecard.TimecardFragment"
         android:label="@string/timecard_title"
         tools:layout="@layout/fragment_timecard">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crewFragment"
+        android:name="com.example.rocketplan_android.ui.crew.CrewFragment"
+        android:label="@string/crew_title"
+        tools:layout="@layout/fragment_crew">
 
         <argument
             android:name="projectId"

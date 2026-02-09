@@ -103,6 +103,15 @@ internal data class PendingAtmosphericLogCreationPayload(
 // Support Payloads
 // ============================================================================
 
+// ============================================================================
+// Crew (Project-User) Payloads
+// ============================================================================
+
+internal data class PendingProjectUserPayload(
+    val projectServerId: Long,
+    val userServerId: Long
+)
+
 internal data class PendingSupportConversationPayload(
     val localConversationId: Long,
     val conversationUuid: String,

@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -41,6 +42,8 @@ class TimecardFragment : Fragment() {
     private lateinit var clockButton: MaterialButton
     private lateinit var todayTotal: TextView
     private lateinit var weekTotal: TextView
+    private lateinit var notesLayout: TextInputLayout
+    private lateinit var notesInput: EditText
     private lateinit var recyclerView: RecyclerView
     private lateinit var emptyState: TextView
 
@@ -68,6 +71,8 @@ class TimecardFragment : Fragment() {
         elapsedTime = root.findViewById(R.id.timecardElapsedTime)
         typeLabel = root.findViewById(R.id.timecardTypeLabel)
         clockButton = root.findViewById(R.id.timecardClockButton)
+        notesLayout = root.findViewById(R.id.timecardNotesLayout)
+        notesInput = root.findViewById(R.id.timecardNotesInput)
         todayTotal = root.findViewById(R.id.timecardTodayTotal)
         weekTotal = root.findViewById(R.id.timecardWeekTotal)
         recyclerView = root.findViewById(R.id.timecardRecyclerView)
@@ -89,7 +94,9 @@ class TimecardFragment : Fragment() {
             val state = viewModel.uiState.value
             if (state is TimecardUiState.Ready) {
                 if (state.isClockedIn) {
-                    viewModel.clockOut()
+                    val notes = notesInput.text?.toString()?.takeIf { it.isNotBlank() }
+                    viewModel.clockOut(notes = notes)
+                    notesInput.text?.clear()
                     Toast.makeText(context, R.string.timecard_clocked_out_toast, Toast.LENGTH_SHORT).show()
                 } else {
                     viewModel.clockIn()
@@ -128,6 +135,11 @@ class TimecardFragment : Fragment() {
                     )
                     typeLabel.isVisible = true
                     typeLabel.text = state.activeTimecard?.timecardTypeName
+                    notesLayout.isVisible = true
+                    // Only populate if the input is empty (don't overwrite user typing)
+                    if (notesInput.text.isNullOrEmpty() && !state.activeTimecard?.notes.isNullOrEmpty()) {
+                        notesInput.setText(state.activeTimecard?.notes)
+                    }
                 } else {
                     statusLabel.text = getString(R.string.timecard_clocked_out)
                     elapsedTime.text = getString(R.string.time_zero)
@@ -136,6 +148,7 @@ class TimecardFragment : Fragment() {
                         resources.getColor(R.color.main_purple, null)
                     )
                     typeLabel.isVisible = false
+                    notesLayout.isVisible = false
                 }
 
                 // Totals

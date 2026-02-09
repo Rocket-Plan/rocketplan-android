@@ -78,6 +78,29 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Notes Input (visible when clocked in) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/timecardNotesLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="@string/timecard_notes"
+                android:visibility="gone"
+                app:boxBackgroundMode="outline"
+                app:boxStrokeColor="@color/main_purple"
+                tools:visibility="visible">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/timecardNotesInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textMultiLine|textCapSentences"
+                    android:maxLines="4"
+                    android:minLines="2"
+                    android:imeOptions="actionDone" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Clock In/Out Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/timecardClockButton"

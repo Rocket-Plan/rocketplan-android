@@ -100,7 +100,7 @@ interface OfflineSyncApi {
     @GET("/api/projects/{projectId}")
     suspend fun getProjectDetail(
         @Path("projectId") projectId: Long,
-        @Query("include") include: String? = "projectStatus,address,projectType,properties,notes,atmosphericLogs"
+        @Query("include") include: String? = "projectStatus,address,projectType,properties"
     ): ProjectDetailResourceResponse
 
     @HTTP(method = "DELETE", path = "/api/projects/{projectId}", hasBody = true)
@@ -113,6 +113,25 @@ interface OfflineSyncApi {
     suspend fun getProjectUsers(
         @Path("projectId") projectId: Long
     ): List<UserDto>
+
+    @GET("/api/projects/{projectId}/users")
+    suspend fun getProjectUsersWithRoles(
+        @Path("projectId") projectId: Long,
+        @Query("include") include: String? = "roles",
+        @Query("sort") sort: String? = "first_name,last_name"
+    ): PaginatedResponse<UserDto>
+
+    @POST("/api/projects/{projectId}/users/{userId}")
+    suspend fun addUserToProject(
+        @Path("projectId") projectId: Long,
+        @Path("userId") userId: Long
+    ): Response<Unit>
+
+    @DELETE("/api/projects/{projectId}/users/{userId}")
+    suspend fun removeUserFromProject(
+        @Path("projectId") projectId: Long,
+        @Path("userId") userId: Long
+    ): Response<Unit>
 
     @GET("/api/projects/{projectId}/noteables")
     suspend fun getProjectNoteables(

@@ -514,6 +514,7 @@
     <string name="delete_note_title">Delete this note?</string>
     <string name="delete_note_message">This note will be removed from the project.</string>
     <string name="loading_project">Loading project…</string>
+    <string name="essentials_sync_failed_message">Couldn\'t load project data. Pull to refresh.</string>
     <string name="add_photo_card_subtitle">Capture new photos for this room.</string>
     <string name="add_photo_flir">Thermal photo (FLIR)</string>
     <string name="regular">Regular</string>
@@ -780,6 +781,25 @@
     <string name="timecard_clocked_out_toast">Clocked out successfully</string>
     <string name="timecard_updated_toast">Timecard updated</string>
     <string name="timecard_deleted_toast">Timecard deleted</string>
+
+    <!-- Crew -->
+    <string name="crew_title">Crew</string>
+    <string name="crew_subtitle">Add and dispatch crew members</string>
+    <string name="crew_empty_title">No crew assigned</string>
+    <string name="crew_empty_message">Add team members to this project.</string>
+    <string name="crew_add_button">Add Crew</string>
+    <string name="crew_add_title">Add Crew Members</string>
+    <string name="crew_add_confirm">Add Selected</string>
+    <string name="crew_search_hint">Search employees</string>
+    <string name="crew_remove_title">Remove crew member</string>
+    <string name="crew_remove_message">Remove %1$s from this project?</string>
+    <string name="crew_remove_confirm">Remove</string>
+    <string name="crew_member_removed">Crew member removed</string>
+    <string name="crew_member_added">Crew members added</string>
+    <string name="crew_add_failed">Unable to add crew members. Check your connection.</string>
+    <string name="crew_remove_failed">Unable to remove crew member. Check your connection.</string>
+    <string name="crew_load_failed">Unable to load crew. Pull to refresh.</string>
+    <string name="crew_no_employees">No employees available to add.</string>
 
     <!-- Time/Format strings -->
     <string name="time_zero">00:00:00</string>

@@ -57,6 +57,26 @@ data class OfflineUserEntity(
 )
 
 @Entity(
+    tableName = "offline_project_users",
+    indices = [
+        Index(value = ["projectServerId", "userServerId"], unique = true),
+        Index(value = ["projectServerId"])
+    ]
+)
+data class OfflineProjectUserEntity(
+    @PrimaryKey(autoGenerate = true)
+    val id: Long = 0,
+    val projectServerId: Long,
+    val userServerId: Long,
+    val firstName: String? = null,
+    val lastName: String? = null,
+    val email: String = "",
+    val isAdmin: Boolean = false,
+    val isPendingAdd: Boolean = false,
+    val isPendingRemove: Boolean = false
+)
+
+@Entity(
     tableName = "offline_properties",
     indices = [
         Index(value = ["uuid"], unique = true),

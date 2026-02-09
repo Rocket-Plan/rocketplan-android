@@ -94,6 +94,8 @@ class SyncQueueManager(
     val photoSyncingProjects: StateFlow<Set<Long>> = _photoSyncingProjects
     private val _projectSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
     val projectSyncingProjects: StateFlow<Set<Long>> = _projectSyncingProjects
+    private val _projectEssentialsFailed = MutableStateFlow<Set<Long>>(emptySet())
+    val projectEssentialsFailed: StateFlow<Set<Long>> = _projectEssentialsFailed
     private val pendingSyncProjectsForce = AtomicBoolean(false)
     @Volatile
     private var lastForegroundSyncAt = 0L
@@ -910,6 +912,14 @@ class SyncQueueManager(
                                 updatePhotoSyncingProjectsLocked()
                             }
                             updateProjectSyncingProjectsLocked()
+                            // Track essentials sync failures for UI (only for modes that sync essentials)
+                            if (mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY || mode == SyncJob.ProjectSyncMode.FULL) {
+                                if (syncSucceeded) {
+                                    _projectEssentialsFailed.value -= job.projectId
+                                } else {
+                                    _projectEssentialsFailed.value += job.projectId
+                                }
+                            }
                         }
                         notifier.tryEmit(Unit)
                     }

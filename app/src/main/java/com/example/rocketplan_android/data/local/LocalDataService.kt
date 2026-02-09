@@ -32,6 +32,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomPhotoSnapshotEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
+import com.example.rocketplan_android.data.local.entity.OfflineProjectUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeCatalogItemEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
@@ -1299,6 +1300,36 @@ class LocalDataService private constructor(
 
     fun observeUsersForCompany(companyId: Long): Flow<List<OfflineUserEntity>> =
         dao.observeUsersForCompany(companyId)
+
+    suspend fun getUsersForCompany(companyId: Long): List<OfflineUserEntity> =
+        withContext(ioDispatcher) { dao.getUsersForCompany(companyId) }
+
+    // Project Users (crew)
+    fun observeProjectUsers(projectServerId: Long): Flow<List<OfflineProjectUserEntity>> =
+        dao.observeProjectUsers(projectServerId)
+
+    suspend fun getProjectUsersSync(projectServerId: Long): List<OfflineProjectUserEntity> =
+        withContext(ioDispatcher) { dao.getProjectUsersSync(projectServerId) }
+
+    suspend fun replaceProjectUsers(projectServerId: Long, users: List<OfflineProjectUserEntity>) =
+        withContext(ioDispatcher) {
+            database.withTransaction {
+                dao.deleteServerProjectUsers(projectServerId)
+                if (users.isNotEmpty()) dao.upsertProjectUsers(users)
+            }
+        }
+
+    suspend fun upsertProjectUser(entity: OfflineProjectUserEntity) =
+        withContext(ioDispatcher) { dao.upsertProjectUser(entity) }
+
+    suspend fun deleteProjectUser(projectServerId: Long, userServerId: Long) =
+        withContext(ioDispatcher) { dao.deleteProjectUser(projectServerId, userServerId) }
+
+    suspend fun markProjectUserPendingRemove(projectServerId: Long, userServerId: Long) =
+        withContext(ioDispatcher) { dao.markProjectUserPendingRemove(projectServerId, userServerId) }
+
+    suspend fun clearProjectUserPendingAdd(projectServerId: Long, userServerId: Long) =
+        withContext(ioDispatcher) { dao.clearProjectUserPendingAdd(projectServerId, userServerId) }
 
     suspend fun saveProperty(property: OfflinePropertyEntity) = withContext(ioDispatcher) {
         dao.upsertProperty(property)

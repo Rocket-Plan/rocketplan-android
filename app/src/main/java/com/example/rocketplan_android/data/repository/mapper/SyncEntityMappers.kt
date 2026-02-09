@@ -926,6 +926,8 @@ internal fun TimecardTypeDto.toEntity(): OfflineTimecardTypeEntity =
 internal fun OfflineTimecardEntity.toCreateRequest(): CreateTimecardRequest =
     CreateTimecardRequest(
         timeIn = DateUtils.formatApiDate(timeIn),
+        timeOut = timeOut?.let { DateUtils.formatApiDate(it) },
+        elapsed = elapsed,
         timecardTypeId = timecardTypeId,
         uuid = uuid,
         notes = notes,

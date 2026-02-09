@@ -47,6 +47,9 @@ data class TimecardTypeDto(
 data class CreateTimecardRequest(
     @SerializedName("time_in")
     val timeIn: String,
+    @SerializedName("time_out")
+    val timeOut: String? = null,
+    val elapsed: Long? = null,
     @SerializedName("timecard_type_id")
     val timecardTypeId: Int = 1,
     val uuid: String,

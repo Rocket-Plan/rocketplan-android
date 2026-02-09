@@ -12,6 +12,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.local.entity.OfflineProjectUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.model.CreateAddressRequest
@@ -413,6 +414,8 @@ class OfflineSyncRepository(
             )
         Log.d("API", "🔄 [syncProjectEssentials] Starting navigation chain for project $projectId (server=$serverProjectId)")
 
+        // Fetch project detail — on 400, log the error body and fall through to property chain
+        var detailFailed = false
         val detail = runCatching { api.getProjectDetail(serverProjectId).data }
             .onFailure { error ->
                 val duration = System.currentTimeMillis() - startTime
@@ -475,105 +478,157 @@ class OfflineSyncRepository(
                     }
                     return@withContext SyncResult.success(SyncSegment.PROJECT_ESSENTIALS, 0, duration)
                 }
-                Log.e("API", "❌ [syncProjectEssentials] Failed", error)
-                return@withContext SyncResult.failure(SyncSegment.PROJECT_ESSENTIALS, error, duration)
+                // Non-404 HTTP error (e.g. 400): log the response body for diagnostics,
+                // then fall through to attempt the property chain directly
+                if (error is HttpException) {
+                    val body = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+                    Log.e("API", "⚠️ [syncProjectEssentials] Project detail returned ${error.code()} for project $serverProjectId, falling back to property chain. Body: ${body?.take(500)}")
+                    remoteLogger?.log(
+                        LogLevel.WARN,
+                        "OfflineSyncRepository",
+                        "Project detail ${error.code()} - falling back to property chain",
+                        mapOf(
+                            "serverProjectId" to serverProjectId.toString(),
+                            "httpCode" to error.code().toString(),
+                            "errorBody" to (body?.take(500) ?: "null")
+                        )
+                    )
+                    detailFailed = true
+                } else {
+                    Log.e("API", "❌ [syncProjectEssentials] Failed", error)
+                    return@withContext SyncResult.failure(SyncSegment.PROJECT_ESSENTIALS, error, duration)
+                }
             }
-            .getOrNull() ?: run {
+            .getOrNull()
+
+        var itemCount = 0
+
+        if (detail != null) {
+            // Guard against phantom project 0 - API sometimes returns empty/default DTOs
+            if (detail.id == 0L) {
+                Log.e("API", "❌ [syncProjectEssentials] API returned project with id=0, skipping save")
                 val duration = System.currentTimeMillis() - startTime
                 return@withContext SyncResult.failure(
                     SyncSegment.PROJECT_ESSENTIALS,
-                    Exception("Project detail returned null"),
+                    Exception("API returned invalid project with id=0"),
                     duration
                 )
             }
 
-        var itemCount = 0
+            // Clean up any phantom room with ID 0 (legacy bug)
+            localDataService.deletePhantomRoom()
 
-        // Guard against phantom project 0 - API sometimes returns empty/default DTOs
-        if (detail.id == 0L) {
-            Log.e("API", "❌ [syncProjectEssentials] API returned project with id=0, skipping save")
+            // Save project entity (preserve property link if list sync already populated it)
+            val existingForSave = localDataService.getProject(projectId) ?: localDataService.getProject(detail.id)
+            localDataService.saveProjects(listOf(detail.toEntity(existing = existingForSave)))
+            itemCount++
+            ensureActive()
+
+            // Save USERS and their ROLES (essential for photo metadata and permission checks)
+            detail.users?.let { users ->
+                // Save user entities
+                localDataService.saveUsers(users.map { user -> user.toEntity() })
+                itemCount += users.size
+
+                // Extract and save unique roles from all users
+                val uniqueRoles = users.extractUniqueRoles()
+                if (uniqueRoles.isNotEmpty()) {
+                    localDataService.saveRoles(uniqueRoles)
+                    Log.d(TAG, "💼 Saved ${uniqueRoles.size} unique roles")
+                }
+
+                // Save user-role relationships
+                val userRoles = users.flatMap { it.toUserRoleEntities() }
+                if (userRoles.isNotEmpty()) {
+                    localDataService.saveUserRoles(userRoles)
+                    Log.d(TAG, "👥 Saved ${userRoles.size} user-role assignments")
+                }
+
+            }
+            ensureActive()
+
+            // Fetch and save project-user associations (crew) via dedicated endpoint
+            runCatching {
+                val crewResponse = api.getProjectUsersWithRoles(serverProjectId)
+                val projectUsers = crewResponse.data.mapNotNull { user ->
+                    if (user.id <= 0L) return@mapNotNull null
+                    val isAdmin = user.roles?.any { it.name == "company-admin" } == true
+                        || localDataService.isUserCompanyAdmin(user.id)
+                    OfflineProjectUserEntity(
+                        projectServerId = detail.id,
+                        userServerId = user.id,
+                        firstName = user.firstName,
+                        lastName = user.lastName,
+                        email = user.email,
+                        isAdmin = isAdmin
+                    )
+                }
+                localDataService.replaceProjectUsers(detail.id, projectUsers)
+                Log.d(TAG, "👥 Saved ${projectUsers.size} project-user associations for project ${detail.id}")
+            }.onFailure { e ->
+                Log.w(TAG, "⚠️ [syncProjectEssentials] Failed to sync crew for project ${detail.id}", e)
+            }
+            ensureActive()
+
+            // Save embedded SNAPSHOTS from detail (quick preview)
+            detail.locations?.let {
+                localDataService.saveLocations(it.map { loc -> loc.toEntity(defaultProjectId = detail.id) })
+                itemCount += it.size
+            }
+            ensureActive()
+
+            detail.rooms?.let { rooms ->
+                val resolvedRooms = rooms.mapNotNull { room ->
+                    // Skip if recently deleted locally (tombstone) or has pending delete in sync queue
+                    if (room.id > 0 && (
+                        DeletionTombstoneCache.isRecentlyDeleted("room", room.id) ||
+                        localDataService.hasPendingDelete("room", room.id)
+                    )) {
+                        Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - recently deleted locally")
+                        return@mapNotNull null
+                    }
+                    val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
+                    // Don't resurrect deleted entities
+                    if (existing?.isDeleted == true) {
+                        Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - local entity is deleted")
+                        return@mapNotNull null
+                    }
+                    if (room.id <= 0 && existing == null) {
+                        Log.w(
+                            "API",
+                            "📴 [syncProjectEssentials] Skipping room with invalid id=${room.id} title=${room.title ?: room.name}"
+                        )
+                        return@mapNotNull null
+                    }
+                    room.toEntity(existing, projectId = detail.id, locationId = room.locationId)
+                }
+                localDataService.saveRooms(resolvedRooms)
+                itemCount += resolvedRooms.size
+            }
+            ensureActive()
+
+            detail.photos?.let {
+                if (photoSyncService.persistPhotos(it)) itemCount += it.size
+            }
+            ensureActive()
+        } else if (detailFailed) {
+            Log.w("API", "⚠️ [syncProjectEssentials] Detail unavailable for project $serverProjectId, attempting property chain directly")
+        } else {
             val duration = System.currentTimeMillis() - startTime
             return@withContext SyncResult.failure(
                 SyncSegment.PROJECT_ESSENTIALS,
-                Exception("API returned invalid project with id=0"),
+                Exception("Project detail returned null"),
                 duration
             )
         }
 
-        // Clean up any phantom room with ID 0 (legacy bug)
-        localDataService.deletePhantomRoom()
-
-        // Save project entity (preserve property link if list sync already populated it)
-        val existingProject = localDataService.getProject(projectId) ?: localDataService.getProject(detail.id)
-        localDataService.saveProjects(listOf(detail.toEntity(existing = existingProject)))
-        itemCount++
-        ensureActive()
-
-        // Save USERS and their ROLES (essential for photo metadata and permission checks)
-        detail.users?.let { users ->
-            // Save user entities
-            localDataService.saveUsers(users.map { user -> user.toEntity() })
-            itemCount += users.size
-
-            // Extract and save unique roles from all users
-            val uniqueRoles = users.extractUniqueRoles()
-            if (uniqueRoles.isNotEmpty()) {
-                localDataService.saveRoles(uniqueRoles)
-                Log.d(TAG, "💼 Saved ${uniqueRoles.size} unique roles")
-            }
-
-            // Save user-role relationships
-            val userRoles = users.flatMap { it.toUserRoleEntities() }
-            if (userRoles.isNotEmpty()) {
-                localDataService.saveUserRoles(userRoles)
-                Log.d(TAG, "👥 Saved ${userRoles.size} user-role assignments")
-            }
-        }
-        ensureActive()
-
-        // Save embedded SNAPSHOTS from detail (quick preview)
-        detail.locations?.let {
-            localDataService.saveLocations(it.map { loc -> loc.toEntity(defaultProjectId = detail.id) })
-            itemCount += it.size
-        }
-        ensureActive()
-
-        detail.rooms?.let { rooms ->
-            val resolvedRooms = rooms.mapNotNull { room ->
-                // Skip if recently deleted locally (tombstone) or has pending delete in sync queue
-                if (room.id > 0 && (
-                    DeletionTombstoneCache.isRecentlyDeleted("room", room.id) ||
-                    localDataService.hasPendingDelete("room", room.id)
-                )) {
-                    Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - recently deleted locally")
-                    return@mapNotNull null
-                }
-                val existing = roomSyncService.resolveExistingRoomForSync(projectId, room)
-                // Don't resurrect deleted entities
-                if (existing?.isDeleted == true) {
-                    Log.d("API", "⚠️ [syncProjectEssentials] Skipping room ${room.id} - local entity is deleted")
-                    return@mapNotNull null
-                }
-                if (room.id <= 0 && existing == null) {
-                    Log.w(
-                        "API",
-                        "📴 [syncProjectEssentials] Skipping room with invalid id=${room.id} title=${room.title ?: room.name}"
-                    )
-                    return@mapNotNull null
-                }
-                room.toEntity(existing, projectId = detail.id, locationId = room.locationId)
-            }
-            localDataService.saveRooms(resolvedRooms)
-            itemCount += resolvedRooms.size
-        }
-        ensureActive()
-
-        detail.photos?.let {
-            if (photoSyncService.persistPhotos(it)) itemCount += it.size
-        }
-        ensureActive()
-
         // === NAVIGATION CHAIN: Property → Levels → Rooms ===
+
+        val existingProject = if (detail != null) {
+            localDataService.getProject(projectId) ?: localDataService.getProject(detail.id)
+        } else {
+            localDataService.getProject(projectId)
+        }
 
         // 1. Property
         val property = propertySyncService.fetchProjectProperty(serverProjectId, detail) ?: run {
@@ -581,8 +636,8 @@ class OfflineSyncRepository(
             // If the project doesn't have a property yet, this is expected - skip property work.
             // Check both local state and API response to avoid skipping when a property exists.
             val hasPropertyReference = existingProject?.propertyId != null ||
-                detail.propertyId != null ||
-                !detail.properties.isNullOrEmpty()
+                detail?.propertyId != null ||
+                !detail?.properties.isNullOrEmpty()
             if (!hasPropertyReference) {
                 Log.d(
                     "API",
@@ -602,22 +657,22 @@ class OfflineSyncRepository(
             )
         }
         Log.d("API", "🏠 [syncProjectEssentials] Property DTO received: id=${property.id}, address=${property.address}, city=${property.city}, state=${property.state}, zip=${property.postalCode}, lat=${property.latitude}, lng=${property.longitude}")
-        Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail.address?.address}, city=${detail.address?.city}, state=${detail.address?.state}, zip=${detail.address?.zip}")
+        Log.d("API", "🏠 [syncProjectEssentials] Project address fallback: address=${detail?.address?.address}, city=${detail?.address?.city}, state=${detail?.address?.state}, zip=${detail?.address?.zip}")
         // Try to get propertyType from: detail.propertyType, property.propertyType, or embedded properties list
-        val embeddedPropertyType = detail.properties?.firstOrNull()?.resolvedPropertyType()
-        val resolvedPropertyType = detail.propertyType ?: property.resolvedPropertyType() ?: embeddedPropertyType
+        val embeddedPropertyType = detail?.properties?.firstOrNull()?.resolvedPropertyType()
+        val resolvedPropertyType = detail?.propertyType ?: property.resolvedPropertyType() ?: embeddedPropertyType
         val existingProperty = existingProject?.propertyId?.let { localDataService.getProperty(it) }
         val entity = propertySyncService.persistProperty(
             projectId = projectId,
             property = property,
             propertyTypeValue = resolvedPropertyType,
             existing = existingProperty,
-            projectAddress = detail.address,
+            projectAddress = detail?.address,
             forceRoomTypeRefresh = false
         )
         val resolvedId = entity.serverId ?: entity.propertyId
         Log.d("API", "🏠 [syncProjectEssentials] Property Entity created: serverId=${entity.serverId}, address=${entity.address}, city=${entity.city}, state=${entity.state}, zip=${entity.zipCode}")
-        Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail.propertyType}, property.propertyType=${property.resolvedPropertyType()}, embeddedPropertyType=$embeddedPropertyType)")
+        Log.d("API", "🏠 [syncProjectEssentials] Attaching property $resolvedId to project $projectId with propertyType=$resolvedPropertyType (detail.propertyType=${detail?.propertyType}, property.propertyType=${property.resolvedPropertyType()}, embeddedPropertyType=$embeddedPropertyType)")
         itemCount++
         ensureActive()
 

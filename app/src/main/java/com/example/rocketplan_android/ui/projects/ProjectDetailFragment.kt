@@ -57,6 +57,7 @@ class ProjectDetailFragment : Fragment() {
     private lateinit var damagesButton: MaterialButton
     private lateinit var sketchButton: MaterialButton
     private lateinit var swipeRefreshLayout: SwipeRefreshLayout
+    private lateinit var syncBlockingOverlay: View
 
     private val albumsAdapter by lazy {
         AlbumsAdapter(
@@ -123,6 +124,7 @@ class ProjectDetailFragment : Fragment() {
         damagesButton = root.findViewById(R.id.damagesTabButton)
         sketchButton = root.findViewById(R.id.sketchTabButton)
         swipeRefreshLayout = root.findViewById(R.id.projectDetailSwipeRefresh)
+        syncBlockingOverlay = root.findViewById(R.id.syncBlockingOverlay)
 
         headerTitle.text = getString(R.string.project_home)
     }
@@ -223,10 +225,11 @@ class ProjectDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
-                    viewModel.uiState.collect { state ->
-                        when (state) {
+                    viewModel.screenState.collect { screenState ->
+                        syncBlockingOverlay.isVisible = screenState.isSyncBlocking
+                        when (screenState.ui) {
                             ProjectDetailUiState.Loading -> showLoadingState()
-                            is ProjectDetailUiState.Ready -> renderState(state)
+                            is ProjectDetailUiState.Ready -> renderState(screenState.ui)
                         }
                     }
                 }
