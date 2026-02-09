@@ -91,7 +91,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
         )
 
         val dto = try {
-            ctx.api.createLocation(propertyServerId, request)
+            ctx.api.createLocation(propertyServerId, request).data
         } catch (e: Exception) {
             if (e.isValidationError()) {
                 Log.w(SYNC_TAG, "Dropping location creation '${payload.locationName}': server validation error (422)")
@@ -141,7 +141,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
 
         var responseDto: com.example.rocketplan_android.data.model.offline.LocationDto? = null
         try {
-            responseDto = ctx.api.updateLocation(serverId, request)
+            responseDto = ctx.api.updateLocation(serverId, request).data
         } catch (error: Throwable) {
             if (error.isConflict()) {
                 Log.w(SYNC_TAG, "⚠️ [handlePendingLocationUpdate] 409 conflict for location $serverId; fetching fresh and retrying")
@@ -176,7 +176,7 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
                     isAccessible = payload.isAccessible,
                     updatedAt = freshLocation.updatedAt
                 )
-                val retryResult = runCatching { ctx.api.updateLocation(serverId, retryRequest) }
+                val retryResult = runCatching { ctx.api.updateLocation(serverId, retryRequest).data }
                     .onFailure { if (it is CancellationException) throw it }
                 retryResult.onFailure { retryError ->
                     if (retryError.isConflict()) {

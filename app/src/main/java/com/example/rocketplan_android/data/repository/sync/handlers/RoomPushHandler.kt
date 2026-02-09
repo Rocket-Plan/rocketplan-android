@@ -113,7 +113,7 @@ class RoomPushHandler(
                 projectId = payload.projectId
             )
             if (resolvedLocation != null) {
-                locationServerId = resolvedLocation.serverId
+                locationServerId = normalizeServerId(resolvedLocation.serverId)
                 location = resolvedLocation
                 Log.d(
                     SYNC_TAG,
@@ -128,7 +128,7 @@ class RoomPushHandler(
             }
         }
 
-        if (levelServerId == null || locationServerId == null) {
+        if (levelServerId == null || locationServerId == null || levelServerId <= 0 || locationServerId <= 0) {
             Log.w(
                 SYNC_TAG,
                 "⚠️ [handlePendingRoomCreation] Missing location/level for room ${payload.roomName}; will retry"
@@ -643,7 +643,7 @@ class RoomPushHandler(
             idempotencyKey = locationUuid
         )
 
-        val dto = runCatching { ctx.api.createLocation(propertyServerId, request) }
+        val dto = runCatching { ctx.api.createLocation(propertyServerId, request).data }
             .onFailure { error ->
                 if (error is CancellationException) throw error
                 Log.e(

@@ -43,7 +43,7 @@ class ProjectSyncService(
         val updatedSince = if (forceFullSync) null else syncCheckpointStore.updatedSinceParam(checkpointKey)
         val allProjects = localDataService.getAllProjects()
         val existingByServerId = allProjects.filter { it.serverId != null }.associateBy { it.serverId }
-        val existingByUuid = allProjects.associateBy { it.uuid }
+        val existingByUuid = allProjects.groupBy { it.uuid }
         val projects = fetchAllPages { page ->
             api.getCompanyProjects(
                 companyId = companyId,
@@ -54,7 +54,8 @@ class ProjectSyncService(
         }
         localDataService.saveProjects(
             projects.map { dto ->
-                val existing = existingByServerId[dto.id] ?: existingByUuid[dto.uuid ?: dto.uid]
+                val existing = existingByServerId[dto.id]
+                    ?: existingByUuid[dto.uuid ?: dto.uid]?.firstOrNull { it.companyId == companyId }
                 dto.toEntity(existing = existing, fallbackCompanyId = companyId)
             }
         )
@@ -76,14 +77,17 @@ class ProjectSyncService(
         val updatedSince = syncCheckpointStore.updatedSinceParam(checkpointKey)
         val allProjects = localDataService.getAllProjects()
         val existingByServerId = allProjects.filter { it.serverId != null }.associateBy { it.serverId }
-        val existingByUuid = allProjects.associateBy { it.uuid }
+        val existingByUuid = allProjects.groupBy { it.uuid }
         val projects = fetchAllPages { page ->
             api.getUserProjects(userId = userId, page = page, updatedSince = updatedSince)
         }
         localDataService.saveProjects(
             projects.map { dto ->
-                val existing = existingByServerId[dto.id] ?: existingByUuid[dto.uuid ?: dto.uid]
-                dto.toEntity(existing = existing)
+                val uuidCandidates = existingByUuid[dto.uuid ?: dto.uid]
+                val existing = existingByServerId[dto.id]
+                    ?: uuidCandidates?.firstOrNull { dto.companyId != null && it.companyId == dto.companyId }
+                    ?: uuidCandidates?.singleOrNull()  // only safe when exactly one match
+                dto.toEntity(existing = existing, fallbackCompanyId = dto.companyId)
             }
         )
         projects.latestTimestamp { it.updatedAt }

@@ -5,6 +5,8 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.model.SingleResourceResponse
+import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.RoomTypeDto
@@ -678,6 +680,138 @@ class RoomPushHandlerTest {
         val result = handler().handleDelete(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.DROP)
+    }
+
+    // ==========================================================================
+    // Single-unit location envelope + zero-ID tests
+    // ==========================================================================
+
+    @Test
+    fun `handleCreate single-unit property unwraps envelope and uses valid location ID`() = runTest {
+        val project = PushHandlerTestFixtures.createProject(
+            projectId = 100L,
+            serverId = 1000L,
+            propertyId = 200L,
+            title = "Test Project"
+        )
+        val property = PushHandlerTestFixtures.createProperty(
+            propertyId = 200L,
+            serverId = 2000L
+        )
+        val level = PushHandlerTestFixtures.createLocation(
+            locationId = 300L,
+            serverId = 3000L,
+            uuid = "shared-uuid",
+            type = "level"
+        )
+        val existingRoom = PushHandlerTestFixtures.createRoom(
+            roomId = 400L,
+            serverId = null,
+            uuid = "room-uuid",
+            projectId = 100L,
+            locationId = 300L
+        )
+
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { localDataService.getProperty(200L) } returns property
+        coEvery { localDataService.getLocationByUuid("shared-uuid") } returns level
+
+        // getOrCreateLocationForProperty: no existing locations, create one
+        coEvery { api.getPropertyLocations(2000L, any()) } returns PaginatedResponse(data = emptyList())
+
+        val createdLocationDto = LocationDto(
+            id = 5000L,
+            uuid = "new-loc-uuid",
+            projectId = 100L,
+            title = "Test Project",
+            name = "Test Project",
+            type = "location",
+            locationType = null,
+            parentLocationId = null,
+            isAccessible = true,
+            createdAt = "2026-01-30T12:00:00.000000Z",
+            updatedAt = "2026-01-30T12:00:00.000000Z"
+        )
+        coEvery { api.createLocation(2000L, any()) } returns SingleResourceResponse(createdLocationDto)
+
+        coEvery { api.getProjectDetail(1000L, any()) } returns mockk(relaxed = true)
+        coEvery { api.getPropertyRoomTypes(2000L, any()) } returns PaginatedResponse(
+            data = listOf(RoomTypeDto(id = 1L, name = "Standard", type = "internal", isStandard = true))
+        )
+        coEvery { localDataService.getRoom(400L) } returns existingRoom
+        coEvery { localDataService.getRoomByServerId(any()) } returns null
+        coEvery { localDataService.getRoomByUuid("room-uuid") } returns existingRoom
+
+        val roomJson = gson.toJsonTree(
+            mapOf(
+                "data" to mapOf(
+                    "id" to 4000L,
+                    "uuid" to "room-uuid",
+                    "name" to "Living Room",
+                    "project_id" to 100L,
+                    "location_id" to 5000L,
+                    "room_type" to mapOf("id" to 1L, "name" to "Standard"),
+                    "updated_at" to "2026-01-30T12:00:00.000000Z",
+                    "created_at" to "2026-01-30T12:00:00.000000Z"
+                )
+            )
+        )
+        coEvery { api.createRoom(5000L, any()) } returns roomJson
+
+        // Single-unit: levelUuid == locationUuid
+        val payload = defaultCreationPayload(
+            levelUuid = "shared-uuid",
+            locationUuid = "shared-uuid",
+            levelServerId = 3000L,
+            locationServerId = null
+        )
+        val operation = createPayloadOperation(payload)
+
+        val result = handler().handleCreate(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        // Verify location was created via envelope API
+        coVerify { api.createLocation(2000L, any()) }
+        // Verify room was created under the new location
+        coVerify { api.createRoom(5000L, any()) }
+    }
+
+    @Test
+    fun `handleCreate with zero locationServerId returns SKIP`() = runTest {
+        val project = PushHandlerTestFixtures.createProject(
+            projectId = 100L,
+            serverId = 1000L,
+            propertyId = 200L
+        )
+        val property = PushHandlerTestFixtures.createProperty(
+            propertyId = 200L,
+            serverId = 2000L
+        )
+        val level = PushHandlerTestFixtures.createLocation(
+            locationId = 300L,
+            serverId = 3000L,
+            uuid = "level-uuid",
+            type = "level"
+        )
+        val locationWithZeroServerId = PushHandlerTestFixtures.createLocation(
+            locationId = 301L,
+            serverId = 0L,
+            uuid = "location-uuid",
+            type = "location"
+        )
+
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { localDataService.getProperty(200L) } returns property
+        coEvery { localDataService.getLocationByUuid("level-uuid") } returns level
+        coEvery { localDataService.getLocationByUuid("location-uuid") } returns locationWithZeroServerId
+
+        val payload = defaultCreationPayload(locationServerId = null)
+        val operation = createPayloadOperation(payload)
+
+        val result = handler().handleCreate(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.createRoom(any(), any()) }
     }
 
 }

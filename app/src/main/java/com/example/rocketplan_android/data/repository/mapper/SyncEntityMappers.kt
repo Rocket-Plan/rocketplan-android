@@ -142,7 +142,7 @@ internal fun buildProjectEntity(
         addressLine2 = addressLine2,
         status = resolvedStatus,
         propertyType = propertyType,
-        companyId = companyId ?: existing?.companyId ?: fallbackCompanyId,
+        companyId = companyId ?: fallbackCompanyId ?: existing?.companyId,
         propertyId = resolvedPropertyId,
         syncStatus = SyncStatus.SYNCED,
         syncVersion = 1,
@@ -339,6 +339,7 @@ internal fun LocationDto.toEntity(
     ).firstOrNull() ?: "location"
     val resolvedProjectId = projectId ?: defaultProjectId
         ?: throw IllegalStateException("Location $id has no projectId")
+    if (id <= 0) throw IllegalStateException("LocationDto has invalid id=$id")
     return OfflineLocationEntity(
         locationId = id,
         serverId = id,

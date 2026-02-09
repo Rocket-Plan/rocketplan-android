@@ -5,6 +5,7 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.model.SingleResourceResponse
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationCreationPayload
@@ -137,7 +138,7 @@ class LocationPushHandlerTest {
         coEvery { localDataService.getProperty(200L) } returns property
         coEvery { localDataService.getLocationByUuid("location-uuid") } returns null
         coEvery { localDataService.getLocations(100L) } returns emptyList()
-        coEvery { api.createLocation(2000L, any()) } returns locationDto
+        coEvery { api.createLocation(2000L, any()) } returns SingleResourceResponse(locationDto)
         coEvery { localDataService.saveLocations(any()) } just runs
 
         val result = handler.handleCreate(operation)
@@ -171,7 +172,7 @@ class LocationPushHandlerTest {
         coEvery { localDataService.getProperty(200L) } returns property
         coEvery { localDataService.getLocationByUuid("location-uuid") } returns null
         coEvery { localDataService.getLocations(100L) } returns emptyList()
-        coEvery { api.createLocation(2000L, any()) } returns locationDto
+        coEvery { api.createLocation(2000L, any()) } returns SingleResourceResponse(locationDto)
         coEvery { localDataService.saveLocations(any()) } just runs
 
         val result = handler.handleCreate(operation)
@@ -251,7 +252,7 @@ class LocationPushHandlerTest {
         )
 
         coEvery { localDataService.getLocationByUuid("location-uuid") } returns location
-        coEvery { api.updateLocation(3000L, any()) } returns responseDto
+        coEvery { api.updateLocation(3000L, any()) } returns SingleResourceResponse(responseDto)
         coEvery { localDataService.saveLocations(any()) } just runs
 
         val result = handler.handleUpdate(operation)
@@ -331,7 +332,7 @@ class LocationPushHandlerTest {
         coEvery { localDataService.getLocationByUuid("location-uuid") } returns location
         // First call throws 409
         coEvery { api.updateLocation(3000L, any()) } throws
-            PushHandlerTestFixtures.create409WithUpdatedAt() andThen retryResponseDto
+            PushHandlerTestFixtures.create409WithUpdatedAt() andThen SingleResourceResponse(retryResponseDto)
 
         // fetchFreshLocation chain
         coEvery { localDataService.getProject(100L) } returns project
@@ -514,5 +515,58 @@ class LocationPushHandlerTest {
         val result = handler.handleDelete(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.DROP)
+    }
+
+    // ===== Envelope deserialization tests =====
+
+    @Test
+    fun `handleCreate with envelope response extracts correct ID`() = runTest {
+        val payload = createCreatePayload()
+        val property = PushHandlerTestFixtures.createProperty(propertyId = 200L, serverId = 2000L)
+        val locationDto = createLocationDto(id = 5000L, uuid = "new-loc-uuid")
+
+        val operation = createOperation(payload = payloadBytes(payload))
+
+        coEvery { localDataService.getProperty(200L) } returns property
+        coEvery { localDataService.getLocationByUuid("location-uuid") } returns null
+        coEvery { localDataService.getLocations(100L) } returns emptyList()
+        coEvery { api.createLocation(2000L, any()) } returns SingleResourceResponse(locationDto)
+        coEvery { localDataService.saveLocations(any()) } just runs
+
+        val result = handler.handleCreate(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { localDataService.saveLocations(match { list ->
+            list.size == 1 && list[0].serverId == 5000L
+        }) }
+    }
+
+    @Test
+    fun `handleUpdate with envelope response extracts correct updatedAt`() = runTest {
+        val payload = createUpdatePayload()
+        val location = PushHandlerTestFixtures.createLocation(
+            locationId = 300L,
+            serverId = 3000L,
+            uuid = "location-uuid"
+        )
+        val responseDto = createLocationDto(updatedAt = "2026-02-01T10:00:00.000000Z")
+
+        val operation = createOperation(
+            operationType = SyncOperationType.UPDATE,
+            payload = payloadBytes(payload)
+        )
+
+        coEvery { localDataService.getLocationByUuid("location-uuid") } returns location
+        coEvery { api.updateLocation(3000L, any()) } returns SingleResourceResponse(responseDto)
+        coEvery { localDataService.saveLocations(any()) } just runs
+
+        val result = handler.handleUpdate(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { localDataService.saveLocations(match { list ->
+            list.size == 1 &&
+                list[0].serverUpdatedAt != null &&
+                list[0].syncStatus == SyncStatus.SYNCED
+        }) }
     }
 }

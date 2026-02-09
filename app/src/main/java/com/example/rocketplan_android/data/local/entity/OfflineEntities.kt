@@ -131,7 +131,7 @@ data class OfflinePropertyEntity(
 @Entity(
     tableName = "offline_projects",
     indices = [
-        Index(value = ["uuid"], unique = true),
+        Index(value = ["uuid", "companyId"], unique = true),
         Index(value = ["serverId"], unique = false),
         Index(value = ["syncStatus"]),
         Index(value = ["isDirty"])

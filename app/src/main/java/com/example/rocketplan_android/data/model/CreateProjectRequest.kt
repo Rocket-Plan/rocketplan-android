@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.model
 
+import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.NoteDto
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.model.offline.ProjectDetailDto
@@ -49,6 +50,7 @@ typealias ProjectResourceResponse = SingleResourceResponse<ProjectDto>
 typealias ProjectDetailResourceResponse = SingleResourceResponse<ProjectDetailDto>
 typealias NoteResourceResponse = SingleResourceResponse<NoteDto>
 typealias PropertyResourceResponse = SingleResourceResponse<PropertyDto>
+typealias LocationResourceResponse = SingleResourceResponse<LocationDto>
 typealias RoomResourceResponse = SingleResourceResponse<com.example.rocketplan_android.data.model.offline.RoomDto>
 
 data class SetActiveCompanyRequest(

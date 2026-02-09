@@ -15,6 +15,7 @@ import com.example.rocketplan_android.data.model.offline.UpdatedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
 import com.example.rocketplan_android.data.model.CreateLocationRequest
+import com.example.rocketplan_android.data.model.LocationResourceResponse
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
@@ -231,13 +232,13 @@ interface OfflineSyncApi {
     suspend fun createLocation(
         @Path("propertyId") propertyId: Long,
         @Body body: CreateLocationRequest
-    ): LocationDto
+    ): LocationResourceResponse
 
     @PUT("/api/locations/{locationId}")
     suspend fun updateLocation(
         @Path("locationId") locationId: Long,
         @Body body: UpdateLocationRequest
-    ): LocationDto
+    ): LocationResourceResponse
 
     @HTTP(method = "DELETE", path = "/api/locations/{locationId}", hasBody = true)
     suspend fun deleteLocation(
