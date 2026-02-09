@@ -52,6 +52,18 @@ class RocketDryViewModel(
     private val _currentTab = MutableStateFlow<RocketDryTab?>(null)
     val currentTab: StateFlow<RocketDryTab?> = _currentTab
 
+    // Holds dialog values while navigating to camera
+    private val _pendingLogCapture = MutableStateFlow<PendingLogCapture?>(null)
+    val pendingLogCapture: StateFlow<PendingLogCapture?> = _pendingLogCapture
+
+    fun savePendingCapture(humidity: Double?, temperature: Double?, pressure: Double?, windSpeed: Double?) {
+        _pendingLogCapture.value = PendingLogCapture(humidity, temperature, pressure, windSpeed)
+    }
+
+    fun clearPendingCapture() {
+        _pendingLogCapture.value = null
+    }
+
     fun setCurrentTab(tab: RocketDryTab) {
         _currentTab.value = tab
     }

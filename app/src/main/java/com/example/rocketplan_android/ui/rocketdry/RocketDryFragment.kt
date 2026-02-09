@@ -76,8 +76,7 @@ class RocketDryFragment : Fragment() {
     private var suppressToggleChanges = false
     private var latestReadyState: RocketDryUiState.Ready? = null
 
-    // Photo capture callback - stored while navigating to camera
-    private var pendingPhotoCallback: ((Uri?) -> Unit)? = null
+    // No longer needed - using ViewModel-based pending capture pattern
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -107,15 +106,20 @@ class RocketDryFragment : Fragment() {
                 if (!photoPath.isNullOrBlank()) {
                     Log.d(TAG, "📸 Received photo from camera: $photoPath")
                     val file = File(photoPath)
-                    if (file.exists()) {
-                        pendingPhotoCallback?.invoke(Uri.fromFile(file))
-                    } else {
-                        pendingPhotoCallback?.invoke(null)
-                    }
-                    pendingPhotoCallback = null
+                    val validPath = if (file.exists()) photoPath else null
+
                     // Clear the result to avoid re-processing
                     findNavController().currentBackStackEntry?.savedStateHandle
                         ?.remove<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
+
+                    val pending = viewModel.pendingLogCapture.value
+                    if (pending != null) {
+                        Log.d(TAG, "📸 Restoring dialog with pending values and photo")
+                        viewModel.clearPendingCapture()
+                        showAddLogDialogWithPhoto(pending, validPath)
+                    } else {
+                        Log.w(TAG, "📸 No pending capture found, photo may be lost")
+                    }
                 }
             }
     }
@@ -367,16 +371,25 @@ class RocketDryFragment : Fragment() {
             formatLogDate(now)
         )
 
-        val photoCallback = object : AtmosphericLogPhotoCallback {
-            override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
-                launchCamera(callback)
-            }
-        }
+        var currentHumidity: Double? = null
+        var currentTemperature: Double? = null
+        var currentPressure: Double? = null
+        var currentWindSpeed: Double? = null
 
-        showAtmosphericLogDialog(
+        showAtmosphericLogDialogWithValueTracking(
             title = title,
             areaLabel = getString(R.string.rocketdry_atmos_room_external),
-            photoCallback = photoCallback
+            photoCallback = object : AtmosphericLogPhotoCallback {
+                override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
+                    launchCamera(currentHumidity, currentTemperature, currentPressure, currentWindSpeed)
+                }
+            },
+            onValuesChanged = { h, t, p, w ->
+                currentHumidity = h
+                currentTemperature = t
+                currentPressure = p
+                currentWindSpeed = w
+            }
         ) { humidity, temperature, pressure, windSpeed, photoLocalPath ->
             Log.d(TAG, "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$photoLocalPath")
             viewModel.addExternalAtmosphericLog(
@@ -397,7 +410,39 @@ class RocketDryFragment : Fragment() {
             .replace("PM", "pm")
     }
 
-    private fun launchCamera(callback: (Uri?) -> Unit) {
+    private fun showAddLogDialogWithPhoto(pending: PendingLogCapture, photoPath: String?) {
+        val now = Date()
+        val title = getString(
+            R.string.rocketdry_external_log_title,
+            formatLogDate(now)
+        )
+
+        showAtmosphericLogDialogWithValues(
+            title = title,
+            areaLabel = getString(R.string.rocketdry_atmos_room_external),
+            initialHumidity = pending.humidity,
+            initialTemperature = pending.temperature,
+            initialPressure = pending.pressure,
+            initialWindSpeed = pending.windSpeed,
+            initialPhotoPath = photoPath,
+            photoCallback = object : AtmosphericLogPhotoCallback {
+                override fun onTakePhotoRequested(callback: (Uri?) -> Unit) {
+                    launchCamera(pending.humidity, pending.temperature, pending.pressure, pending.windSpeed)
+                }
+            }
+        ) { humidity, temperature, pressure, windSpeed, finalPhotoPath ->
+            Log.d(TAG, "📩 External atmospheric log submitted: rh=$humidity temp=$temperature pressure=$pressure wind=$windSpeed photo=$finalPhotoPath")
+            viewModel.addExternalAtmosphericLog(
+                humidity = humidity,
+                temperature = temperature,
+                pressure = pressure,
+                windSpeed = windSpeed,
+                photoLocalPath = finalPhotoPath
+            )
+        }
+    }
+
+    private fun launchCamera(humidity: Double?, temperature: Double?, pressure: Double?, windSpeed: Double?) {
         // Prevent double navigation if already navigating to camera
         val currentDestId = findNavController().currentDestination?.id
         if (currentDestId != R.id.rocketDryFragment) {
@@ -407,7 +452,7 @@ class RocketDryFragment : Fragment() {
         // Clear any old photo result before navigating to prevent stale data triggering callback
         findNavController().currentBackStackEntry?.savedStateHandle
             ?.remove<String>(SinglePhotoCaptureFragment.PHOTO_RESULT_KEY)
-        pendingPhotoCallback = callback
+        viewModel.savePendingCapture(humidity, temperature, pressure, windSpeed)
         Log.d(TAG, "📷 Navigating to camera screen")
         findNavController().navigate(
             RocketDryFragmentDirections
