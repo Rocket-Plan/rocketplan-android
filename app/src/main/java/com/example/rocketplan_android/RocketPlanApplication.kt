@@ -313,6 +313,19 @@ class RocketPlanApplication : Application() {
                 )
             }
         }
+
+        // Cleanup orphaned pending properties not referenced by any active project
+        CoroutineScope(Dispatchers.IO).launch {
+            val cleaned = localDataService.cleanupOrphanedProperties()
+            if (cleaned > 0) {
+                remoteLogger.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Data repair: deleted orphaned pending properties",
+                    metadata = mapOf("deleted_count" to cleaned.toString())
+                )
+            }
+        }
     }
 
     private fun logDeviceInfo() {

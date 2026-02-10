@@ -986,6 +986,35 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_properties WHERE serverId = :serverId AND isDeleted = 0 LIMIT 1")
     fun observePropertyByServerId(serverId: Long): Flow<OfflinePropertyEntity?>
 
+    @Query("SELECT COUNT(*) FROM offline_projects WHERE propertyId = :propertyId AND isDeleted = 0")
+    suspend fun countActiveProjectsWithProperty(propertyId: Long): Int
+
+    @Query("SELECT * FROM offline_properties WHERE serverId = :serverId AND isDeleted = 0")
+    suspend fun getPropertiesByServerId(serverId: Long): List<OfflinePropertyEntity>
+
+    @Query("UPDATE offline_projects SET propertyId = :newPropertyId WHERE propertyId = :oldPropertyId AND isDeleted = 0")
+    suspend fun reassignProjectProperty(oldPropertyId: Long, newPropertyId: Long): Int
+
+    @Query("UPDATE offline_properties SET isDeleted = 1 WHERE propertyId = :propertyId AND isDirty = 0")
+    suspend fun markPropertyDeletedByLocalId(propertyId: Long)
+
+    /** Find orphaned pending properties: local-only, not dirty, not referenced by any active project */
+    @Query("""
+        SELECT p.* FROM offline_properties p
+        WHERE p.propertyId < 0
+          AND p.serverId IS NULL
+          AND p.isDirty = 0
+          AND p.isDeleted = 0
+          AND NOT EXISTS (
+              SELECT 1 FROM offline_projects proj
+              WHERE proj.propertyId = p.propertyId AND proj.isDeleted = 0
+          )
+    """)
+    suspend fun getOrphanedPendingProperties(): List<OfflinePropertyEntity>
+
+    @Query("DELETE FROM offline_properties WHERE propertyId IN (:propertyIds)")
+    suspend fun deletePropertiesByIds(propertyIds: List<Long>)
+
     @Query(
         """
         SELECT address FROM (
@@ -1109,6 +1138,10 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_sync_queue WHERE entityType = 'property' AND entityId IN (SELECT propertyId FROM offline_properties WHERE propertyId IN (:propertyIds))")
     suspend fun deleteSyncOpsForProperties(propertyIds: List<Long>): Int
+
+    /** Direct sync-op delete by entityId list — works even after property rows are deleted */
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = 'property' AND entityId IN (:propertyIds)")
+    suspend fun deleteSyncOpsForPropertyIds(propertyIds: List<Long>): Int
 
     @Query("DELETE FROM offline_sync_queue WHERE entityType = 'location' AND entityId IN (SELECT locationId FROM offline_locations WHERE projectId IN (:projectIds))")
     suspend fun deleteSyncOpsForLocationsByProject(projectIds: List<Long>): Int

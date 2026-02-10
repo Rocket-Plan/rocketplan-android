@@ -624,7 +624,7 @@ class RoomSyncService(
             "Pending property"
         ).first()
 
-        val pending = OfflinePropertyEntity(
+        val pendingTemplate = OfflinePropertyEntity(
             propertyId = localId,
             serverId = null,
             uuid = UuidUtils.generateUuidV7(),
@@ -636,34 +636,36 @@ class RoomSyncService(
             longitude = null,
             syncStatus = SyncStatus.PENDING,
             syncVersion = 0,
+            isDirty = true,
             createdAt = timestamp,
             updatedAt = timestamp,
             lastSyncedAt = null
         )
-        localDataService.saveProperty(pending)
-        localDataService.attachPropertyToProject(
+
+        val (property, wasCreated) = localDataService.getOrCreatePendingProperty(
             projectId = project.projectId,
-            propertyId = pending.propertyId,
+            createProperty = { pendingTemplate },
             propertyType = project.propertyType
         )
 
-        // Enqueue for sync when back online
-        // Resolve the correct property type ID from catalog, or use fallback
-        val propertyTypeId = (roomTypeRepository.resolveCatalogPropertyTypeId(project.propertyType)
-            ?: RoomTypeRepository.fallbackPropertyTypeId(
-                RoomTypeRepository.normalizePropertyType(project.propertyType) ?: "single_unit"
+        if (wasCreated) {
+            val propertyTypeId = (roomTypeRepository.resolveCatalogPropertyTypeId(project.propertyType)
+                ?: RoomTypeRepository.fallbackPropertyTypeId(
+                    RoomTypeRepository.normalizePropertyType(project.propertyType) ?: "single_unit"
+                )
+                ?: 1L).toInt()
+            syncQueueEnqueuer().enqueuePropertyCreation(
+                property = property,
+                projectId = project.projectId,
+                propertyTypeId = propertyTypeId,
+                propertyTypeValue = project.propertyType,
+                idempotencyKey = property.uuid
             )
-            ?: 1L).toInt() // Convert to Int for enqueue API
-        syncQueueEnqueuer().enqueuePropertyCreation(
-            property = pending,
-            projectId = project.projectId,
-            propertyTypeId = propertyTypeId,
-            propertyTypeValue = project.propertyType,
-            idempotencyKey = pending.uuid
-        )
-
-        Log.d(TAG, "[createPendingPropertyForProject] Created pending property ${pending.propertyId} for project ${project.projectId}")
-        return pending
+            Log.d(TAG, "[createPendingPropertyForProject] Created pending property ${property.propertyId} for project ${project.projectId}")
+        } else {
+            Log.d(TAG, "[createPendingPropertyForProject] Reusing existing property ${property.propertyId} for project ${project.projectId}")
+        }
+        return property
     }
 
     companion object {

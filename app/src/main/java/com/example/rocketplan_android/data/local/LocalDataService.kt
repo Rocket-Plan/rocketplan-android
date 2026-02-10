@@ -272,6 +272,110 @@ class LocalDataService private constructor(
     suspend fun deleteProperty(propertyId: Long) =
         withContext(ioDispatcher) { dao.deleteProperty(propertyId) }
 
+    suspend fun getPropertiesByServerId(serverId: Long): List<OfflinePropertyEntity> =
+        withContext(ioDispatcher) { dao.getPropertiesByServerId(serverId) }
+
+    /**
+     * Atomically gets an existing property for a project, or creates and attaches a new one.
+     * Returns the property and whether it was newly created (true) or reused (false).
+     */
+    suspend fun getOrCreatePendingProperty(
+        projectId: Long,
+        createProperty: () -> OfflinePropertyEntity,
+        propertyType: String?
+    ): Pair<OfflinePropertyEntity, Boolean> = withContext(ioDispatcher) {
+        database.withTransaction {
+            val project = dao.getProject(projectId)
+                ?: throw IllegalStateException("Project $projectId not found")
+            val existingId = project.propertyId
+            if (existingId != null) {
+                val existing = dao.getProperty(existingId)
+                if (existing != null) return@withTransaction existing to false
+            }
+            val pending = createProperty()
+            dao.upsertProperty(pending)
+            dao.upsertProject(project.copy(
+                propertyId = pending.propertyId,
+                propertyType = propertyType ?: project.propertyType,
+                updatedAt = Date()
+            ))
+            pending to true
+        }
+    }
+
+    /**
+     * Atomically persists a synced property: re-reads current state inside the transaction,
+     * deletes any pending predecessor, saves the new property, attaches to project, and
+     * deduplicates any other local properties with the same serverId.
+     */
+    suspend fun persistSyncedPropertyAtomically(
+        projectId: Long,
+        property: OfflinePropertyEntity,
+        propertyTypeValue: String?,
+        forcePropertyIdUpdate: Boolean
+    ): OfflinePropertyEntity = withContext(ioDispatcher) {
+        database.withTransaction {
+            val project = dao.getProject(projectId)
+                ?: return@withTransaction property
+
+            val currentExisting = project.propertyId?.let { dao.getProperty(it) }
+
+            val isPendingUpgrade = currentExisting != null
+                && currentExisting.propertyId < 0 && property.propertyId > 0
+            if (isPendingUpgrade) {
+                dao.deleteProperty(currentExisting!!.propertyId)
+            }
+
+            dao.upsertProperty(property)
+
+            val shouldForce = forcePropertyIdUpdate || isPendingUpgrade
+            val timestamp = Date()
+            dao.upsertProject(project.copy(
+                propertyId = property.propertyId,
+                propertyType = propertyTypeValue ?: project.propertyType,
+                syncStatus = if (shouldForce) SyncStatus.SYNCED else project.syncStatus,
+                isDirty = if (shouldForce) false else project.isDirty,
+                updatedAt = timestamp,
+                lastSyncedAt = if (shouldForce) timestamp else project.lastSyncedAt
+            ))
+
+            val serverId = property.serverId
+            if (serverId != null) {
+                val duplicates = dao.getPropertiesByServerId(serverId)
+                    .filter { it.propertyId != property.propertyId && !it.isDirty }
+                if (duplicates.isNotEmpty()) {
+                    val dupIds = duplicates.map { it.propertyId }
+                    dao.deleteSyncOpsForPropertyIds(dupIds)
+                    for (dup in duplicates) {
+                        dao.reassignProjectProperty(dup.propertyId, property.propertyId)
+                        dao.deleteProperty(dup.propertyId)
+                    }
+                }
+            }
+
+            property
+        }
+    }
+
+    /** Deletes orphaned pending properties not referenced by any active project. */
+    suspend fun cleanupOrphanedProperties(): Int = withContext(ioDispatcher) {
+        database.withTransaction {
+            // Read + delete in the same transaction to avoid TOCTOU race
+            val orphans = dao.getOrphanedPendingProperties()
+            if (orphans.isEmpty()) return@withTransaction 0
+
+            Log.w("LocalDataService", "Found ${orphans.size} orphaned pending properties (will delete):")
+            orphans.take(5).forEach { p ->
+                Log.w("LocalDataService", "  Property ${p.propertyId}: address=${p.address}")
+            }
+
+            val ids = orphans.map { it.propertyId }
+            dao.deleteSyncOpsForPropertyIds(ids)
+            dao.deletePropertiesByIds(ids)
+            orphans.size
+        }
+    }
+
     suspend fun getRoomByServerId(serverId: Long): OfflineRoomEntity? =
         withContext(ioDispatcher) { dao.getRoomByServerId(serverId) }
 
@@ -1111,6 +1215,20 @@ class LocalDataService private constructor(
 
             // Mark the project itself as deleted
             dao.markProjectDeletedByLocalId(projectId)
+
+            // Clean up the property if no other active project references it
+            if (propertyId != null) {
+                val otherRefs = dao.countActiveProjectsWithProperty(propertyId)
+                if (otherRefs == 0) {
+                    if (propertyId < 0) {
+                        // Pending local-only: hard-delete (sync ops already cleared above)
+                        dao.deleteProperty(propertyId)
+                    } else {
+                        // Synced property: soft-delete if not dirty
+                        dao.markPropertyDeletedByLocalId(propertyId)
+                    }
+                }
+            }
 
             Log.d(
                 "LocalDataService",
