@@ -48,6 +48,7 @@ fun Fragment.showAtmosphericLogDialog(
 
     val dialogView = layoutInflater.inflate(R.layout.dialog_add_external_log, null)
     val wizardTitle = dialogView.findViewById<TextView>(R.id.wizardTitle)
+    val titleDivider = dialogView.findViewById<View>(R.id.titleDivider)
     val stepLabel = dialogView.findViewById<TextView>(R.id.stepLabel)
     val stepPreview = dialogView.findViewById<TextView>(R.id.stepPreview)
     val stepPosition = dialogView.findViewById<TextView>(R.id.stepPosition)
@@ -77,6 +78,18 @@ fun Fragment.showAtmosphericLogDialog(
     val photoStepPressure = dialogView.findViewById<TextView>(R.id.photoStepPressure)
     val photoStepWindSpeed = dialogView.findViewById<TextView>(R.id.photoStepWindSpeed)
 
+    val isCompactScreen = resources.configuration.smallestScreenWidthDp < 600
+
+    // On compact screens, reduce padding and hide title/divider to fit above keyboard
+    if (isCompactScreen) {
+        val pad = (12 * resources.displayMetrics.density).toInt()
+        (dialogView as? android.view.ViewGroup)?.getChildAt(0)?.let { inner ->
+            inner.setPadding(pad, pad, pad, pad)
+        } ?: dialogView.setPadding(pad, pad, pad, pad)
+        wizardTitle.isVisible = false
+        titleDivider.isVisible = false
+    }
+
     val dialog = MaterialAlertDialogBuilder(requireContext())
         .setView(dialogView)
         .setCancelable(true)
@@ -86,6 +99,14 @@ fun Fragment.showAtmosphericLogDialog(
         WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
             WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
     )
+    dialog.setOnShowListener {
+        if (isCompactScreen) {
+            dialog.window?.setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 
     wizardTitle.text = title
 
@@ -200,16 +221,15 @@ fun Fragment.showAtmosphericLogDialog(
 
     fun showInputStep() {
         inputStepContainer.isVisible = true
-        stepLabel.isVisible = true
+        // Hide area and redundant label on compact screens to fit above keyboard
+        stepLabel.isVisible = !isCompactScreen
+        areaContainer.isVisible = !isCompactScreen && hasAreaUi
         stepPreview.isVisible = true
         stepPosition.isVisible = true
         photoCaptureStep.isVisible = false
         nextStepButton.isVisible = true
         cancelWizardButton.isVisible = true
         previousStepButton.isVisible = true
-        if (hasAreaUi) {
-            areaContainer.isVisible = true
-        }
     }
 
     fun bindStep() {
@@ -436,6 +456,7 @@ fun Fragment.showAtmosphericLogDialogWithValueTracking(
 
     val dialogView = layoutInflater.inflate(R.layout.dialog_add_external_log, null)
     val wizardTitle = dialogView.findViewById<TextView>(R.id.wizardTitle)
+    val titleDivider = dialogView.findViewById<View>(R.id.titleDivider)
     val stepLabel = dialogView.findViewById<TextView>(R.id.stepLabel)
     val stepPreview = dialogView.findViewById<TextView>(R.id.stepPreview)
     val stepPosition = dialogView.findViewById<TextView>(R.id.stepPosition)
@@ -465,6 +486,17 @@ fun Fragment.showAtmosphericLogDialogWithValueTracking(
     val photoStepPressure = dialogView.findViewById<TextView>(R.id.photoStepPressure)
     val photoStepWindSpeed = dialogView.findViewById<TextView>(R.id.photoStepWindSpeed)
 
+    val isCompactScreen2 = resources.configuration.smallestScreenWidthDp < 600
+
+    if (isCompactScreen2) {
+        val pad = (12 * resources.displayMetrics.density).toInt()
+        (dialogView as? android.view.ViewGroup)?.getChildAt(0)?.let { inner ->
+            inner.setPadding(pad, pad, pad, pad)
+        } ?: dialogView.setPadding(pad, pad, pad, pad)
+        wizardTitle.isVisible = false
+        titleDivider.isVisible = false
+    }
+
     val dialog = MaterialAlertDialogBuilder(requireContext())
         .setView(dialogView)
         .setCancelable(true)
@@ -474,6 +506,14 @@ fun Fragment.showAtmosphericLogDialogWithValueTracking(
         WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE or
             WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
     )
+    dialog.setOnShowListener {
+        if (isCompactScreen2) {
+            dialog.window?.setLayout(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 
     wizardTitle.text = title
 
@@ -577,16 +617,14 @@ fun Fragment.showAtmosphericLogDialogWithValueTracking(
 
     fun showInputStep() {
         inputStepContainer.isVisible = true
-        stepLabel.isVisible = true
+        stepLabel.isVisible = !isCompactScreen2
+        areaContainer.isVisible = !isCompactScreen2 && hasAreaUi
         stepPreview.isVisible = true
         stepPosition.isVisible = true
         photoCaptureStep.isVisible = false
         nextStepButton.isVisible = true
         cancelWizardButton.isVisible = true
         previousStepButton.isVisible = true
-        if (hasAreaUi) {
-            areaContainer.isVisible = true
-        }
     }
 
     fun bindStep() {

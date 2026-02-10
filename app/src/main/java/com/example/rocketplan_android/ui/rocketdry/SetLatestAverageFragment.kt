@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageView
@@ -43,8 +44,11 @@ class SetLatestAverageFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_set_latest_average, container, false)
     }
 
+    @Suppress("DEPRECATION")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        // Allow ScrollView to scroll when keyboard is open
+        activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         view.findViewById<ImageView>(R.id.backButton).setOnClickListener {
             findNavController().popBackStack()
@@ -151,6 +155,12 @@ class SetLatestAverageFragment : Fragment() {
                 Toast.makeText(requireContext(), R.string.rocketdry_material_save_error, Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    override fun onDestroyView() {
+        // Restore default soft input mode
+        activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+        super.onDestroyView()
     }
 
     private fun saveRemoved(readingInput: EditText) {

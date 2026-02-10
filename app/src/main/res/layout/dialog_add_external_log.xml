@@ -27,6 +27,7 @@
         android:textStyle="bold" />
 
     <View
+        android:id="@+id/titleDivider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginBottom="12dp"
@@ -130,8 +131,8 @@
             android:layout_gravity="center_horizontal"
             android:layout_marginTop="12dp"
             android:hint="@string/rocketdry_relative_humidity_label"
-            android:maxWidth="320dp"
-            android:minWidth="220dp"
+            android:maxWidth="180dp"
+            android:minWidth="120dp"
             app:boxBackgroundMode="outline"
             app:boxCornerRadiusBottomEnd="8dp"
             app:boxCornerRadiusBottomStart="8dp"
@@ -141,7 +142,7 @@
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/stepInput"
                 android:layout_width="match_parent"
-                android:layout_height="@dimen/icon_touch_target"
+                android:layout_height="wrap_content"
                 android:gravity="center"
                 android:imeOptions="actionNext"
                 android:inputType="numberDecimal"
