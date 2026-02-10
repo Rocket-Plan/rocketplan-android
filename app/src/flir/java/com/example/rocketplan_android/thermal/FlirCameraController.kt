@@ -51,6 +51,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -576,38 +577,32 @@ class FlirCameraController(
                 return@launch
             }
 
-            // Teardown GL resources and disconnect camera synchronously before completing
+            // Release hardware camera FIRST so CameraX can acquire it quickly,
+            // then do GL cleanup in the background (doesn't need the hardware)
+            try {
+                currentCamera.disconnect()
+                logDebug("disconnect(): Camera disconnected")
+            } catch (t: Throwable) {
+                logWarn("disconnect(): Camera disconnect error: ${t.message}")
+            }
+
+            // Brief delay for Android camera service to register the release
+            try {
+                delay(200)
+                logDebug("disconnect(): Post-disconnect delay complete")
+            } catch (_: Exception) { /* cancelled */ }
+
+            // Signal completion - CameraX can now acquire the camera
+            onComplete?.invoke()
+
+            // GL teardown happens AFTER completion - it's just resource cleanup
             runOnGlThread {
                 try {
-                    // FLIR's Camera.glTeardownPipeline() has a 500ms sleep before teardown
-                    Thread.sleep(500)
                     currentCamera.glTeardownPipeline()
                     logDebug("disconnect(): GL teardown complete")
-                } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
                 } catch (t: Throwable) {
                     logWarn("disconnect(): GL teardown error: ${t.message}")
                 }
-
-                // Disconnect camera after GL teardown - do this synchronously
-                try {
-                    currentCamera.disconnect()
-                    logDebug("disconnect(): Camera disconnected")
-                } catch (t: Throwable) {
-                    logWarn("disconnect(): Camera disconnect error: ${t.message}")
-                }
-
-                // Give Android's camera service time to fully release the hardware
-                // Without this delay, Camera2 may get ERROR_CAMERA_IN_USE
-                try {
-                    Thread.sleep(300)
-                    logDebug("disconnect(): Post-disconnect delay complete")
-                } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                }
-
-                // Signal completion after camera is fully released
-                onComplete?.invoke()
             }
         }
     }
