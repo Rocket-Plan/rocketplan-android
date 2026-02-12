@@ -48,6 +48,8 @@ import com.example.rocketplan_android.thermal.FlirCameraController
 import com.example.rocketplan_android.thermal.FlirSnapshotResult
 import com.example.rocketplan_android.thermal.FlirState
 import com.example.rocketplan_android.thermal.FusionMode
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.chip.ChipGroup
 import com.google.android.material.button.MaterialButton
@@ -111,6 +113,7 @@ class BatchCaptureFragment : Fragment() {
 
     private lateinit var thumbnailAdapter: ThumbnailStripAdapter
     private var flirReady = false
+    private var flirStarted = false
     private val useGlSurfaceFallback = false
     private var latestUiState: BatchCaptureUiState = BatchCaptureUiState()
 
@@ -125,6 +128,7 @@ class BatchCaptureFragment : Fragment() {
     private var lensFacing = CameraSelector.LENS_FACING_BACK
     private var flashMode = ImageCapture.FLASH_MODE_OFF
     private lateinit var flirController: FlirCameraController
+    private lateinit var remoteLogger: RemoteLogger
 
     private lateinit var cameraPermissionLauncher: ActivityResultLauncher<Array<String>>
     private val cameraPermissions = arrayOf(Manifest.permission.CAMERA)
@@ -136,7 +140,7 @@ class BatchCaptureFragment : Fragment() {
             // Attach for all FLIR modes (IR and all DUAL variants use same texture view)
             if (isFlirMode(captureMode)) {
                 flirController.attachTextureSurface(surface, width, height)
-                if (hasCameraPermission()) {
+                if (!flirStarted && hasCameraPermission()) {
                     startActiveMode()
                 }
             }
@@ -192,7 +196,18 @@ class BatchCaptureFragment : Fragment() {
         }
 
         val rocketPlanApp = requireActivity().application as RocketPlanApplication
-        flirController = FlirCameraController(requireContext(), rocketPlanApp.remoteLogger)
+        remoteLogger = rocketPlanApp.remoteLogger
+        remoteLogger.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Batch capture opened",
+            metadata = mapOf(
+                "initial_mode" to captureMode.name,
+                "room_id" to args.roomId.toString(),
+                "project_id" to args.projectId.toString()
+            )
+        )
+        flirController = FlirCameraController(requireContext(), remoteLogger)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
         cameraPermissionLauncher =
@@ -382,11 +397,25 @@ class BatchCaptureFragment : Fragment() {
         }
 
         flirPaletteSwitch.setOnCheckedChangeListener { _, isChecked ->
-            flirController.setPalette(if (isChecked) 1 else 0)
+            val paletteIndex = if (isChecked) 1 else 0
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "FLIR palette toggled",
+                metadata = mapOf("palette_index" to paletteIndex.toString())
+            )
+            flirController.setPalette(paletteIndex)
         }
 
         flirFusionSwitch.setOnCheckedChangeListener { _, isChecked ->
-            flirController.setFusionMode(if (isChecked) FusionMode.VISUAL_ONLY else FusionMode.THERMAL_ONLY)
+            val mode = if (isChecked) FusionMode.VISUAL_ONLY else getFusionModeFor(captureMode)
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "FLIR fusion toggled",
+                metadata = mapOf("mode" to mode.name, "switch_on" to isChecked.toString())
+            )
+            flirController.setFusionMode(mode)
         }
 
         flirMeasurementsSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -436,28 +465,33 @@ class BatchCaptureFragment : Fragment() {
     }
 
     private fun showFlirOptionsMenu() {
-        val items = arrayOf(
-            getString(R.string.flir_palette),
-            getString(R.string.flir_fusion),
-            getString(R.string.flir_measurements)
-        )
-        val checked = booleanArrayOf(
-            flirPaletteSwitch.isChecked,
-            flirFusionSwitch.isChecked,
-            flirMeasurementsSwitch.isChecked
-        )
+        // In BLEND mode, hide fusion toggle to avoid overriding blending
+        val inBlendMode = captureMode == CaptureMode.BLEND
+        val items = mutableListOf(getString(R.string.flir_palette))
+        val checked = mutableListOf(flirPaletteSwitch.isChecked)
+        // Index mapping: track which original option each dialog index maps to
+        // 0=palette, 1=fusion, 2=measurements
+        val indexMap = mutableListOf(0)
+        if (!inBlendMode) {
+            items.add(getString(R.string.flir_fusion))
+            checked.add(flirFusionSwitch.isChecked)
+            indexMap.add(1)
+        }
+        items.add(getString(R.string.flir_measurements))
+        checked.add(flirMeasurementsSwitch.isChecked)
+        indexMap.add(2)
 
         MaterialAlertDialogBuilder(requireContext())
             .setTitle(R.string.flir_options)
-            .setMultiChoiceItems(items, checked) { _, which, isChecked ->
-                when (which) {
+            .setMultiChoiceItems(items.toTypedArray(), checked.toBooleanArray()) { _, which, isChecked ->
+                when (indexMap[which]) {
                     0 -> {
                         flirPaletteSwitch.isChecked = isChecked
                         flirController.setPalette(if (isChecked) 1 else 0)
                     }
                     1 -> {
                         flirFusionSwitch.isChecked = isChecked
-                        flirController.setFusionMode(if (isChecked) FusionMode.VISUAL_ONLY else FusionMode.THERMAL_ONLY)
+                        flirController.setFusionMode(if (isChecked) FusionMode.VISUAL_ONLY else getFusionModeFor(captureMode))
                     }
                     2 -> {
                         flirMeasurementsSwitch.isChecked = isChecked
@@ -581,6 +615,7 @@ class BatchCaptureFragment : Fragment() {
                                 flirStatusText.text = getString(R.string.flir_status_idle)
                                 flirInitSpinner.visibility = View.GONE
                                 flirReady = false
+                                flirStarted = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset if FLIR disconnected mid-capture
                                 pendingDualCaptures = 0
@@ -613,6 +648,7 @@ class BatchCaptureFragment : Fragment() {
                                 flirStatusText.text = state.message
                                 flirInitSpinner.visibility = View.GONE
                                 flirReady = false
+                                flirStarted = false
                                 captureTimeoutJob?.cancel()
                                 isCapturing = false  // Reset capture lock so user can retry
                                 pendingDualCaptures = 0
@@ -709,11 +745,6 @@ class BatchCaptureFragment : Fragment() {
                         com.example.rocketplan_android.ui.projects.RoomDetailFragment.PHOTOS_ADDED_RESULT_KEY,
                         PhotosAddedResult(event.count, event.assemblyId)
                     )
-                Toast.makeText(
-                    requireContext(),
-                    getString(R.string.batch_capture_success),
-                    Toast.LENGTH_SHORT
-                ).show()
                 findNavController().navigateUp()
             }
             is BatchCaptureEvent.Error -> {
@@ -757,6 +788,18 @@ class BatchCaptureFragment : Fragment() {
         val wasUsingFlir = isFlirMode(oldMode)
         val willUseFlir = isFlirMode(newMode)
 
+        remoteLogger.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Capture mode switch",
+            metadata = mapOf(
+                "from" to oldMode.name,
+                "to" to newMode.name,
+                "from_flir" to wasUsingFlir.toString(),
+                "to_flir" to willUseFlir.toString()
+            )
+        )
+
         // Only disconnect FLIR when going to REGULAR mode (not using FLIR anymore)
         // Don't disconnect when switching between IR and DUAL modes to avoid GL crashes
         // Note: We don't call disconnect() here - startActiveMode() will handle it with
@@ -764,16 +807,37 @@ class BatchCaptureFragment : Fragment() {
         if (wasUsingFlir && !willUseFlir) {
             Log.d(TAG, "switchMode: Going to REGULAR mode (disconnect will be handled by startActiveMode)")
             flirReady = false
+            flirStarted = false
         } else if (wasUsingFlir && willUseFlir) {
             // Switching between IR and DUAL modes - both use same flirTextureView
-            // Just need to change fusion mode, no surface change needed
             val fusionMode = getFusionModeFor(newMode)
             Log.d(TAG, "switchMode: Switching FLIR fusion mode to $fusionMode")
             flirController.setFusionMode(fusionMode)
+            // BLEND uses a different internal pipeline path in the FLIR SDK;
+            // switching to/from BLEND requires a pipeline re-setup, not just a fusion mode change.
+            val blendTransition = oldMode == CaptureMode.BLEND || newMode == CaptureMode.BLEND
+            if (blendTransition) {
+                Log.d(TAG, "switchMode: BLEND transition, resetting pipeline")
+                flirController.resetPipeline("switchMode($oldMode→$newMode)")
+            }
             // Keep flirReady as-is since stream continues
         }
 
         captureMode = newMode
+        // Reset fusion switch so it doesn't carry stale VISUAL_ONLY into the new mode.
+        // Suppress listener to avoid overriding the correct fusion mode set above.
+        flirFusionSwitch.setOnCheckedChangeListener(null)
+        flirFusionSwitch.isChecked = false
+        flirFusionSwitch.setOnCheckedChangeListener { _, isChecked ->
+            val mode = if (isChecked) FusionMode.VISUAL_ONLY else getFusionModeFor(captureMode)
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "FLIR fusion toggled",
+                metadata = mapOf("mode" to mode.name, "switch_on" to isChecked.toString())
+            )
+            flirController.setFusionMode(mode)
+        }
         updateModeUi()
         if (!wasUsingFlir && willUseFlir) {
             // Starting FLIR fresh
@@ -814,6 +878,9 @@ class BatchCaptureFragment : Fragment() {
         // FLIR-specific controls (palette, fusion, etc.) visible for all FLIR modes
         flirControls.isVisible = usesFlir && BuildConfig.HAS_FLIR_SUPPORT
 
+        // Hide fusion switch in BLEND mode - toggling it would override blending
+        flirFusionSwitch.isVisible = usesFlir && captureMode != CaptureMode.BLEND
+
         // Flash only works in REGULAR mode (not IR or DUAL since IR doesn't use flash)
         flashButton.isEnabled = captureMode == CaptureMode.REGULAR
         flashButton.alpha = if (captureMode == CaptureMode.REGULAR) 1f else 0.4f
@@ -825,6 +892,15 @@ class BatchCaptureFragment : Fragment() {
     }
 
     private fun startActiveMode() {
+        remoteLogger.log(
+            level = LogLevel.INFO,
+            tag = TAG,
+            message = "Starting active mode",
+            metadata = mapOf(
+                "mode" to captureMode.name,
+                "is_flir" to isFlirMode(captureMode).toString()
+            )
+        )
         if (captureMode == CaptureMode.REGULAR) {
             flirReady = false
             // Wait for FLIR camera to fully disconnect before starting regular camera
@@ -841,6 +917,12 @@ class BatchCaptureFragment : Fragment() {
         val fusionMode = getFusionModeFor(captureMode)
         flirController.setFusionMode(fusionMode)
 
+        // If FLIR is already started, just update the fusion mode (may have changed between IR modes)
+        if (flirStarted) {
+            Log.d(TAG, "startActiveMode: FLIR already started, fusion mode updated to $fusionMode")
+            return
+        }
+
         // Check if FLIR surface is ready
         val surface = flirTextureView.surfaceTexture
         val surfaceReady = if (useGlSurfaceFallback) {
@@ -850,6 +932,12 @@ class BatchCaptureFragment : Fragment() {
         }
         if (!surfaceReady) {
             Log.d(TAG, "startActiveMode: FLIR surface not ready for $captureMode mode, waiting for availability")
+            remoteLogger.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "FLIR surface not ready",
+                metadata = mapOf("mode" to captureMode.name)
+            )
             return
         }
         // Ensure we have a valid surface to attach
@@ -860,6 +948,7 @@ class BatchCaptureFragment : Fragment() {
         stopRegularCamera()
         Log.d(TAG, "startActiveMode: Starting $captureMode mode with $fusionMode fusion")
         flirController.attachTextureSurface(validSurface, flirTextureView.width, flirTextureView.height)
+        flirStarted = true
         flirController.startDiscovery()
     }
 
@@ -1037,6 +1126,7 @@ class BatchCaptureFragment : Fragment() {
         modeToggle.clearOnButtonCheckedListeners()
         cameraProvider?.unbindAll()
         tearDownFlirPreviewSurface()
+        flirStarted = false
         flirController.disconnect()
         super.onDestroyView()
     }

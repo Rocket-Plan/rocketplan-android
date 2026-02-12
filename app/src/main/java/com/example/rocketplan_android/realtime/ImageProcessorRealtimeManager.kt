@@ -327,7 +327,17 @@ class ImageProcessorRealtimeManager(
          */
         @JvmStatic
         internal fun shouldIgnoreUpdate(localStatus: AssemblyStatus?, backendStatus: String): Boolean {
-            return localStatus == AssemblyStatus.COMPLETED && backendStatus == "processing"
+            if (localStatus == AssemblyStatus.COMPLETED && backendStatus == "processing") return true
+            // Ignore "processing" from backend if we haven't finished uploading yet —
+            // the backend fires this immediately on assembly creation before photos arrive.
+            if (backendStatus == "processing" && localStatus in listOf(
+                    AssemblyStatus.QUEUED,
+                    AssemblyStatus.CREATING,
+                    AssemblyStatus.CREATED,
+                    AssemblyStatus.UPLOADING
+                )
+            ) return true
+            return false
         }
     }
 }

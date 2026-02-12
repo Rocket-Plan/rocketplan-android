@@ -253,6 +253,12 @@ class FlirCaptureFragment : Fragment() {
                 }
 
                 launch {
+                    controller.streamSelection.collect { selection ->
+                        updateStreamLabel(selection)
+                    }
+                }
+
+                launch {
                     viewModel.events.collect { event ->
                         handleEvent(event)
                     }

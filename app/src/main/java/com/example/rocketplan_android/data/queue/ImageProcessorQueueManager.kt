@@ -782,7 +782,11 @@ class ImageProcessorQueueManager(
         val retryableStatuses = setOf(
             AssemblyStatus.FAILED,
             AssemblyStatus.WAITING_FOR_CONNECTIVITY,
-            AssemblyStatus.CANCELLED
+            AssemblyStatus.CANCELLED,
+            AssemblyStatus.PENDING,
+            AssemblyStatus.QUEUED,
+            AssemblyStatus.CREATED,
+            AssemblyStatus.CREATING
         )
 
         if (status !in retryableStatuses) {

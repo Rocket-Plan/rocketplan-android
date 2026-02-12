@@ -82,6 +82,9 @@ class FlirCameraController(
     private val _snapshotsWithVisual = MutableSharedFlow<FlirSnapshotResult>(extraBufferCapacity = 1)
     val snapshotsWithVisual: SharedFlow<FlirSnapshotResult> = _snapshotsWithVisual.asSharedFlow()
 
+    private val _streamSelection = MutableSharedFlow<StreamSelection>(extraBufferCapacity = 1)
+    val streamSelection: SharedFlow<StreamSelection> = _streamSelection.asSharedFlow()
+
     private val extractVisualOnSnapshot = AtomicBoolean(false)
 
     private var camera: Camera? = null
@@ -97,10 +100,11 @@ class FlirCameraController(
     private var frameCount = 0L
     private var lastFrameLogTime = 0L
 
-    private var currentPalette: Palette = PaletteManager.getDefaultPalettes().first()
-    private var currentFusionMode: FusionMode = FusionMode.THERMAL_ONLY
-    private var enableMeasurements: Boolean = false
+    @Volatile private var currentPalette: Palette = PaletteManager.getDefaultPalettes().first()
+    @Volatile private var currentFusionMode: FusionMode = FusionMode.THERMAL_ONLY
+    @Volatile private var enableMeasurements: Boolean = false
     private val snapshotRequested = AtomicBoolean(false)
+    private val isStreamSwitching = AtomicBoolean(false)
 
     data class StreamSelection(val index: Int, val count: Int, val isThermal: Boolean)
 
@@ -188,7 +192,20 @@ class FlirCameraController(
     }
 
     fun setFusionMode(mode: FusionMode) {
+        val previous = currentFusionMode
         currentFusionMode = mode
+        if (mode != previous) {
+            logDebug("🔀 Fusion mode changed: $previous → $mode")
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "FLIR fusion mode changed",
+                metadata = mapOf(
+                    "from" to previous.name,
+                    "to" to mode.name
+                )
+            )
+        }
     }
 
     fun setMeasurementsEnabled(enabled: Boolean) {
@@ -483,11 +500,49 @@ class FlirCameraController(
         return StreamSelection(newIndex, streams.size, newStream.isThermal)
     }
 
+    private fun emitCurrentStreamSelection(cam: Camera) {
+        val streams = cam.streams
+        if (streams.isEmpty()) return
+        val current = activeStream
+        val idx = current?.let { streams.indexOf(it) }?.takeIf { it >= 0 } ?: 0
+        _streamSelection.tryEmit(StreamSelection(idx, streams.size, streams[idx].isThermal))
+    }
+
     private fun performStreamSwitch(cam: Camera, target: GlRenderTarget, newStream: Stream, newIndex: Int) {
+        if (!isStreamSwitching.compareAndSet(false, true)) {
+            logWarn("🔀 Stream switch rejected: another switch is in progress")
+            remoteLogger.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "FLIR stream switch rejected (concurrent)",
+                metadata = mapOf("to_index" to newIndex.toString())
+            )
+            // Emit the actual current selection so UI corrects the optimistic label
+            emitCurrentStreamSelection(cam)
+            return
+        }
+
         val previousStream = activeStream
-        if (newStream != previousStream) {
+        val previousIndex = previousStream?.let { cam.streams.indexOf(it) }?.takeIf { it >= 0 }
+        val switching = newStream != previousStream
+        if (switching) {
             logDebug("🔀 Switching stream to index=$newIndex isThermal=${newStream.isThermal}")
-            previousStream?.stop()
+            remoteLogger.log(
+                level = LogLevel.INFO,
+                tag = TAG,
+                message = "FLIR stream switch started",
+                metadata = mapOf(
+                    "from_index" to (previousIndex?.toString() ?: "none"),
+                    "from_thermal" to (previousStream?.isThermal?.toString() ?: "none"),
+                    "to_index" to newIndex.toString(),
+                    "to_thermal" to newStream.isThermal.toString()
+                )
+            )
+            try {
+                previousStream?.stop()
+            } catch (t: Throwable) {
+                logWarn("🔀 previousStream.stop() failed (non-fatal): ${t.message}")
+            }
         } else {
             logDebug("🔀 Reapplying current stream index=$newIndex isThermal=${newStream.isThermal}")
         }
@@ -496,6 +551,16 @@ class FlirCameraController(
             if (setupError != null) {
                 val message = "🔀 cycleStream(): setup error ${setupError.message}"
                 logWarn(message)
+                remoteLogger.log(
+                    level = LogLevel.ERROR,
+                    tag = TAG,
+                    message = "FLIR stream switch setup failed",
+                    metadata = mapOf(
+                        "to_index" to newIndex.toString(),
+                        "to_thermal" to newStream.isThermal.toString(),
+                        "error" to (setupError.message ?: "unknown")
+                    )
+                )
                 _errors.tryEmit(message)
                 _state.value = FlirState.Error(message)
 
@@ -503,28 +568,101 @@ class FlirCameraController(
                 if (previousStream != null && previousStream != newStream) {
                     logWarn("🔀 cycleStream(): restoring previous stream after failure")
                     setupPipelineAsync(cam, previousStream, "cycleStream(recover)") { recoverError ->
+                        isStreamSwitching.set(false)
                         if (recoverError == null) {
                             activeStream = previousStream
-                            previousStream.start({ target.requestRender() }, { error ->
-                                val recoverMessage = "🔀 Stream error after recovery: $error"
-                                logWarn(recoverMessage)
-                                _errors.tryEmit(recoverMessage)
-                            })
+                            try {
+                                previousStream.start({ target.requestRender() }, { error ->
+                                    val recoverMessage = "🔀 Stream error after recovery: $error"
+                                    logWarn(recoverMessage)
+                                    _errors.tryEmit(recoverMessage)
+                                })
+                            } catch (t: Throwable) {
+                                logWarn("🔀 cycleStream(recover): stream.start() failed: ${t.message}")
+                                _errors.tryEmit("Stream recovery failed: ${t.message}")
+                            }
                             target.requestRender()
                         }
+                        // Emit actual selection so UI corrects the label after recovery
+                        emitCurrentStreamSelection(cam)
                     }
+                } else {
+                    isStreamSwitching.set(false)
                 }
                 return@setupPipelineAsync
             }
 
+            isStreamSwitching.set(false)
             activeStream = newStream
             target.setRenderMode(RenderMode.CONTINUOUS)
-            newStream.start({ target.requestRender() }, { error ->
-                val message = "🔀 Stream error after switch: $error"
-                logWarn(message)
-                _errors.tryEmit(message)
-            })
+            if (!switching) {
+                // Reapplying same stream - stop first to avoid "already started" error
+                try { newStream.stop() } catch (_: Throwable) {}
+            }
+            try {
+                newStream.start({ target.requestRender() }, { error ->
+                    val message = "🔀 Stream error after switch: $error"
+                    logWarn(message)
+                    remoteLogger.log(
+                        level = LogLevel.ERROR,
+                        tag = TAG,
+                        message = "FLIR stream error after switch",
+                        metadata = mapOf(
+                            "stream_index" to newIndex.toString(),
+                            "is_thermal" to newStream.isThermal.toString(),
+                            "error" to (error?.toString() ?: "unknown")
+                        )
+                    )
+                    _errors.tryEmit(message)
+                })
+            } catch (t: Throwable) {
+                logWarn("🔀 cycleStream: stream.start() failed: ${t.message}")
+                _errors.tryEmit("Stream start failed: ${t.message}")
+            }
             target.requestRender()
+            // Emit authoritative selection after successful switch
+            emitCurrentStreamSelection(cam)
+            if (switching) {
+                remoteLogger.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "FLIR stream switch completed",
+                    metadata = mapOf(
+                        "stream_index" to newIndex.toString(),
+                        "is_thermal" to newStream.isThermal.toString()
+                    )
+                )
+            }
+        }
+    }
+
+    fun resetPipeline(reason: String = "resetPipeline") {
+        val cam = camera ?: return
+        val stream = activeStream ?: return
+        val target = renderTarget ?: return
+        logDebug("🔄 resetPipeline: reason=$reason, stopping stream first")
+        try {
+            stream.stop()
+        } catch (t: Throwable) {
+            logWarn("🔄 resetPipeline: stream.stop() error (non-fatal): ${t.message}")
+        }
+        setupPipelineAsync(cam, stream, reason) { error ->
+            if (error != null) {
+                logWarn("🔄 resetPipeline failed: ${error.message}")
+                _errors.tryEmit("Pipeline reset failed: ${error.message}")
+            } else {
+                logDebug("🔄 resetPipeline complete, restarting stream")
+                try {
+                    stream.start({ target.requestRender() }, { streamError ->
+                        logWarn("🔄 Stream error after pipeline reset: $streamError")
+                        _errors.tryEmit("Stream error after reset: $streamError")
+                    })
+                } catch (t: Throwable) {
+                    logWarn("🔄 resetPipeline: stream.start() failed: ${t.message}")
+                    _errors.tryEmit("Stream restart failed: ${t.message}")
+                }
+                target.requestRender()
+            }
         }
     }
 
@@ -793,6 +931,17 @@ class FlirCameraController(
         if (!rendered || !thermalImageProcessed) {
             if (frameCount % 30 == 0L) {
                 logWarn("🖼️ Frame issue: rendered=$rendered, thermalImageProcessed=$thermalImageProcessed")
+                remoteLogger.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "FLIR frame issue",
+                    metadata = mapOf(
+                        "rendered" to rendered.toString(),
+                        "thermal_processed" to thermalImageProcessed.toString(),
+                        "frame" to frameCount.toString(),
+                        "is_thermal" to (activeStream?.isThermal?.toString() ?: "unknown")
+                    )
+                )
             }
         }
     }

@@ -60,6 +60,7 @@ class ImageProcessorAssembliesFragment : Fragment() {
         binding.assembliesRecyclerView.layoutManager = LinearLayoutManager(requireContext())
         binding.assembliesRecyclerView.adapter = adapter
 
+        binding.retryAllButton.setOnClickListener { viewModel.retryAllAssemblies() }
         binding.deleteAllButton.setOnClickListener { confirmDeleteAll() }
 
         observeUiState()
@@ -75,6 +76,7 @@ class ImageProcessorAssembliesFragment : Fragment() {
                             binding.loadingIndicator.visibility = View.VISIBLE
                             binding.assembliesRecyclerView.visibility = View.GONE
                             binding.emptyPlaceholder.visibility = View.GONE
+                            binding.retryAllButton.isEnabled = false
                             binding.deleteAllButton.isEnabled = false
                         }
 
@@ -82,6 +84,7 @@ class ImageProcessorAssembliesFragment : Fragment() {
                             binding.loadingIndicator.visibility = View.GONE
                             binding.assembliesRecyclerView.visibility = View.GONE
                             binding.emptyPlaceholder.visibility = View.VISIBLE
+                            binding.retryAllButton.isEnabled = false
                             binding.deleteAllButton.isEnabled = false
                         }
 
@@ -89,6 +92,7 @@ class ImageProcessorAssembliesFragment : Fragment() {
                             binding.loadingIndicator.visibility = View.GONE
                             binding.assembliesRecyclerView.visibility = View.VISIBLE
                             binding.emptyPlaceholder.visibility = View.GONE
+                            binding.retryAllButton.isEnabled = true
                             binding.deleteAllButton.isEnabled = true
                             adapter.submitList(state.assemblies)
                         }
@@ -105,6 +109,10 @@ class ImageProcessorAssembliesFragment : Fragment() {
                     when (event) {
                         ImageProcessorAssembliesEvent.RetryQueued -> {
                             showMessage(getString(R.string.toast_image_processor_retry_queued))
+                        }
+
+                        is ImageProcessorAssembliesEvent.RetryAllQueued -> {
+                            showMessage(getString(R.string.toast_image_processor_retry_all_queued, event.count))
                         }
 
                         is ImageProcessorAssembliesEvent.RetryFailed -> {
@@ -332,7 +340,11 @@ private class ImageProcessorAssembliesViewHolder(
         val retryableStatuses = setOf(
             AssemblyStatus.FAILED,
             AssemblyStatus.WAITING_FOR_CONNECTIVITY,
-            AssemblyStatus.CANCELLED
+            AssemblyStatus.CANCELLED,
+            AssemblyStatus.PENDING,
+            AssemblyStatus.QUEUED,
+            AssemblyStatus.CREATED,
+            AssemblyStatus.CREATING
         )
         when {
             status == AssemblyStatus.PROCESSING -> {

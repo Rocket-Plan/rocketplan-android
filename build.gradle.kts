@@ -19,6 +19,13 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
+// CycloneDX S-BOM configuration - only include runtime dependencies
+// Excludes build tooling (AGP/UTP) that isn't shipped in the APK
+tasks.named<org.cyclonedx.gradle.CycloneDxTask>("cyclonedxBom") {
+    setIncludeConfigs(listOf("releaseRuntimeClasspath", "devStandardDebugRuntimeClasspath"))
+    setSkipConfigs(listOf("classpath", "testRuntimeClasspath", "androidTestRuntimeClasspath"))
+}
+
 // OWASP Dependency-Check configuration
 dependencyCheck {
     // Fail build on HIGH or CRITICAL vulnerabilities

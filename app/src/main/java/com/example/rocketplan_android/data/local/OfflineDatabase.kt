@@ -90,7 +90,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineProjectUserEntity
         OfflineClaimEntity::class,
         OfflineProjectUserEntity::class
     ],
-    version = 27,
+    version = 28,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)

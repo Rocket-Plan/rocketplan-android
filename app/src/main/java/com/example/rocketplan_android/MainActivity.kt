@@ -44,6 +44,7 @@ import com.example.rocketplan_android.ui.syncstatus.SyncStatusBannerManager
 import com.example.rocketplan_android.ui.syncstatus.SyncStatusBannerState
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.card.MaterialCardView
+import io.sentry.Sentry
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -502,6 +503,7 @@ class MainActivity : AppCompatActivity() {
         }
         PopupMenu(this, anchor, Gravity.END).apply {
             menuInflater.inflate(R.menu.profile_menu, menu)
+            menu.findItem(R.id.action_test_sentry)?.isVisible = BuildConfig.ENVIRONMENT == "DEV"
             Log.d(TAG, "🟣 Profile menu inflated with ${menu.size()} items")
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "Profile menu inflated with ${menu.size()} items")
@@ -517,6 +519,11 @@ class MainActivity : AppCompatActivity() {
                             Log.d(TAG, "Navigating to Sync Status")
                         }
                         findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.syncStatusFragment)
+                        true
+                    }
+                    R.id.action_test_sentry -> {
+                        Sentry.captureException(RuntimeException("Test Sentry error from Android"))
+                        Toast.makeText(this@MainActivity, "Test error sent to Sentry", Toast.LENGTH_SHORT).show()
                         true
                     }
                     R.id.action_image_processor_assemblies -> {

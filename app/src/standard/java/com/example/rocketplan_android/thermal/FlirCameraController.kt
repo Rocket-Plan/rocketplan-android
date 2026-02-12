@@ -27,6 +27,7 @@ class FlirCameraController(context: Context, remoteLogger: RemoteLogger) {
     val snapshots: Flow<File> = emptyFlow()
     val snapshotsWithVisual: Flow<FlirSnapshotResult> = emptyFlow()
     val errors: Flow<String> = emptyFlow()
+    val streamSelection: Flow<StreamSelection> = emptyFlow()
 
     fun attachSurface(glSurfaceView: GLSurfaceView) {
         // No-op: FLIR not supported
@@ -96,6 +97,10 @@ class FlirCameraController(context: Context, remoteLogger: RemoteLogger) {
     }
 
     fun setOverlayFriendlyMode(enabled: Boolean) {
+        // No-op: FLIR not supported
+    }
+
+    fun resetPipeline(reason: String = "resetPipeline") {
         // No-op: FLIR not supported
     }
 }

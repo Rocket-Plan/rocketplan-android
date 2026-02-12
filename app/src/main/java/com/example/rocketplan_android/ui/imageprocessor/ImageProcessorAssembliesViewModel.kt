@@ -91,6 +91,19 @@ class ImageProcessorAssembliesViewModel(application: Application) : AndroidViewM
         }
     }
 
+    fun retryAllAssemblies() {
+        viewModelScope.launch {
+            val state = _uiState.value
+            if (state !is ImageProcessorAssembliesUiState.Content) return@launch
+            var retried = 0
+            for (item in state.assemblies) {
+                val result = queueManager.retryAssembly(item.assembly.assemblyId)
+                if (result.isSuccess) retried++
+            }
+            _events.emit(ImageProcessorAssembliesEvent.RetryAllQueued(retried))
+        }
+    }
+
     fun reconcileAssembly(assemblyId: String) {
         viewModelScope.launch {
             val result = queueManager.reconcileAssemblyStatus(assemblyId)
@@ -123,6 +136,7 @@ sealed class ImageProcessorAssembliesUiState {
 
 sealed class ImageProcessorAssembliesEvent {
     object RetryQueued : ImageProcessorAssembliesEvent()
+    data class RetryAllQueued(val count: Int) : ImageProcessorAssembliesEvent()
     data class RetryFailed(val reason: String) : ImageProcessorAssembliesEvent()
     data class AssemblyDeleted(val assemblyId: String) : ImageProcessorAssembliesEvent()
     data class AssembliesCleared(val count: Int) : ImageProcessorAssembliesEvent()

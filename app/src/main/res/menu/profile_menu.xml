@@ -4,6 +4,9 @@
         android:id="@+id/action_sync_status"
         android:title="@string/action_sync_status" />
     <item
+        android:id="@+id/action_test_sentry"
+        android:title="@string/action_test_sentry" />
+    <item
         android:id="@+id/action_image_processor_assemblies"
         android:title="@string/action_image_processor_assemblies" />
     <item

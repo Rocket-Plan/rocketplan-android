@@ -305,8 +305,14 @@ class ProjectsFragment : Fragment() {
     private fun showProfileMenu(anchor: View) {
         PopupMenu(requireContext(), anchor, Gravity.END).apply {
             menuInflater.inflate(R.menu.profile_menu, menu)
+            menu.findItem(R.id.action_test_sentry)?.isVisible = BuildConfig.ENVIRONMENT == "DEV"
             setOnMenuItemClickListener { menuItem ->
                 when (menuItem.itemId) {
+                    R.id.action_test_sentry -> {
+                        io.sentry.Sentry.captureException(RuntimeException("Test Sentry error from Android"))
+                        Toast.makeText(requireContext(), "Test error sent to Sentry", Toast.LENGTH_SHORT).show()
+                        true
+                    }
                     R.id.action_company_info -> {
                         findNavController().navigate(R.id.companyInfoFragment)
                         true

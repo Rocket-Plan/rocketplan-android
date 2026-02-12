@@ -93,8 +93,8 @@ json_key_file("path/to/your/play-store-key.json")
 ./gradlew compileDevStandardDebugKotlin # Compile only (fast check)
 ```
 
-**Claude:** Run builds and tests in background so the user can continue working:
-- Use `run_in_background: true` for `compileDevStandardDebugKotlin` and `testDevStandardDebugUnitTest`
+**Claude:** ALWAYS run ALL Gradle commands (`assembleDevStandardDebug`, `compileDevStandardDebugKotlin`, `compileDevFlirDebugKotlin`, `testDevStandardDebugUnitTest`, `assembleDevFlirDebug`, `installDevStandardDebug`, `installDevFlirDebug`, etc.) in the background so the user can continue working:
+- Use `run_in_background: true` for any `./gradlew` command
 - Check results later with `TaskOutput` or by reading the output file
 
 ## FLIR Device
