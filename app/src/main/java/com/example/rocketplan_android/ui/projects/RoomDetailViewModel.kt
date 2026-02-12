@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import kotlin.collections.buildSet
@@ -942,6 +943,39 @@ class RoomDetailViewModel(
         return true
     }
 
+    /**
+     * Refreshes room photos after Pusher signals assembly completion.
+     * Uses ignoreCheckpoint because a premature sync may have advanced the checkpoint
+     * before the server finished processing. Retries once after a delay if the expected
+     * new photos don't appear (server may need a moment after marking the assembly done).
+     */
+    private fun refreshPhotosAfterAssemblyCompletion(snapshotRoomId: Long, expectedNewPhotos: Int) {
+        viewModelScope.launch {
+            val countBefore = localDataService.getPhotoCountForRoom(snapshotRoomId)
+            Log.d(TAG, "🔄 Assembly completion refresh: countBefore=$countBefore, expecting +$expectedNewPhotos")
+
+            ensureRoomPhotosFresh(force = true, ignoreCheckpoint = true)
+
+            // Wait for the sync to finish (isRefreshing goes false)
+            // Then check if photos actually arrived
+            var waited = 0L
+            while (isRefreshing.get() && waited < 10_000) {
+                delay(200)
+                waited += 200
+            }
+
+            val countAfter = localDataService.getPhotoCountForRoom(snapshotRoomId)
+            val gained = countAfter - countBefore
+            Log.d(TAG, "🔄 Assembly completion refresh: countAfter=$countAfter, gained=$gained (expected $expectedNewPhotos)")
+
+            if (gained < expectedNewPhotos) {
+                Log.d(TAG, "🔄 Photos not yet available, retrying in ${ASSEMBLY_PHOTO_RETRY_DELAY_MS}ms")
+                delay(ASSEMBLY_PHOTO_RETRY_DELAY_MS)
+                ensureRoomPhotosFresh(force = true, ignoreCheckpoint = true)
+            }
+        }
+    }
+
     val photoPagingData: Flow<PagingData<RoomPhotoItem>> =
         _resolvedRoom
             .map { room -> Pair(room?.roomId, room?.serverId ?: room?.roomId) }
@@ -1076,11 +1110,13 @@ class RoomDetailViewModel(
             pendingAssemblyIds.removeAll(finishedPending.toSet())
 
             if (newlyCompleted.isNotEmpty()) {
+                val totalNewPhotos = newlyCompleted.sumOf { it.totalFiles }
                 Log.d(
                     TAG,
-                    "✅ Assemblies completed for room $localRoomId: ${newlyCompleted.map { it.assemblyId }}, syncing photos from server"
+                    "✅ Assemblies completed for room $localRoomId: ${newlyCompleted.map { it.assemblyId }}, " +
+                        "expecting $totalNewPhotos new photos, syncing from server"
                 )
-                ensureRoomPhotosFresh(force = true)
+                refreshPhotosAfterAssemblyCompletion(snapshotRoomId, totalNewPhotos)
             }
 
             val awaiting = activeAssemblies.isNotEmpty() || pendingAssemblyIds.isNotEmpty()
@@ -1163,6 +1199,7 @@ class RoomDetailViewModel(
     companion object {
         private const val TAG = "RoomDetailVM"
         private const val ROOM_REFRESH_INTERVAL_MS = 10_000L
+        private const val ASSEMBLY_PHOTO_RETRY_DELAY_MS = 5_000L
 
         fun provideFactory(
             application: Application,

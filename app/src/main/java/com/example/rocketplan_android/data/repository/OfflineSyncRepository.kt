@@ -241,11 +241,9 @@ class OfflineSyncRepository(
     fun attachImageProcessorQueueManager(manager: ImageProcessorQueueManager) {
         imageProcessorQueueManager = manager
 
-        // Set callback to refresh room photos after successful assembly upload
-        manager.onAssemblyUploadCompleted = { projectId, roomId ->
-            Log.d(TAG, "📸 Assembly upload completed, refreshing photos for room $roomId")
-            photoSyncService.refreshRoomPhotos(projectId, roomId)
-        }
+        // Note: Room photo sync after assembly upload is intentionally NOT done here.
+        // The upload completing doesn't mean photos are processed yet. The refresh is
+        // triggered by Pusher "success" → ImageProcessorRealtimeManager → RoomDetailViewModel.
 
         // Set callback to refresh atmospheric log after photo upload completes
         manager.onAtmosphericLogPhotoCompleted = { entityUuid, projectId ->

@@ -1484,14 +1484,12 @@ class ImageProcessorQueueManager(
             }
             Log.d(TAG, "🗑️ Upload data and temp files cleaned for assembly $assemblyId")
 
-            // Trigger photo sync for the room to update UI
+            // Note: We do NOT sync room photos here. The upload completing means the server
+            // just received the files — it hasn't processed them into photos yet. The actual
+            // photo refresh is triggered by the Pusher "success" event via
+            // ImageProcessorRealtimeManager → RoomDetailViewModel.observeAssembliesForRoom.
             if (projectId != null && roomId != null) {
-                Log.d(TAG, "🔄 Triggering photo sync for room $roomId (project $projectId)")
-                try {
-                    onAssemblyUploadCompleted?.invoke(projectId, roomId)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Failed to trigger photo sync callback", e)
-                }
+                Log.d(TAG, "📌 Upload complete for room $roomId (project $projectId); photos will refresh on Pusher completion event")
             }
 
             // For atmospheric log photos, trigger re-sync to get photoUrl from server
