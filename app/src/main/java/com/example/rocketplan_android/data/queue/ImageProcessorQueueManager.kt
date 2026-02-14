@@ -16,6 +16,7 @@ import com.example.rocketplan_android.data.local.entity.AssemblyStatus
 import com.example.rocketplan_android.data.local.entity.ImageProcessorAssemblyEntity
 import com.example.rocketplan_android.data.local.entity.ImageProcessorPhotoEntity
 import com.example.rocketplan_android.data.local.entity.PhotoStatus
+import com.example.rocketplan_android.data.model.AbandonAssembliesRequest
 import com.example.rocketplan_android.data.model.ImageProcessorAssemblyRequest
 import com.example.rocketplan_android.data.model.ImageProcessorStatusSnapshot
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
@@ -181,6 +182,62 @@ class ImageProcessorQueueManager(
 
         } catch (e: Exception) {
             Log.e(TAG, "❌ Error recovering stranded assemblies", e)
+        }
+    }
+
+    /**
+     * POST known local assembly IDs to the server so it can abandon any
+     * assemblies the client no longer tracks. Must be called after auth
+     * is available (not from Application.onCreate). Fires on every app
+     * launch (matching iOS behaviour). Network failures are silently
+     * ignored so they don't block startup.
+     */
+    suspend fun abandonStaleServerAssemblies() {
+        runCatching {
+            val terminalStatuses = listOf(
+                AssemblyStatus.COMPLETED.value,
+                AssemblyStatus.FAILED.value,
+                AssemblyStatus.CANCELLED.value
+            )
+            val activeAssemblies = dao.getAllAssemblies()
+                .filter { it.status !in terminalStatuses }
+            val knownIds = activeAssemblies.map { it.assemblyId }
+
+            Log.d(TAG, "🧹 Abandoning stale server assemblies (known=${knownIds.size})")
+
+            val response = api.abandonAssemblies(AbandonAssembliesRequest(knownAssemblyIds = knownIds))
+            if (response.isSuccessful) {
+                val abandonedCount = response.body()?.abandonedCount ?: 0
+                Log.d(TAG, "🧹 Server abandoned $abandonedCount stale assemblies")
+                remoteLogger?.log(
+                    level = LogLevel.INFO,
+                    tag = TAG,
+                    message = "Abandon stale assemblies completed",
+                    metadata = mapOf(
+                        "known_count" to knownIds.size.toString(),
+                        "abandoned_count" to abandonedCount.toString()
+                    )
+                )
+            } else {
+                Log.w(TAG, "⚠️ Abandon assemblies request failed: HTTP ${response.code()}")
+                remoteLogger?.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Abandon stale assemblies HTTP error",
+                    metadata = mapOf(
+                        "code" to response.code().toString(),
+                        "known_count" to knownIds.size.toString()
+                    )
+                )
+            }
+        }.onFailure { e ->
+            Log.w(TAG, "⚠️ Abandon stale assemblies failed (non-fatal)", e)
+            remoteLogger?.log(
+                level = LogLevel.WARN,
+                tag = TAG,
+                message = "Abandon stale assemblies exception",
+                metadata = mapOf("error" to (e.message ?: "unknown"))
+            )
         }
     }
 

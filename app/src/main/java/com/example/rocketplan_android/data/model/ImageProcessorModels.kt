@@ -105,3 +105,11 @@ data class ImageProcessorStatusSnapshot(
     val remainingFiles: Int?,
     val isComplete: Boolean?
 )
+
+data class AbandonAssembliesRequest(
+    @SerializedName("known_assembly_ids") val knownAssemblyIds: List<String>
+)
+
+data class AbandonAssembliesResponse(
+    @SerializedName("abandoned_count") val abandonedCount: Int
+)

@@ -1,5 +1,7 @@
 package com.example.rocketplan_android.data.api
 
+import com.example.rocketplan_android.data.model.AbandonAssembliesRequest
+import com.example.rocketplan_android.data.model.AbandonAssembliesResponse
 import com.example.rocketplan_android.data.model.ImageProcessorAssemblyRequest
 import com.example.rocketplan_android.data.model.ImageProcessorAssemblyResponse
 import com.example.rocketplan_android.data.model.ImageProcessorStatusResponse
@@ -37,4 +39,9 @@ interface ImageProcessorApi {
         @Query("format") format: String = "simple",
         @Query("include_logs") includeLogs: Boolean = true
     ): Response<ImageProcessorStatusResponse>
+
+    @POST("/api/image-processor/abandon")
+    suspend fun abandonAssemblies(
+        @Body request: AbandonAssembliesRequest
+    ): Response<AbandonAssembliesResponse>
 }

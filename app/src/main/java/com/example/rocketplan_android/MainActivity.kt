@@ -331,6 +331,7 @@ class MainActivity : AppCompatActivity() {
                     controller.navigate(R.id.nav_projects, null, navOptions)
                     lifecycleScope.launch {
                         syncQueueManager.ensureInitialSync()
+                        (application as RocketPlanApplication).imageProcessorQueueManager.abandonStaleServerAssemblies()
                     }
                 }
             }
@@ -451,6 +452,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     syncQueueManager.clear()
                     syncQueueManager.ensureInitialSync()
+                    (application as RocketPlanApplication).imageProcessorQueueManager.abandonStaleServerAssemblies()
 
                     // Navigate to projects screen and clear auth stack
                     val navController = findNavController(R.id.nav_host_fragment_content_main)
