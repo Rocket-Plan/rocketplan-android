@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.model.CrmContactDto
+import com.example.rocketplan_android.data.repository.CrmBusinessRepository
 import com.example.rocketplan_android.data.repository.CrmContactRepository
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,8 @@ data class CrmContactListItem(
     val phone: String?,
     val email: String?,
     val type: String?,
-    val initials: String
+    val initials: String,
+    val companyName: String? = null
 )
 
 data class CrmContactsUiState(
@@ -40,15 +42,20 @@ data class CrmContactsUiState(
 class CrmContactsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: CrmContactRepository
+    private val businessRepository: CrmBusinessRepository
 
     private val _uiState = MutableStateFlow(CrmContactsUiState())
     val uiState: StateFlow<CrmContactsUiState> = _uiState
 
     private val searchQueryFlow = MutableStateFlow("")
 
+    // Cache of businessId -> business name
+    private var businessNameCache: MutableMap<String, String> = mutableMapOf()
+
     init {
         val app = application as RocketPlanApplication
         repository = CrmContactRepository(app.authRepository, app.remoteLogger)
+        businessRepository = CrmBusinessRepository(app.authRepository, app.remoteLogger)
 
         // Debounced server-side search
         viewModelScope.launch {
@@ -74,6 +81,7 @@ class CrmContactsViewModel(application: Application) : AndroidViewModel(applicat
     }
 
     fun refresh() {
+        businessNameCache.clear()
         loadPage(page = 1, reset = true)
     }
 
@@ -100,6 +108,16 @@ class CrmContactsViewModel(application: Application) : AndroidViewModel(applicat
             )
 
             result.onSuccess { response ->
+                // Resolve business names for contacts with businessId
+                val unresolvedIds = response.data
+                    .mapNotNull { it.businessId?.takeIf { id -> id.isNotBlank() && id !in businessNameCache } }
+                    .distinct()
+                for (bizId in unresolvedIds) {
+                    businessRepository.getBusiness(bizId).onSuccess { biz ->
+                        biz.name?.takeIf { it.isNotBlank() }?.let { businessNameCache[bizId] = it }
+                    }
+                }
+
                 val newItems = response.data.map { it.toListItem() }
                 val lastPage = response.meta?.lastPage ?: 1
                 val hasMore = page < lastPage
@@ -142,13 +160,16 @@ class CrmContactsViewModel(application: Application) : AndroidViewModel(applicat
             if (isEmpty() && displayName.isNotBlank()) append(displayName.first().uppercaseChar())
         }.ifBlank { "?" }
 
+        val resolvedCompany = businessId?.takeIf { it.isNotBlank() }?.let { businessNameCache[it] }
+
         return CrmContactListItem(
             id = id ?: "",
             displayName = displayName,
             phone = phone,
             email = email,
             type = type,
-            initials = initials
+            initials = initials,
+            companyName = resolvedCompany
         )
     }
 }

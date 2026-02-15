@@ -316,6 +316,11 @@ class CrmOpportunitiesFragment : Fragment() {
         binding.boardScrollView.post { binding.boardScrollView.scrollTo(scrollX, 0) }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refresh()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

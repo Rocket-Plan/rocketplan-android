@@ -43,6 +43,7 @@ class CrmContactsAdapter(
         private val nameView: TextView = itemView.findViewById(R.id.contactName)
         private val phoneView: TextView = itemView.findViewById(R.id.contactPhone)
         private val emailView: TextView = itemView.findViewById(R.id.contactEmail)
+        private val companyView: TextView = itemView.findViewById(R.id.contactCompany)
         private val typeBadge: TextView = itemView.findViewById(R.id.contactTypeBadge)
         private val removeButton: ImageButton = itemView.findViewById(R.id.removeButton)
         private var boundItem: CrmContactListItem? = null
@@ -72,6 +73,9 @@ class CrmContactsAdapter(
 
             emailView.text = item.email
             emailView.isVisible = !item.email.isNullOrBlank()
+
+            companyView.text = item.companyName
+            companyView.isVisible = !item.companyName.isNullOrBlank()
 
             typeBadge.text = item.type?.replaceFirstChar { it.uppercaseChar() }
             typeBadge.isVisible = !item.type.isNullOrBlank()

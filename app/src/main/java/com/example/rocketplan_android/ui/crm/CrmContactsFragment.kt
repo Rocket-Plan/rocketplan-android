@@ -249,6 +249,13 @@ class CrmContactsFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (!isShowingOpportunities && !isShowingBusinesses) {
+            viewModel.refresh()
+        }
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putBoolean("isShowingOpportunities", isShowingOpportunities)

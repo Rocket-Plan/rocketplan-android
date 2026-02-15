@@ -89,6 +89,11 @@ class CrmBusinessesFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refresh()
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null

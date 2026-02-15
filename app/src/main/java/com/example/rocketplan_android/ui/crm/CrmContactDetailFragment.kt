@@ -67,6 +67,10 @@ class CrmContactDetailFragment : Fragment() {
         binding.addNoteButton.setOnClickListener { showAddNoteDialog() }
         binding.addTaskButton.setOnClickListener { showAddTaskDialog() }
 
+        binding.contactSwipeRefresh.setOnRefreshListener {
+            viewModel.loadContact(args.contactId)
+        }
+
         observeState()
         observeEvents()
 
@@ -77,7 +81,8 @@ class CrmContactDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.uiState.collect { state ->
-                    binding.loadingIndicator.isVisible = state.isLoading
+                    binding.loadingIndicator.isVisible = state.isLoading && !binding.contactSwipeRefresh.isRefreshing
+                    if (!state.isLoading) binding.contactSwipeRefresh.isRefreshing = false
 
                     // Only show the contact tab content when it's the selected tab
                     val selectedTab = binding.tabLayout.selectedTabPosition
@@ -198,7 +203,7 @@ class CrmContactDetailFragment : Fragment() {
         binding.contactPhone.text = contact.phone ?: "\u2014"
         binding.contactType.text = contact.type?.replaceFirstChar { it.uppercaseChar() } ?: "\u2014"
         binding.contactSource.text = contact.source ?: "\u2014"
-        // Business association
+        // Business association — only show when contact is linked to a business
         val businessId = contact.businessId?.takeIf { it.isNotBlank() }
         if (businessId != null) {
             binding.contactBusinessLabel.isVisible = true
@@ -213,8 +218,6 @@ class CrmContactDetailFragment : Fragment() {
             binding.contactBusinessLabel.isVisible = false
             binding.contactBusiness.isVisible = false
         }
-
-        binding.contactCompanyName.text = contact.companyName ?: "\u2014"
         binding.contactWebsite.text = contact.website ?: "\u2014"
 
         val addressText = listOfNotNull(

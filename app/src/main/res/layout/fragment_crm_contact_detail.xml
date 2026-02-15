@@ -62,14 +62,19 @@
     </com.google.android.material.tabs.TabLayout>
 
     <!-- Contact tab content -->
-    <ScrollView
-        android:id="@+id/contactContent"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/contactSwipeRefresh"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tabLayout">
+
+    <ScrollView
+        android:id="@+id/contactContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -169,24 +174,6 @@
                 android:visibility="gone"
                 tools:text="Acme Corp" />
 
-            <!-- Company Name -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="@string/crm_label_company_name"
-                android:textColor="@color/light_text_rp"
-                android:textSize="@dimen/text_size_body_small" />
-
-            <TextView
-                android:id="@+id/contactCompanyName"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textColor="@color/dark_text_rp"
-                android:textSize="@dimen/text_size_body_large"
-                tools:text="Acme Corp" />
-
             <!-- Website -->
             <TextView
                 android:layout_width="match_parent"
@@ -243,6 +230,8 @@
 
         </LinearLayout>
     </ScrollView>
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
 
     <!-- Notes tab content -->
     <androidx.constraintlayout.widget.ConstraintLayout

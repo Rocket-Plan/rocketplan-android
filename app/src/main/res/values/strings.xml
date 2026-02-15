@@ -93,7 +93,7 @@
     <string name="bottom_nav_map">Map</string>
     <string name="bottom_nav_projects">Projects</string>
     <string name="bottom_nav_notifications">Notifications</string>
-    <string name="bottom_nav_people">People</string>
+    <string name="bottom_nav_people">CRM</string>
     <string name="map_placeholder_message">The map view is coming soon.</string>
     <string name="map_view_all">View All</string>
     <string name="map_empty_my_projects">No assigned projects yet. Create one or view all.</string>
