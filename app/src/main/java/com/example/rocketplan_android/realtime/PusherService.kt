@@ -57,8 +57,10 @@ class PusherService(
                 }
 
                 ConnectionState.RECONNECTING -> {
-                    Log.d(TAG, "🔌 Pusher reconnecting")
-                    scheduleReconnect()
+                    // No-op: SDK handles reconnection internally. Scheduling our own
+                    // reconnect here would call pusher.connect() while the SDK is
+                    // mid-reconnect, causing duplicate channel subscriptions.
+                    Log.d(TAG, "🔌 Pusher reconnecting (SDK-managed)")
                 }
 
                 else -> Unit
@@ -66,6 +68,17 @@ class PusherService(
         }
 
         override fun onError(message: String?, code: String?, e: Exception?) {
+            // "Existing subscription" is harmless - Pusher SDK auto-resubscribes on reconnect.
+            // Log at DEBUG to retain observability without polluting error logs.
+            if (message != null && message.contains("existing subscription", ignoreCase = true)) {
+                Log.d(TAG, "🔌 Pusher duplicate subscription (harmless): $message")
+                remoteLogger?.log(
+                    level = LogLevel.DEBUG,
+                    tag = TAG,
+                    message = "Pusher duplicate subscription (harmless): $message"
+                )
+                return
+            }
             Log.e(TAG, "🚨 Pusher connection error: ${message ?: "unknown"} (code=${code ?: "none"})", e)
             remoteLogger?.log(
                 level = LogLevel.ERROR,
@@ -303,7 +316,7 @@ class PusherService(
 
     private fun ensureConnected() {
         val state = pusher.connection.state
-        if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING) {
+        if (state == ConnectionState.CONNECTED || state == ConnectionState.CONNECTING || state == ConnectionState.RECONNECTING) {
             return
         }
         Log.d(TAG, "🔌 Connecting Pusher (state=$state)")

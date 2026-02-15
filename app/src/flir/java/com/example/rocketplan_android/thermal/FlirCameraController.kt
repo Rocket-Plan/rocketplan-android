@@ -231,6 +231,13 @@ class FlirCameraController(
     }
 
     fun startDiscovery() {
+        if (!FlirSdkManager.isAvailable) {
+            val message = "FLIR SDK not available on this device"
+            Log.e(TAG, message)
+            _state.value = FlirState.Error(message)
+            _errors.tryEmit(message)
+            return
+        }
         _state.value = FlirState.Discovering
         ThermalLog.d(TAG, "Starting discovery on $communicationInterface")
         remoteLogger.log(
@@ -652,6 +659,8 @@ class FlirCameraController(
                 _errors.tryEmit("Pipeline reset failed: ${error.message}")
             } else {
                 logDebug("🔄 resetPipeline complete, restarting stream")
+                // Stop first to avoid "Streaming already started" error from FLIR SDK
+                try { stream.stop() } catch (_: Throwable) {}
                 try {
                     stream.start({ target.requestRender() }, { streamError ->
                         logWarn("🔄 Stream error after pipeline reset: $streamError")

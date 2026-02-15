@@ -11,14 +11,22 @@ import java.util.concurrent.atomic.AtomicBoolean
 object FlirSdkManager {
     private val initialized = AtomicBoolean(false)
 
+    val isAvailable: Boolean get() = initialized.get()
+
     fun init(context: Context) {
         if (initialized.get()) return
-        ThermalSdkAndroid.init(
-            context.applicationContext,
-            ThermalLog.LogLevel.DEBUG,
-            /* logToFile = */ null,
-            /* useOpenCL = */ true
-        )
-        initialized.set(true)
+        try {
+            ThermalSdkAndroid.init(
+                context.applicationContext,
+                ThermalLog.LogLevel.DEBUG,
+                /* logToFile = */ null,
+                /* useOpenCL = */ true
+            )
+            initialized.set(true)
+        } catch (e: UnsatisfiedLinkError) {
+            android.util.Log.e("FlirSdkManager", "FLIR native libraries not available on this device architecture", e)
+        } catch (e: Throwable) {
+            android.util.Log.e("FlirSdkManager", "Failed to initialize FLIR SDK", e)
+        }
     }
 }

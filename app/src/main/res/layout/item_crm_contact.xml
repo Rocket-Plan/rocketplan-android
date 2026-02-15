@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardElevation="0dp"
+    app:cardUseCompatPadding="false"
+    app:strokeColor="@color/light_border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <!-- Initials circle -->
+        <TextView
+            android:id="@+id/contactInitials"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_initials_circle"
+            android:gravity="center"
+            android:textColor="@color/main_purple"
+            android:textSize="@dimen/text_size_body_large"
+            android:textStyle="bold"
+            tools:text="JD" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/contactName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/dark_text_rp"
+                    android:textSize="@dimen/text_size_body_large"
+                    android:textStyle="bold"
+                    tools:text="John Doe" />
+
+                <TextView
+                    android:id="@+id/contactTypeBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/badge_type"
+                    android:paddingHorizontal="8dp"
+                    android:paddingVertical="2dp"
+                    android:textColor="@color/main_purple"
+                    android:textSize="@dimen/text_size_caption"
+                    android:visibility="gone"
+                    tools:text="Lead"
+                    tools:visibility="visible" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/contactPhone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:drawablePadding="4dp"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small"
+                android:visibility="gone"
+                tools:text="+1 555-123-4567"
+                tools:visibility="visible" />
+
+            <TextView
+                android:id="@+id/contactEmail"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:drawablePadding="4dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small"
+                android:visibility="gone"
+                tools:text="john.doe@example.com"
+                tools:visibility="visible" />
+
+        </LinearLayout>
+
+        <!-- Remove button (hidden by default, shown in business detail) -->
+        <ImageButton
+            android:id="@+id/removeButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/crm_remove_contact_from_business"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

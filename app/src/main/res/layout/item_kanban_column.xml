@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="260dp"
+    android:layout_height="match_parent"
+    android:layout_marginHorizontal="6dp"
+    app:cardBackgroundColor="@color/secondary_background"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/light_border"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- Column header -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="12dp">
+
+            <TextView
+                android:id="@+id/columnHeader"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                android:textStyle="bold"
+                tools:text="New" />
+
+            <TextView
+                android:id="@+id/columnCount"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="@drawable/bg_initials_circle"
+                android:gravity="center"
+                android:textColor="@color/main_purple"
+                android:textSize="@dimen/text_size_body_small"
+                android:textStyle="bold"
+                tools:text="3" />
+
+        </LinearLayout>
+
+        <!-- Monetary total -->
+        <TextView
+            android:id="@+id/columnTotal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingHorizontal="12dp"
+            android:paddingBottom="8dp"
+            android:textColor="@color/light_text_rp"
+            android:textSize="@dimen/text_size_body_small"
+            android:visibility="gone"
+            tools:text="$12,500.00"
+            tools:visibility="visible" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/light_border" />
+
+        <!-- Opportunity cards list -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/columnRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:padding="8dp" />
+
+        <!-- Empty column text -->
+        <TextView
+            android:id="@+id/columnEmpty"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="@string/crm_no_opportunities_in_stage"
+            android:textColor="@color/light_text_rp"
+            android:textSize="@dimen/text_size_body_small"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

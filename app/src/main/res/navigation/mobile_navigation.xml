@@ -144,9 +144,132 @@
 
     <fragment
         android:id="@+id/nav_people"
-        android:name="com.example.rocketplan_android.ui.people.PeopleFragment"
+        android:name="com.example.rocketplan_android.ui.crm.CrmContactsFragment"
         android:label="@string/bottom_nav_people"
-        tools:layout="@layout/fragment_people" />
+        tools:layout="@layout/fragment_crm_contacts">
+
+        <action
+            android:id="@+id/action_crmContacts_to_crmContactDetail"
+            app:destination="@id/crmContactDetailFragment" />
+
+        <action
+            android:id="@+id/action_crmContacts_to_crmContactForm"
+            app:destination="@id/crmContactFormFragment" />
+
+        <action
+            android:id="@+id/action_crmContacts_to_crmOpportunityForm"
+            app:destination="@id/crmOpportunityFormFragment" />
+
+        <action
+            android:id="@+id/action_crmContacts_to_crmOpportunityDetail"
+            app:destination="@id/crmOpportunityDetailFragment" />
+
+        <action
+            android:id="@+id/action_crmContacts_to_crmBusinessDetail"
+            app:destination="@id/crmBusinessDetailFragment" />
+
+        <action
+            android:id="@+id/action_crmContacts_to_crmBusinessForm"
+            app:destination="@id/crmBusinessFormFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crmContactDetailFragment"
+        android:name="com.example.rocketplan_android.ui.crm.CrmContactDetailFragment"
+        android:label="@string/crm_contact_detail_title"
+        tools:layout="@layout/fragment_crm_contact_detail">
+
+        <argument
+            android:name="contactId"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_crmContactDetail_to_crmContactForm"
+            app:destination="@id/crmContactFormFragment" />
+
+        <action
+            android:id="@+id/action_crmContactDetail_to_crmBusinessDetail"
+            app:destination="@id/crmBusinessDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crmContactFormFragment"
+        android:name="com.example.rocketplan_android.ui.crm.CrmContactFormFragment"
+        android:label="@string/crm_add_contact"
+        tools:layout="@layout/fragment_crm_contact_form">
+
+        <argument
+            android:name="contactId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crmBusinessDetailFragment"
+        android:name="com.example.rocketplan_android.ui.crm.CrmBusinessDetailFragment"
+        android:label="@string/crm_business_detail_title"
+        tools:layout="@layout/fragment_crm_business_detail">
+
+        <argument
+            android:name="businessId"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_crmBusinessDetail_to_crmBusinessForm"
+            app:destination="@id/crmBusinessFormFragment" />
+
+        <action
+            android:id="@+id/action_crmBusinessDetail_to_crmContactDetail"
+            app:destination="@id/crmContactDetailFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crmBusinessFormFragment"
+        android:name="com.example.rocketplan_android.ui.crm.CrmBusinessFormFragment"
+        android:label="@string/crm_add_business"
+        tools:layout="@layout/fragment_crm_business_form">
+
+        <argument
+            android:name="businessId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crmOpportunityDetailFragment"
+        android:name="com.example.rocketplan_android.ui.crm.CrmOpportunityDetailFragment"
+        android:label="@string/crm_opportunity_detail_title"
+        tools:layout="@layout/fragment_crm_opportunity_detail">
+
+        <argument
+            android:name="opportunityId"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_crmOpportunityDetail_to_crmOpportunityForm"
+            app:destination="@id/crmOpportunityFormFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/crmOpportunityFormFragment"
+        android:name="com.example.rocketplan_android.ui.crm.CrmOpportunityFormFragment"
+        android:label="@string/crm_add_opportunity"
+        tools:layout="@layout/fragment_crm_opportunity_form">
+
+        <argument
+            android:name="opportunityId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+
+        <argument
+            android:name="pipelineId"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null" />
+    </fragment>
 
     <fragment
         android:id="@+id/projectLandingFragment"

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <ProgressBar
+        android:id="@+id/loadingIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+    <ScrollView
+        android:id="@+id/contentScroll"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Business Name -->
+            <TextView
+                android:id="@+id/businessName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_headline"
+                android:textStyle="bold"
+                tools:text="Acme Corp" />
+
+            <!-- Email -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/crm_label_email"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/businessEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="info@acme.com" />
+
+            <!-- Phone -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_phone"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/businessPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="+1 555-123-4567" />
+
+            <!-- Website -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_website"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/businessWebsite"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="https://acme.com" />
+
+            <!-- Description -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_description"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/businessDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="A restoration company" />
+
+            <!-- Address -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_address"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/businessAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="123 Main St, Springfield, IL 62701" />
+
+            <!-- Custom Fields -->
+            <LinearLayout
+                android:id="@+id/customFieldsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
+            <!-- Contacts Section Header -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/crm_business_contacts_title"
+                    android:textColor="@color/dark_text_rp"
+                    android:textSize="@dimen/text_size_title"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/addContactButton"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/crm_add_contact_to_business"
+                    android:textSize="@dimen/text_size_body_small" />
+            </LinearLayout>
+
+            <ProgressBar
+                android:id="@+id/contactsLoading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/contactsEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/crm_business_no_contacts"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/contactsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false"
+                android:visibility="gone" />
+
+            <!-- Edit Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/editButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/crm_edit_business" />
+
+            <!-- Delete Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/deleteButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="32dp"
+                android:text="@string/delete"
+                android:textColor="@android:color/holo_red_dark" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

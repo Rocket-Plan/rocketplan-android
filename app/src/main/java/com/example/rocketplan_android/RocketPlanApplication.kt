@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 import com.example.rocketplan_android.thermal.FlirSdkManager
 import com.example.rocketplan_android.config.AppConfig
 import android.os.Build
+import com.google.android.libraries.places.api.Places
 import io.sentry.Sentry
 import io.sentry.android.core.SentryAndroid
 
@@ -127,6 +128,9 @@ class RocketPlanApplication : Application() {
 
         // Initialize FLIR SDK early so discovery is ready when users enter thermal capture
         FlirSdkManager.init(this)
+
+        // Initialize Google Places SDK early so AutocompleteActivity doesn't crash
+        initPlaces()
 
         // Removed debug-time database purge to preserve cached data across launches
         localDataService = LocalDataService.initialize(this)
@@ -352,7 +356,9 @@ class RocketPlanApplication : Application() {
                 "screen_width" to displayMetrics.widthPixels.toString(),
                 "screen_height" to displayMetrics.heightPixels.toString(),
                 "screen_density" to displayMetrics.density.toString(),
-                "density_dpi" to displayMetrics.densityDpi.toString()
+                "density_dpi" to displayMetrics.densityDpi.toString(),
+                "supported_abis" to Build.SUPPORTED_ABIS.joinToString(","),
+                "build_flavor" to BuildConfig.FLAVOR
             )
         )
     }
@@ -372,6 +378,17 @@ class RocketPlanApplication : Application() {
 
         Sentry.configureScope { scope ->
             scope.setTag("device_flavor", if (BuildConfig.HAS_FLIR_SUPPORT) "flir" else "standard")
+        }
+    }
+
+    private fun initPlaces() {
+        try {
+            val apiKey = BuildConfig.MAPS_API_KEY
+            if (apiKey.isNotBlank() && !Places.isInitialized()) {
+                Places.initialize(this, apiKey)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to initialize Places SDK", e)
         }
     }
 

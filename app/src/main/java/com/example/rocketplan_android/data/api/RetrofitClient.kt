@@ -167,4 +167,5 @@ object RetrofitClient {
     val imageProcessorApi: ImageProcessorApi by lazy {
         createService<ImageProcessorApi>()
     }
+
 }

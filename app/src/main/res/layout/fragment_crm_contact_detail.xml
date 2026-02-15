@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <ProgressBar
+        android:id="@+id/loadingIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <!-- Contact name header -->
+    <TextView
+        android:id="@+id/contactName"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:padding="16dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/dark_text_rp"
+        android:textSize="@dimen/text_size_headline"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:text="John Galt" />
+
+    <!-- Tab layout -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:tabGravity="fill"
+        app:tabMode="fixed"
+        app:tabSelectedTextColor="@color/main_purple"
+        app:tabIndicatorColor="@color/main_purple"
+        app:tabTextColor="@color/light_text_rp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/contactName">
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/crm_tab_contact" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/crm_tab_notes" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/crm_tab_tasks" />
+    </com.google.android.material.tabs.TabLayout>
+
+    <!-- Contact tab content -->
+    <ScrollView
+        android:id="@+id/contactContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Email -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/crm_label_email"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/contactEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="john.doe@example.com" />
+
+            <!-- Phone -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_phone"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/contactPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="+1 555-123-4567" />
+
+            <!-- Type -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_type"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/contactType"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="Lead" />
+
+            <!-- Source -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_source"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/contactSource"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="Website" />
+
+            <!-- Business -->
+            <TextView
+                android:id="@+id/contactBusinessLabel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_business_association"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/contactBusiness"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/main_purple"
+                android:textSize="@dimen/text_size_body_large"
+                android:visibility="gone"
+                tools:text="Acme Corp" />
+
+            <!-- Company Name -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_company_name"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/contactCompanyName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="Acme Corp" />
+
+            <!-- Website -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_website"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/contactWebsite"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="https://example.com" />
+
+            <!-- Address -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/crm_label_address"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_body_small" />
+
+            <TextView
+                android:id="@+id/contactAddress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_body_large"
+                tools:text="123 Main St, Springfield, IL 62701" />
+
+            <!-- Custom Fields -->
+            <LinearLayout
+                android:id="@+id/customFieldsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="vertical"
+                android:visibility="gone" />
+
+            <!-- Edit Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/editButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="32dp"
+                android:text="@string/crm_edit_contact" />
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Notes tab content -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/notesContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/notesRecyclerView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:padding="16dp"
+            android:clipToPadding="false"
+            app:layout_constraintBottom_toTopOf="@id/addNoteButton"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/notesEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/crm_no_notes"
+            android:textColor="@color/light_text_rp"
+            android:textSize="@dimen/text_size_body_large"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/addNoteButton"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ProgressBar
+            android:id="@+id/notesLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/addNoteButton"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/addNoteButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:text="@string/crm_add_note"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Tasks tab content -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/tasksContent"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tabLayout">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/tasksRecyclerView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:padding="16dp"
+            android:clipToPadding="false"
+            app:layout_constraintBottom_toTopOf="@id/addTaskButton"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tasksEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/crm_no_tasks"
+            android:textColor="@color/light_text_rp"
+            android:textSize="@dimen/text_size_body_large"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/addTaskButton"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <ProgressBar
+            android:id="@+id/tasksLoading"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/addTaskButton"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/addTaskButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:text="@string/crm_add_task"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

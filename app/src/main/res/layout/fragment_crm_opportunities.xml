@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <!-- Pipeline selector -->
+    <Spinner
+        android:id="@+id/pipelineSelector"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:background="@drawable/bg_spinner"
+        android:padding="12dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
+
+    <!-- Status filter chips -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/statusChipGroup"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="4dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pipelineSelector"
+        tools:visibility="visible">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipOpen"
+            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/crm_status_open"
+            app:chipBackgroundColor="@color/chip_background_selector"
+            android:textColor="@color/chip_text_selector"
+            app:checkedIconVisible="false" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipWon"
+            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/crm_status_won"
+            app:chipBackgroundColor="@color/chip_background_selector"
+            android:textColor="@color/chip_text_selector"
+            app:checkedIconVisible="false" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipLost"
+            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="false"
+            android:text="@string/crm_status_lost"
+            app:chipBackgroundColor="@color/chip_background_selector"
+            android:textColor="@color/chip_text_selector"
+            app:checkedIconVisible="false" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipAbandoned"
+            style="@style/Widget.MaterialComponents.Chip.Filter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="@string/crm_status_abandoned"
+            app:chipBackgroundColor="@color/chip_background_selector"
+            android:textColor="@color/chip_text_selector"
+            app:checkedIconVisible="false" />
+
+    </com.google.android.material.chip.ChipGroup>
+
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/swipeRefresh"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/statusChipGroup">
+
+        <HorizontalScrollView
+            android:id="@+id/boardScrollView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:id="@+id/columnsContainer"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="8dp" />
+
+        </HorizontalScrollView>
+
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
+    <!-- Loading state -->
+    <ProgressBar
+        android:id="@+id/loadingIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pipelineSelector" />
+
+    <!-- Error state -->
+    <TextView
+        android:id="@+id/errorText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="32dp"
+        android:textColor="@color/light_text_rp"
+        android:textSize="@dimen/text_size_body_large"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/pipelineSelector"
+        tools:text="Error loading opportunities" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
