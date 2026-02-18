@@ -25,13 +25,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.databinding.FragmentSmsCodeVerifyBinding
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
-import com.google.android.gms.safetynet.SafetyNet
 
 class SmsCodeVerifyFragment : Fragment() {
 
@@ -233,7 +231,7 @@ class SmsCodeVerifyFragment : Fragment() {
         }
 
         binding.resendButton.setOnClickListener {
-            requestRecaptchaAndResend()
+            resend()
         }
     }
 
@@ -273,28 +271,9 @@ class SmsCodeVerifyFragment : Fragment() {
         }
     }
 
-    private fun requestRecaptchaAndResend() {
+    private fun resend() {
         binding.resendButton.isEnabled = false
-        // reCAPTCHA as client-side bot gate; token is not sent to backend
-        SafetyNet.getClient(requireActivity())
-            .verifyWithRecaptcha(BuildConfig.RECAPTCHA_SITE_KEY)
-            .addOnSuccessListener { response ->
-                val token = response.tokenResult
-                if (!token.isNullOrEmpty()) {
-                    viewModel.resendCode()
-                } else {
-                    Log.w(TAG, "reCAPTCHA returned empty token on resend")
-                    binding.resendButton.isEnabled = true
-                }
-            }
-            .addOnFailureListener { e ->
-                Log.e(TAG, "reCAPTCHA failed on resend", e)
-                if (BuildConfig.ENVIRONMENT == "DEV") {
-                    viewModel.resendCode()
-                } else {
-                    binding.resendButton.isEnabled = true
-                }
-            }
+        viewModel.resendCode()
 
         // Re-start SMS consent for the resent code
         startSmsUserConsent()

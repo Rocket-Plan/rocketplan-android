@@ -18,7 +18,6 @@ import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.data.model.CountryCode
 import com.example.rocketplan_android.databinding.FragmentPhoneVerificationBinding
-import com.google.android.gms.safetynet.SafetyNet
 
 class PhoneVerificationFragment : Fragment() {
 
@@ -102,7 +101,7 @@ class PhoneVerificationFragment : Fragment() {
 
         binding.sendCodeButton.setOnClickListener {
             hideKeyboard()
-            requestRecaptchaAndSend()
+            validateAndSend()
         }
     }
 
@@ -187,7 +186,7 @@ class PhoneVerificationFragment : Fragment() {
         }
     }
 
-    private fun requestRecaptchaAndSend() {
+    private fun validateAndSend() {
         val phone = viewModel.phone.value?.trim() ?: ""
         if (phone.isBlank()) {
             binding.errorText.text = getString(R.string.onboarding_phone_required)
@@ -203,28 +202,7 @@ class PhoneVerificationFragment : Fragment() {
         }
         binding.errorText.visibility = View.GONE
         binding.sendCodeButton.isEnabled = false
-        // reCAPTCHA as client-side bot gate; token is not sent to backend
-        SafetyNet.getClient(requireActivity())
-            .verifyWithRecaptcha(BuildConfig.RECAPTCHA_SITE_KEY)
-            .addOnSuccessListener { response ->
-                val token = response.tokenResult
-                if (!token.isNullOrEmpty()) {
-                    viewModel.sendCode()
-                } else {
-                    binding.sendCodeButton.isEnabled = true
-                    Log.w(TAG, "reCAPTCHA returned empty token")
-                }
-            }
-            .addOnFailureListener { e ->
-                binding.sendCodeButton.isEnabled = true
-                Log.e(TAG, "reCAPTCHA failed", e)
-                if (BuildConfig.ENVIRONMENT == "DEV") {
-                    viewModel.sendCode() // Proceed without reCAPTCHA in dev only
-                } else {
-                    binding.errorText.text = getString(R.string.onboarding_recaptcha_failed)
-                    binding.errorText.visibility = View.VISIBLE
-                }
-            }
+        viewModel.sendCode()
     }
 
     private fun setupObservers() {
