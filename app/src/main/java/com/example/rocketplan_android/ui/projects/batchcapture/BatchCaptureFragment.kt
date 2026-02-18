@@ -1127,7 +1127,7 @@ class BatchCaptureFragment : Fragment() {
         cameraProvider?.unbindAll()
         tearDownFlirPreviewSurface()
         flirStarted = false
-        flirController.disconnect()
+        flirController.shutdown()
         super.onDestroyView()
     }
 

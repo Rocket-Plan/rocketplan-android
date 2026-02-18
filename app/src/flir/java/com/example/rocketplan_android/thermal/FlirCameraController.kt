@@ -40,6 +40,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import javax.microedition.khronos.egl.EGLConfig as GLConfigLegacy
 import javax.microedition.khronos.opengles.GL10
 import kotlinx.coroutines.CoroutineScope
@@ -105,6 +106,11 @@ class FlirCameraController(
     @Volatile private var enableMeasurements: Boolean = false
     private val snapshotRequested = AtomicBoolean(false)
     private val isStreamSwitching = AtomicBoolean(false)
+    private val isTornDown = AtomicBoolean(false)
+    private val sessionGeneration = AtomicInteger(0)
+
+    /** Returns true if the given generation doesn't match the current session or we're torn down. */
+    private fun isStaleSession(gen: Int): Boolean = isTornDown.get() || gen != sessionGeneration.get()
 
     data class StreamSelection(val index: Int, val count: Int, val isThermal: Boolean)
 
@@ -231,6 +237,8 @@ class FlirCameraController(
     }
 
     fun startDiscovery() {
+        isTornDown.set(false)
+        val gen = sessionGeneration.incrementAndGet()
         if (!FlirSdkManager.isAvailable) {
             val message = "FLIR SDK not available on this device"
             Log.e(TAG, message)
@@ -248,6 +256,7 @@ class FlirCameraController(
         )
         DiscoveryFactory.getInstance().scan(object : DiscoveryEventListener {
             override fun onCameraFound(discoveredCamera: DiscoveredCamera) {
+                if (isStaleSession(gen)) return
                 val foundIdentity = discoveredCamera.identity
                 ThermalLog.d(TAG, "Found camera: $foundIdentity")
                 if (foundIdentity.cameraType == CameraType.ACE &&
@@ -263,7 +272,7 @@ class FlirCameraController(
                         )
                     )
                     DiscoveryFactory.getInstance().stop(communicationInterface)
-                    connect(foundIdentity)
+                    connect(foundIdentity, gen)
                 }
             }
 
@@ -271,6 +280,7 @@ class FlirCameraController(
                 communicationInterface: CommunicationInterface,
                 error: ErrorCode
             ) {
+                if (isStaleSession(gen)) return
                 val message = "Discovery error: $error"
                 ThermalLog.e(TAG, message)
                 remoteLogger.log(
@@ -288,10 +298,12 @@ class FlirCameraController(
         }, communicationInterface)
     }
 
-    private fun connect(identity: FlirIdentity) {
+    private fun connect(identity: FlirIdentity, gen: Int) {
+        if (isStaleSession(gen)) return
         _state.value = FlirState.Connecting(identity)
         scope.launch {
             try {
+                if (isStaleSession(gen)) return@launch
                 ThermalLog.d(TAG, "Connecting to ${identity.deviceId}")
                 remoteLogger.log(
                     level = LogLevel.INFO,
@@ -305,6 +317,7 @@ class FlirCameraController(
                 camera?.connect(
                     identity,
                     { error ->
+                        if (isStaleSession(gen)) return@connect
                         val message = "Connection error: $error"
                         ThermalLog.e(TAG, message)
                         remoteLogger.log(
@@ -322,6 +335,7 @@ class FlirCameraController(
                     ConnectParameters()
                 )
 
+                if (isStaleSession(gen)) return@launch
                 val info: FlirCameraInformation? = camera?.remoteControl?.cameraInformation()?.sync
                 ThermalLog.d(TAG, "Camera connected: $info")
                 remoteLogger.log(
@@ -334,8 +348,9 @@ class FlirCameraController(
                         "serial" to (info?.serialNumber ?: "unknown")
                     )
                 )
-                startStream(identity, info)
+                startStream(identity, info, gen)
             } catch (io: IOException) {
+                if (isStaleSession(gen)) return@launch
                 val message = "Connection error: ${io.message}"
                 ThermalLog.e(TAG, message)
                 remoteLogger.log(
@@ -353,7 +368,8 @@ class FlirCameraController(
         }
     }
 
-    private fun startStream(identity: FlirIdentity, info: FlirCameraInformation?) {
+    private fun startStream(identity: FlirIdentity, info: FlirCameraInformation?, gen: Int) {
+        if (isStaleSession(gen)) return
         val cam = camera ?: return
         val target = renderTarget
         if (target == null) {
@@ -417,9 +433,8 @@ class FlirCameraController(
 
             // Continue on IO scope once GL work is done
             scope.launch {
-                // Check if disconnected while GL setup was in progress
-                if (camera == null) {
-                    logDebug("🎬 Camera disconnected during GL setup, aborting stream start")
+                if (isStaleSession(gen)) {
+                    logDebug("🎬 Session stale after GL setup, aborting stream start")
                     return@launch
                 }
 
@@ -447,9 +462,10 @@ class FlirCameraController(
                 logDebug("🎬 Surface ready for streaming: target=${target.description()}")
                 stream.start(
                     {
-                        target.requestRender()
+                        if (!isStaleSession(gen)) target.requestRender()
                     },
                     { error ->
+                        if (isStaleSession(gen)) return@start
                         val message = "🎬 Stream error: $error"
                         logWarn(message)
                         remoteLogger.log(
@@ -474,7 +490,7 @@ class FlirCameraController(
                         "is_thermal" to stream.isThermal.toString()
                     )
                 )
-                target.requestRender()
+                if (!isStaleSession(gen)) target.requestRender()
             }
         }
     }
@@ -493,6 +509,7 @@ class FlirCameraController(
         val target = renderTarget ?: return null
         val streams = cam.streams
         if (streams.isEmpty()) return null
+        val gen = sessionGeneration.get()
 
         val currentIndex = activeStream?.let { streams.indexOf(it) }?.takeIf { it >= 0 } ?: 0
         val newIndex = (currentIndex + offset + streams.size) % streams.size
@@ -500,7 +517,7 @@ class FlirCameraController(
 
         // Run the actual switch work off the caller thread to avoid UI stalls.
         scope.launch {
-            performStreamSwitch(cam, target, newStream, newIndex)
+            performStreamSwitch(cam, target, newStream, newIndex, gen)
         }
 
         // Return the intended selection immediately for UI label updates.
@@ -515,7 +532,7 @@ class FlirCameraController(
         _streamSelection.tryEmit(StreamSelection(idx, streams.size, streams[idx].isThermal))
     }
 
-    private fun performStreamSwitch(cam: Camera, target: GlRenderTarget, newStream: Stream, newIndex: Int) {
+    private fun performStreamSwitch(cam: Camera, target: GlRenderTarget, newStream: Stream, newIndex: Int, gen: Int) {
         if (!isStreamSwitching.compareAndSet(false, true)) {
             logWarn("🔀 Stream switch rejected: another switch is in progress")
             remoteLogger.log(
@@ -555,6 +572,7 @@ class FlirCameraController(
         }
 
         setupPipelineAsync(cam, newStream, "cycleStream") { setupError ->
+            if (isStaleSession(gen)) { isStreamSwitching.set(false); return@setupPipelineAsync }
             if (setupError != null) {
                 val message = "🔀 cycleStream(): setup error ${setupError.message}"
                 logWarn(message)
@@ -576,19 +594,24 @@ class FlirCameraController(
                     logWarn("🔀 cycleStream(): restoring previous stream after failure")
                     setupPipelineAsync(cam, previousStream, "cycleStream(recover)") { recoverError ->
                         isStreamSwitching.set(false)
+                        if (isStaleSession(gen)) return@setupPipelineAsync
                         if (recoverError == null) {
                             activeStream = previousStream
                             try {
-                                previousStream.start({ target.requestRender() }, { error ->
-                                    val recoverMessage = "🔀 Stream error after recovery: $error"
-                                    logWarn(recoverMessage)
-                                    _errors.tryEmit(recoverMessage)
-                                })
+                                previousStream.start(
+                                    { if (!isStaleSession(gen)) target.requestRender() },
+                                    { error ->
+                                        if (isStaleSession(gen)) return@start
+                                        val recoverMessage = "🔀 Stream error after recovery: $error"
+                                        logWarn(recoverMessage)
+                                        _errors.tryEmit(recoverMessage)
+                                    }
+                                )
                             } catch (t: Throwable) {
                                 logWarn("🔀 cycleStream(recover): stream.start() failed: ${t.message}")
                                 _errors.tryEmit("Stream recovery failed: ${t.message}")
                             }
-                            target.requestRender()
+                            if (!isStaleSession(gen)) target.requestRender()
                         }
                         // Emit actual selection so UI corrects the label after recovery
                         emitCurrentStreamSelection(cam)
@@ -607,26 +630,30 @@ class FlirCameraController(
                 try { newStream.stop() } catch (_: Throwable) {}
             }
             try {
-                newStream.start({ target.requestRender() }, { error ->
-                    val message = "🔀 Stream error after switch: $error"
-                    logWarn(message)
-                    remoteLogger.log(
-                        level = LogLevel.ERROR,
-                        tag = TAG,
-                        message = "FLIR stream error after switch",
-                        metadata = mapOf(
-                            "stream_index" to newIndex.toString(),
-                            "is_thermal" to newStream.isThermal.toString(),
-                            "error" to (error?.toString() ?: "unknown")
+                newStream.start(
+                    { if (!isStaleSession(gen)) target.requestRender() },
+                    { error ->
+                        if (isStaleSession(gen)) return@start
+                        val message = "🔀 Stream error after switch: $error"
+                        logWarn(message)
+                        remoteLogger.log(
+                            level = LogLevel.ERROR,
+                            tag = TAG,
+                            message = "FLIR stream error after switch",
+                            metadata = mapOf(
+                                "stream_index" to newIndex.toString(),
+                                "is_thermal" to newStream.isThermal.toString(),
+                                "error" to (error?.toString() ?: "unknown")
+                            )
                         )
-                    )
-                    _errors.tryEmit(message)
-                })
+                        _errors.tryEmit(message)
+                    }
+                )
             } catch (t: Throwable) {
                 logWarn("🔀 cycleStream: stream.start() failed: ${t.message}")
                 _errors.tryEmit("Stream start failed: ${t.message}")
             }
-            target.requestRender()
+            if (!isStaleSession(gen)) target.requestRender()
             // Emit authoritative selection after successful switch
             emitCurrentStreamSelection(cam)
             if (switching) {
@@ -647,6 +674,7 @@ class FlirCameraController(
         val cam = camera ?: return
         val stream = activeStream ?: return
         val target = renderTarget ?: return
+        val gen = sessionGeneration.get()
         logDebug("🔄 resetPipeline: reason=$reason, stopping stream first")
         try {
             stream.stop()
@@ -654,6 +682,7 @@ class FlirCameraController(
             logWarn("🔄 resetPipeline: stream.stop() error (non-fatal): ${t.message}")
         }
         setupPipelineAsync(cam, stream, reason) { error ->
+            if (isStaleSession(gen)) return@setupPipelineAsync
             if (error != null) {
                 logWarn("🔄 resetPipeline failed: ${error.message}")
                 _errors.tryEmit("Pipeline reset failed: ${error.message}")
@@ -662,15 +691,19 @@ class FlirCameraController(
                 // Stop first to avoid "Streaming already started" error from FLIR SDK
                 try { stream.stop() } catch (_: Throwable) {}
                 try {
-                    stream.start({ target.requestRender() }, { streamError ->
-                        logWarn("🔄 Stream error after pipeline reset: $streamError")
-                        _errors.tryEmit("Stream error after reset: $streamError")
-                    })
+                    stream.start(
+                        { if (!isStaleSession(gen)) target.requestRender() },
+                        { streamError ->
+                            if (isStaleSession(gen)) return@start
+                            logWarn("🔄 Stream error after pipeline reset: $streamError")
+                            _errors.tryEmit("Stream error after reset: $streamError")
+                        }
+                    )
                 } catch (t: Throwable) {
                     logWarn("🔄 resetPipeline: stream.start() failed: ${t.message}")
                     _errors.tryEmit("Stream restart failed: ${t.message}")
                 }
-                target.requestRender()
+                if (!isStaleSession(gen)) target.requestRender()
             }
         }
     }
@@ -695,7 +728,32 @@ class FlirCameraController(
         }
     }
 
+    /**
+     * Tears down the render loop and disconnects. Call from onDestroyView.
+     * The controller can be reused after a new startDiscovery() call.
+     */
+    fun shutdown() {
+        isTornDown.set(true)
+        renderTarget?.release()
+        renderTarget = null
+        disconnect()
+    }
+
     fun disconnect(onComplete: (() -> Unit)? = null) {
+        val gen = sessionGeneration.get()
+        // Capture references before launching so we disconnect the right objects
+        // even if a new session overwrites the fields.
+        val cameraToDisconnect = camera
+        val streamToStop = activeStream
+        val targetToQuiet = renderTarget
+
+        // Clear state synchronously so a new session doesn't race with us
+        if (gen == sessionGeneration.get()) {
+            camera = null
+            activeStream = null
+            _state.value = FlirState.Idle
+        }
+
         scope.launch {
             ThermalLog.d(TAG, "disconnect()")
             remoteLogger.log(
@@ -703,22 +761,19 @@ class FlirCameraController(
                 tag = TAG,
                 message = "FLIR camera disconnecting"
             )
-            val currentCamera = camera
             try {
-                activeStream?.stop()
+                streamToStop?.stop()
             } catch (t: Throwable) {
                 logWarn("disconnect(): Stream stop error: ${t.message}")
             }
-            renderTarget?.setRenderMode(RenderMode.WHEN_DIRTY)
+            targetToQuiet?.setRenderMode(RenderMode.WHEN_DIRTY)
 
-            // Clear state immediately so new connections don't race
-            camera = null
-            activeStream = null
-            _state.value = FlirState.Idle
-            DiscoveryFactory.getInstance().stop(communicationInterface)
+            if (gen == sessionGeneration.get()) {
+                DiscoveryFactory.getInstance().stop(communicationInterface)
+            }
 
             // If no camera was connected, complete immediately
-            if (currentCamera == null) {
+            if (cameraToDisconnect == null) {
                 logDebug("disconnect(): No camera to disconnect, completing immediately")
                 onComplete?.invoke()
                 return@launch
@@ -727,7 +782,7 @@ class FlirCameraController(
             // Release hardware camera FIRST so CameraX can acquire it quickly,
             // then do GL cleanup in the background (doesn't need the hardware)
             try {
-                currentCamera.disconnect()
+                cameraToDisconnect.disconnect()
                 logDebug("disconnect(): Camera disconnected")
             } catch (t: Throwable) {
                 logWarn("disconnect(): Camera disconnect error: ${t.message}")
@@ -745,7 +800,7 @@ class FlirCameraController(
             // GL teardown happens AFTER completion - it's just resource cleanup
             runOnGlThread {
                 try {
-                    currentCamera.glTeardownPipeline()
+                    cameraToDisconnect.glTeardownPipeline()
                     logDebug("disconnect(): GL teardown complete")
                 } catch (t: Throwable) {
                     logWarn("disconnect(): GL teardown error: ${t.message}")
@@ -810,6 +865,8 @@ class FlirCameraController(
     }
 
     private fun onRendererDrawFrame() {
+        if (isTornDown.get()) return
+
         val cam = camera
         if (cam == null) {
             // Only log occasionally to avoid spam
