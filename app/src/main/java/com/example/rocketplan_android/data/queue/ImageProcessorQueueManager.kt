@@ -207,15 +207,20 @@ class ImageProcessorQueueManager(
 
             val response = api.abandonAssemblies(AbandonAssembliesRequest(knownAssemblyIds = knownIds))
             if (response.isSuccessful) {
-                val abandonedCount = response.body()?.abandonedCount ?: 0
-                Log.d(TAG, "🧹 Server abandoned $abandonedCount stale assemblies")
+                val body = response.body()
+                val abandonedCount = body?.abandonedCount ?: 0
+                val restoredCount = body?.restoredCount ?: 0
+                if (abandonedCount > 0 || restoredCount > 0) {
+                    Log.d(TAG, "🧹 Server abandoned $abandonedCount, restored $restoredCount stale assemblies")
+                }
                 remoteLogger?.log(
                     level = LogLevel.INFO,
                     tag = TAG,
                     message = "Abandon stale assemblies completed",
                     metadata = mapOf(
                         "known_count" to knownIds.size.toString(),
-                        "abandoned_count" to abandonedCount.toString()
+                        "abandoned_count" to abandonedCount.toString(),
+                        "restored_count" to restoredCount.toString()
                     )
                 )
             } else {

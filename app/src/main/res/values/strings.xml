@@ -264,6 +264,9 @@
     <string name="message_passwords_match">Passwords match</string>
     <string name="action_create_account">Create Account</string>
     <string name="message_sign_up_agreement">By signing up, you agree to receive updates and special offers about RocketPlan products. You may unsubscribe at any time.</string>
+    <string name="sign_up_legal_links">View our Privacy Policy and Terms and Conditions</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="terms_and_conditions">Terms and Conditions</string>
     <string name="google_sign_in_title">Google Sign-In</string>
     <string name="apple_sign_in_title">Apple Sign-In</string>
     <string name="facebook_sign_in_title">Facebook Sign-In</string>
@@ -272,6 +275,43 @@
     <string name="error_opening_provider_sign_in">Unable to start %1$s sign-in. Please try again.</string>
     <string name="oauth_webview_default_title">Secure Sign-In</string>
     <string name="external_browser_blocked">Opening links outside the app is not allowed on this device.</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_account_type_title">Set Up Your Account</string>
+    <string name="onboarding_account_type_subtitle">How would you like to get started?</string>
+    <string name="onboarding_create_company">Create a Company</string>
+    <string name="onboarding_create_company_desc">Start fresh with your own company account.</string>
+    <string name="onboarding_join_company">Join a Company</string>
+    <string name="onboarding_join_company_desc">Join an existing company with an invite link.</string>
+    <string name="onboarding_join_title">Join a Company</string>
+    <string name="onboarding_join_message">To join an existing company, you\'ll need an invite link from your team admin. Check your email for an invitation.</string>
+    <string name="onboarding_join_create_instead">Create a Company Instead</string>
+    <string name="onboarding_phone_title">Verify Your Phone</string>
+    <string name="onboarding_phone_subtitle">We\'ll send a verification code to confirm your number.</string>
+    <string name="onboarding_phone_label">Phone Number</string>
+    <string name="onboarding_phone_hint">Phone number</string>
+    <string name="onboarding_phone_send_code">Send Code</string>
+    <string name="onboarding_phone_required">Phone number is required</string>
+    <string name="onboarding_phone_invalid">Please enter a valid phone number</string>
+    <string name="onboarding_sms_title">Enter Verification Code</string>
+    <string name="onboarding_sms_subtitle">We sent a code to %1$s</string>
+    <string name="onboarding_sms_code_label">Verification Code</string>
+    <string name="onboarding_sms_code_hint">4-digit code</string>
+    <string name="onboarding_sms_verify">Verify</string>
+    <string name="onboarding_sms_resend">Resend Code</string>
+    <string name="onboarding_sms_resend_timer">Resend in %1$ds</string>
+    <string name="onboarding_sms_invalid_code">Please enter a valid 4-digit code</string>
+    <string name="onboarding_final_title">Complete Your Profile</string>
+    <string name="onboarding_final_subtitle">Tell us a bit about yourself.</string>
+    <string name="onboarding_first_name_label">First Name</string>
+    <string name="onboarding_last_name_label">Last Name</string>
+    <string name="onboarding_company_name_label">Company Name</string>
+    <string name="onboarding_company_name_hint">Your company name</string>
+    <string name="onboarding_finish">Finish Setup</string>
+    <string name="onboarding_first_name_required">First name is required</string>
+    <string name="onboarding_last_name_required">Last name is required</string>
+    <string name="onboarding_company_name_required">Company name is required</string>
+    <string name="onboarding_recaptcha_failed">Verification failed. Please try again.</string>
 
     <!-- Company Info -->
     <string name="company_info_title">Company Info</string>

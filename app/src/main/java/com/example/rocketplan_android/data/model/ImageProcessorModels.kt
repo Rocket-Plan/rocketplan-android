@@ -111,5 +111,6 @@ data class AbandonAssembliesRequest(
 )
 
 data class AbandonAssembliesResponse(
-    @SerializedName("abandoned_count") val abandonedCount: Int
+    @SerializedName("abandoned_count") val abandonedCount: Int,
+    @SerializedName("restored_count") val restoredCount: Int? = null
 )

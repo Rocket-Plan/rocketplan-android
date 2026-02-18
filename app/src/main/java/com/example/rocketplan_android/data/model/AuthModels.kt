@@ -152,3 +152,34 @@ data class GoogleAuthRequest(
 data class GoogleAuthResponse(
     val token: String
 )
+
+// ==================== Onboarding Models ====================
+
+data class SmsSendVerificationRequest(
+    val phone: String
+)
+
+data class SmsVerifyCodeRequest(
+    val phone: String,
+    val code: String
+)
+
+data class UpdateUserRequest(
+    @SerializedName("first_name")
+    val firstName: String,
+    @SerializedName("last_name")
+    val lastName: String,
+    val email: String
+)
+
+data class UpdateUserResponse(
+    val data: CurrentUserResponse
+)
+
+data class CreateCompanyRequest(
+    val name: String
+)
+
+data class CreateCompanyResponse(
+    val data: Company
+)

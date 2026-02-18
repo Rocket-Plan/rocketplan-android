@@ -171,4 +171,8 @@ class SignUpViewModel(
     fun onSignUpSuccessHandled() {
         _signUpSuccess.value = false
     }
+
+    fun setError(message: String) {
+        _errorMessage.value = message
+    }
 }

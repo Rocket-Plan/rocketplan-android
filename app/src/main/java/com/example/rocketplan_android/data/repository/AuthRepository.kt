@@ -14,9 +14,13 @@ import com.example.rocketplan_android.data.model.LoginRequest
 import com.example.rocketplan_android.data.model.LoginResponse
 import com.example.rocketplan_android.data.model.RegisterRequest
 import com.example.rocketplan_android.data.model.AuthSession
+import com.example.rocketplan_android.data.model.CreateCompanyRequest
 import com.example.rocketplan_android.data.model.CurrentUserResponse
 import com.example.rocketplan_android.data.model.Company
 import com.example.rocketplan_android.data.model.SetActiveCompanyRequest
+import com.example.rocketplan_android.data.model.SmsSendVerificationRequest
+import com.example.rocketplan_android.data.model.SmsVerifyCodeRequest
+import com.example.rocketplan_android.data.model.UpdateUserRequest
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.logging.LogLevel
@@ -534,6 +538,109 @@ class AuthRepository(
             val currentUser = envelope?.data
             if (response.isSuccessful && currentUser != null) {
                 Result.success(currentUser.companies.orEmpty())
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    // ==================== Onboarding ====================
+
+    /**
+     * Send SMS verification code. Phone must be in E164 format (e.g. "+15555555555").
+     * Server returns 204 No Content on success.
+     */
+    suspend fun sendSmsVerification(phone: String): Result<Unit> {
+        return try {
+            val response = authService.sendSmsVerification(
+                SmsSendVerificationRequest(phone)
+            )
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    /**
+     * Verify the SMS code. Phone must be in E164 format.
+     * Server returns 204 No Content on success.
+     */
+    suspend fun verifySmsCode(phone: String, code: String): Result<Unit> {
+        return try {
+            val response = authService.verifySmsCode(
+                SmsVerifyCodeRequest(phone, code)
+            )
+            if (response.isSuccessful) {
+                Result.success(Unit)
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    /**
+     * Update user profile. Matches backend PUT /api/users/{id} which expects
+     * first_name, last_name, and email.
+     */
+    suspend fun updateUser(userId: Long, firstName: String, lastName: String, email: String): Result<CurrentUserResponse> {
+        return try {
+            val response = authService.updateUser(userId, UpdateUserRequest(firstName, lastName, email))
+            if (response.isSuccessful) {
+                val user = response.body()?.data
+                    ?: return Result.failure(Exception("Empty response"))
+                Result.success(user)
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    private val companyApi = RetrofitClient.companyApi
+
+    suspend fun createCompany(name: String): Result<Company> {
+        return try {
+            val response = companyApi.createCompany(CreateCompanyRequest(name))
+            if (response.isSuccessful) {
+                val company = response.body()?.data
+                    ?: return Result.failure(Exception("Empty response"))
+                Result.success(company)
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    /**
+     * Link a user to a company. This endpoint has company.resolve middleware
+     * removed on the server, so it works during onboarding.
+     */
+    suspend fun addCompanyUser(companyId: Long, userId: Long): Result<Unit> {
+        return try {
+            val response = companyApi.addCompanyUser(companyId, userId)
+            if (response.isSuccessful) {
+                Result.success(Unit)
             } else {
                 val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
                 Result.failure(Exception(apiError.displayMessage))

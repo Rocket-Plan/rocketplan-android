@@ -1,12 +1,20 @@
 package com.example.rocketplan_android.ui.auth
 
 import android.app.Application
+import android.net.Uri
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.method.LinkMovementMethod
+import android.text.style.ClickableSpan
+import android.text.style.ForegroundColorSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
+import androidx.appcompat.app.AppCompatActivity
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.widget.doAfterTextChanged
@@ -52,6 +60,42 @@ class SignUpFragment : Fragment() {
         }
         setupInputListeners()
         setupObservers()
+        setupLegalLinks()
+    }
+
+    private fun setupLegalLinks() {
+        val fullText = getString(R.string.sign_up_legal_links)
+        val privacyLabel = getString(R.string.privacy_policy)
+        val termsLabel = getString(R.string.terms_and_conditions)
+        val spannable = SpannableString(fullText)
+        val purple = ContextCompat.getColor(requireContext(), R.color.main_purple)
+
+        val privacyStart = fullText.indexOf(privacyLabel)
+        if (privacyStart >= 0) {
+            spannable.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    openUrl("https://rocketplantech.com/privacy-policy/")
+                }
+            }, privacyStart, privacyStart + privacyLabel.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(ForegroundColorSpan(purple), privacyStart, privacyStart + privacyLabel.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        val termsStart = fullText.indexOf(termsLabel)
+        if (termsStart >= 0) {
+            spannable.setSpan(object : ClickableSpan() {
+                override fun onClick(widget: View) {
+                    openUrl("https://rocketplantech.com/terms-and-conditions/")
+                }
+            }, termsStart, termsStart + termsLabel.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            spannable.setSpan(ForegroundColorSpan(purple), termsStart, termsStart + termsLabel.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+
+        binding.legalLinksText.text = spannable
+        binding.legalLinksText.movementMethod = LinkMovementMethod.getInstance()
+    }
+
+    private fun openUrl(url: String) {
+        CustomTabsIntent.Builder().build().launchUrl(requireContext(), Uri.parse(url))
     }
 
     private fun setupInputListeners() {
@@ -130,14 +174,37 @@ class SignUpFragment : Fragment() {
 
         viewModel.signUpSuccess.observe(viewLifecycleOwner) { success ->
             if (success == true) {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    (requireActivity().application as RocketPlanApplication)
-                        .syncQueueManager
-                        .ensureInitialSync()
-                }
-                val action = SignUpFragmentDirections.actionSignUpFragmentToNavHome()
-                findNavController().navigate(action)
                 viewModel.onSignUpSuccessHandled()
+                if (findNavController().currentDestination?.id != R.id.signUpFragment) return@observe
+
+                val session = viewModel.authSession.value
+                val userId = session?.user?.id ?: 0L
+                val email = viewModel.email.value ?: args.email
+
+                // Guard: if we somehow have no userId, show error
+                if (userId <= 0L) {
+                    viewModel.setError("Account was created but user ID is missing. Please try signing in.")
+                    return@observe
+                }
+
+                // Check if user already has a company — skip onboarding if so
+                val hasCompany = session?.user?.getPrimaryCompanyId() != null
+                if (hasCompany) {
+                    (requireActivity() as? AppCompatActivity)?.lifecycleScope?.launch {
+                        (requireActivity().application as RocketPlanApplication)
+                            .syncQueueManager
+                            .ensureInitialSync()
+                    }
+                    val action = SignUpFragmentDirections.actionSignUpFragmentToNavHome()
+                    findNavController().navigate(action)
+                } else {
+                    val action = SignUpFragmentDirections
+                        .actionSignUpFragmentToPhoneVerificationFragment(
+                            userId = userId,
+                            email = email
+                        )
+                    findNavController().navigate(action)
+                }
             }
         }
     }

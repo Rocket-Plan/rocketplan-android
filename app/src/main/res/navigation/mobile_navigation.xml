@@ -75,6 +75,10 @@
             app:destination="@id/nav_projects"
             app:popUpTo="@id/emailCheckFragment"
             app:popUpToInclusive="true" />
+
+        <action
+            android:id="@+id/action_signUpFragment_to_phoneVerificationFragment"
+            app:destination="@id/phoneVerificationFragment" />
     </fragment>
 
     <!-- Forgot Password Fragment -->
@@ -102,6 +106,160 @@
             android:name="title"
             app:argType="string"
             android:defaultValue="" />
+    </fragment>
+
+    <!-- Onboarding: Account Type Selection -->
+    <fragment
+        android:id="@+id/accountTypeFragment"
+        android:name="com.example.rocketplan_android.ui.auth.AccountTypeFragment"
+        android:label="Account Type"
+        tools:layout="@layout/fragment_account_type">
+
+        <argument
+            android:name="userId"
+            app:argType="long" />
+
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="phone"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="countryCode"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_accountTypeFragment_to_finalDetailsFragment"
+            app:destination="@id/finalDetailsFragment" />
+
+        <action
+            android:id="@+id/action_accountTypeFragment_to_joinCompanyFragment"
+            app:destination="@id/joinCompanyFragment" />
+    </fragment>
+
+    <!-- Onboarding: Join Company -->
+    <fragment
+        android:id="@+id/joinCompanyFragment"
+        android:name="com.example.rocketplan_android.ui.auth.JoinCompanyFragment"
+        android:label="Join Company"
+        tools:layout="@layout/fragment_join_company">
+
+        <argument
+            android:name="userId"
+            app:argType="long" />
+
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="phone"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="countryCode"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_joinCompanyFragment_to_finalDetailsFragment"
+            app:destination="@id/finalDetailsFragment" />
+    </fragment>
+
+    <!-- Onboarding: Phone Verification -->
+    <fragment
+        android:id="@+id/phoneVerificationFragment"
+        android:name="com.example.rocketplan_android.ui.auth.PhoneVerificationFragment"
+        android:label="Phone Verification"
+        tools:layout="@layout/fragment_phone_verification">
+
+        <argument
+            android:name="userId"
+            app:argType="long" />
+
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_phoneVerificationFragment_to_smsCodeVerifyFragment"
+            app:destination="@id/smsCodeVerifyFragment" />
+    </fragment>
+
+    <!-- Onboarding: SMS Code Verify -->
+    <fragment
+        android:id="@+id/smsCodeVerifyFragment"
+        android:name="com.example.rocketplan_android.ui.auth.SmsCodeVerifyFragment"
+        android:label="Verify Code"
+        tools:layout="@layout/fragment_sms_code_verify">
+
+        <argument
+            android:name="userId"
+            app:argType="long" />
+
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="phone"
+            app:argType="string" />
+
+        <argument
+            android:name="countryCode"
+            app:argType="string" />
+
+        <action
+            android:id="@+id/action_smsCodeVerifyFragment_to_accountTypeFragment"
+            app:destination="@id/accountTypeFragment" />
+    </fragment>
+
+    <!-- Onboarding: Final Details -->
+    <fragment
+        android:id="@+id/finalDetailsFragment"
+        android:name="com.example.rocketplan_android.ui.auth.FinalDetailsFragment"
+        android:label="Complete Profile"
+        tools:layout="@layout/fragment_final_details">
+
+        <argument
+            android:name="userId"
+            app:argType="long" />
+
+        <argument
+            android:name="email"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="isCreating"
+            app:argType="boolean"
+            android:defaultValue="true" />
+
+        <argument
+            android:name="phone"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <argument
+            android:name="countryCode"
+            app:argType="string"
+            android:defaultValue="" />
+
+        <action
+            android:id="@+id/action_finalDetailsFragment_to_nav_home"
+            app:destination="@id/nav_projects"
+            app:popUpTo="@id/emailCheckFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment

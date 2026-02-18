@@ -11,10 +11,16 @@ import com.example.rocketplan_android.data.model.LoginRequest
 import com.example.rocketplan_android.data.model.LoginResponse
 import com.example.rocketplan_android.data.model.RegisterRequest
 import com.example.rocketplan_android.data.model.SetActiveCompanyRequest
+import com.example.rocketplan_android.data.model.SmsSendVerificationRequest
+import com.example.rocketplan_android.data.model.SmsVerifyCodeRequest
+import com.example.rocketplan_android.data.model.UpdateUserRequest
+import com.example.rocketplan_android.data.model.UpdateUserResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
 
 /**
  * Retrofit service interface for authentication API endpoints
@@ -70,4 +76,27 @@ interface AuthService {
      */
     @POST("api/active-company")
     suspend fun setActiveCompany(@Body request: SetActiveCompanyRequest): Response<Unit>
+
+    /**
+     * Send SMS verification code to the given phone number (E164 format).
+     * Server returns 204 No Content on success.
+     */
+    @POST("api/auth/sms-send-verification")
+    suspend fun sendSmsVerification(@Body request: SmsSendVerificationRequest): Response<Unit>
+
+    /**
+     * Verify the SMS code entered by the user.
+     * Server returns 204 No Content on success.
+     */
+    @POST("api/auth/sms-verify-code")
+    suspend fun verifySmsCode(@Body request: SmsVerifyCodeRequest): Response<Unit>
+
+    /**
+     * Update the current user's profile (name, phone, etc.)
+     */
+    @PUT("api/users/{userId}")
+    suspend fun updateUser(
+        @Path("userId") userId: Long,
+        @Body request: UpdateUserRequest
+    ): Response<UpdateUserResponse>
 }

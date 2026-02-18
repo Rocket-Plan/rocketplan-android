@@ -18,7 +18,8 @@ import androidx.navigation.findNavController
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.core.view.isVisible
-import androidx.core.view.WindowCompat
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import android.graphics.Color
@@ -33,6 +34,8 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.navigation.NavOptions
 import androidx.appcompat.app.AppCompatDelegate
 import com.example.rocketplan_android.databinding.ActivityMainBinding
+import com.example.rocketplan_android.data.api.CrmUserApi
+import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
@@ -87,6 +90,10 @@ class MainActivity : AppCompatActivity() {
     private var syncBannerEnabled = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.BLACK),
+            navigationBarStyle = SystemBarStyle.dark(Color.BLACK)
+        )
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         super.onCreate(savedInstanceState)
 
@@ -203,6 +210,11 @@ class MainActivity : AppCompatActivity() {
                 destination.id == R.id.signUpFragment ||
                 destination.id == R.id.forgotPasswordFragment ||
                 destination.id == R.id.oauthWebViewFragment ||
+                destination.id == R.id.accountTypeFragment ||
+                destination.id == R.id.joinCompanyFragment ||
+                destination.id == R.id.phoneVerificationFragment ||
+                destination.id == R.id.smsCodeVerifyFragment ||
+                destination.id == R.id.finalDetailsFragment ||
                 destination.id == R.id.scopePickerFragment ||
                 destination.id == R.id.batchCaptureFragment ||
                 destination.id == R.id.flirCaptureFragment
@@ -210,12 +222,17 @@ class MainActivity : AppCompatActivity() {
             updateContentLayoutForAppBar(shouldHideAppBar)
             setFullscreen(FULLSCREEN_DESTINATIONS.contains(destination.id))
 
-            // Hide sync status banner on auth and fullscreen camera screens
+            // Hide sync status banner on auth, onboarding, and fullscreen camera screens
             val shouldHideSyncBanner = destination.id == R.id.emailCheckFragment ||
                 destination.id == R.id.loginFragment ||
                 destination.id == R.id.signUpFragment ||
                 destination.id == R.id.forgotPasswordFragment ||
                 destination.id == R.id.oauthWebViewFragment ||
+                destination.id == R.id.accountTypeFragment ||
+                destination.id == R.id.joinCompanyFragment ||
+                destination.id == R.id.phoneVerificationFragment ||
+                destination.id == R.id.smsCodeVerifyFragment ||
+                destination.id == R.id.finalDetailsFragment ||
                 destination.id == R.id.batchCaptureFragment ||
                 destination.id == R.id.flirCaptureFragment
             updateSyncBannerVisibility(!shouldHideSyncBanner)
@@ -225,8 +242,13 @@ class MainActivity : AppCompatActivity() {
                     destination.id == R.id.loginFragment ||
                     destination.id == R.id.signUpFragment ||
                     destination.id == R.id.forgotPasswordFragment ||
-                destination.id == R.id.oauthWebViewFragment -> {
-                    // Hide toolbar and drawer on auth screens
+                    destination.id == R.id.oauthWebViewFragment ||
+                    destination.id == R.id.accountTypeFragment ||
+                    destination.id == R.id.joinCompanyFragment ||
+                    destination.id == R.id.phoneVerificationFragment ||
+                    destination.id == R.id.smsCodeVerifyFragment ||
+                    destination.id == R.id.finalDetailsFragment -> {
+                    // Hide toolbar and drawer on auth/onboarding screens
                     bottomNavigation.isVisible = false
                     supportActionBar?.hide()
                     drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
@@ -278,6 +300,12 @@ class MainActivity : AppCompatActivity() {
             if (authRepository.isLoggedIn()) {
                 imageProcessorQueueManager.reconcileProcessingAssemblies(source = "foreground")
                 syncQueueManager.syncOnForeground()
+                // Abandon stale server assemblies after Pusher stabilizes (matches iOS).
+                // Launched separately so it doesn't block sync.
+                launch {
+                    kotlinx.coroutines.delay(1000)
+                    imageProcessorQueueManager.abandonStaleServerAssemblies()
+                }
             }
         }
     }
@@ -297,8 +325,15 @@ class MainActivity : AppCompatActivity() {
             if (!isLoggedIn) return@launch
 
             preloadImageProcessorConfiguration()
+            checkCrmAccess()
             runCatching { roomTypeRepository.prefetchOfflineCatalog(forceRefresh = false) }
                 .onFailure { Log.w(TAG, "⚠️ Prefetch offline room type catalog failed", it) }
+
+            // Check if user needs onboarding (has token but no company)
+            val companyId = authRepository.getStoredCompanyId()
+            val userId = authRepository.getStoredUserId() ?: 0L
+            val needsOnboarding = companyId == null && userId > 0L
+            val cachedEmail = if (needsOnboarding) authRepository.getSavedEmail() ?: "" else ""
 
             val authDestinations = setOf(
                 R.id.emailCheckFragment,
@@ -320,6 +355,19 @@ class MainActivity : AppCompatActivity() {
                     }
 
                     controller.removeOnDestinationChangedListener(this)
+
+                    if (needsOnboarding) {
+                        Log.d(TAG, "User authenticated but no company, redirecting to onboarding")
+                        val bundle = Bundle().apply {
+                            putLong("userId", userId)
+                            putString("email", cachedEmail)
+                        }
+                        val navOptions = NavOptions.Builder()
+                            .setPopUpTo(R.id.emailCheckFragment, true)
+                            .build()
+                        controller.navigate(R.id.phoneVerificationFragment, bundle, navOptions)
+                        return
+                    }
 
                     if (BuildConfig.ENABLE_LOGGING) {
                         Log.d(TAG, "User authenticated, navigating to projects")
@@ -453,6 +501,7 @@ class MainActivity : AppCompatActivity() {
                     syncQueueManager.clear()
                     syncQueueManager.ensureInitialSync()
                     (application as RocketPlanApplication).imageProcessorQueueManager.abandonStaleServerAssemblies()
+                    checkCrmAccess()
 
                     // Navigate to projects screen and clear auth stack
                     val navController = findNavController(R.id.nav_host_fragment_content_main)
@@ -613,6 +662,29 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private suspend fun checkCrmAccess() {
+        try {
+            val companyId = authRepository.getStoredCompanyId()
+            if (companyId == null) {
+                val bottomNav = binding.appBarMain.contentMain.bottomNavigation
+                bottomNav.menu.findItem(R.id.nav_people)?.isVisible = false
+                return
+            }
+            val api = RetrofitClient.createService<CrmUserApi>()
+            val response = api.getGhlMe(companyId)
+            val connected = response.body()?.connected == true
+            if (BuildConfig.ENABLE_LOGGING) {
+                Log.d(TAG, "CRM access check: connected=$connected")
+            }
+            val bottomNav = binding.appBarMain.contentMain.bottomNavigation
+            bottomNav.menu.findItem(R.id.nav_people)?.isVisible = connected
+        } catch (e: Exception) {
+            Log.w(TAG, "CRM access check failed, hiding CRM tab", e)
+            val bottomNav = binding.appBarMain.contentMain.bottomNavigation
+            bottomNav.menu.findItem(R.id.nav_people)?.isVisible = false
+        }
+    }
+
     private fun preloadImageProcessorConfiguration(forceRefresh: Boolean = false) {
         lifecycleScope.launch {
             val result = imageProcessingConfigurationRepository.getConfiguration(forceRefresh)
@@ -624,17 +696,21 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    @Suppress("DEPRECATION")
     private fun setFullscreen(enabled: Boolean) {
-        WindowCompat.setDecorFitsSystemWindows(window, !enabled)
         val controller = WindowInsetsControllerCompat(window, binding.root)
         if (enabled) {
-            window.statusBarColor = Color.TRANSPARENT
+            enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+                navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
+            )
             controller.hide(WindowInsetsCompat.Type.statusBars())
             controller.systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         } else {
-            window.statusBarColor = getColor(R.color.black)
+            enableEdgeToEdge(
+                statusBarStyle = SystemBarStyle.dark(Color.BLACK),
+                navigationBarStyle = SystemBarStyle.dark(Color.BLACK)
+            )
             controller.show(WindowInsetsCompat.Type.statusBars())
         }
     }

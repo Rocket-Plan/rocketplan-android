@@ -40,7 +40,7 @@ android {
         applicationId = "com.rocketplantech.rocketplan"
         minSdk = 24
         targetSdk = 35
-        val buildNumber = 16
+        val buildNumber = 18
         versionCode = buildNumber
         versionName = "1.29 ($buildNumber)"
 
@@ -67,6 +67,8 @@ android {
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnDev.isNotBlank()}")
             // Google Web Client ID for Credential Manager (from Google Cloud Console)
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.dev", "")}\"")
+            // reCAPTCHA site key (test key for dev)
+            buildConfigField("String", "RECAPTCHA_SITE_KEY", "\"${localProperties.getProperty("recaptcha.site.key.dev", "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI")}\"")
 
             // Custom resources for dev
             resValue("string", "app_name", "RocketPlan Dev")
@@ -85,6 +87,8 @@ android {
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnStaging.isNotBlank()}")
             // Google Web Client ID for Credential Manager (from Google Cloud Console)
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.staging", "")}\"")
+            // reCAPTCHA site key (test key for staging until real key is configured)
+            buildConfigField("String", "RECAPTCHA_SITE_KEY", "\"${localProperties.getProperty("recaptcha.site.key.staging", "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI")}\"")
 
             // Custom resources for staging
             resValue("string", "app_name", "RocketPlan Staging")
@@ -102,6 +106,8 @@ android {
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnProd.isNotBlank()}")
             // Google Web Client ID for Credential Manager (from Google Cloud Console)
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.prod", "")}\"")
+            // reCAPTCHA site key (MUST be configured in local.properties for production)
+            buildConfigField("String", "RECAPTCHA_SITE_KEY", "\"${localProperties.getProperty("recaptcha.site.key.prod", "")}\"")
 
             // Custom resources for production
             resValue("string", "app_name", "RocketPlan")
@@ -235,6 +241,7 @@ dependencies {
     }
 
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.activity)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
     implementation(libs.androidx.constraintlayout)
@@ -278,6 +285,8 @@ dependencies {
     implementation(libs.credentials)
     implementation(libs.credentials.play.services)
     implementation(libs.googleid)
+    implementation(libs.play.services.safetynet)
+    implementation(libs.play.services.auth.api.phone)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.room.paging)

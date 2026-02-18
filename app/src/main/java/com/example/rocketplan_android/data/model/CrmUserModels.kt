@@ -2,6 +2,15 @@ package com.example.rocketplan_android.data.model
 
 import com.google.gson.annotations.SerializedName
 
+data class GhlMeResponse(
+    val connected: Boolean = false,
+    @SerializedName("ghl_user_id") val ghlUserId: String? = null,
+    val name: String? = null,
+    val email: String? = null,
+    val role: String? = null,
+    val permissions: Map<String, Any>? = null
+)
+
 data class CrmUserDto(
     val id: String? = null,
     @SerializedName("location_id")
