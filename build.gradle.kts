@@ -5,8 +5,8 @@ plugins {
     alias(libs.plugins.android.application) apply false
     alias(libs.plugins.kotlin.android) apply false
     id("androidx.navigation.safeargs.kotlin") version "2.6.0" apply false
-    id("org.cyclonedx.bom") version "2.2.0"
-    id("org.owasp.dependencycheck") version "12.1.0"
+    id("org.cyclonedx.bom") version "3.2.0"
+    id("org.owasp.dependencycheck") version "12.2.0"
 }
 
 group = "com.example.rocketplan_android"
@@ -21,9 +21,29 @@ if (localPropertiesFile.exists()) {
 
 // CycloneDX S-BOM configuration - only include runtime dependencies
 // Excludes build tooling (AGP/UTP) that isn't shipped in the APK
-tasks.named<org.cyclonedx.gradle.CycloneDxTask>("cyclonedxBom") {
-    setIncludeConfigs(listOf("releaseRuntimeClasspath", "devStandardDebugRuntimeClasspath"))
-    setSkipConfigs(listOf("classpath", "testRuntimeClasspath", "androidTestRuntimeClasspath"))
+val runtimeOnlyConfigs = listOf(
+    "releaseRuntimeClasspath",
+    "prodStandardReleaseRuntimeClasspath",
+    "prodFlirReleaseRuntimeClasspath",
+    "devStandardDebugRuntimeClasspath",
+    "devFlirDebugRuntimeClasspath"
+)
+
+tasks.named<org.cyclonedx.gradle.CyclonedxDirectTask>("cyclonedxDirectBom") {
+    includeConfigs = runtimeOnlyConfigs
+}
+
+subprojects {
+    plugins.withId("org.cyclonedx.bom") {
+        tasks.named<org.cyclonedx.gradle.CyclonedxDirectTask>("cyclonedxDirectBom") {
+            includeConfigs = runtimeOnlyConfigs
+        }
+    }
+}
+
+// Apply CycloneDX to app subproject so the config above takes effect
+project(":app") {
+    apply(plugin = "org.cyclonedx.bom")
 }
 
 // OWASP Dependency-Check configuration
