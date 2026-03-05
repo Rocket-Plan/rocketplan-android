@@ -17,6 +17,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.model.ClaimDto
+import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.model.ClaimMutationRequest
 import com.example.rocketplan_android.data.model.DamageCauseDto
 import com.example.rocketplan_android.data.model.DamageTypeDto
@@ -1105,30 +1106,7 @@ private fun OfflineDamageCauseEntity.toDto(): DamageCauseDto {
     )
 }
 
-private fun ClaimDto.toEntity(): OfflineClaimEntity {
-    return OfflineClaimEntity(
-        claimId = id,
-        projectId = projectId,
-        locationId = locationId,
-        policyHolder = policyHolder ?: claimInfo?.policyHolder,
-        ownershipStatus = ownershipStatus ?: claimInfo?.ownershipStatus,
-        policyHolderPhone = policyHolderPhone ?: claimInfo?.policyHolderPhone,
-        policyHolderEmail = policyHolderEmail ?: claimInfo?.policyHolderEmail,
-        representative = representative ?: claimInfo?.representative,
-        provider = provider ?: claimInfo?.provider,
-        insuranceDeductible = insuranceDeductible ?: claimInfo?.insuranceDeductible,
-        policyNumber = policyNumber ?: claimInfo?.policyNumber,
-        claimNumber = claimNumber ?: claimInfo?.claimNumber,
-        adjuster = adjuster ?: claimInfo?.adjuster,
-        adjusterPhone = adjusterPhone ?: claimInfo?.adjusterPhone,
-        adjusterEmail = adjusterEmail ?: claimInfo?.adjusterEmail,
-        claimTypeId = claimType?.id,
-        claimTypeName = claimType?.name,
-        createdAt = createdAt?.let { com.example.rocketplan_android.util.DateUtils.parseApiDate(it) },
-        updatedAt = updatedAt?.let { com.example.rocketplan_android.util.DateUtils.parseApiDate(it) },
-        lastSyncedAt = Date()
-    )
-}
+// ClaimDto.toEntity() is now in SyncEntityMappers.kt
 
 private fun OfflineClaimEntity.toDto(): ClaimDto {
     return ClaimDto(

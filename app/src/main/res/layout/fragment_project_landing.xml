@@ -325,6 +325,66 @@
                 </com.google.android.material.card.MaterialCardView>
 
                 <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/eSignatureCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    app:cardBackgroundColor="@color/white"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/light_border"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <FrameLayout
+                            android:layout_width="@dimen/icon_size_list_container"
+                            android:layout_height="@dimen/icon_size_list_container"
+                            android:background="@drawable/bg_icon_circle_purple"
+                            android:foreground="?attr/selectableItemBackgroundBorderless">
+
+                            <ImageView
+                                android:id="@+id/eSignatureIcon"
+                                android:layout_width="@dimen/icon_size_list_large"
+                                android:layout_height="@dimen/icon_size_list_large"
+                                android:layout_gravity="center"
+                                android:contentDescription="@null"
+                                android:scaleType="centerInside"
+                                android:src="@drawable/ic_esignature" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/esignature_title"
+                                android:textColor="@color/black"
+                                android:textSize="@dimen/text_size_card_title"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="@string/esignature_subtitle"
+                                android:textColor="@color/light_text_rp"
+                                android:textSize="@dimen/text_size_card_subtitle" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <com.google.android.material.card.MaterialCardView
                     android:id="@+id/rocketDryCard"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

@@ -106,7 +106,15 @@ class ProjectMetadataSyncService(
             runCatching { api.getProjectAtmosphericLogs(serverProjectId, atmosSince) }
                 .onSuccess { response ->
                     val dtos = response.data
-                    localDataService.saveAtmosphericLogs(dtos.map { it.toEntity(defaultRoomId = null) })
+                    localDataService.saveAtmosphericLogs(
+                        dtos.map {
+                            it.toEntity(
+                                defaultRoomId = null,
+                                defaultProjectId = projectId,
+                                defaultIsExternal = true
+                            )
+                        }
+                    )
                     itemCount.addAndGet(dtos.size)
 
                     // Create photo entities for logs with photos (enables offline caching)
@@ -118,6 +126,16 @@ class ProjectMetadataSyncService(
 
                     dtos.latestTimestamp { it.updatedAt }
                         ?.let { syncCheckpointStore.updateCheckpoint(atmosCheckpointKey, it) }
+                }.isSuccess
+        }
+
+        // Claims (independent)
+        queue.addItem("claims") {
+            runCatching { api.getProjectClaims(serverProjectId, include = "claimType") }
+                .onSuccess { response ->
+                    val entities = response.data.map { it.toEntity() }
+                    localDataService.saveClaims(entities)
+                    itemCount.addAndGet(entities.size)
                 }.isSuccess
         }
 
@@ -229,7 +247,8 @@ class ProjectMetadataSyncService(
 
     suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
-        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "damageMaterial,photo") }
+        // API returns {"data": {"materialId": [{log}, ...], ...}} — dict keyed by material ID inside "data" wrapper
+        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "photo,moisture_log") }
             .onFailure { error ->
                 Log.e(TAG, "[syncRoomMoistureLogs] Failed for roomId=$roomId (projectId=$projectId)", error)
             }
@@ -237,11 +256,52 @@ class ProjectMetadataSyncService(
 
         val logs: List<MoistureLogDto> = when {
             response.data == null -> emptyList()
+            response.data.isJsonObject -> {
+                val obj = response.data.asJsonObject
+                // Distinguish material-keyed dict (keys are numeric IDs) from a single log object
+                val looksLikeMaterialDict = obj.entrySet().any { it.key.toLongOrNull() != null }
+                if (looksLikeMaterialDict) {
+                    // Dict keyed by material ID: {"123": [{log}, ...], "456": [{log}, ...]}
+                    val allLogs = mutableListOf<MoistureLogDto>()
+                    for ((materialIdStr, element) in obj.entrySet()) {
+                        val materialId = materialIdStr.toLongOrNull()
+                        if (element == null) continue
+                        if (element.isJsonArray) {
+                            val materialLogs = gson.fromJson(element, Array<MoistureLogDto>::class.java)
+                                ?.toList() ?: emptyList()
+                            allLogs += materialLogs.map { log ->
+                                if (log.materialId == null && materialId != null) {
+                                    log.copy(materialId = materialId)
+                                } else {
+                                    log
+                                }
+                            }
+                        } else if (element.isJsonObject) {
+                            val log = gson.fromJson(element, MoistureLogDto::class.java) ?: continue
+                            allLogs += if (log.materialId == null && materialId != null) {
+                                log.copy(materialId = materialId)
+                            } else {
+                                log
+                            }
+                        }
+                    }
+                    if (allLogs.isNotEmpty()) {
+                        Log.d(TAG, "[syncRoomMoistureLogs] Parsed dict response: ${obj.size()} materials, ${allLogs.size} total logs for roomId=$roomId")
+                    }
+                    allLogs
+                } else {
+                    // Single log object at top level
+                    val log = gson.fromJson(response.data, MoistureLogDto::class.java)
+                    if (log != null) {
+                        Log.d(TAG, "[syncRoomMoistureLogs] Parsed single log object for roomId=$roomId")
+                        listOf(log)
+                    } else {
+                        emptyList()
+                    }
+                }
+            }
             response.data.isJsonArray -> {
                 gson.fromJson(response.data, Array<MoistureLogDto>::class.java)?.toList() ?: emptyList()
-            }
-            response.data.isJsonObject -> {
-                listOfNotNull(gson.fromJson(response.data, MoistureLogDto::class.java))
             }
             else -> {
                 Log.w(
@@ -257,11 +317,19 @@ class ProjectMetadataSyncService(
             return@withContext 0
         }
 
-        val entities = logs.mapNotNull { it.toEntity() }
+        val entities = logs.mapNotNull {
+            it.toEntity(
+                defaultProjectId = projectId,
+                defaultRoomId = roomId
+            )
+        }
+        if (entities.size < logs.size) {
+            Log.w(TAG, "[syncRoomMoistureLogs] ${logs.size} DTOs -> ${entities.size} entities (${logs.size - entities.size} dropped by toEntity)")
+        }
         localDataService.saveMoistureLogs(entities)
 
         // Create photo entities for logs with photos (enables offline caching)
-        val logPhotos = logs.mapNotNull { it.toPhotoEntity() }
+        val logPhotos = logs.mapNotNull { it.toPhotoEntity(defaultProjectId = projectId, defaultRoomId = roomId) }
         if (logPhotos.isNotEmpty()) {
             localDataService.saveOrUpdateLogPhotos(logPhotos)
             Log.d(TAG, "[syncRoomMoistureLogs] Created ${logPhotos.size} photo entities for offline caching")

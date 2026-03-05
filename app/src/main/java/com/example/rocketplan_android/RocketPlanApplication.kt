@@ -20,6 +20,7 @@ import com.example.rocketplan_android.data.repository.AuthRepository
 import com.example.rocketplan_android.data.repository.ImageProcessorRepository
 import com.example.rocketplan_android.data.repository.ImageProcessingConfigurationRepository
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
+import com.example.rocketplan_android.data.repository.PdfFormRepository
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
 import com.example.rocketplan_android.data.repository.sync.SupportSyncService
 import com.example.rocketplan_android.data.repository.sync.TimecardSyncService
@@ -114,6 +115,9 @@ class RocketPlanApplication : Application() {
     lateinit var pusherService: PusherService
         private set
 
+    lateinit var pdfFormRepository: PdfFormRepository
+        private set
+
     private lateinit var imageProcessorNetworkMonitor: com.example.rocketplan_android.data.network.ImageProcessorNetworkMonitor
 
     private lateinit var imageProcessingConfigStore: ImageProcessingConfigStore
@@ -148,6 +152,7 @@ class RocketPlanApplication : Application() {
         val offlineRoomTypeCatalogStore = OfflineRoomTypeCatalogStore.getInstance(this)
 
         authRepository = AuthRepository(secureStorage, remoteLogger)
+        pdfFormRepository = PdfFormRepository(authRepository, remoteLogger)
 
         val offlineSyncApi = RetrofitClient.createService<OfflineSyncApi>()
         roomTypeRepository = RoomTypeRepository(

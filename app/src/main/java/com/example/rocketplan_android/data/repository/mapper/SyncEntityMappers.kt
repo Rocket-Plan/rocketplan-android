@@ -4,6 +4,7 @@ import android.util.Log
 import com.example.rocketplan_android.data.local.PhotoCacheStatus
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
+import com.example.rocketplan_android.data.local.entity.OfflineClaimEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
@@ -22,6 +23,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineUserEntity
 import com.example.rocketplan_android.data.local.entity.OfflineUserRoleEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.CategoryAlbums
+import com.example.rocketplan_android.data.model.ClaimDto
 import com.example.rocketplan_android.data.model.offline.AlbumDto
 import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
@@ -575,6 +577,8 @@ internal fun ProjectPhotoListingDto.toPhotoDto(defaultProjectId: Long): PhotoDto
 
 internal fun AtmosphericLogDto.toEntity(
     defaultRoomId: Long? = roomId,
+    defaultProjectId: Long? = null,
+    defaultIsExternal: Boolean? = null,
     existing: OfflineAtmosphericLogEntity? = null
 ): OfflineAtmosphericLogEntity {
     val timestamp = now()
@@ -582,7 +586,7 @@ internal fun AtmosphericLogDto.toEntity(
         logId = existing?.logId ?: id,
         serverId = id,
         uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
-        projectId = projectId,
+        projectId = defaultProjectId ?: projectId,
         roomId = defaultRoomId,
         date = DateUtils.parseApiDate(date) ?: timestamp,
         relativeHumidity = relativeHumidity ?: 0.0,
@@ -591,13 +595,13 @@ internal fun AtmosphericLogDto.toEntity(
         gpp = gpp,
         pressure = pressure,
         windSpeed = windSpeed,
-        isExternal = isExternal ?: false,
+        isExternal = defaultIsExternal ?: isExternal ?: false,
         isInlet = isInlet ?: false,
         inletId = inletId,
         outletId = outletId,
-        photoUrl = photoUrl ?: existing?.photoUrl,
+        photoUrl = photoUrl ?: photo?.getBestUrl() ?: existing?.photoUrl,
         photoLocalPath = photoLocalPath ?: existing?.photoLocalPath,
-        photoUploadStatus = photoUploadStatus ?: existing?.photoUploadStatus ?: "completed",
+        photoUploadStatus = photoUploadStatus ?: if (photo?.getBestUrl() != null) "completed" else existing?.photoUploadStatus ?: "completed",
         photoAssemblyId = photoAssemblyId ?: existing?.photoAssemblyId,
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
@@ -611,26 +615,32 @@ internal fun AtmosphericLogDto.toEntity(
 }
 
 internal fun MoistureLogDto.toEntity(
-    existing: OfflineMoistureLogEntity? = null
+    existing: OfflineMoistureLogEntity? = null,
+    defaultProjectId: Long? = null,
+    defaultRoomId: Long? = null
 ): OfflineMoistureLogEntity? {
-    val material = materialId ?: damageMaterial?.id ?: return null
+    val material = materialId ?: damageMaterial?.id
+    if (material == null) {
+        Log.w("SyncMapper", "MoistureLog id=$id dropped: no materialId or damageMaterial.id")
+        return null
+    }
     val resolvedReading = reading ?: moistureContent
     val timestamp = now()
     return OfflineMoistureLogEntity(
         logId = existing?.logId ?: id,
         serverId = id,
         uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
-        projectId = projectId,
-        roomId = roomId,
+        projectId = defaultProjectId ?: projectId,
+        roomId = defaultRoomId ?: roomId,
         materialId = material,
         date = DateUtils.parseApiDate(date) ?: timestamp,
         moistureContent = resolvedReading ?: 0.0,
         removed = removed ?: existing?.removed ?: false,
         location = location,
         depth = depth,
-        photoUrl = photoUrl ?: existing?.photoUrl,
+        photoUrl = photoUrl ?: photo?.getBestUrl() ?: existing?.photoUrl,
         photoLocalPath = photoLocalPath ?: existing?.photoLocalPath,
-        photoUploadStatus = photoUploadStatus ?: existing?.photoUploadStatus ?: "completed",
+        photoUploadStatus = photoUploadStatus ?: if (photo?.getBestUrl() != null) "completed" else existing?.photoUploadStatus ?: "completed",
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
@@ -1008,7 +1018,10 @@ internal fun AtmosphericLogDto.toPhotoEntity(): OfflinePhotoEntity? {
  * Uses nested photo.sizes URL (from include=photo) or falls back to photoUrl.
  * Returns null if the log has no photo.
  */
-internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
+internal fun MoistureLogDto.toPhotoEntity(
+    defaultProjectId: Long? = null,
+    defaultRoomId: Long? = null
+): OfflinePhotoEntity? {
     // Prefer nested photo.sizes (from include=photo), fall back to flat photoUrl
     val url = photo?.getBestUrl() ?: photoUrl
     if (url.isNullOrBlank()) return null
@@ -1020,12 +1033,16 @@ internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
     val photoUuid = photo?.uuid ?: uuid?.let { "moisture-photo-$it" } ?: UuidUtils.generateUuidV7()
     val thumbnailUrl = photo?.sizes?.small ?: url
 
+    // Use defaults when DTO IDs are missing/zero (dict response path)
+    val resolvedProjectId = if (projectId != 0L) projectId else (defaultProjectId ?: projectId)
+    val resolvedRoomId = if (roomId != 0L) roomId else (defaultRoomId ?: roomId)
+
     return OfflinePhotoEntity(
         photoId = localId,
         serverId = photo?.id, // Use photo's server ID if available
         uuid = photoUuid,
-        projectId = projectId,
-        roomId = roomId,
+        projectId = resolvedProjectId,
+        roomId = resolvedRoomId,
         logId = null,
         moistureLogId = logServerId,
         albumId = null,
@@ -1053,5 +1070,30 @@ internal fun MoistureLogDto.toPhotoEntity(): OfflinePhotoEntity? {
         cachedOriginalPath = null,
         cachedThumbnailPath = null,
         lastAccessedAt = null
+    )
+}
+
+internal fun ClaimDto.toEntity(): OfflineClaimEntity {
+    return OfflineClaimEntity(
+        claimId = id,
+        projectId = projectId,
+        locationId = locationId,
+        policyHolder = policyHolder ?: claimInfo?.policyHolder,
+        ownershipStatus = ownershipStatus ?: claimInfo?.ownershipStatus,
+        policyHolderPhone = policyHolderPhone ?: claimInfo?.policyHolderPhone,
+        policyHolderEmail = policyHolderEmail ?: claimInfo?.policyHolderEmail,
+        representative = representative ?: claimInfo?.representative,
+        provider = provider ?: claimInfo?.provider,
+        insuranceDeductible = insuranceDeductible ?: claimInfo?.insuranceDeductible,
+        policyNumber = policyNumber ?: claimInfo?.policyNumber,
+        claimNumber = claimNumber ?: claimInfo?.claimNumber,
+        adjuster = adjuster ?: claimInfo?.adjuster,
+        adjusterPhone = adjusterPhone ?: claimInfo?.adjusterPhone,
+        adjusterEmail = adjusterEmail ?: claimInfo?.adjusterEmail,
+        claimTypeId = claimType?.id,
+        claimTypeName = claimType?.name,
+        createdAt = createdAt?.let { DateUtils.parseApiDate(it) },
+        updatedAt = updatedAt?.let { DateUtils.parseApiDate(it) },
+        lastSyncedAt = Date()
     )
 }

@@ -1020,6 +1020,47 @@
     <string name="drying_color_hint">Your latest average will be coloured from Red to Green based on how far it is from your drying goal.</string>
     <string name="drying_back_label">%1$s damages</string>
 
+    <!-- eSignature / PDF Forms -->
+    <string name="esignature_title">Documents</string>
+    <string name="esignature_subtitle">Create and sign PDF forms</string>
+    <string name="esignature_empty">No PDF form submissions yet.</string>
+    <string name="esignature_loading">Loading submissions…</string>
+    <string name="esignature_new_form">New PDF Form</string>
+    <string name="esignature_select_template">Select Template</string>
+    <string name="esignature_client_name">Client Name</string>
+    <string name="esignature_client_email">Client Email</string>
+    <string name="esignature_client_phone">Client Phone</string>
+    <string name="esignature_create_and_sign">Create &amp; Open for Signing</string>
+    <string name="esignature_creating">Creating submission…</string>
+    <string name="esignature_created">Submission created</string>
+    <string name="esignature_create_failed">Failed to create submission</string>
+    <string name="esignature_status_pending">Pending</string>
+    <string name="esignature_status_signing">Signing</string>
+    <string name="esignature_status_signed">Signed</string>
+    <string name="esignature_sign_title">Sign PDF Form</string>
+    <string name="esignature_sign_submit">Submit Signature</string>
+    <string name="esignature_signing">Submitting…</string>
+    <string name="esignature_signed_success">Form signed successfully</string>
+    <string name="esignature_sign_failed">Failed to sign form</string>
+    <string name="esignature_signature">Signature</string>
+    <string name="esignature_tap_to_sign">Tap to sign</string>
+    <string name="esignature_clear_signature">Clear</string>
+    <string name="esignature_draw_signature">Draw your signature</string>
+    <string name="esignature_done">Done</string>
+    <string name="esignature_sign_above_line">Sign above the line</string>
+    <string name="esignature_no_templates">No templates available</string>
+    <string name="esignature_load_failed">Failed to load data</string>
+    <string name="esignature_page_indicator">Page %1$d of %2$d</string>
+    <string name="esignature_next">Next</string>
+    <string name="esignature_required_fields_remaining">%1$d required field(s) remaining</string>
+    <string name="esignature_delete_title">Delete Submission</string>
+    <string name="esignature_delete_message">Are you sure you want to delete \"%1$s\"?</string>
+    <string name="esignature_delete">Delete</string>
+    <string name="esignature_cancel">Cancel</string>
+    <string name="esignature_default_template">PDF Form</string>
+    <string name="esignature_created_date">Created: %1$s</string>
+    <string name="esignature_delete_submission_cd">Delete submission</string>
+
     <!-- Accessibility -->
     <string name="photo_content_description">Photo taken on %1$s</string>
     <string name="photo_content_description_no_date">Photo</string>

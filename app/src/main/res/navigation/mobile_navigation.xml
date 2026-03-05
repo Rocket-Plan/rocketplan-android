@@ -466,6 +466,10 @@
         <action
             android:id="@+id/action_projectLandingFragment_to_crewFragment"
             app:destination="@id/crewFragment" />
+
+        <action
+            android:id="@+id/action_projectLandingFragment_to_eSignatureFragment"
+            app:destination="@id/eSignatureFragment" />
     </fragment>
 
     <fragment
@@ -1077,6 +1081,36 @@
             android:id="@+id/action_to_chat"
             app:destination="@id/supportChatFragment"
             app:popUpTo="@id/supportFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/eSignatureFragment"
+        android:name="com.example.rocketplan_android.ui.esignature.ESignatureFragment"
+        android:label="@string/esignature_title"
+        tools:layout="@layout/fragment_esignature">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <action
+            android:id="@+id/action_eSignatureFragment_to_pdfFormSignFragment"
+            app:destination="@id/pdfFormSignFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/pdfFormSignFragment"
+        android:name="com.example.rocketplan_android.ui.esignature.PdfFormSignFragment"
+        android:label="@string/esignature_sign_title"
+        tools:layout="@layout/fragment_pdf_form_sign">
+
+        <argument
+            android:name="submissionUuid"
+            app:argType="string" />
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
     </fragment>
 
 </navigation>

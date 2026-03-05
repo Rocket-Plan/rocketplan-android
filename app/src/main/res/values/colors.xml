@@ -40,6 +40,11 @@
     <color name="secondary_yellow">#E39600</color>
     <color name="team_member_tag">#DFF1FE</color>
     <color name="team_member_tag_dark">#4AB2FE</color>
+    <color name="team_member_tag_bg">#FFF3E0</color>
+    <color name="badge_green_bg">#E7F5EF</color>
+    <color name="badge_green_text">#007760</color>
+    <color name="badge_blue_bg">#DFF1FE</color>
+    <color name="badge_blue_text">#1976D2</color>
     <color name="warning_red">#E82828</color>
     <color name="dark_text_rp">#2C2736</color>
     <color name="light_gray_rp">#E8E7ED</color>

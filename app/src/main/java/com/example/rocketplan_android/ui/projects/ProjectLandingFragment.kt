@@ -68,6 +68,7 @@ class ProjectLandingFragment : Fragment() {
     private lateinit var allNotesCard: View
     private lateinit var allNotesIcon: ImageView
     private lateinit var allNotesSubtitle: TextView
+    private lateinit var eSignatureCard: View
     private lateinit var timecardCard: View
     private lateinit var crewCard: View
     private lateinit var syncBlockingOverlay: View
@@ -116,6 +117,7 @@ class ProjectLandingFragment : Fragment() {
         allNotesCard = root.findViewById(R.id.allNotesCard)
         allNotesIcon = root.findViewById(R.id.allNotesIcon)
         allNotesSubtitle = root.findViewById(R.id.allNotesSubtitle)
+        eSignatureCard = root.findViewById(R.id.eSignatureCard)
         timecardCard = root.findViewById(R.id.timecardCard)
         crewCard = root.findViewById(R.id.crewCard)
         syncBlockingOverlay = root.findViewById(R.id.syncBlockingOverlay)
@@ -221,6 +223,11 @@ class ProjectLandingFragment : Fragment() {
         allNotesCard.setOnClickListener {
             val action = ProjectLandingFragmentDirections
                 .actionProjectLandingFragmentToProjectNotesFragment(args.projectId)
+            safeNavigate(action)
+        }
+        eSignatureCard.setOnClickListener {
+            val action = ProjectLandingFragmentDirections
+                .actionProjectLandingFragmentToESignatureFragment(args.projectId)
             safeNavigate(action)
         }
         timecardCard.setOnClickListener {
