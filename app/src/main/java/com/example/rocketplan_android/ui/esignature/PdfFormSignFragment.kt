@@ -1074,18 +1074,24 @@ class PdfFormSignFragment : Fragment() {
             userEditedValues[fieldId] = editText.text?.toString() ?: ""
         }
 
+        // Hard gate: ensure all required fields are filled before submitting
+        if (!allRequiredFieldsFilled()) {
+            Toast.makeText(requireContext(), R.string.esignature_required_fields_incomplete, Toast.LENGTH_SHORT).show()
+            scrollToNextEmptyRequiredField()
+            return
+        }
+
         // Validate ALL fields (on-screen and off-screen) for email/phone format
         for ((fieldId, value) in userEditedValues) {
             if (value.isBlank()) continue
 
             if (allFieldTypes[fieldId] == "email" && !Patterns.EMAIL_ADDRESS.matcher(value).matches()) {
-                // If field is on-screen, show inline error; otherwise show toast
                 val editText = fieldInputs[fieldId]
                 if (editText != null) {
-                    editText.error = "Invalid email address"
+                    editText.error = getString(R.string.esignature_invalid_email)
                     editText.requestFocus()
                 } else {
-                    Toast.makeText(requireContext(), "Invalid email address in a field on another page", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), R.string.esignature_invalid_email_other_page, Toast.LENGTH_LONG).show()
                 }
                 return
             }
@@ -1093,10 +1099,10 @@ class PdfFormSignFragment : Fragment() {
             if (allFieldTypes[fieldId] == "phone" && !Patterns.PHONE.matcher(value).matches()) {
                 val editText = fieldInputs[fieldId]
                 if (editText != null) {
-                    editText.error = "Invalid phone number"
+                    editText.error = getString(R.string.esignature_invalid_phone)
                     editText.requestFocus()
                 } else {
-                    Toast.makeText(requireContext(), "Invalid phone number in a field on another page", Toast.LENGTH_LONG).show()
+                    Toast.makeText(requireContext(), R.string.esignature_invalid_phone_other_page, Toast.LENGTH_LONG).show()
                 }
                 return
             }

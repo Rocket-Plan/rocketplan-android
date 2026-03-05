@@ -1060,6 +1060,11 @@
     <string name="esignature_default_template">PDF Form</string>
     <string name="esignature_created_date">Created: %1$s</string>
     <string name="esignature_delete_submission_cd">Delete submission</string>
+    <string name="esignature_invalid_email">Invalid email address</string>
+    <string name="esignature_invalid_email_other_page">Invalid email address in a field on another page</string>
+    <string name="esignature_invalid_phone">Invalid phone number</string>
+    <string name="esignature_invalid_phone_other_page">Invalid phone number in a field on another page</string>
+    <string name="esignature_required_fields_incomplete">Please fill all required fields before submitting</string>
 
     <!-- Accessibility -->
     <string name="photo_content_description">Photo taken on %1$s</string>
