@@ -323,10 +323,14 @@ class PdfFormSignFragment : Fragment() {
                 val bitmapWidth = (displayWidth * effectiveScale).toInt()
                 val bitmapHeight = (pageHeight * fitScale * effectiveScale).toInt()
 
-                val bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, bitmapConfig)
-                bitmap.eraseColor(Color.WHITE)
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                page.close()
+                val bitmap = try {
+                    val bmp = Bitmap.createBitmap(bitmapWidth, bitmapHeight, bitmapConfig)
+                    bmp.eraseColor(Color.WHITE)
+                    page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    bmp
+                } finally {
+                    page.close()
+                }
 
                 // Recycle old bitmap
                 val oldDrawable = oldImageView.drawable
@@ -337,6 +341,8 @@ class PdfFormSignFragment : Fragment() {
 
                 oldImageView.setImageBitmap(bitmap)
                 Log.d(TAG, "reRenderVisiblePages: page $pageIndex re-rendered at ${bitmapWidth}x${bitmapHeight}")
+            } catch (e: OutOfMemoryError) {
+                Log.e(TAG, "reRenderVisiblePages: OOM re-rendering page $pageIndex at scale $targetScale", e)
             } catch (e: Exception) {
                 Log.e(TAG, "reRenderVisiblePages: failed for page $pageIndex", e)
             }
@@ -661,10 +667,14 @@ class PdfFormSignFragment : Fragment() {
             val bitmapHeight = (pageHeight * scale * renderScale).toInt()
             val layoutHeight = pageLayoutHeights[pageIndex]
 
-            val bitmap = Bitmap.createBitmap(bitmapWidth, bitmapHeight, bitmapConfig)
-            bitmap.eraseColor(Color.WHITE)
-            page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-            page.close()
+            val bitmap = try {
+                val bmp = Bitmap.createBitmap(bitmapWidth, bitmapHeight, bitmapConfig)
+                bmp.eraseColor(Color.WHITE)
+                page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                bmp
+            } finally {
+                page.close()
+            }
 
             // Add image as first child
             val imageView = ImageView(requireContext()).apply {
@@ -686,6 +696,10 @@ class PdfFormSignFragment : Fragment() {
 
             renderedPages.add(pageIndex)
             Log.d(TAG, "renderPage: rendered page $pageIndex (${renderedPages.size} total in memory)")
+        } catch (e: OutOfMemoryError) {
+            Log.e(TAG, "renderPage: OOM rendering page $pageIndex, evicting distant pages", e)
+            // Evict all non-adjacent pages and retry is not worth the complexity;
+            // the page simply stays as a white placeholder until next scroll.
         } catch (e: Exception) {
             Log.e(TAG, "renderPage: failed to render page $pageIndex", e)
         }

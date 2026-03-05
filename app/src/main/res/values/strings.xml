@@ -1065,6 +1065,14 @@
     <string name="esignature_invalid_phone">Invalid phone number</string>
     <string name="esignature_invalid_phone_other_page">Invalid phone number in a field on another page</string>
     <string name="esignature_required_fields_incomplete">Please fill all required fields before submitting</string>
+    <string name="esignature_email_and_sms">Email &amp; SMS to Client</string>
+    <string name="esignature_email_to_client">Email to Client</string>
+    <string name="esignature_sms_to_client">SMS to Client</string>
+    <string name="esignature_open_on_device">Open on This Device</string>
+    <string name="esignature_email_required">Client email is required</string>
+    <string name="esignature_phone_required">Client phone is required</string>
+    <string name="esignature_shared_success">Form sent to client</string>
+    <string name="esignature_share_failed">Failed to send form to client</string>
 
     <!-- Accessibility -->
     <string name="photo_content_description">Photo taken on %1$s</string>

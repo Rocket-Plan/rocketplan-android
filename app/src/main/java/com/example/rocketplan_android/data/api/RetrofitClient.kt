@@ -114,6 +114,15 @@ object RetrofitClient {
     /**
      * OkHttp client with interceptors, timeouts, and certificate pinning
      */
+    /** OkHttp client without auth interceptor — for downloading external URLs (e.g. S3). */
+    val plainHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .connectTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
+            .readTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
+            .build()
+    }
+
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)

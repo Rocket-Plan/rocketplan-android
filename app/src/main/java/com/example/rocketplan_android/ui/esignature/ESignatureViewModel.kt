@@ -34,6 +34,12 @@ sealed class ESignatureEvent {
     data class NavigateToSign(val uuid: String) : ESignatureEvent()
     data class ShowError(val message: String) : ESignatureEvent()
     data class OpenSignedUrl(val url: String) : ESignatureEvent()
+    object SubmissionShared : ESignatureEvent()
+    data class SubmissionShareFailed(val message: String) : ESignatureEvent()
+}
+
+enum class DeliveryMethod {
+    EMAIL_AND_SMS, EMAIL, SMS, OPEN_ON_DEVICE
 }
 
 class ESignatureViewModel(
@@ -101,7 +107,8 @@ class ESignatureViewModel(
         templateId: Long,
         clientName: String?,
         clientEmail: String?,
-        clientPhone: String?
+        clientPhone: String?,
+        deliveryMethod: DeliveryMethod = DeliveryMethod.OPEN_ON_DEVICE
     ) {
         if (_isCreating.value) return
         viewModelScope.launch {
@@ -113,18 +120,44 @@ class ESignatureViewModel(
                 clientEmail = clientEmail,
                 clientPhone = clientPhone
             )
-            _isCreating.value = false
 
             result.fold(
                 onSuccess = { submission ->
-                    // Reload list
                     loadData()
-                    // Navigate to sign screen
-                    submission.uuid?.let { uuid ->
-                        _events.send(ESignatureEvent.SubmissionCreated(uuid))
+                    if (deliveryMethod == DeliveryMethod.OPEN_ON_DEVICE) {
+                        _isCreating.value = false
+                        submission.uuid?.let { uuid ->
+                            _events.send(ESignatureEvent.SubmissionCreated(uuid))
+                        }
+                    } else {
+                        val shareEmail = when (deliveryMethod) {
+                            DeliveryMethod.EMAIL_AND_SMS, DeliveryMethod.EMAIL -> clientEmail
+                            else -> null
+                        }
+                        val sharePhone = when (deliveryMethod) {
+                            DeliveryMethod.EMAIL_AND_SMS, DeliveryMethod.SMS -> clientPhone
+                            else -> null
+                        }
+                        val shareResult = pdfFormRepository.shareSubmission(
+                            id = submission.id!!,
+                            email = shareEmail,
+                            phone = sharePhone
+                        )
+                        _isCreating.value = false
+                        shareResult.fold(
+                            onSuccess = {
+                                _events.send(ESignatureEvent.SubmissionShared)
+                            },
+                            onFailure = { error ->
+                                _events.send(ESignatureEvent.SubmissionShareFailed(
+                                    error.message ?: "Failed to share submission"
+                                ))
+                            }
+                        )
                     }
                 },
                 onFailure = { error ->
+                    _isCreating.value = false
                     _events.send(ESignatureEvent.ShowError(error.message ?: "Failed to create submission"))
                 }
             )

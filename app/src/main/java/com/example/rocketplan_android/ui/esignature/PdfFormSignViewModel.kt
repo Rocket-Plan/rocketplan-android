@@ -7,21 +7,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.RocketPlanApplication
-import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.model.PdfFormFieldDto
 import com.example.rocketplan_android.data.model.PdfFormSubmissionDto
 import com.example.rocketplan_android.data.model.PdfFormTemplateDto
 import com.example.rocketplan_android.data.model.SignPdfFormRequest
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.io.File
-import java.net.URL
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -197,42 +193,23 @@ class PdfFormSignViewModel(
         return defaults to labels
     }
 
-    private suspend fun downloadPdf(url: String): File? = withContext(Dispatchers.IO) {
-        try {
-            Log.d(TAG, "downloadPdf: starting download")
-            val cacheDir = app.cacheDir
-            val pdfFile = File(cacheDir, "pdf_form_${submissionUuid}.pdf")
-            if (pdfFile.exists()) {
-                Log.d(TAG, "downloadPdf: deleting existing cached file")
-                pdfFile.delete()
+    private suspend fun downloadPdf(url: String): File? {
+        Log.d(TAG, "downloadPdf: starting download")
+        val result = pdfFormRepository.downloadPdf(
+            url = url,
+            cacheDir = app.cacheDir,
+            fileName = "pdf_form_${submissionUuid}.pdf"
+        )
+        return result.fold(
+            onSuccess = { file ->
+                Log.d(TAG, "downloadPdf: saved to ${file.absolutePath} size=${file.length()} bytes")
+                file
+            },
+            onFailure = { error ->
+                Log.e(TAG, "downloadPdf: FAILED - ${error.message}", error)
+                null
             }
-
-            val connection = URL(url).openConnection() as java.net.HttpURLConnection
-            connection.connectTimeout = 30_000
-            connection.readTimeout = 30_000
-            // Only attach auth headers for non-S3 URLs; pre-signed S3 URLs
-            // already contain auth params and S3 rejects duplicate auth.
-            val isPreSignedS3 = url.contains("X-Amz-Signature") || url.contains("x-amz-signature")
-            if (!isPreSignedS3) {
-                RetrofitClient.getAuthToken()?.let { token ->
-                    connection.setRequestProperty("Authorization", "Bearer $token")
-                }
-                RetrofitClient.getCompanyId()?.let { companyId ->
-                    connection.setRequestProperty("X-Company-Id", companyId.toString())
-                }
-            }
-            Log.d(TAG, "downloadPdf: connecting... responseCode=${connection.responseCode}")
-            connection.inputStream.use { input ->
-                pdfFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
-            }
-            Log.d(TAG, "downloadPdf: saved to ${pdfFile.absolutePath} size=${pdfFile.length()} bytes")
-            pdfFile
-        } catch (e: Exception) {
-            Log.e(TAG, "downloadPdf: FAILED - ${e.message}", e)
-            null
-        }
+        )
     }
 
     fun submitSignature(fieldValuesById: Map<String, Any>, signatureData: String?) {

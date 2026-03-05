@@ -6,10 +6,15 @@ import com.example.rocketplan_android.data.model.CreatePdfFormSubmissionRequest
 import com.example.rocketplan_android.data.model.PdfFormSignDataResponse
 import com.example.rocketplan_android.data.model.PdfFormSubmissionDto
 import com.example.rocketplan_android.data.model.PdfFormTemplateDto
+import com.example.rocketplan_android.data.model.SharePdfFormSubmissionRequest
 import com.example.rocketplan_android.data.model.SignPdfFormRequest
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.Request
 import retrofit2.Response
+import java.io.File
 
 class PdfFormRepository(
     private val authRepository: AuthRepository,
@@ -131,6 +136,29 @@ class PdfFormRepository(
         }
     }
 
+    suspend fun shareSubmission(
+        id: Long,
+        email: String? = null,
+        phone: String? = null
+    ): Result<PdfFormSubmissionDto> {
+        return try {
+            remoteLogger?.log(LogLevel.INFO, TAG, "Sharing submission id=$id email=${email != null} phone=${phone != null}")
+            val request = SharePdfFormSubmissionRequest(email = email, phone = phone)
+            val response = api.shareSubmission(id, request)
+            if (response.isSuccessful) {
+                val submission = response.body()?.data
+                    ?: return Result.failure(IllegalStateException("Empty response"))
+                remoteLogger?.log(LogLevel.INFO, TAG, "Shared submission id=$id")
+                Result.success(submission)
+            } else {
+                failWithErrorBody(response, "Failed to share submission")
+            }
+        } catch (e: Exception) {
+            remoteLogger?.log(LogLevel.ERROR, TAG, "Error sharing submission: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
     suspend fun deleteSubmission(id: Long): Result<Unit> {
         return try {
             remoteLogger?.log(LogLevel.INFO, TAG, "Deleting submission id=$id")
@@ -143,6 +171,44 @@ class PdfFormRepository(
             }
         } catch (e: Exception) {
             remoteLogger?.log(LogLevel.ERROR, TAG, "Error deleting submission: ${e.message}")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun downloadPdf(url: String, cacheDir: File, fileName: String): Result<File> = withContext(Dispatchers.IO) {
+        try {
+            remoteLogger?.log(LogLevel.DEBUG, TAG, "Downloading PDF: $fileName")
+            val pdfFile = File(cacheDir, fileName)
+            if (pdfFile.exists()) pdfFile.delete()
+
+            val isPreSignedS3 = url.contains("X-Amz-Signature", ignoreCase = true)
+            val requestBuilder = Request.Builder().url(url)
+            if (!isPreSignedS3) {
+                RetrofitClient.getAuthToken()?.let { token ->
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+                RetrofitClient.getCompanyId()?.let { companyId ->
+                    requestBuilder.addHeader("X-Company-Id", companyId.toString())
+                }
+            }
+
+            val response = RetrofitClient.plainHttpClient.newCall(requestBuilder.build()).execute()
+            response.use { resp ->
+                if (!resp.isSuccessful) {
+                    return@withContext Result.failure(IllegalStateException("PDF download failed: HTTP ${resp.code}"))
+                }
+
+                resp.body?.byteStream()?.use { input ->
+                    pdfFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                } ?: return@withContext Result.failure(IllegalStateException("Empty response body"))
+            }
+
+            remoteLogger?.log(LogLevel.INFO, TAG, "Downloaded PDF: ${pdfFile.length()} bytes")
+            Result.success(pdfFile)
+        } catch (e: Exception) {
+            remoteLogger?.log(LogLevel.ERROR, TAG, "Error downloading PDF: ${e.message}")
             Result.failure(e)
         }
     }

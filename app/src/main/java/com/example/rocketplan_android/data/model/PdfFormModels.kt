@@ -85,6 +85,11 @@ data class CreatePdfFormSubmissionRequest(
     val clientPhone: String? = null
 )
 
+data class SharePdfFormSubmissionRequest(
+    val email: String? = null,
+    val phone: String? = null
+)
+
 data class SignPdfFormRequest(
     @SerializedName("field_values_by_id")
     val fieldValuesById: Map<String, Any>,

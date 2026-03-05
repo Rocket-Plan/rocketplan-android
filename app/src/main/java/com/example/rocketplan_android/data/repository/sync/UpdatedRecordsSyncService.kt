@@ -112,6 +112,7 @@ class UpdatedRecordsSyncService(
             put("workScopeActions", body.workScopeActions.size)
             put("claims", body.claims.size)
             put("timecards", body.timecards.size)
+            put("pdfFormSubmissions", body.pdfFormSubmissions.size)
         }
         val totalUpdated = summary.values.sum()
 

@@ -30,6 +30,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import kotlinx.coroutines.launch
 
 class ESignatureFragment : Fragment() {
@@ -146,6 +147,12 @@ class ESignatureFragment : Fragment() {
                                 Toast.makeText(requireContext(), R.string.esignature_load_failed, Toast.LENGTH_SHORT).show()
                             }
                         }
+                        is ESignatureEvent.SubmissionShared -> {
+                            Toast.makeText(requireContext(), R.string.esignature_shared_success, Toast.LENGTH_SHORT).show()
+                        }
+                        is ESignatureEvent.SubmissionShareFailed -> {
+                            Toast.makeText(requireContext(), event.message, Toast.LENGTH_LONG).show()
+                        }
                     }
                 }
             }
@@ -190,7 +197,12 @@ class ESignatureFragment : Fragment() {
         val clientNameInput = dialogView.findViewById<TextInputEditText>(R.id.clientNameInput)
         val clientEmailInput = dialogView.findViewById<TextInputEditText>(R.id.clientEmailInput)
         val clientPhoneInput = dialogView.findViewById<TextInputEditText>(R.id.clientPhoneInput)
-        val createButton = dialogView.findViewById<MaterialButton>(R.id.createButton)
+        val clientEmailLayout = dialogView.findViewById<TextInputLayout>(R.id.clientEmailLayout)
+        val clientPhoneLayout = dialogView.findViewById<TextInputLayout>(R.id.clientPhoneLayout)
+        val btnEmailAndSms = dialogView.findViewById<MaterialButton>(R.id.btnEmailAndSms)
+        val btnEmail = dialogView.findViewById<MaterialButton>(R.id.btnEmail)
+        val btnSms = dialogView.findViewById<MaterialButton>(R.id.btnSms)
+        val btnOpenOnDevice = dialogView.findViewById<MaterialButton>(R.id.btnOpenOnDevice)
 
         // Setup template dropdown
         val templateNames = templates.map { it.name ?: "Untitled" }
@@ -214,21 +226,47 @@ class ESignatureFragment : Fragment() {
             clientPhoneInput.setText(viewModel.getClientPhonePrefill())
         }
 
-        createButton.setOnClickListener {
+        fun submitWithDelivery(deliveryMethod: DeliveryMethod) {
             val template = selectedTemplate
             if (template?.id == null) {
                 Toast.makeText(requireContext(), R.string.esignature_select_template, Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
+                return
+            }
+
+            val email = clientEmailInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() }
+            val phone = clientPhoneInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() }
+
+            // Clear previous errors
+            clientEmailLayout.error = null
+            clientPhoneLayout.error = null
+
+            // Validate required fields based on delivery method
+            val needsEmail = deliveryMethod == DeliveryMethod.EMAIL || deliveryMethod == DeliveryMethod.EMAIL_AND_SMS
+            val needsPhone = deliveryMethod == DeliveryMethod.SMS || deliveryMethod == DeliveryMethod.EMAIL_AND_SMS
+
+            if (needsEmail && email.isNullOrBlank()) {
+                clientEmailLayout.error = getString(R.string.esignature_email_required)
+                return
+            }
+            if (needsPhone && phone.isNullOrBlank()) {
+                clientPhoneLayout.error = getString(R.string.esignature_phone_required)
+                return
             }
 
             viewModel.createSubmission(
                 templateId = template.id,
                 clientName = clientNameInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() },
-                clientEmail = clientEmailInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() },
-                clientPhone = clientPhoneInput.text?.toString()?.trim()?.takeIf { it.isNotBlank() }
+                clientEmail = email,
+                clientPhone = phone,
+                deliveryMethod = deliveryMethod
             )
             dialog.dismiss()
         }
+
+        btnEmailAndSms.setOnClickListener { submitWithDelivery(DeliveryMethod.EMAIL_AND_SMS) }
+        btnEmail.setOnClickListener { submitWithDelivery(DeliveryMethod.EMAIL) }
+        btnSms.setOnClickListener { submitWithDelivery(DeliveryMethod.SMS) }
+        btnOpenOnDevice.setOnClickListener { submitWithDelivery(DeliveryMethod.OPEN_ON_DEVICE) }
 
         dialog.setContentView(dialogView)
         dialog.show()

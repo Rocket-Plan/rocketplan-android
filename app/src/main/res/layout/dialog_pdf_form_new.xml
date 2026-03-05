@@ -75,10 +75,36 @@
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/createButton"
+        android:id="@+id/btnEmailAndSms"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
-        android:text="@string/esignature_create_and_sign"
+        android:text="@string/esignature_email_and_sms"
         app:backgroundTint="@color/main_purple" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/esignature_email_to_client"
+        app:backgroundTint="@color/main_purple" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSms"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/esignature_sms_to_client"
+        app:backgroundTint="@color/main_purple" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnOpenOnDevice"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/esignature_open_on_device"
+        android:textColor="@color/main_purple"
+        app:strokeColor="@color/main_purple" />
 </LinearLayout>

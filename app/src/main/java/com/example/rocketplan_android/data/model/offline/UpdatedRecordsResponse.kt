@@ -29,7 +29,9 @@ data class UpdatedRecordsResponse(
     @SerializedName("support_conversations")
     val supportConversations: List<UpdatedRecord> = emptyList(),
     @SerializedName("support_messages")
-    val supportMessages: List<UpdatedRecord> = emptyList()
+    val supportMessages: List<UpdatedRecord> = emptyList(),
+    @SerializedName("pdf_form_submissions")
+    val pdfFormSubmissions: List<UpdatedRecord> = emptyList()
 ) {
     /**
      * Returns true if any record type has updates.
@@ -50,7 +52,8 @@ data class UpdatedRecordsResponse(
             claims.isNotEmpty() ||
             timecards.isNotEmpty() ||
             supportConversations.isNotEmpty() ||
-            supportMessages.isNotEmpty()
+            supportMessages.isNotEmpty() ||
+            pdfFormSubmissions.isNotEmpty()
 }
 
 data class UpdatedRecord(

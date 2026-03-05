@@ -5,6 +5,7 @@ import com.example.rocketplan_android.data.model.PdfFormSubmissionSingleResponse
 import com.example.rocketplan_android.data.model.PdfFormSignDataResponse
 import com.example.rocketplan_android.data.model.PdfFormTemplateResponse
 import com.example.rocketplan_android.data.model.CreatePdfFormSubmissionRequest
+import com.example.rocketplan_android.data.model.SharePdfFormSubmissionRequest
 import com.example.rocketplan_android.data.model.SignPdfFormRequest
 import retrofit2.Response
 import retrofit2.http.Body
@@ -48,6 +49,12 @@ interface PdfFormApi {
     suspend fun signForm(
         @Path("uuid") uuid: String,
         @Body request: SignPdfFormRequest
+    ): Response<PdfFormSubmissionSingleResponse>
+
+    @POST("api/pdf-form-submissions/{id}/shares")
+    suspend fun shareSubmission(
+        @Path("id") id: Long,
+        @Body request: SharePdfFormSubmissionRequest
     ): Response<PdfFormSubmissionSingleResponse>
 
     @DELETE("api/pdf-form-submissions/{id}")
