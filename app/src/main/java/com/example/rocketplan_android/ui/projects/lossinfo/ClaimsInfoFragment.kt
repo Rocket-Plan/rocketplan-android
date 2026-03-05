@@ -2,10 +2,14 @@ package com.example.rocketplan_android.ui.projects.lossinfo
 
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.getSystemService
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
@@ -181,6 +185,7 @@ class ClaimsInfoFragment : Fragment() {
         cancelButton.setOnClickListener { dialog.dismiss() }
         dialog.setOnDismissListener { editDialogState = null }
 
+        setupKeyboardDismissal(content)
         dialog.show()
     }
 
@@ -284,6 +289,7 @@ class ClaimsInfoFragment : Fragment() {
         cancelButton.setOnClickListener { dialog.dismiss() }
         dialog.setOnDismissListener { createDialogState = null }
 
+        setupKeyboardDismissal(content)
         dialog.show()
     }
 
@@ -311,6 +317,20 @@ class ClaimsInfoFragment : Fragment() {
         state.inputs.forEach { it.isEnabled = !isSaving }
         state.saveButton.isEnabled = !isSaving
         state.progress.visibility = if (isSaving) View.VISIBLE else View.GONE
+    }
+
+    private fun setupKeyboardDismissal(content: View) {
+        content.findViewById<View>(R.id.claimEditRoot).setOnTouchListener { v, event ->
+            if (event.action == MotionEvent.ACTION_DOWN) {
+                val focused = content.findFocus()
+                if (focused is EditText) {
+                    focused.clearFocus()
+                    val imm = requireContext().getSystemService<InputMethodManager>()
+                    imm?.hideSoftInputFromWindow(focused.windowToken, 0)
+                }
+            }
+            false
+        }
     }
 
     companion object {
