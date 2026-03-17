@@ -33,6 +33,7 @@ class ImageProcessorRealtimeManager(
         AssemblyStatus.FAILED
     )
     private val assemblyResultType = object : TypeToken<AssemblyResultEnvelope>() {}.type
+    private val completedAssemblies = ConcurrentHashMap.newKeySet<String>()
 
     init {
         scope.launch {
@@ -52,6 +53,7 @@ class ImageProcessorRealtimeManager(
 
     fun clear() {
         trackedAssemblies.toList().forEach { stopTracking(it) }
+        completedAssemblies.clear()
     }
 
     fun trackAssembly(assemblyId: String) {
@@ -109,6 +111,11 @@ class ImageProcessorRealtimeManager(
         }
 
         val mappedStatus = update.status?.let { mapAssemblyStatus(it) }
+
+        // Prevent duplicate processing of terminal events from concurrent handlers
+        if (mappedStatus != null && mappedStatus in terminalStates && !completedAssemblies.add(assemblyId)) {
+            return
+        }
         val updatedAssembly = assembly.copy(
             status = mappedStatus?.value ?: assembly.status,
             bytesReceived = update.bytesReceived ?: assembly.bytesReceived,
@@ -202,6 +209,7 @@ class ImageProcessorRealtimeManager(
     }
 
     private fun stopTracking(assemblyId: String) {
+        completedAssemblies.remove(assemblyId)
         if (!trackedAssemblies.remove(assemblyId)) return
         val channelName = PusherConfig.channelNameForAssembly(assemblyId)
         pusherService.unsubscribe(channelName)
@@ -237,7 +245,7 @@ class ImageProcessorRealtimeManager(
             remoteLogger?.log(
                 level = LogLevel.DEBUG,
                 tag = TAG,
-                message = "Ignored stale Pusher update (local completed, backend processing)",
+                message = "Ignored stale Pusher update (local ${assembly.status}, backend $backendStatus)",
                 metadata = mapOf(
                     "assembly_id" to assembly.assemblyId,
                     "local_status" to assembly.status,

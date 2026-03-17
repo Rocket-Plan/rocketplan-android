@@ -269,6 +269,7 @@ class ESignatureFragment : Fragment() {
         btnOpenOnDevice.setOnClickListener { submitWithDelivery(DeliveryMethod.OPEN_ON_DEVICE) }
 
         dialog.setContentView(dialogView)
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
         dialog.show()
     }
 }

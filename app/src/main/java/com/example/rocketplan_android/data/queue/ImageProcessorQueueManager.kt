@@ -1123,7 +1123,7 @@ class ImageProcessorQueueManager(
                     "source" to source,
                     "server_status" to (snapshot.status ?: "unknown"),
                     "completed_files" to completedCount.toString(),
-                    "remaining_files" to (snapshot.remainingFiles ?: -1).toString(),
+                    "remaining_files" to (snapshot.remainingFiles?.toString() ?: "unknown"),
                     "is_complete" to (snapshot.isComplete ?: false).toString()
                 )
             )
