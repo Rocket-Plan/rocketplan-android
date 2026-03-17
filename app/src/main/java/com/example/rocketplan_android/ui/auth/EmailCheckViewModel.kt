@@ -61,6 +61,7 @@ class EmailCheckViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun submitEmail() {
+        if (_isLoading.value == true) return
         if (!validateEmail()) {
             return
         }

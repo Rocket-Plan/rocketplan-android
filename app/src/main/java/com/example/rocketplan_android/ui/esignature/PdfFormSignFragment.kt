@@ -64,6 +64,7 @@ class PdfFormSignFragment : Fragment() {
 
     // Track field inputs (fieldId -> EditText), field types, required fields, and signature data
     private val fieldInputs = mutableMapOf<String, EditText>()
+    private val checkboxInputs = mutableMapOf<String, android.widget.CheckBox>()
     private val fieldTypes = mutableMapOf<String, String>()
     private val requiredFieldIds = mutableSetOf<String>()
     private var signatureRequired = false
@@ -351,10 +352,17 @@ class PdfFormSignFragment : Fragment() {
 
     private fun allRequiredFieldsFilled(): Boolean {
         for (fieldId in requiredFieldIds) {
-            // Check on-screen EditText first, fall back to persisted userEditedValues
-            val value = fieldInputs[fieldId]?.text?.toString()
-                ?: userEditedValues[fieldId]
-            if (value.isNullOrBlank()) return false
+            if (allFieldTypes[fieldId] == "checkbox") {
+                // Required checkboxes must be checked
+                val isChecked = checkboxInputs[fieldId]?.isChecked
+                    ?: (userEditedValues[fieldId] == "true")
+                if (!isChecked) return false
+            } else {
+                // Check on-screen EditText first, fall back to persisted userEditedValues
+                val value = fieldInputs[fieldId]?.text?.toString()
+                    ?: userEditedValues[fieldId]
+                if (value.isNullOrBlank()) return false
+            }
         }
         if (signatureRequired && signatureData.isNullOrBlank()) return false
         return true
@@ -372,15 +380,48 @@ class PdfFormSignFragment : Fragment() {
         } else {
             submitButton.isVisible = false
             nextButton.isVisible = true
-            val remaining = requiredFieldIds.count { (fieldInputs[it]?.text?.toString() ?: userEditedValues[it]).isNullOrBlank() } +
-                if (signatureRequired && signatureData.isNullOrBlank()) 1 else 0
+            val remaining = requiredFieldIds.count { fieldId ->
+                if (allFieldTypes[fieldId] == "checkbox") {
+                    val isChecked = checkboxInputs[fieldId]?.isChecked
+                        ?: (userEditedValues[fieldId] == "true")
+                    !isChecked
+                } else {
+                    (fieldInputs[fieldId]?.text?.toString() ?: userEditedValues[fieldId]).isNullOrBlank()
+                }
+            } + if (signatureRequired && signatureData.isNullOrBlank()) 1 else 0
             nextButton.text = getString(R.string.esignature_required_fields_remaining, remaining)
         }
     }
 
     private fun scrollToNextEmptyRequiredField() {
-        // Find the first empty required text field (check both on-screen and off-screen)
+        // Find the first unfilled required field (check both on-screen and off-screen)
         for (fieldId in requiredFieldIds) {
+            if (allFieldTypes[fieldId] == "checkbox") {
+                val isChecked = checkboxInputs[fieldId]?.isChecked
+                    ?: (userEditedValues[fieldId] == "true")
+                if (isChecked) continue
+
+                // Unchecked required checkbox — scroll to it
+                val checkBox = checkboxInputs[fieldId]
+                if (checkBox != null) {
+                    val location = IntArray(2)
+                    checkBox.getLocationInWindow(location)
+                    val scrollViewLocation = IntArray(2)
+                    scrollView.getLocationInWindow(scrollViewLocation)
+                    val relativeY = location[1] - scrollViewLocation[1] + scrollView.scrollY - scrollView.height / 3
+                    scrollView.smoothScrollTo(0, relativeY.coerceAtLeast(0))
+                    checkBox.requestFocus()
+                    return
+                }
+                // Checkbox is on a non-rendered page — scroll to that page
+                val pageIndex = fieldPageMap[fieldId] ?: continue
+                if (pageIndex in 0 until pdfPagesContainer.childCount) {
+                    val pageView = pdfPagesContainer.getChildAt(pageIndex)
+                    scrollView.smoothScrollTo(0, pageView.top)
+                }
+                return
+            }
+
             val editText = fieldInputs[fieldId]
             val value = editText?.text?.toString() ?: userEditedValues[fieldId]
             if (!value.isNullOrBlank()) continue
@@ -498,6 +539,7 @@ class PdfFormSignFragment : Fragment() {
         Log.d(TAG, "renderPdfWithFields: file=${pdfFile.absolutePath} exists=${pdfFile.exists()} size=${pdfFile.length()} fields=${fields.size}")
         pdfPagesContainer.removeAllViews()
         fieldInputs.clear()
+        checkboxInputs.clear()
         fieldTypes.clear()
         requiredFieldIds.clear()
         renderedPages.clear()
@@ -599,7 +641,11 @@ class PdfFormSignFragment : Fragment() {
                 val existingValue = existingValues[idStr]?.toString()?.takeIf { it.isNotBlank() }
                 val defaultValue = tokenDefaults[field.fieldName ?: ""]
                 val resolved = existingValue ?: defaultValue ?: ""
-                if (resolved.isNotBlank()) {
+                if (fieldType == "checkbox") {
+                    // Always store checkbox state so never-rendered pages are included in payload
+                    // Match the rendered-widget path which accepts both "true" and "1" as checked
+                    userEditedValues[idStr] = if (resolved == "true" || resolved == "1") "true" else "false"
+                } else if (resolved.isNotBlank()) {
                     userEditedValues[idStr] = resolved
                 }
             }
@@ -717,9 +763,20 @@ class PdfFormSignFragment : Fragment() {
                 fieldsOnPage.add(fieldId)
             }
         }
-        // Remove from fieldInputs (but NOT from allFieldTypes or requiredFieldIds)
+        val checkboxesOnPage = mutableListOf<String>()
+        for ((fieldId, checkBox) in checkboxInputs) {
+            if (checkBox.parent == pageFrame) {
+                userEditedValues[fieldId] = if (checkBox.isChecked) "true" else "false"
+                checkboxesOnPage.add(fieldId)
+            }
+        }
+        // Remove from fieldInputs/checkboxInputs (but NOT from allFieldTypes or requiredFieldIds)
         for (fieldId in fieldsOnPage) {
             fieldInputs.remove(fieldId)
+            fieldTypes.remove(fieldId)
+        }
+        for (fieldId in checkboxesOnPage) {
+            checkboxInputs.remove(fieldId)
             fieldTypes.remove(fieldId)
         }
 
@@ -807,6 +864,34 @@ class PdfFormSignFragment : Fragment() {
             "email" -> {
                 val editText = createFieldEditText(x, y, width, height, field)
                 editText.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+                editText.hint = friendlyName
+                val existingValue = field.id?.let { id ->
+                    existingValues[id.toString()]?.toString()?.takeIf { it.isNotBlank() }
+                }
+                editText.setText(existingValue ?: defaultValue ?: "")
+                pageFrame.addView(editText)
+                field.id?.let { fieldInputs[it.toString()] = editText }
+            }
+            "checkbox" -> {
+                val existingValue = field.id?.let { id ->
+                    existingValues[id.toString()]?.toString()
+                }
+                val isChecked = existingValue == "true" || existingValue == "1"
+                val checkBox = android.widget.CheckBox(requireContext()).apply {
+                    layoutParams = FrameLayout.LayoutParams(width, height).apply {
+                        leftMargin = x
+                        topMargin = y
+                    }
+                    this.isChecked = isChecked
+                    buttonTintList = android.content.res.ColorStateList.valueOf(Color.BLACK)
+                    if (isReadOnly) isEnabled = false
+                }
+                pageFrame.addView(checkBox)
+                field.id?.let { checkboxInputs[it.toString()] = checkBox }
+            }
+            "number" -> {
+                val editText = createFieldEditText(x, y, width, height, field)
+                editText.inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
                 editText.hint = friendlyName
                 val existingValue = field.id?.let { id ->
                     existingValues[id.toString()]?.toString()?.takeIf { it.isNotBlank() }
@@ -1086,6 +1171,10 @@ class PdfFormSignFragment : Fragment() {
         // Sync current on-screen field values into userEditedValues
         for ((fieldId, editText) in fieldInputs) {
             userEditedValues[fieldId] = editText.text?.toString() ?: ""
+        }
+        // Sync on-screen checkbox values
+        for ((fieldId, checkBox) in checkboxInputs) {
+            userEditedValues[fieldId] = if (checkBox.isChecked) "true" else "false"
         }
 
         // Hard gate: ensure all required fields are filled before submitting

@@ -145,6 +145,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
      * Sign in with email and password using actual API
      */
     fun signIn() {
+        if (_isLoading.value == true) return
         if (!validateAllFields()) {
             return
         }

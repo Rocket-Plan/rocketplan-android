@@ -48,8 +48,10 @@ import com.example.rocketplan_android.ui.syncstatus.SyncStatusBannerState
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.card.MaterialCardView
 import io.sentry.Sentry
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class MainActivity : AppCompatActivity() {
 
@@ -88,6 +90,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var scrollingContentBehavior: AppBarLayout.ScrollingViewBehavior
     private var syncStatusBannerManager: SyncStatusBannerManager? = null
     private var syncBannerEnabled = true
+    private var isForceSigningOut = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -124,6 +127,18 @@ class MainActivity : AppCompatActivity() {
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
+        }
+
+        // Force sign-out when server rejects the token (401 on authenticated requests)
+        RetrofitClient.onUnauthorized = {
+            runOnUiThread {
+                if (!isForceSigningOut) {
+                    isForceSigningOut = true
+                    Log.w(TAG, "Token rejected by server — forcing sign out")
+                    performSignOut()
+                    Toast.makeText(this, "Your session has expired. Please sign in again.", Toast.LENGTH_LONG).show()
+                }
+            }
         }
 
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -335,56 +350,33 @@ class MainActivity : AppCompatActivity() {
             val needsOnboarding = companyId == null && userId > 0L
             val cachedEmail = if (needsOnboarding) authRepository.getSavedEmail() ?: "" else ""
 
-            val authDestinations = setOf(
-                R.id.emailCheckFragment,
-                R.id.loginFragment,
-                R.id.signUpFragment
-            )
-
-            // Wait for navigation graph to be ready, then redirect once
-            val authRedirectListener = object : NavController.OnDestinationChangedListener {
-                override fun onDestinationChanged(
-                    controller: NavController,
-                    destination: NavDestination,
-                    arguments: Bundle?
-                ) {
-                    if (!authDestinations.contains(destination.id)) return
-
-                    if (BuildConfig.ENABLE_LOGGING) {
-                        Log.d(TAG, "Navigation destination changed: ${destination.label}")
+            // Navigate directly — no listener needed since we already know auth state
+            withContext(Dispatchers.Main.immediate) {
+                if (needsOnboarding) {
+                    Log.d(TAG, "User authenticated but no company, redirecting to onboarding")
+                    val bundle = Bundle().apply {
+                        putLong("userId", userId)
+                        putString("email", cachedEmail)
                     }
-
-                    controller.removeOnDestinationChangedListener(this)
-
-                    if (needsOnboarding) {
-                        Log.d(TAG, "User authenticated but no company, redirecting to onboarding")
-                        val bundle = Bundle().apply {
-                            putLong("userId", userId)
-                            putString("email", cachedEmail)
-                        }
-                        val navOptions = NavOptions.Builder()
-                            .setPopUpTo(R.id.emailCheckFragment, true)
-                            .build()
-                        controller.navigate(R.id.phoneVerificationFragment, bundle, navOptions)
-                        return
-                    }
-
-                    if (BuildConfig.ENABLE_LOGGING) {
-                        Log.d(TAG, "User authenticated, navigating to projects")
-                    }
-
-                    val navOptions = androidx.navigation.NavOptions.Builder()
+                    val navOptions = NavOptions.Builder()
                         .setPopUpTo(R.id.emailCheckFragment, true)
                         .build()
-                    controller.navigate(R.id.nav_projects, null, navOptions)
-                    lifecycleScope.launch {
-                        syncQueueManager.ensureInitialSync()
-                        (application as RocketPlanApplication).imageProcessorQueueManager.abandonStaleServerAssemblies()
-                    }
+                    navController.navigate(R.id.phoneVerificationFragment, bundle, navOptions)
+                    return@withContext
+                }
+
+                if (BuildConfig.ENABLE_LOGGING) {
+                    Log.d(TAG, "User authenticated, navigating to projects")
+                }
+
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(R.id.emailCheckFragment, true)
+                    .build()
+                navController.navigate(R.id.nav_projects, null, navOptions)
+                lifecycleScope.launch {
+                    syncQueueManager.ensureInitialSync()
                 }
             }
-
-            navController.addOnDestinationChangedListener(authRedirectListener)
         }
     }
 
@@ -468,6 +460,8 @@ class MainActivity : AppCompatActivity() {
         val status = uri.getQueryParameter("status")?.toIntOrNull()
         val incomingState = uri.getQueryParameter("state")
         val expectedState = authRepository.getStoredOAuthState()
+        // Always clear OAuth state immediately to prevent reuse
+        authRepository.clearOAuthState()
 
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "OAuth callback - Status: $status, Token present: ${token != null}, State present: ${incomingState != null}")
@@ -481,7 +475,6 @@ class MainActivity : AppCompatActivity() {
 
         if (incomingState.isNullOrBlank() || incomingState != expectedState) {
             Log.w(TAG, "OAuth state mismatch; expected=$expectedState, received=$incomingState")
-            authRepository.clearOAuthState()
             Toast.makeText(this, "Sign in failed: invalid session", Toast.LENGTH_LONG).show()
             return true
         }
@@ -490,13 +483,19 @@ class MainActivity : AppCompatActivity() {
             // Save token and navigate to home
             lifecycleScope.launch {
                 try {
-                    authRepository.clearOAuthState()
                     authRepository.saveAuthToken(token)
                     if (BuildConfig.ENABLE_LOGGING) {
                         Log.d(TAG, "OAuth token saved successfully")
                     }
                     authRepository.refreshUserContext().onFailure { error ->
-                        Log.w(TAG, "Failed to refresh user context after OAuth", error)
+                        Log.e(TAG, "Failed to refresh user context after OAuth", error)
+                        authRepository.clearAuthToken()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Sign in failed: unable to load account. Please try again.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        return@launch
                     }
                     syncQueueManager.clear()
                     syncQueueManager.ensureInitialSync()
@@ -526,7 +525,6 @@ class MainActivity : AppCompatActivity() {
             }
         } else {
             Log.e(TAG, "OAuth callback failed - Status: $status")
-            authRepository.clearOAuthState()
             Toast.makeText(
                 this,
                 "Sign in failed",
@@ -658,6 +656,8 @@ class MainActivity : AppCompatActivity() {
                     "Failed to sign out: ${e.message}",
                     Toast.LENGTH_LONG
                 ).show()
+            } finally {
+                isForceSigningOut = false
             }
         }
     }

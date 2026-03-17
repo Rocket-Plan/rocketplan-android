@@ -21,6 +21,12 @@ object RetrofitClient {
     private val companyId: AtomicReference<Long?> = AtomicReference(null)
 
     /**
+     * Listener invoked on the first 401 response when a token is set.
+     * Used by MainActivity to trigger forced sign-out.
+     */
+    var onUnauthorized: (() -> Unit)? = null
+
+    /**
      * Set the authentication token for API requests
      */
     fun setAuthToken(token: String?) {
@@ -123,10 +129,28 @@ object RetrofitClient {
             .build()
     }
 
+    /**
+     * Interceptor that detects 401 Unauthorized responses and triggers forced sign-out.
+     * Only fires for authenticated requests (token was set) and skips auth endpoints.
+     */
+    private val unauthorizedInterceptor = Interceptor { chain ->
+        val response = chain.proceed(chain.request())
+        if (response.code == 401 && authToken.get() != null) {
+            val path = chain.request().url.encodedPath
+            // Don't trigger on login/auth endpoints — 401 there means wrong credentials
+            if (!path.contains("/auth/login") && !path.contains("/auth/google")) {
+                android.util.Log.w("RetrofitClient", "401 Unauthorized on $path — token may be revoked")
+                onUnauthorized?.invoke()
+            }
+        }
+        response
+    }
+
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
         .addInterceptor(loggingInterceptor)
         .addInterceptor(GzipRequestInterceptor())
+        .addInterceptor(unauthorizedInterceptor)
         .apply { certificatePinner?.let { certificatePinner(it) } }
         .connectTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
         .readTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)

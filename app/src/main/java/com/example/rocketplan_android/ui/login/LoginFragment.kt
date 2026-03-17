@@ -133,6 +133,10 @@ class LoginFragment : Fragment() {
     }
 
     private fun setupButtons() {
+        binding.backButton.setOnClickListener {
+            findNavController().popBackStack()
+        }
+
         binding.signInButton.setOnClickListener {
             hideKeyboard()
             viewModel.signIn()
