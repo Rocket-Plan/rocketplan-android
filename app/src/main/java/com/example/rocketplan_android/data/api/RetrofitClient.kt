@@ -139,8 +139,18 @@ object RetrofitClient {
             val path = chain.request().url.encodedPath
             // Don't trigger on login/auth endpoints — 401 there means wrong credentials
             if (!path.contains("/auth/login") && !path.contains("/auth/google")) {
-                android.util.Log.w("RetrofitClient", "401 Unauthorized on $path — token may be revoked")
-                onUnauthorized?.invoke()
+                // Only treat small JSON responses as real auth rejections.
+                // Large responses (>1KB) are HTML error pages from misconfigured endpoints.
+                val contentLength = response.header("Content-Length")?.toLongOrNull()
+                    ?: response.body?.contentLength()
+                    ?: 0L
+                val contentType = response.header("Content-Type") ?: ""
+                if (contentLength < 1000 && contentType.contains("json")) {
+                    android.util.Log.w("RetrofitClient", "401 Unauthorized on $path — token may be revoked")
+                    onUnauthorized?.invoke()
+                } else {
+                    android.util.Log.w("RetrofitClient", "401 on $path ignored (non-auth error page)")
+                }
             }
         }
         response

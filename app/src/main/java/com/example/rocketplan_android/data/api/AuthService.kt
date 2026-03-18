@@ -1,5 +1,6 @@
 package com.example.rocketplan_android.data.api
 
+import com.example.rocketplan_android.data.model.AppVersionResponse
 import com.example.rocketplan_android.data.model.CheckEmailRequest
 import com.example.rocketplan_android.data.model.CheckEmailResponse
 import com.example.rocketplan_android.data.model.CurrentUserEnvelope
@@ -21,6 +22,7 @@ import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
+import retrofit2.http.Query
 
 /**
  * Retrofit service interface for authentication API endpoints
@@ -99,4 +101,15 @@ interface AuthService {
         @Path("userId") userId: Long,
         @Body request: UpdateUserRequest
     ): Response<UpdateUserResponse>
+
+    /**
+     * Check app version and flavor status
+     * Endpoint: GET /api/app-version?platform=Android&version=X&flavor=Y
+     */
+    @GET("api/app-version")
+    suspend fun checkAppVersion(
+        @Query("platform") platform: String = "Android",
+        @Query("version") version: String,
+        @Query("flavor") flavor: String? = null
+    ): Response<AppVersionResponse>
 }

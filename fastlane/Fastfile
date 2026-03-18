@@ -87,6 +87,17 @@ platform :android do
     )
   end
 
+  desc "Deploy to Play Store open testing track"
+  lane :deploy_open do
+    bump
+    build_release
+    upload_to_play_store(
+      track: "beta",
+      release_status: "completed",
+      skip_upload_apk: true
+    )
+  end
+
   desc "Build staging release AAB"
   lane :build_staging_release do
     gradle(

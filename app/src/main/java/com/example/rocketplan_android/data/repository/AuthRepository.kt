@@ -268,6 +268,10 @@ class AuthRepository(
      * Save authentication token
      */
     suspend fun saveAuthToken(token: String) {
+        // Clear stale company ID before setting new token — prevents the
+        // X-Company-Id header from a previous session causing 401s on
+        // post-login API calls (e.g. image-processor/abandon)
+        RetrofitClient.setCompanyId(null)
         secureStorage.saveAuthToken(token)
         RetrofitClient.setAuthToken(token)
     }

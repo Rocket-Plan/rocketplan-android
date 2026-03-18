@@ -91,6 +91,7 @@ class MainActivity : AppCompatActivity() {
     private var syncStatusBannerManager: SyncStatusBannerManager? = null
     private var syncBannerEnabled = true
     private var isForceSigningOut = false
+    private var isProcessingOAuth = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
@@ -128,6 +129,9 @@ class MainActivity : AppCompatActivity() {
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "AuthRepository initialized")
         }
+
+        // Check app version and flavor status on launch
+        checkAppVersionAndFlavor()
 
         // Force sign-out when server rejects the token (401 on authenticated requests)
         RetrofitClient.onUnauthorized = {
@@ -311,6 +315,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Skip onResume sync work if an OAuth flow is in progress — the token
+        // hasn't been saved yet and API calls would race with the OAuth handler.
+        if (isProcessingOAuth) return
+
         lifecycleScope.launch {
             if (authRepository.isLoggedIn()) {
                 imageProcessorQueueManager.reconcileProcessingAssemblies(source = "foreground")
@@ -434,6 +442,7 @@ class MainActivity : AppCompatActivity() {
      * Returns true if the URI was handled.
      */
     fun handleOAuthRedirect(uri: Uri): Boolean {
+        isProcessingOAuth = true
         if (BuildConfig.ENABLE_LOGGING) {
             Log.d(TAG, "Deep link received: $uri")
         }
@@ -450,6 +459,7 @@ class MainActivity : AppCompatActivity() {
             uri.path == "/redirect"
 
         if (!isOAuthCallback) {
+            isProcessingOAuth = false
             if (BuildConfig.ENABLE_LOGGING) {
                 Log.d(TAG, "Ignoring deep link (not OAuth callback): $uri")
             }
@@ -469,12 +479,14 @@ class MainActivity : AppCompatActivity() {
 
         if (expectedState.isNullOrBlank()) {
             Log.w(TAG, "OAuth callback received with no pending state; ignoring")
+            isProcessingOAuth = false
             Toast.makeText(this, "Sign in failed: invalid session", Toast.LENGTH_LONG).show()
             return true
         }
 
         if (incomingState.isNullOrBlank() || incomingState != expectedState) {
             Log.w(TAG, "OAuth state mismatch; expected=$expectedState, received=$incomingState")
+            isProcessingOAuth = false
             Toast.makeText(this, "Sign in failed: invalid session", Toast.LENGTH_LONG).show()
             return true
         }
@@ -521,9 +533,12 @@ class MainActivity : AppCompatActivity() {
                         "Sign in failed: ${e.message}",
                         Toast.LENGTH_LONG
                     ).show()
+                } finally {
+                    isProcessingOAuth = false
                 }
             }
         } else {
+            isProcessingOAuth = false
             Log.e(TAG, "OAuth callback failed - Status: $status")
             Toast.makeText(
                 this,
@@ -815,6 +830,65 @@ class MainActivity : AppCompatActivity() {
         }
 
         return parts.joinToString(", ")
+    }
+
+    /**
+     * Check app version and flavor status on launch.
+     * Shows a blocking dialog if the flavor is disabled or a mandatory update is required.
+     * Only runs once per process (not on rotation).
+     */
+    private var hasCheckedAppVersion = false
+
+    private fun checkAppVersionAndFlavor() {
+        if (hasCheckedAppVersion) return
+        hasCheckedAppVersion = true
+
+        lifecycleScope.launch {
+            try {
+                val authService = RetrofitClient.createService<com.example.rocketplan_android.data.api.AuthService>()
+                val flavor = if (BuildConfig.HAS_FLIR_SUPPORT) "flir" else "standard"
+                // Send semantic version only (strip build number parens)
+                val version = BuildConfig.VERSION_NAME.replace(Regex("\\s*\\(.*\\)"), "")
+                val response = authService.checkAppVersion(
+                    version = version,
+                    flavor = flavor
+                )
+                val body = response.body() ?: return@launch
+
+                when {
+                    body.flavorDisabled -> {
+                        val message = body.flavorMessage ?: "This version of the app is no longer available."
+                        showBlockingDialog("App Unavailable", message) {
+                            finish()
+                        }
+                    }
+                    body.mustUpdate -> {
+                        showBlockingDialog("Update Required",
+                            "A required update is available. Please update the app to continue."
+                        ) {
+                            try {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName")))
+                            } catch (_: Exception) {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+                            }
+                            finish()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                // Network error — don't block the app, just log
+                Log.w(TAG, "App version check failed: ${e.message}")
+            }
+        }
+    }
+
+    private fun showBlockingDialog(title: String, message: String, onAction: () -> Unit) {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setCancelable(false)
+            .setPositiveButton("OK") { _, _ -> onAction() }
+            .show()
     }
 
     override fun onDestroy() {
