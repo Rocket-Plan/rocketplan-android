@@ -160,6 +160,7 @@ platform :android do
     gradle_content = File.read("../app/build.gradle.kts")
     version_base = gradle_content.match(/versionName = "([^(]+)\(/)[1].strip
     version = "com.rocketplantech.rocketplan@#{version_base} (#{build})+#{build}"
+    sh("sentry-cli releases new '#{version}' --org rocketplan-technologies-inc --project android")
     sh("sentry-cli releases finalize '#{version}' --org rocketplan-technologies-inc --project android")
   end
 
