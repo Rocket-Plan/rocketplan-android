@@ -44,21 +44,21 @@ Requires Homebrew Ruby (system Ruby won't work):
 
 ```bash
 brew install ruby
-/usr/local/opt/ruby/bin/bundle _2.5.0_ install
+/opt/homebrew/opt/ruby/bin/bundle install
 ```
 
 ### Running Lanes
 
-Use the Homebrew Ruby bundle with version specifier:
+Use the Homebrew Ruby bundle:
 
 ```bash
-/usr/local/opt/ruby/bin/bundle _2.5.0_ exec fastlane <lane>
+/opt/homebrew/opt/ruby/bin/bundle exec fastlane <lane>
 ```
 
 Or add an alias to your shell config:
 
 ```bash
-alias fastlane='/usr/local/opt/ruby/bin/bundle _2.5.0_ exec fastlane'
+alias fastlane='/opt/homebrew/opt/ruby/bin/bundle exec fastlane'
 ```
 
 ### Available Lanes

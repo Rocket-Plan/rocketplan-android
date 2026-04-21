@@ -835,6 +835,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Check app version and flavor status on launch.
      * Shows a blocking dialog if the flavor is disabled or a mandatory update is required.
+     */
     private fun checkAppVersionAndFlavor() {
         lifecycleScope.launch {
             try {
