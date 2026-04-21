@@ -98,7 +98,7 @@ class SyncQueueManager(
     val projectEssentialsFailed: StateFlow<Set<Long>> = _projectEssentialsFailed
     private val pendingSyncProjectsForce = AtomicBoolean(false)
     @Volatile
-    private var lastForegroundSyncAt = 0L
+    private var lastForegroundSyncAt = -1L
 
     // Track projects with updates for incremental sync
     private val pendingUpdatedProjectIds = mutableSetOf<Long>()
@@ -203,8 +203,8 @@ class SyncQueueManager(
             // Check if we should pull updates (avoid hammering server on rapid foreground/background)
             val now = System.currentTimeMillis()
             val (shouldSync, elapsed) = mutex.withLock {
-                val elapsed = now - lastForegroundSyncAt
-                if (elapsed > AppConfig.FOREGROUND_SYNC_THRESHOLD_MS) {
+                val elapsed = if (lastForegroundSyncAt < 0) null else now - lastForegroundSyncAt
+                if (elapsed == null || elapsed > AppConfig.FOREGROUND_SYNC_THRESHOLD_MS) {
                     lastForegroundSyncAt = now
                     true to elapsed
                 } else {
@@ -212,21 +212,21 @@ class SyncQueueManager(
                 }
             }
             if (shouldSync) {
-                Log.d(TAG, "🔄 Foreground sync triggered (last sync was ${elapsed / 1000}s ago)")
+                Log.d(TAG, "🔄 Foreground sync triggered (last sync was ${elapsed?.let { "${it / 1000}s ago" } ?: "never"})")
                 remoteLogger.log(
                     LogLevel.INFO,
                     TAG,
                     "Foreground sync triggered",
-                    mapOf(
-                        "syncType" to "foreground",
-                        "elapsedMs" to elapsed.toString(),
-                        "didPull" to "true"
-                    )
+                    buildMap {
+                        put("syncType", "foreground")
+                        put("didPull", "true")
+                        elapsed?.let { put("elapsedMs", it.toString()) }
+                    }
                 )
                 enqueue(SyncJob.EnsureUserContext)
                 enqueue(SyncJob.SyncProjects(force = false))
             } else {
-                Log.d(TAG, "⏭️ Skipping foreground sync (${elapsed / 1000}s since last)")
+                Log.d(TAG, "⏭️ Skipping foreground sync (${elapsed?.let { "${it / 1000}s" } ?: "?"} since last)")
             }
         }
     }
@@ -439,7 +439,7 @@ class SyncQueueManager(
                 assignedProjectIds.value = emptySet()
                 _assignedProjectsLoaded.value = false
                 pendingUpdatedProjectIds.clear()
-                lastForegroundSyncAt = 0L
+                lastForegroundSyncAt = -1L
             }
             projectRealtimeManager?.clear()
             _isActive.value = false

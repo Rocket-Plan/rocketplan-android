@@ -130,12 +130,13 @@ object RetrofitClient {
     }
 
     /**
-     * Interceptor that detects 401 Unauthorized responses and triggers forced sign-out.
+     * Interceptor that detects 401/403 responses and triggers forced sign-out.
      * Only fires for authenticated requests (token was set) and skips auth endpoints.
      */
     private val unauthorizedInterceptor = Interceptor { chain ->
         val response = chain.proceed(chain.request())
-        if (response.code == 401 && authToken.get() != null) {
+        val code = response.code
+        if ((code == 401 || code == 403) && authToken.get() != null) {
             val path = chain.request().url.encodedPath
             // Don't trigger on login/auth endpoints — 401 there means wrong credentials
             if (!path.contains("/auth/login") && !path.contains("/auth/google")) {
@@ -146,10 +147,10 @@ object RetrofitClient {
                     ?: 0L
                 val contentType = response.header("Content-Type") ?: ""
                 if (contentLength < 1000 && contentType.contains("json")) {
-                    android.util.Log.w("RetrofitClient", "401 Unauthorized on $path — token may be revoked")
+                    android.util.Log.w("RetrofitClient", "$code on $path — signing out")
                     onUnauthorized?.invoke()
                 } else {
-                    android.util.Log.w("RetrofitClient", "401 on $path ignored (non-auth error page)")
+                    android.util.Log.w("RetrofitClient", "$code on $path ignored (non-auth error page)")
                 }
             }
         }

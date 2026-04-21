@@ -835,14 +835,7 @@ class MainActivity : AppCompatActivity() {
     /**
      * Check app version and flavor status on launch.
      * Shows a blocking dialog if the flavor is disabled or a mandatory update is required.
-     * Only runs once per process (not on rotation).
-     */
-    private var hasCheckedAppVersion = false
-
     private fun checkAppVersionAndFlavor() {
-        if (hasCheckedAppVersion) return
-        hasCheckedAppVersion = true
-
         lifecycleScope.launch {
             try {
                 val authService = RetrofitClient.createService<com.example.rocketplan_android.data.api.AuthService>()
@@ -858,11 +851,28 @@ class MainActivity : AppCompatActivity() {
                 when {
                     body.flavorDisabled -> {
                         val message = body.flavorMessage ?: "This version of the app is no longer available."
+                        remoteLogger.log(
+                            LogLevel.WARN,
+                            TAG,
+                            "Kill-switch: flavor disabled",
+                            mapOf("flavor" to flavor, "message" to message)
+                        )
+                        remoteLogger.flush()
+                        if (authRepository.isLoggedIn()) {
+                            performSignOut()
+                        }
                         showBlockingDialog("App Unavailable", message) {
                             finish()
                         }
                     }
                     body.mustUpdate -> {
+                        remoteLogger.log(
+                            LogLevel.WARN,
+                            TAG,
+                            "Kill-switch: mandatory update required",
+                            mapOf("flavor" to flavor)
+                        )
+                        remoteLogger.flush()
                         showBlockingDialog("Update Required",
                             "A required update is available. Please update the app to continue."
                         ) {

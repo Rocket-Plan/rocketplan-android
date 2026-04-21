@@ -62,9 +62,10 @@ platform :android do
 
   desc "Deploy dev build to Play Store internal track"
   lane :deploy_dev do
-    bump
+    build = bump
     build_dev_release
     upload_dev
+    finalize_sentry(build: build)
   end
 
   desc "Upload dev AAB to Play Store internal track (skip build)"
@@ -78,24 +79,26 @@ platform :android do
 
   desc "Deploy to Play Store internal track"
   lane :deploy_internal do
-    bump
+    build = bump
     build_release
     upload_to_play_store(
       track: "internal",
       release_status: "draft",
       skip_upload_apk: true
     )
+    finalize_sentry(build: build)
   end
 
   desc "Deploy to Play Store open testing track"
   lane :deploy_open do
-    bump
+    build = bump
     build_release
     upload_to_play_store(
       track: "beta",
       release_status: "completed",
       skip_upload_apk: true
     )
+    finalize_sentry(build: build)
   end
 
   desc "Build staging release AAB"
@@ -107,18 +110,19 @@ platform :android do
 
   desc "Deploy staging build to Play Store closed testing track"
   lane :deploy_staging do
-    bump
+    build = bump
     build_staging_release
     upload_to_play_store(
       track: "alpha",
       release_status: "completed",
       aab: "app/build/outputs/bundle/stagingStandardRelease/app-staging-standard-release.aab"
     )
+    finalize_sentry(build: build)
   end
 
   desc "Deploy to Play Store beta track"
   lane :deploy_beta do
-    bump
+    build = bump
     build_release
     upload_to_play_store(
       track: "beta",
@@ -129,17 +133,19 @@ platform :android do
       skip_upload_images: true,
       skip_upload_screenshots: true
     )
+    finalize_sentry(build: build)
   end
 
   desc "Deploy to Play Store production"
   lane :deploy_production do
-    bump
+    build = bump
     build_release
     upload_to_play_store(
       track: "production",
       release_status: "completed",
       skip_upload_apk: true
     )
+    finalize_sentry(build: build)
   end
 
   desc "Clean build"
@@ -147,6 +153,14 @@ platform :android do
     gradle(
       task: "clean"
     )
+  end
+
+  private_lane :finalize_sentry do |options|
+    build = options[:build]
+    gradle_content = File.read("../app/build.gradle.kts")
+    version_base = gradle_content.match(/versionName = "([^(]+)\(/)[1].strip
+    version = "com.rocketplantech.rocketplan@#{version_base} (#{build})+#{build}"
+    sh("sentry-cli releases finalize '#{version}' --org rocketplan-technologies-inc --project android")
   end
 
 end
