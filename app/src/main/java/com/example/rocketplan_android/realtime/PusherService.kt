@@ -1,5 +1,9 @@
 package com.example.rocketplan_android.realtime
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.util.Log
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
@@ -24,17 +28,46 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.max
 
 class PusherService(
+    context: Context,
     private val gson: Gson = Gson(),
-    private val remoteLogger: RemoteLogger? = null
+    private val remoteLogger: RemoteLogger? = null,
+    private val appVisibilityTracker: AppVisibilityTracker =
+        AppVisibilityTracker.getInstance(context.applicationContext)
 ) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val connectivityManager =
+        context.applicationContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     private val pusher: Pusher = Pusher(
         PusherConfig.appKey(),
         PusherOptions().setCluster(PusherConfig.CLUSTER)
     )
+    private val throttledErrorTimestamps = ConcurrentHashMap<String, Long>()
+    private val appVisibilityListener: (Boolean) -> Unit = { isForeground ->
+        if (isForeground) {
+            scope.launch { ensureConnectedIfNeeded("foreground") }
+        } else {
+            scope.launch { disconnectSocket("background") }
+        }
+    }
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            scope.launch { ensureConnectedIfNeeded("network-restored") }
+        }
+
+        override fun onLost(network: Network) {
+            scope.launch { disconnectSocket("network-lost") }
+        }
+
+        override fun onCapabilitiesChanged(network: Network, networkCapabilities: NetworkCapabilities) {
+            if (networkCapabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                scope.launch { ensureConnectedIfNeeded("network-capabilities") }
+            }
+        }
+    }
 
     private val connectionListener = object : ConnectionEventListener {
         override fun onConnectionStateChange(change: ConnectionStateChange?) {
@@ -79,16 +112,8 @@ class PusherService(
                 )
                 return
             }
-            Log.e(TAG, "🚨 Pusher connection error: ${message ?: "unknown"} (code=${code ?: "none"})", e)
-            remoteLogger?.log(
-                level = LogLevel.ERROR,
-                tag = TAG,
-                message = "Pusher connection error: ${message ?: "unknown"}",
-                metadata = buildMap {
-                    put("code", code ?: "none")
-                    e?.message?.let { put("exception", it) }
-                }
-            )
+            val level = classifyConnectionError(message, code, e)
+            logConnectionIssue(level, message, code, e)
             scheduleReconnect()
         }
     }
@@ -105,6 +130,14 @@ class PusherService(
     private val stateMutex = Mutex()
     private var reconnectJob: Job? = null
     private var reconnectAttempts = 0
+
+    init {
+        appVisibilityTracker.addListener(appVisibilityListener)
+        runCatching { connectivityManager.registerDefaultNetworkCallback(networkCallback) }
+            .onFailure {
+                Log.w(TAG, "Unable to register Pusher network callback: ${it.localizedMessage}")
+            }
+    }
 
     fun bindImageProcessorEvent(
         channelName: String,
@@ -151,7 +184,7 @@ class PusherService(
 
         binding.listeners[eventName] = listener
         binding.channel.bind(eventName, listener)
-        ensureConnected()
+        scope.launch { ensureConnectedIfNeeded("bind-image-processor") }
     }
 
     fun unsubscribe(channelName: String) {
@@ -195,7 +228,7 @@ class PusherService(
 
         binding.listeners[eventName] = listener
         binding.channel.bind(eventName, listener)
-        ensureConnected()
+        scope.launch { ensureConnectedIfNeeded("bind-generic") }
     }
 
     /**
@@ -228,7 +261,7 @@ class PusherService(
 
         binding.listeners[eventName] = listener
         binding.channel.bind(eventName, listener)
-        ensureConnected()
+        scope.launch { ensureConnectedIfNeeded("bind-raw") }
     }
 
     /**
@@ -280,18 +313,12 @@ class PusherService(
 
         binding.listeners[eventName] = listener
         binding.channel.bind(eventName, listener)
-        ensureConnected()
+        scope.launch { ensureConnectedIfNeeded("bind-typed") }
     }
 
     fun disconnect() {
         channelBindings.keys.toList().forEach { unsubscribe(it) }
-        scope.launch {
-            stateMutex.withLock {
-                reconnectJob?.cancel()
-                reconnectJob = null
-            }
-            pusher.disconnect()
-        }
+        scope.launch { disconnectSocket("manual-disconnect") }
     }
 
     /**
@@ -305,14 +332,27 @@ class PusherService(
         reconnectJob?.cancel()
         reconnectJob = null
         pusher.disconnect()
+        runCatching { connectivityManager.unregisterNetworkCallback(networkCallback) }
+        appVisibilityTracker.removeListener(appVisibilityListener)
         scope.cancel()
     }
 
     fun connectIfNeeded() {
-        ensureConnected()
+        scope.launch { ensureConnectedIfNeeded("manual-connect") }
     }
 
     fun isConnected(): Boolean = pusher.connection.state == ConnectionState.CONNECTED
+
+    private suspend fun ensureConnectedIfNeeded(reason: String) {
+        if (!shouldMaintainConnection()) {
+            Log.d(
+                TAG,
+                "⏸️ Skipping Pusher connect: reason=$reason foreground=${appVisibilityTracker.isAppForeground()} online=${isNetworkAvailable()} channels=${channelBindings.size}"
+            )
+            return
+        }
+        ensureConnected()
+    }
 
     private fun ensureConnected() {
         val state = pusher.connection.state
@@ -354,6 +394,11 @@ class PusherService(
         scope.launch {
             stateMutex.withLock {
                 if (channelBindings.isEmpty()) return@withLock
+                if (!shouldMaintainConnection()) {
+                    reconnectJob?.cancel()
+                    reconnectJob = null
+                    return@withLock
+                }
                 val state = pusher.connection.state
                 if (state == ConnectionState.CONNECTING || state == ConnectionState.CONNECTED) {
                     return@withLock
@@ -367,7 +412,7 @@ class PusherService(
                 reconnectJob = scope.launch {
                     delay(delayMs)
                     Log.d(TAG, "♻️ Reconnect timer fired (attempt=${attempt + 1})")
-                    ensureConnected()
+                    ensureConnectedIfNeeded("reconnect")
                     stateMutex.withLock { reconnectJob = null }
                 }
             }
@@ -382,14 +427,120 @@ class PusherService(
 
     private fun disconnectIfIdle() {
         if (channelBindings.isEmpty()) {
-            scope.launch {
-                stateMutex.withLock {
-                    reconnectJob?.cancel()
-                    reconnectJob = null
-                }
-                pusher.disconnect()
-            }
+            scope.launch { disconnectSocket("idle") }
         }
+    }
+
+    private suspend fun disconnectSocket(reason: String) {
+        stateMutex.withLock {
+            reconnectJob?.cancel()
+            reconnectJob = null
+            reconnectAttempts = 0
+        }
+        val state = pusher.connection.state
+        if (state != ConnectionState.DISCONNECTED) {
+            Log.d(TAG, "🔌 Disconnecting Pusher socket (reason=$reason state=$state)")
+            pusher.disconnect()
+        }
+    }
+
+    private fun shouldMaintainConnection(): Boolean {
+        return channelBindings.isNotEmpty() &&
+            appVisibilityTracker.isAppForeground() &&
+            isNetworkAvailable()
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        return runCatching {
+            val network = connectivityManager.activeNetwork ?: return false
+            val capabilities = connectivityManager.getNetworkCapabilities(network) ?: return false
+            capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+        }.getOrDefault(false)
+    }
+
+    private fun classifyConnectionError(
+        message: String?,
+        code: String?,
+        exception: Exception?
+    ): LogLevel {
+        val reason = exception?.message.orEmpty()
+        val combined = buildString {
+            append(message.orEmpty())
+            append(' ')
+            append(reason)
+        }
+        val inBackground = !appVisibilityTracker.isAppForeground()
+        val offline = !isNetworkAvailable()
+        val expectedConnectivityIssue =
+            code == "4201" ||
+                combined.contains("Pong reply not received", ignoreCase = true) ||
+                combined.contains("RECONNECTING state", ignoreCase = true) ||
+                combined.contains("Unable to resolve host", ignoreCase = true) ||
+                combined.contains("exception was thrown by the websocket", ignoreCase = true)
+
+        return when {
+            offline || inBackground -> LogLevel.INFO
+            expectedConnectivityIssue -> LogLevel.WARN
+            else -> LogLevel.ERROR
+        }
+    }
+
+    private fun logConnectionIssue(
+        level: LogLevel,
+        message: String?,
+        code: String?,
+        exception: Exception?
+    ) {
+        val resolvedMessage = message ?: "unknown"
+        val exceptionMessage = exception?.message
+        val formatted = "Pusher connection error: $resolvedMessage"
+        when (level) {
+            LogLevel.DEBUG -> Log.d(TAG, "🔌 $formatted", exception)
+            LogLevel.INFO -> Log.i(TAG, "ℹ️ $formatted (code=${code ?: "none"})", exception)
+            LogLevel.WARN -> Log.w(TAG, "⚠️ $formatted (code=${code ?: "none"})", exception)
+            LogLevel.ERROR -> Log.e(TAG, "🚨 $formatted (code=${code ?: "none"})", exception)
+        }
+
+        val metadata = buildMap {
+            put("code", code ?: "none")
+            put("connection_state", pusher.connection.state.name)
+            put("app_foreground", appVisibilityTracker.isAppForeground().toString())
+            put("network_available", isNetworkAvailable().toString())
+            exceptionMessage?.let { put("exception", it) }
+        }
+
+        if (shouldThrottleRemoteLog(level, resolvedMessage, code, exceptionMessage)) {
+            return
+        }
+
+        remoteLogger?.log(
+            level = level,
+            tag = TAG,
+            message = formatted,
+            metadata = metadata
+        )
+    }
+
+    private fun shouldThrottleRemoteLog(
+        level: LogLevel,
+        message: String,
+        code: String?,
+        exceptionMessage: String?
+    ): Boolean {
+        if (level == LogLevel.ERROR) return false
+
+        val key = listOf(message, code ?: "none", exceptionMessage ?: "none").joinToString("|")
+        val now = System.currentTimeMillis()
+        val lastSeenAt = throttledErrorTimestamps[key]
+        if (lastSeenAt != null && now - lastSeenAt < EXPECTED_ERROR_LOG_THROTTLE_MS) {
+            return true
+        }
+        throttledErrorTimestamps[key] = now
+        if (throttledErrorTimestamps.size > MAX_THROTTLE_CACHE_SIZE) {
+            val cutoff = now - max(EXPECTED_ERROR_LOG_THROTTLE_MS, 60_000L)
+            throttledErrorTimestamps.entries.removeIf { (_, timestamp) -> timestamp < cutoff }
+        }
+        return false
     }
 
     private fun parseUpdate(raw: String): ImageProcessorUpdate? {
@@ -417,5 +568,7 @@ class PusherService(
         private const val SUBSCRIPTION_ERROR = "pusher:subscription_error"
         private const val BASE_BACKOFF_MS = 1_000L
         private const val MAX_BACKOFF_MS = 30_000L
+        private const val EXPECTED_ERROR_LOG_THROTTLE_MS = 15 * 60 * 1000L
+        private const val MAX_THROTTLE_CACHE_SIZE = 128
     }
 }

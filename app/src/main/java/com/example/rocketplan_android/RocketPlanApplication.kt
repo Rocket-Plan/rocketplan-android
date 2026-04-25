@@ -221,7 +221,10 @@ class RocketPlanApplication : Application() {
         imageProcessorDao = offlineDb.imageProcessorDao()
         val offlineDao = offlineDb.offlineDao()
         imageProcessorUploadStore = ImageProcessorUploadStore.getInstance(this)
-        pusherService = PusherService(remoteLogger = remoteLogger)
+        pusherService = PusherService(
+            context = this,
+            remoteLogger = remoteLogger
+        )
         imageProcessorRealtimeManager = ImageProcessorRealtimeManager(
             dao = imageProcessorDao,
             pusherService = pusherService,
