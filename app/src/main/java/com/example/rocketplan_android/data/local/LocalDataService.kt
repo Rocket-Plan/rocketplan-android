@@ -76,15 +76,27 @@ class LocalDataService private constructor(
     /**
      * The company ID the user is currently operating in.
      * Set this when the user logs in or switches companies.
+     *
      * @throws IllegalStateException if accessed before being set
+     * @deprecated Use [currentCompanyIdOrNull] instead. This accessor throws and is not safe
+     * for use during startup, logout, or relogin transitions where company context may be absent.
+     * The nullable [currentCompanyIdOrNull] supports graceful degradation without exceptions.
      */
+    @Deprecated(
+        message = "Use currentCompanyIdOrNull instead. Throwing accessor is unsafe during lifecycle transitions.",
+        replaceWith = ReplaceWith("currentCompanyIdOrNull"),
+        level = DeprecationLevel.ERROR
+    )
     val currentCompanyId: Long
         get() = _currentCompanyId
             ?: throw IllegalStateException("currentCompanyId not set. Call setCurrentCompanyId() after login.")
 
     /**
      * Returns the current company ID, or null if not yet set.
-     * Prefer [currentCompanyId] when you expect it to be set.
+     * Company context is session state that is set after login / company selection.
+     * It must be treated as nullable during startup, logout, or relogin transitions.
+     * @see setCurrentCompanyId
+     * @see clearCurrentCompanyId
      */
     val currentCompanyIdOrNull: Long?
         get() = _currentCompanyId

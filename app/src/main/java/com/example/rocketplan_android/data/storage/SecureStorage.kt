@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.storage
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
@@ -10,24 +11,41 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import io.sentry.Sentry
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Secure storage for authentication tokens and user credentials
  * Uses DataStore for general preferences and EncryptedSharedPreferences for sensitive data
  */
-class SecureStorage(private val context: Context) {
+@OptIn(ExperimentalCoroutinesApi::class)
+class SecureStorage internal constructor(
+    private val context: Context,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    legacyTokenReader: (suspend () -> String?)? = null,
+    legacyTokenClearer: (suspend () -> Unit)? = null,
+) {
+
+    constructor(context: Context) : this(context, CoroutineScope(SupervisorJob() + Dispatchers.IO))
 
     companion object {
+        private const val TAG = "SecureStorage"
+
         // DataStore keys
         private val AUTH_TOKEN_KEY = stringPreferencesKey("auth_token")
         private val USER_EMAIL_KEY = stringPreferencesKey("user_email")
@@ -42,6 +60,8 @@ class SecureStorage(private val context: Context) {
         // EncryptedSharedPreferences name
         private const val ENCRYPTED_PREFS_NAME = "rocketplan_encrypted_prefs"
         private const val SAVED_PASSWORD_KEY = "saved_password"
+
+        private const val MIGRATION_TIMEOUT_MS = 5_000L
 
         @Volatile
         private var INSTANCE: SecureStorage? = null
@@ -73,14 +93,30 @@ class SecureStorage(private val context: Context) {
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val authTokenState = MutableStateFlow<String?>(
         encryptedPrefs.getString(AUTH_TOKEN_PREF_KEY, null)
     )
 
-    init {
-        scope.launch {
-            migrateLegacyAuthToken()
+    private val readLegacyToken: suspend () -> String? = legacyTokenReader
+        ?: { context.dataStore.data.first()[AUTH_TOKEN_KEY] }
+    private val clearLegacyToken: suspend () -> Unit = legacyTokenClearer
+        ?: { context.dataStore.edit { prefs -> prefs.remove(AUTH_TOKEN_KEY) } }
+
+    // Bounded one-shot legacy migration. getAuthTokenSync() awaits this so
+    // callers don't race the migration on cold start; the timeout prevents a
+    // stuck DataStore from hanging every auth read forever.
+    // Made resettable so clearAll() can cancel and replace stale migration work.
+    private val migrationMutex = Mutex()
+    private var migrationDeferred: Deferred<String?>? = null
+
+    private fun createMigrationDeferred(scope: CoroutineScope): Deferred<String?> =
+        scope.async {
+            withTimeoutOrNull(MIGRATION_TIMEOUT_MS) { migrateLegacyAuthToken() }
+        }
+
+    private suspend fun initMigrationDeferred(scope: CoroutineScope) {
+        migrationMutex.withLock {
+            migrationDeferred = createMigrationDeferred(scope)
         }
     }
 
@@ -107,11 +143,11 @@ class SecureStorage(private val context: Context) {
      * Get authentication token synchronously
      */
     suspend fun getAuthTokenSync(): String? {
-        val current = authTokenState.value
-        if (current != null) return current
-
-        // One-time migration from legacy DataStore storage if present.
-        return migrateLegacyAuthToken()
+        authTokenState.value?.let { return it }
+        val deferred = migrationMutex.withLock { migrationDeferred }
+            ?: scope.async { null }.also { migrationDeferred = it }
+        deferred.await()
+        return authTokenState.value
     }
 
     /**
@@ -291,7 +327,11 @@ class SecureStorage(private val context: Context) {
      * Clear all stored authentication data (logout)
      */
     suspend fun clearAll() {
-        // Clear DataStore
+        migrationMutex.withLock {
+            migrationDeferred?.cancel()
+            migrationDeferred = scope.async { null }
+        }
+
         context.dataStore.edit { preferences ->
             preferences.remove(AUTH_TOKEN_KEY)
             preferences.remove(USER_EMAIL_KEY)
@@ -302,7 +342,6 @@ class SecureStorage(private val context: Context) {
             preferences.remove(COMPANY_NAME_KEY)
         }
 
-        // Clear EncryptedSharedPreferences
         encryptedPrefs.edit().clear().apply()
         authTokenState.value = null
     }
@@ -315,12 +354,33 @@ class SecureStorage(private val context: Context) {
     }
 
     private suspend fun migrateLegacyAuthToken(): String? {
-        val legacyToken = context.dataStore.data.first()[AUTH_TOKEN_KEY] ?: return null
-        saveAuthTokenInternal(legacyToken)
-        context.dataStore.edit { prefs ->
-            prefs.remove(AUTH_TOKEN_KEY)
+        Log.d(TAG, "legacy auth token migration: start")
+        return try {
+            val legacyToken = readLegacyToken() ?: run {
+                Log.d(TAG, "legacy auth token migration: no legacy token")
+                return null
+            }
+            // Order matters for crash safety:
+            //   1. saveAuthTokenInternal — encrypted prefs holds the token first.
+            //   2. clearLegacyToken — DataStore copy is removed only after the
+            //      authoritative store accepted it. If we cleared first and the save
+            //      crashed, the token would be lost.
+            //   3. compareAndSet — publish to in-memory state last so flow consumers
+            //      can't observe a token that isn't yet persisted.
+            saveAuthTokenInternal(legacyToken)
+            clearLegacyToken()
+            authTokenState.compareAndSet(null, legacyToken)
+            Log.d(TAG, "legacy auth token migration: migrated")
+            legacyToken
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Sentry.withScope { scope ->
+                scope.setTag("event", "auth_migration_failed")
+                Sentry.captureException(e)
+            }
+            Log.w(TAG, "legacy auth token migration: failed", e)
+            null
         }
-        authTokenState.value = legacyToken
-        return legacyToken
     }
 }

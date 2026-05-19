@@ -38,6 +38,7 @@ import com.example.rocketplan_android.data.model.offline.PropertyDto
 import com.example.rocketplan_android.data.model.offline.RoomDto
 import com.example.rocketplan_android.data.model.offline.UserDto
 import com.example.rocketplan_android.data.model.offline.WorkScopeDto
+import com.example.rocketplan_android.data.repository.IncompleteReason
 import com.example.rocketplan_android.data.repository.SyncResult.Failure
 import com.example.rocketplan_android.data.repository.SyncResult.Success
 import com.example.rocketplan_android.data.repository.SyncSegment
@@ -1427,6 +1428,89 @@ class OfflineSyncRepositoryTest {
             e
         }
         assertThat(error).isNotNull()
+    }
+
+    @Test
+    fun `syncProjectEssentials returns incomplete with NO_COMPANY_CONTEXT when company id is null`() = runTest {
+        val api = mockk<OfflineSyncApi>(relaxed = true)
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        coEvery { localDataService.currentCompanyIdOrNull } returns null
+        every { localDataService.observeDamages(any()) } returns flowOf(emptyList<OfflineDamageEntity>())
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = mockk(relaxed = true),
+            syncCheckpointStore = mockk(relaxed = true),
+            roomTypeRepository = mockk(relaxed = true)
+        )
+
+        val result = repository.syncProjectEssentials(projectId)
+
+        assertThat(result.incomplete).isTrue()
+        assertThat((result as SyncResult.Incomplete).reason).isEqualTo(IncompleteReason.NO_COMPANY_CONTEXT)
+        coVerify(exactly = 0) { api.getProjectDetail(any()) }
+    }
+
+    @Test
+    fun `syncProjectEssentials proceeds normally when company id is set`() = runTest {
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        coEvery { localDataService.currentCompanyIdOrNull } returns companyId
+        coEvery { localDataService.getProject(projectId) } returns OfflineProjectEntity(
+            projectId = projectId,
+            serverId = 100L,
+            uuid = "project-uuid",
+            title = "Test Project",
+            status = "wip",
+            companyId = companyId
+        )
+        coEvery { api.getProjectDetail(100L) } returns ProjectDetailResourceResponse(
+            data = ProjectDetailDto(
+                id = projectId,
+                title = "Test Project",
+                status = "wip",
+                companyId = companyId
+            )
+        )
+        coEvery { api.getProjectProperties(any()) } returns PaginatedResponse(data = emptyList())
+        every { localDataService.observeDamages(any()) } returns flowOf(emptyList<OfflineDamageEntity>())
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = mockk(relaxed = true),
+            syncCheckpointStore = mockk(relaxed = true),
+            roomTypeRepository = mockk(relaxed = true)
+        )
+
+        val result = repository.syncProjectEssentials(projectId)
+
+        assertThat(result.success).isTrue()
+        coVerify { api.getProjectDetail(100L) }
+    }
+
+    @Test
+    fun `syncProjectEssentials uses nullable accessor and not throwing accessor`() = runTest {
+        val api = mockk<OfflineSyncApi>(relaxed = true)
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        coEvery { localDataService.currentCompanyIdOrNull } returns null
+        every { localDataService.observeDamages(any()) } returns flowOf(emptyList<OfflineDamageEntity>())
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = mockk(relaxed = true),
+            syncCheckpointStore = mockk(relaxed = true),
+            roomTypeRepository = mockk(relaxed = true)
+        )
+
+        val result = repository.syncProjectEssentials(projectId)
+
+        assertThat(result.incomplete).isTrue()
+        assertThat((result as SyncResult.Incomplete).reason).isEqualTo(IncompleteReason.NO_COMPANY_CONTEXT)
+        coVerify { localDataService.currentCompanyIdOrNull }
+        coVerify(exactly = 0) { api.getProjectDetail(any()) }
     }
 
     // Conflict handling is exercised at queue-processing time, not during local delete.

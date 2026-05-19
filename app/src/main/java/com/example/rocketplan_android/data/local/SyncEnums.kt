@@ -8,7 +8,13 @@ enum class SyncStatus {
     SYNCING,
     SYNCED,
     CONFLICT,
-    FAILED
+    FAILED;
+
+    companion object {
+        fun fromStorageValue(value: String): SyncStatus =
+            entries.find { it.name == value }
+                ?: throw IllegalArgumentException("Unknown SyncStatus storage value: '$value'. Expected one of: ${entries.joinToString { it.name }}")
+    }
 }
 
 /**

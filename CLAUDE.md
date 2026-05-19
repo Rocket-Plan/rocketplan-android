@@ -210,3 +210,14 @@ Capture ─► LocalDB (pending) ─► Upload ─► Server Processing ─► P
 | Local Storage | `LocalDataService.kt`, `OfflineDao.kt` |
 | Image Upload | `ImageProcessorQueueManager.kt`, `ImageProcessorRealtimeManager.kt` |
 | Pusher | `PusherService.kt`, `PusherConfig.kt` |
+
+## Documentation
+
+All project docs live under `docs/`. See `docs/README.md` for the folder structure — use it to decide where to place a new doc or where to look for an existing one. If `docs/README.md` does not exist yet, follow the structure below:
+
+- **Bug tracker**: `docs/BUG_TRACKER.md` is the single source of truth for bug status. Always check it first when investigating a bug. Update it at every lifecycle step (register, plan, fix, release).
+- For bug/fix documentation flow, follow the "Bug doc lifecycle" section in `docs/README.md` (or the pattern from `docs/BUG_TRACKER.md` if README doesn't exist).
+- When asked to perform a code review and save it, save the review under `docs/reviews/`.
+- Use a filename in the form `code_review_<scope>_<YYYY-MM-DD>.md`.
+- In the review body, include at minimum: `Reviewer: Codex`, branch, commit/commit-range, scope, and whether the review is draft or final.
+- When the user refers to "console logs", check `adb logcat` output filtered by tag (e.g., `logcat -d -t 500 --pid=$(adb shell pidof -s com.rocketplantech.rocketplan)`).

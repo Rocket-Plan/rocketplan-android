@@ -1,0 +1,40 @@
+[
+  {
+    "eventType": "VIEW_TEXT_CHANGED",
+    "replacementText": "android@rocketplantech.com",
+    "elementDescriptors": [
+      {
+        "resourceId": "com.rocketplantech.rocketplan:id/emailInput"
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "elementDescriptors": [
+      {
+        "resourceId": "com.rocketplantech.rocketplan:id/continueButton"
+      }
+    ]
+  },
+  {
+    "eventType": "DELAYED_MESSAGE_POSTED",
+    "delayTime": 5000
+  },
+  {
+    "eventType": "VIEW_TEXT_CHANGED",
+    "replacementText": "rp#2026androiduser",
+    "elementDescriptors": [
+      {
+        "resourceId": "com.rocketplantech.rocketplan:id/passwordInput"
+      }
+    ]
+  },
+  {
+    "eventType": "VIEW_CLICKED",
+    "elementDescriptors": [
+      {
+        "resourceId": "com.rocketplantech.rocketplan:id/signInButton"
+      }
+    ]
+  }
+]

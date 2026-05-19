@@ -179,7 +179,7 @@ ProjectDetail → RoomDetail (tabs: photos, notes, damages, work scope)
 
 **Fragments:** All screens are Fragments; no BaseFragment. Each extends `Fragment` directly with ViewBinding.
 
-**ViewModels:** 31 ViewModels, one per screen. Created via `ViewModelProvider` with custom factories that accept Application-level services. ViewModels observe Room Flows and expose `StateFlow`/`LiveData` to fragments.
+**ViewModels:** 45 ViewModels, one per screen. Created via `ViewModelProvider` with custom factories that accept Application-level services. ViewModels observe Room Flows and expose `StateFlow`/`LiveData` to fragments.
 
 **Data flow:**
 ```
@@ -204,12 +204,12 @@ Room DB → Flow<List<Entity>> → ViewModel (map/filter) → StateFlow → Frag
 
 ### Room Database
 
-**Class:** `OfflineDatabase` (version 25)
+**Class:** `OfflineDatabase` (version 28)
 **Database name:** `rocketplan_offline.db`
 **DAOs:** `OfflineDao` (main), `ImageProcessorDao` (assemblies)
-**Fallback:** Destructive migration in DEBUG builds only
+**Migrations:** Explicit migrations from 10 → 27 (`MIGRATION_10_11` … `MIGRATION_26_27`). The jump 27 → 28 currently relies on `fallbackToDestructiveMigration()` — schema changes after 27 will wipe local data on upgrade. Track this as a hardening item (`RP-HD-###`) before shipping a release that bumps past 28.
 
-**37 entities across these categories:**
+**38 entities across these categories:**
 
 | Category | Entities |
 |----------|----------|
@@ -225,7 +225,7 @@ Room DB → Flow<List<Entity>> → ViewModel (map/filter) → StateFlow → Frag
 | **Image processor** | ImageProcessorAssembly, ImageProcessorPhoto |
 
 **Files:**
-- `data/local/OfflineDatabase.kt` - Database definition, migrations (10→25)
+- `data/local/OfflineDatabase.kt` - Database definition, migrations (10→27, 28 via destructive fallback)
 - `data/local/entity/OfflineEntities.kt` - All entity data classes
 - `data/local/dao/OfflineDao.kt` - Single DAO with all queries
 
@@ -546,6 +546,7 @@ Per-entity sync services that fetch data from the server and upsert into Room:
 | `UpdatedRecordsSyncService` | `UpdatedRecordsSyncService.kt` | Incremental updates via `/api/sync/updated` |
 | `SupportSyncService` | `SupportSyncService.kt` | Support conversations and messages |
 | `TimecardSyncService` | `TimecardSyncService.kt` | Timecards per project |
+| `FreshTimestampService` | `FreshTimestampService.kt` | Fetches the server's current `updated_at` for an entity (used by 409 conflict recovery when the error body does not carry the timestamp) |
 
 ### Sync Queue (Pending Operations)
 
@@ -582,7 +583,7 @@ Uses explicit deletion endpoint (`/api/sync/deleted?since=<timestamp>`) rather t
 
 ## 6. Push Handlers
 
-11 push handlers in `data/repository/sync/handlers/`, one per entity type. They process pending operations from the sync queue and push local changes to the server.
+12 push handlers in `data/repository/sync/handlers/`, one per entity type. They process pending operations from the sync queue and push local changes to the server. Shared helpers in the same folder: `OperationOutcome.kt` (return enum), `PushHandlerContext.kt` (DI container), `SyncHandlerUtils.kt` (409 parsing and other utilities).
 
 ### Handler List
 
@@ -598,6 +599,7 @@ Uses explicit deletion endpoint (`/api/sync/deleted?since=<timestamp>`) rather t
 | `MoistureLogPushHandler` | MoistureLog | Yes | Yes | Yes |
 | `AtmosphericLogPushHandler` | AtmosphericLog | Yes | Yes | Yes |
 | `TimecardPushHandler` | Timecard | Yes | Yes | Yes |
+| `CrewPushHandler` | Crew (project users) | Yes | Yes | Yes |
 | `SupportPushHandler` | SupportMessage | Yes | No | No |
 
 ### Common Push Pattern
@@ -658,6 +660,18 @@ When the server returns HTTP 409 (conflict), the entity's `serverUpdatedAt` does
 5. Returns `OperationOutcome.CONFLICT_PENDING`
 
 **File:** `data/repository/sync/handlers/SyncHandlerUtils.kt`
+
+### Conflict Resolution UI
+
+When a 409 cannot be auto-recovered, the entity surfaces as a row in the in-app conflict list.
+
+| File | Purpose |
+|------|---------|
+| `ui/conflict/ConflictListFragment.kt` | Screen listing all unresolved `OfflineConflictResolutionEntity` rows |
+| `ui/conflict/ConflictListViewModel.kt` | Loads conflicts, drives resolution actions |
+| `ui/conflict/ConflictListAdapter.kt` | RecyclerView adapter for the list |
+| `ui/conflict/ConflictDetailDialog.kt` | Per-conflict dialog showing local vs server side |
+| `ui/conflict/ConflictBannerManager.kt` | Activity-level banner that announces unresolved conflicts |
 
 ### Error Handling by HTTP Status
 
@@ -821,6 +835,14 @@ Manages WebSocket connection lifecycle. Connects on login, disconnects on logout
 
 Each manager subscribes to relevant channels and triggers local data updates (sync or Room inserts) when events arrive.
 
+### AppVisibilityTracker
+
+`realtime/AppVisibilityTracker.kt` watches process lifecycle so the Pusher connection can be disconnected when the app is backgrounded and reconnected on foreground. This avoids holding open sockets while the user is away and keeps battery/data usage in check.
+
+### Pusher Payloads
+
+`realtime/PusherPayloads.kt` contains the Gson DTOs for inbound Pusher event payloads (one data class per event). Realtime managers parse incoming JSON into these types before dispatching to handlers.
+
 ---
 
 ## 9. FLIR Integration
@@ -934,7 +956,9 @@ Mixed approach across the codebase:
 
 ### WorkManager
 
-Single worker: `ImageProcessorRetryWorker` runs every 15 minutes to retry failed assemblies. Registered in `RocketPlanApplication` during initialization.
+Single periodic worker: `PhotoPrefetchWorker` (scheduled via `PhotoCacheScheduler`) prefetches photo cache entries on a recurring interval. Registered in `RocketPlanApplication` during initialization.
+
+Image processor retry is **not** a WorkManager job — `ImageProcessorQueueManager` schedules its own coroutine-based retries with exponential backoff (10s → 30 min, max 13 attempts).
 
 ### Key File Quick Reference
 

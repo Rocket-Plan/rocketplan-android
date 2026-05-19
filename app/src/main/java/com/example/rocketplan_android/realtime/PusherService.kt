@@ -536,11 +536,24 @@ class PusherService(
             return true
         }
         throttledErrorTimestamps[key] = now
-        if (throttledErrorTimestamps.size > MAX_THROTTLE_CACHE_SIZE) {
-            val cutoff = now - max(EXPECTED_ERROR_LOG_THROTTLE_MS, 60_000L)
-            throttledErrorTimestamps.entries.removeIf { (_, timestamp) -> timestamp < cutoff }
-        }
+        pruneAndTrimCache(now)
         return false
+    }
+
+    private fun pruneAndTrimCache(now: Long) {
+        val beforeSize = throttledErrorTimestamps.size
+        val cutoff = now - EXPECTED_ERROR_LOG_THROTTLE_MS
+        throttledErrorTimestamps.entries.removeIf { (_, timestamp) -> timestamp < cutoff }
+        if (throttledErrorTimestamps.size > MAX_THROTTLE_CACHE_SIZE) {
+            val sortedEntries = throttledErrorTimestamps.entries.sortedBy { it.value }
+            val entriesToRemove = throttledErrorTimestamps.size - MAX_THROTTLE_CACHE_SIZE
+            sortedEntries.take(entriesToRemove).forEach { (key, _) ->
+                throttledErrorTimestamps.remove(key)
+            }
+        }
+        if (throttledErrorTimestamps.size < beforeSize) {
+            Log.d(TAG, "Pusher throttle cache trimmed from $beforeSize to ${throttledErrorTimestamps.size} entries")
+        }
     }
 
     private fun parseUpdate(raw: String): ImageProcessorUpdate? {
