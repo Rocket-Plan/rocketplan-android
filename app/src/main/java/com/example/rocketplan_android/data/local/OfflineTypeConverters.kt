@@ -20,7 +20,7 @@ class OfflineTypeConverters {
     fun fromDate(date: Date?): Long? = date?.time
 
     @TypeConverter
-    fun toSyncStatus(value: String?): SyncStatus? = value?.let { runCatching { SyncStatus.valueOf(it) }.getOrNull() }
+    fun toSyncStatus(value: String?): SyncStatus? = value?.let { SyncStatus.fromStorageValue(it) }
 
     @TypeConverter
     fun fromSyncStatus(status: SyncStatus?): String? = status?.name

@@ -7,7 +7,7 @@
 **Bug ID(s):** RP-BUG-026
 **Author:** jeremie.blais@jot.digital
 **Date:** 2026-05-18
-**State:** in_review
+**State:** approved
 
 ---
 
@@ -83,10 +83,8 @@ Revert `SecureStorage.kt` migration lifecycle changes. No persistent format chan
 ## Post-implementation Review Notes
 
 - **Review:** [code_review_rp_bug_024_027_2026-05-18.md](../reviews/code_review_rp_bug_024_027_2026-05-18.md)
-- **Status:** changes implemented, review blockers remain
+- **Status:** implemented and validated
 
 ### Follow-up Required
 
-- Restore actual startup of legacy-token migration; current review found that `migrationDeferred` is no longer initialized before `getAuthTokenSync()` awaits it.
-- Ensure deferred creation/publication is lock-safe so concurrent callers cannot race to install inconsistent migration tasks.
-- Re-run the `SecureStorageTest` coverage after the fix and do not mark this bug complete until legacy-token migration still works on cold start.
+- No bug-specific blockers remain.

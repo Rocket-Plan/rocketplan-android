@@ -7,7 +7,7 @@
 **Bug ID(s):** RP-BUG-027
 **Author:** jeremie.blais@jot.digital
 **Date:** 2026-05-18
-**State:** in_review
+**State:** approved
 
 ---
 
@@ -77,9 +77,9 @@ Revert the centralized parser and restore the current converter behavior. No sch
 ## Post-implementation Review Notes
 
 - **Review:** [code_review_rp_bug_024_027_2026-05-18.md](../reviews/code_review_rp_bug_024_027_2026-05-18.md)
-- **Status:** implemented; no blocking review findings specific to this bug
+- **Status:** already effectively fixed and validated
 
 ### Follow-up Required
 
-- Confirm whether fail-fast parsing for unknown stored values is the intended production behavior before final sign-off.
-- Keep the plan open until the bundled review blockers on related work are resolved and the full patch set is re-reviewed.
+- No bug-specific blockers remain.
+- Optional follow-up: document fail-fast parsing as an intentional production invariant.

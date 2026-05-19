@@ -40,7 +40,7 @@ android {
         applicationId = "com.rocketplantech.rocketplan"
         minSdk = 24
         targetSdk = 35
-        val buildNumber = 31
+        val buildNumber = 32
         versionCode = buildNumber
         versionName = "1.29 ($buildNumber)"
 
@@ -65,6 +65,7 @@ android {
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
             buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnDev\"")
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnDev.isNotBlank()}")
+            buildConfigField("Boolean", "ALLOW_DESTRUCTIVE_MIGRATION", "true")
             // Google Web Client ID for Credential Manager (from Google Cloud Console)
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.dev", "")}\"")
             // reCAPTCHA site key (test key for dev)
@@ -85,6 +86,7 @@ android {
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
             buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnStaging\"")
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnStaging.isNotBlank()}")
+            buildConfigField("Boolean", "ALLOW_DESTRUCTIVE_MIGRATION", "false")
             // Google Web Client ID for Credential Manager (from Google Cloud Console)
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.staging", "")}\"")
             // reCAPTCHA site key (test key for staging until real key is configured)
@@ -104,6 +106,7 @@ android {
             buildConfigField("Boolean", "ENABLE_ROCKET_DRY", "true")
             buildConfigField("String", "SENTRY_DSN", "\"$sentryDsnProd\"")
             buildConfigField("Boolean", "SENTRY_ENABLED", "${sentryDsnProd.isNotBlank()}")
+            buildConfigField("Boolean", "ALLOW_DESTRUCTIVE_MIGRATION", "false")
             // Google Web Client ID for Credential Manager (from Google Cloud Console)
             buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${localProperties.getProperty("google.web.client.id.prod", "")}\"")
             // reCAPTCHA site key (MUST be configured in local.properties for production)

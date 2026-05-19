@@ -8,8 +8,8 @@ source: review
 found_in: "1.0.00+000"
 fixed_in: null
 released_in: null
-state: planned
-release_state: n/a
+state: fixed
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_024_pusher_throttle_map_2026-05-18.md

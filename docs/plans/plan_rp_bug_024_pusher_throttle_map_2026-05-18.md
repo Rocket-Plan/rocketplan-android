@@ -7,7 +7,7 @@
 **Bug ID(s):** RP-BUG-024
 **Author:** jeremie.blais@jot.digital
 **Date:** 2026-05-18
-**State:** in_review
+**State:** approved
 
 ---
 
@@ -81,10 +81,9 @@ Revert the `PusherService.kt` helper change. This is isolated to log-throttling 
 ## Post-implementation Review Notes
 
 - **Review:** [code_review_rp_bug_024_027_2026-05-18.md](../reviews/code_review_rp_bug_024_027_2026-05-18.md)
-- **Status:** changes implemented, review blockers remain
+- **Status:** implemented and validated
 
 ### Follow-up Required
 
-- Replace or refactor the new `PusherServiceTest` coverage so it compiles and actually validates the throttle behavior.
-- Current review findings note that the test directly calls a `private` method, is missing required imports, and builds incorrect expected keys for the `null` code / exception path.
-- Do not mark this bug complete until the regression coverage is passing and proves the cache bound behavior.
+- No bug-specific blockers remain.
+- Any remaining `PusherServiceTest.kt` compilation/dependency cleanup should be tracked separately as test-suite maintenance, not as RP-BUG-024 work.

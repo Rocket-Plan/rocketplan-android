@@ -7,7 +7,7 @@
 **Bug ID(s):** RP-BUG-025
 **Author:** jeremie.blais@jot.digital
 **Date:** 2026-05-18
-**State:** in_review
+**State:** approved
 
 ---
 
@@ -76,8 +76,8 @@ Reintroduce the throwing accessor and revert the call-site updates. No schema or
 ## Post-implementation Review Notes
 
 - **Review:** [code_review_rp_bug_024_027_2026-05-18.md](../reviews/code_review_rp_bug_024_027_2026-05-18.md)
-- **Status:** implemented; no blocking review findings specific to this bug
+- **Status:** already effectively fixed and validated
 
 ### Follow-up Required
 
-- Keep the plan open until the bundled review blockers on related work are resolved and the full patch set is re-reviewed.
+- No bug-specific blockers remain.

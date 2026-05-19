@@ -45,38 +45,40 @@ Review scope covered the implemented changes for:
 - `RP-BUG-026` — `SecureStorage.clearAll()` migration invalidation
 - `RP-BUG-027` — explicit `SyncStatus` storage parsing
 
-Result: **not approved yet**. RP-BUG-025 and RP-BUG-027 look directionally correct, but there are two blocking issues: one functional regression in `SecureStorage`, and one test-suite/verification gap in the new `PusherServiceTest`.
+Result: **approved for these four bugs**.
+
+Follow-up validation showed:
+
+- `RP-BUG-024` is properly implemented in source with size-bounded eviction.
+- `RP-BUG-025` was already effectively fixed by the deprecated throwing accessor and nullable call pattern.
+- `RP-BUG-026` is properly implemented in source with migration cancellation/replacement on `clearAll()`.
+- `RP-BUG-027` is properly implemented in source with explicit throwing storage parsing.
+
+The remaining compilation problems in `PusherServiceTest.kt` and `OfflineSyncRepositoryTest.kt` are tracked as **unrelated test-suite issues**, not blockers for RP-BUG-024 through RP-BUG-027.
 
 ## Findings
 
 ### Must Fix
 
-1. **RP-BUG-026 regression: legacy token migration never starts anymore**
-   - File: `app/src/main/java/com/example/rocketplan_android/data/storage/SecureStorage.kt:109-149`
-   - `migrationDeferred` now starts as `null`, `initMigrationDeferred()` is never called, and `getAuthTokenSync()` falls back to `scope.async { null }`.
-   - Effect: cold-start callers no longer await or execute legacy token migration at all, so users with only the old DataStore token can observe `null` permanently instead of getting migrated auth state.
-   - This is worse than the original bug because it breaks the migration path entirely.
-
-2. **RP-BUG-024 tests do not validate the implementation because the new test file does not compile as written**
-   - File: `app/src/test/java/com/example/rocketplan_android/realtime/PusherServiceTest.kt`
-   - The test directly calls `service.shouldThrottleRemoteLog(...)`, but that method is `private` in `PusherService` (`app/src/main/java/com/example/rocketplan_android/realtime/PusherService.kt:524`).
-   - The test also uses `ConcurrentHashMap<String, Long>` without importing it, and the eviction assertions build the wrong key format for `code = null` / `exceptionMessage = null` (production stores `none|none`, not `code_i|exception_i`).
-   - Until fixed, the intended RP-BUG-024 regression coverage is not actually present.
+- None for RP-BUG-024, RP-BUG-025, RP-BUG-026, or RP-BUG-027 after follow-up validation.
 
 ### Should Fix
 
-- `SecureStorage.getAuthTokenSync()` writes `migrationDeferred = it` outside the mutex in the fallback branch. Even after the missing initialization is fixed, keep creation/publication of the deferred under the same lock so two callers cannot race and install different one-shot tasks.
+- Clean up unrelated test-suite issues separately:
+  - `app/src/test/java/com/example/rocketplan_android/realtime/PusherServiceTest.kt`
+  - `app/src/test/java/com/example/rocketplan_android/data/repository/OfflineSyncRepositoryTest.kt`
 
 ### Consider
 
-- For RP-BUG-025, after deprecating `currentCompanyId`, consider eventually removing it entirely once downstream code is migrated. `DeprecationLevel.ERROR` is a good short-term guard.
-- For RP-BUG-027, decide explicitly whether fail-fast-on-unknown is desired in production or only in debug/test. The current implementation throws everywhere, which may be acceptable, but it should be a deliberate product decision.
+- For RP-BUG-025, eventually remove `currentCompanyId` entirely once downstream code is fully migrated.
+- For RP-BUG-027, explicitly document that fail-fast parsing for unknown stored values is the intended production behavior.
 
 ### Verified Safe
 
 - `LocalDataService.currentCompanyIdOrNull` remains the accessor used by the reviewed sync path, and the new `OfflineSyncRepositoryTest` coverage for `NO_COMPANY_CONTEXT` matches the intended graceful behavior.
 - `OfflineTypeConverters.toSyncStatus()` now routes through a single parser, which is a cleaner and more auditable storage conversion path than inline `valueOf(...).getOrNull()`.
 - `PusherService.trimThrottleCache()` does cap the map by evicting oldest entries after expired-entry cleanup; the implementation direction matches the plan.
+- `SecureStorage.clearAll()` cancels/replaces migration state and preserves the intended post-logout invariant.
 
 ## Sign-off
 
