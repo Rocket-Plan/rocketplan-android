@@ -1,0 +1,30 @@
+#!/bin/sh
+# RocketPlan Android pre-commit hook.
+# Install via: sh scripts/install-hooks.sh
+#
+# Guards:
+#   1. Room @Database version bump must have a registered migration (RP-BUG-016 class)
+#   2. No duplicate bug IDs in BUG_TRACKER.md
+#   3. Investigation frontmatter must not drift from its BUG_TRACKER.md row (warn-only)
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+# 1. Room migration guard — only runs when the database file is staged.
+if ! python3 "$REPO_ROOT/scripts/check_room_migration.py"; then
+    exit 1
+fi
+
+# 2. Duplicate bug-ID guard — only run when BUG_TRACKER.md is staged.
+if git diff --cached --name-only | grep -q '^docs/BUG_TRACKER\.md$'; then
+    if ! python3 "$REPO_ROOT/scripts/check_bug_id_duplicates.py"; then
+        exit 1
+    fi
+fi
+
+# 3. Frontmatter-vs-tracker drift guard — only run when an investigation doc is staged.
+#    Warn-only for now; add --strict here to make drift block the commit.
+if git diff --cached --name-only | grep -q '^docs/investigations/.*\.md$'; then
+    python3 "$REPO_ROOT/scripts/check_tracker_regenerated.py" || true
+fi
+
+exit 0
