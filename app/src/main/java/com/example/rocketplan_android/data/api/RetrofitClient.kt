@@ -108,14 +108,14 @@ object RetrofitClient {
         return "RocketPlan Android/$versionName (Android $androidVersion; $deviceModel)"
     }
 
-    // TODO: Add real certificate pins before production release.
-    // To generate certificate hashes, run:
-    // openssl s_client -servername <hostname> -connect <hostname>:443 | \
-    //   openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | \
-    //   openssl dgst -sha256 -binary | openssl enc -base64
-    // Pin both the leaf certificate and at least one backup (intermediate CA)
-    // to avoid lockout during certificate rotation.
-    private val certificatePinner: CertificatePinner? = null
+    private val certificatePinner: CertificatePinner? =
+        AppConfig.certificatePins
+            .takeIf { it.isNotEmpty() && AppConfig.apiHost.isNotBlank() }
+            ?.let { pins ->
+                CertificatePinner.Builder()
+                    .apply { pins.forEach { pin -> add(AppConfig.apiHost, "sha256/$pin") } }
+                    .build()
+            }
 
     /**
      * OkHttp client with interceptors, timeouts, and certificate pinning
@@ -124,6 +124,7 @@ object RetrofitClient {
     val plainHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .addInterceptor(loggingInterceptor)
+            .apply { certificatePinner?.let { certificatePinner(it) } }
             .connectTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
             .readTimeout(AppConfig.apiTimeout, TimeUnit.SECONDS)
             .build()

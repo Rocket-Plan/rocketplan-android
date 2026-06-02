@@ -90,6 +90,8 @@ class SyncQueueManager(
     // Track active project sync jobs for cancellation
     private val activeProjectSyncJobs = mutableMapOf<Long, Job>()
     private val activeProjectModes = mutableMapOf<Long, SyncJob.ProjectSyncMode>()
+    // Deferred project syncs waiting for a slot (RP-BUG-010: no busy-spin)
+    private val deferredProjectSyncs = mutableSetOf<SyncJob.SyncProjectGraph>()
     @Volatile
     private var foregroundProjectId: Long? = null
     // Track projects with pending photo sync jobs to avoid duplicates
@@ -454,10 +456,10 @@ class SyncQueueManager(
                 }
                 activeProjectSyncJobs.clear()
                 activeProjectModes.clear()
+                deferredProjectSyncs.clear()
                 foregroundProjectId = null
 
-                queue.clear()
-                taskIndex.clear()
+                clearLocked()
                 pendingPhotoSyncs.clear()
                 updatePhotoSyncingProjectsLocked()
                 initialSyncStarted.set(false)
@@ -486,9 +488,7 @@ class SyncQueueManager(
                     queue.remove(existing)
                 }
             }
-            val queued = QueuedTask(job.key, job, job.priority, System.currentTimeMillis())
-            queue.add(queued)
-            taskIndex[job.key] = queued
+            enqueueLocked(QueuedTask(job.key, job, job.priority, System.currentTimeMillis()))
             updateProjectSyncingProjectsLocked()
             notifier.tryEmit(Unit)
         }
@@ -497,8 +497,7 @@ class SyncQueueManager(
     private suspend fun processLoop() {
         while (true) {
             val next = mutex.withLock {
-                queue.poll()?.also {
-                    taskIndex.remove(it.key)
+                pollLocked()?.also {
                     updateProjectSyncingProjectsLocked()
                 }
             }
@@ -929,8 +928,58 @@ class SyncQueueManager(
                                 photoCacheScheduler.schedulePrefetch()
                             }
                         }
+
+                        // Post-sync follow-up work that previously ran AFTER join().
+                        // Now runs here so processLoop() stays free to drain other jobs
+                        // while project sync is in-flight (RP-BUG-010).
+
+                        // If fast sync succeeded, queue photo sync (unless skipContentSync or already pending)
+                        if (syncSucceeded && mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
+                            if (!job.skipContentSync) {
+                                val shouldEnqueuePhotos = mutex.withLock {
+                                    if (pendingPhotoSyncs.contains(job.projectId)) {
+                                        Log.d(TAG, "⏭️ Photo sync already pending for project ${job.projectId}, skipping duplicate")
+                                        false
+                                    } else {
+                                        pendingPhotoSyncs.add(job.projectId)
+                                        updatePhotoSyncingProjectsLocked()
+                                        true
+                                    }
+                                }
+                                if (shouldEnqueuePhotos) {
+                                    val followUpPrio = job.prio + 1
+                                    Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority $followUpPrio")
+                                    enqueue(
+                                        SyncJob.SyncProjectGraph(
+                                            projectId = job.projectId,
+                                            prio = followUpPrio,
+                                            skipPhotos = false,
+                                            mode = SyncJob.ProjectSyncMode.CONTENT_ONLY
+                                        )
+                                    )
+                                }
+                            } else {
+                                Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, skipping content sync (not assigned and not in top $MAX_UNASSIGNED_FULL_SYNC unassigned)")
+                            }
+                        }
+
+                        // Only clear foreground and resume background after FULL sync completes
+                        val shouldResumeBackground = mutex.withLock {
+                            if (foregroundProjectId == job.projectId && mode != SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
+                                foregroundProjectId = null
+                                true
+                            } else {
+                                false
+                            }
+                        }
+
+                        if (shouldResumeBackground) {
+                            Log.d(TAG, "✅ Foreground project ${job.projectId} completed (including photos), resuming background sync")
+                            val forcePending = pendingSyncProjectsForce.getAndSet(false)
+                            enqueue(SyncJob.SyncProjects(force = forcePending))
+                        }
                     } finally {
-                        mutex.withLock {
+                        val pendingDeferred = mutex.withLock {
                             activeProjectSyncJobs.remove(job.projectId)
                             activeProjectModes.remove(job.projectId)
                             if (mode.includesPhotos()) {
@@ -938,7 +987,6 @@ class SyncQueueManager(
                                 updatePhotoSyncingProjectsLocked()
                             }
                             updateProjectSyncingProjectsLocked()
-                            // Track essentials sync failures for UI (only for modes that sync essentials)
                             if (mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY || mode == SyncJob.ProjectSyncMode.FULL) {
                                 if (syncSucceeded) {
                                     _projectEssentialsFailed.value -= job.projectId
@@ -946,74 +994,33 @@ class SyncQueueManager(
                                     _projectEssentialsFailed.value += job.projectId
                                 }
                             }
+                            // Drain one deferred project sync now that a slot opened
+                            val pending = deferredProjectSyncs.firstOrNull()
+                            if (pending != null) {
+                                deferredProjectSyncs.remove(pending)
+                                pending
+                            } else null
                         }
                         notifier.tryEmit(Unit)
+                        // Re-enqueue deferred job outside mutex to avoid deadlock with processLoop
+                        pendingDeferred?.let { enqueue(it) }
                     }
                 }
 
-                // Register the job BEFORE starting so clear() can always find it.
-                // LAZY start ensures no execution happens until after registration.
-                mutex.withLock {
-                    activeProjectSyncJobs[job.projectId] = syncJob
-                    activeProjectModes[job.projectId] = mode
-                    updateProjectSyncingProjectsLocked()
-                }
-                syncJob.start()
-
-                // Wait for completion
-                syncJob.join()
-
-                // If fast sync succeeded, queue photo sync (unless skipContentSync or already pending)
-                if (syncSucceeded && mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
-                    // Skip content sync for unassigned projects outside top N
-                    if (job.skipContentSync) {
-                        Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, skipping content sync (not assigned and not in top $MAX_UNASSIGNED_FULL_SYNC unassigned)")
-                    } else {
-                        val shouldEnqueuePhotos = mutex.withLock {
-                            if (pendingPhotoSyncs.contains(job.projectId)) {
-                                Log.d(TAG, "⏭️ Photo sync already pending for project ${job.projectId}, skipping duplicate")
-                                false
-                            } else {
-                                // Drop any queued FAST job so the full photo run can start immediately.
-                                taskIndex[job.key]?.let { existing ->
-                                    Log.d(TAG, "♻️ Replacing queued FAST job with FULL sync for project ${job.projectId}")
-                                    queue.remove(existing)
-                                    taskIndex.remove(existing.key)
-                                }
-                                pendingPhotoSyncs.add(job.projectId)
-                                updatePhotoSyncingProjectsLocked()
-                                true
-                            }
-                        }
-                        if (shouldEnqueuePhotos) {
-                            val followUpPrio = job.prio + 1
-                            Log.d(TAG, "⏭️ Fast sync completed for project ${job.projectId}, queueing photo sync at priority $followUpPrio")
-                            enqueue(
-                                SyncJob.SyncProjectGraph(
-                                    projectId = job.projectId,
-                                    prio = followUpPrio,
-                                    skipPhotos = false,
-                                    mode = SyncJob.ProjectSyncMode.CONTENT_ONLY
-                                )
-                            )
-                        }
-                    }
-                }
-
-                // Only clear foreground and resume background after FULL sync completes
-                val shouldResumeBackground = mutex.withLock {
-                    if (foregroundProjectId == job.projectId && mode != SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
-                        foregroundProjectId = null
-                        true
-                    } else {
+                val started = mutex.withLock {
+                    if (activeProjectSyncJobs.size >= MAX_CONCURRENT_PROJECT_SYNCS) {
+                        Log.d(TAG, "⏳ Project sync for ${job.projectId} deferred (max ${MAX_CONCURRENT_PROJECT_SYNCS} concurrent)")
+                        deferredProjectSyncs.add(job)
                         false
+                    } else {
+                        activeProjectSyncJobs[job.projectId] = syncJob
+                        activeProjectModes[job.projectId] = mode
+                        updateProjectSyncingProjectsLocked()
+                        true
                     }
                 }
-
-                if (shouldResumeBackground) {
-                    Log.d(TAG, "✅ Foreground project ${job.projectId} completed (including photos), resuming background sync")
-                    val forcePending = pendingSyncProjectsForce.getAndSet(false)
-                    enqueue(SyncJob.SyncProjects(force = forcePending))
+                if (started) {
+                    syncJob.start()
                 }
             }
         }
@@ -1021,7 +1028,7 @@ class SyncQueueManager(
 
     private suspend fun observePendingOperations() {
         localDataService.observeSyncOperations(SyncStatus.PENDING)
-            .debounce(750)
+            .debounce(PENDING_OPS_DEBOUNCE_MS)
             .collect { ops ->
                 if (ops.isNotEmpty()) {
                     enqueue(SyncJob.ProcessPendingOperations)
@@ -1076,6 +1083,24 @@ class SyncQueueManager(
         // Full sync for all assigned projects + this many unassigned projects (by recency)
         // Other projects get essentials-only (fast sync) for navigation
         private const val MAX_UNASSIGNED_FULL_SYNC = 5
+        // Concurrency cap: only one project sync at a time to avoid unbounded fan-out
+        private const val MAX_CONCURRENT_PROJECT_SYNCS = 1
+        // Debounce window for pending-operation observation
+        private const val PENDING_OPS_DEBOUNCE_MS = 750L
+    }
+
+    // Lock-guarded helpers to ensure queue and taskIndex stay in sync
+    private fun enqueueLocked(task: QueuedTask) {
+        queue.add(task)
+        taskIndex[task.key] = task
+    }
+
+    private fun pollLocked(): QueuedTask? =
+        queue.poll()?.also { taskIndex.remove(it.key) }
+
+    private fun clearLocked() {
+        queue.clear()
+        taskIndex.clear()
     }
 
     private suspend fun focusProjectSync(projectId: Long) {

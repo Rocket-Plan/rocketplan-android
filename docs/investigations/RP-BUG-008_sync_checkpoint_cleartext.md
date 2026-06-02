@@ -8,15 +8,15 @@ source: review
 found_in: "1.0.00+000"
 fixed_in: null
 released_in: null
-state: planned
-release_state: n/a
+state: fixed
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_008_sync_checkpoint_cleartext_2026-06-01.md
-related_review: null
+related_review: docs/reviews/code_review_planned_batch_2026-06-02.md
 related_test: null
 priority: P0
-last_updated: 2026-06-01
+last_updated: 2026-06-02
 ---
 
 # Investigation: Sync Checkpoints Stored in Cleartext SharedPreferences
