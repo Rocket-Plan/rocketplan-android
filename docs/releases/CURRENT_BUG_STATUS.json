@@ -1,0 +1,295 @@
+{
+  "generated_at": "2026-06-02T10:26:54-07:00",
+  "source_tracker": "docs/BUG_TRACKER.md",
+  "current_shipping_release": null,
+  "counts": {
+    "all_canonical_bugs": 31,
+    "global_state_counts": {
+      "fixed": 19,
+      "planned": 10,
+      "open": 1,
+      "investigating": 1
+    },
+    "global_release_state_counts": {
+      "n/a": 14,
+      "unreleased": 17
+    },
+    "global_active_priority_counts": {
+      "P0": 4,
+      "P1": 6,
+      "P2": 14,
+      "P3": 5
+    },
+    "current_release_line_fixed_count": 0,
+    "current_release_line_active_count": 0,
+    "global_active_count": 29
+  },
+  "current_release_line": {
+    "version": null,
+    "fixed_bugs": [],
+    "active_followups": []
+  },
+  "global_active_bugs": [
+    {
+      "id": "RP-BUG-002",
+      "priority": "P0",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "printStackTrace() Leaks Sensitive Data in Production"
+    },
+    {
+      "id": "RP-BUG-003",
+      "priority": "P1",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "PriorityQueue Thread-Safety Violation in SyncQueueManager"
+    },
+    {
+      "id": "RP-BUG-004",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Silent Fallback When ConnectivityManager Unavailable"
+    },
+    {
+      "id": "RP-BUG-005",
+      "priority": "P0",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Non-Blocking Write to EncryptedSharedPreferences for Auth Token"
+    },
+    {
+      "id": "RP-BUG-007",
+      "priority": "P2",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Unshared OkHttpClient Configuration for Photo Cache"
+    },
+    {
+      "id": "RP-BUG-008",
+      "priority": "P0",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Sync Checkpoints Stored in Cleartext SharedPreferences"
+    },
+    {
+      "id": "RP-BUG-009",
+      "priority": "P1",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Bitmap Memory Leak in Thumbnail Generation"
+    },
+    {
+      "id": "RP-BUG-010",
+      "priority": "P1",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Unbounded Photo Sync Job Blocking Other Operations"
+    },
+    {
+      "id": "RP-BUG-011",
+      "priority": "P2",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Certificate Pinning Not Implemented"
+    },
+    {
+      "id": "RP-BUG-012",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Untracked Coroutine Scope in Application Startup"
+    },
+    {
+      "id": "RP-BUG-013",
+      "priority": "P1",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Swallowed Exception in ImageProcessorRetryWorker"
+    },
+    {
+      "id": "RP-BUG-014",
+      "priority": "P1",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Realm-like ID Pattern Fragile Migration Logic"
+    },
+    {
+      "id": "RP-BUG-015",
+      "priority": "P2",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Debounce May Not Prevent Rapid Re-enqueues"
+    },
+    {
+      "id": "RP-BUG-016",
+      "priority": "P1",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Missing Migration 27_28 in Database Version Sequence"
+    },
+    {
+      "id": "RP-BUG-017",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "ImageProcessorQueueManager Shutdown Doesn't Wait for In-Flight Requests"
+    },
+    {
+      "id": "RP-BUG-018",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Session Object Printed in Debug Logging May Contain Sensitive Data"
+    },
+    {
+      "id": "RP-BUG-019",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Potential ConcurrentModificationException in PhotoCacheManager"
+    },
+    {
+      "id": "RP-BUG-020",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Error Handling Swallows Failures in ImageProcessorQueueManager"
+    },
+    {
+      "id": "RP-BUG-021",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Hardcoded Magic Numbers for Retry Configuration"
+    },
+    {
+      "id": "RP-BUG-022",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Inefficient LRU Calculation in Photo Cleanup"
+    },
+    {
+      "id": "RP-BUG-023",
+      "priority": "P3",
+      "state": "open",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "TODO Comments for Incomplete Features in PeopleFragment"
+    },
+    {
+      "id": "RP-BUG-024",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Pusher throttledErrorTimestamps Unbounded Growth"
+    },
+    {
+      "id": "RP-BUG-025",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "LocalDataService.currentCompanyId Throws If Accessed Before Login"
+    },
+    {
+      "id": "RP-BUG-026",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "SecureStorage.clearAll() Doesn't Clear migrationDeferred"
+    },
+    {
+      "id": "RP-BUG-027",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Room SyncStatus Enum Comparisons Use String Parsing"
+    },
+    {
+      "id": "RP-BUG-028",
+      "priority": "P0",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Legacy Auth-Token Migration Never Runs (Dead Wiring)"
+    },
+    {
+      "id": "RP-HD-001",
+      "priority": "P2",
+      "state": "investigating",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Audit every codebase touchpoint against every RP-CD rule"
+    },
+    {
+      "id": "RP-HD-002",
+      "priority": "P2",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Guard SecureStorage migration body against non-cancellation exceptions"
+    },
+    {
+      "id": "RP-HD-003",
+      "priority": "P3",
+      "state": "planned",
+      "release_state": "n/a",
+      "fixed_in": "\u2014",
+      "found_in": "1.0.00",
+      "title": "Document ordering of legacy-token clear vs encrypted save in SecureStorage"
+    }
+  ]
+}
