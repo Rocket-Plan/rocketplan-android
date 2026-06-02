@@ -9,15 +9,15 @@ evidence: preventive
 found_in: "1.0.00"
 fixed_in: null
 released_in: null
-state: planned
-release_state: n/a
+state: fixed
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_hd_002_003_secure_storage_2026-05-18.md
 related_review: docs/reviews/code_review_RP-BUG-001_006_2026-05-18.md
 related_test: null
 priority: P3
-last_updated: 2026-05-18
+last_updated: 2026-06-02
 ---
 
 # Hardening: document the clear-vs-save ordering invariant in `migrateLegacyAuthToken`

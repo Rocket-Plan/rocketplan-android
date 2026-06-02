@@ -24,9 +24,7 @@ class PhotoCacheManager(
     private val localDataService: LocalDataService,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    // TODO: Share OkHttpClient config (timeouts, cert pinning) with RetrofitClient
-    //  to ensure consistent network behaviour across the app.
-    private val httpClient: OkHttpClient = OkHttpClient()
+    private val httpClient: OkHttpClient = RetrofitClient.plainHttpClient
 ) {
 
     companion object {

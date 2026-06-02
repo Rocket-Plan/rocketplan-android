@@ -768,10 +768,6 @@ class LocalDataService private constructor(
             rooms.forEach { room ->
                 val serverId = room.serverId ?: return@forEach
                 val localRoomId = room.roomId
-                if (localRoomId == serverId) {
-                    // Nothing to migrate if the auto PK already matches the server id
-                    return@forEach
-                }
 
                 suspend fun migrateReferences(oldId: Long, newId: Long): ReferenceMigrationCounts {
                     if (oldId == newId) {

@@ -75,6 +75,31 @@ object AppConfig {
     val apiTimeout: Long = if (isProduction) 30 else 60
 
     /**
+     * Hostname extracted from apiBaseUrl, used for certificate pinning.
+     */
+    val apiHost: String by lazy {
+        try {
+            val url = java.net.URL(apiBaseUrl)
+            url.host
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
+    /**
+     * SHA-256 public-key pins for [apiHost], supplied as a comma-separated BuildConfig field.
+     * Blank for dev builds to avoid lockout against rotating QA certs.
+     */
+    val certificatePins: List<String> by lazy {
+        val pins = try {
+            BuildConfig::class.java.getField("CERT_PINS").get(null) as? String ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+        pins.split(',').map { it.trim() }.filter { it.isNotBlank() }
+    }
+
+    /**
      * Enable crash reporting
      */
     val isCrashReportingEnabled: Boolean = isSentryEnabled
