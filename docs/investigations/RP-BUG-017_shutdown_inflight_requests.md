@@ -5,11 +5,11 @@ title: ImageProcessorQueueManager Shutdown Doesn't Wait for In-Flight Requests
 type: functional
 classification: pre_existing_latent
 source: review
-found_in: "1.0.00+000"
+found_in: "1.0.00"
 fixed_in: null
 released_in: null
 state: fixed
-release_state: n/a
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_013_017_020_image_queue_2026-06-01.md

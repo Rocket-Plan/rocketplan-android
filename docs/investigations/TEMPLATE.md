@@ -5,7 +5,7 @@ title: Example bug - Brief description of the issue
 type: crash | hang | threading | memory | ui_bug | performance | functional
 classification: pre_existing_latent | new_code_bug | regression | pre_existing_worsened
 source: sentry | qa | review | customer | internal
-found_in: "1.0.00+000"
+found_in: "1.0.00"
 fixed_in: null
 released_in: null
 state: investigating
