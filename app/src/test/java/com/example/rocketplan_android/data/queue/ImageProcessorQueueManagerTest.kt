@@ -21,6 +21,8 @@ import io.mockk.mockk
 import io.mockk.runs
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -39,7 +41,10 @@ class ImageProcessorQueueManagerTest {
     private val secureStorage: SecureStorage = mockk(relaxed = true)
     private val remoteLogger: RemoteLogger = mockk(relaxed = true)
 
-    private fun createQueueManager() = ImageProcessorQueueManager(
+    private fun createQueueManager(
+        retryConfig: ImageProcessorQueueManager.RetryConfig =
+            ImageProcessorQueueManager.DEFAULT_RETRY_CONFIG
+    ) = ImageProcessorQueueManager(
         context = context,
         dao = dao,
         offlineDao = offlineDao,
@@ -48,8 +53,17 @@ class ImageProcessorQueueManagerTest {
         configRepository = configRepository,
         secureStorage = secureStorage,
         remoteLogger = remoteLogger,
-        realtimeManager = null
+        realtimeManager = null,
+        retryConfig = retryConfig
     )
+
+    /** Invoke the private suspend [calculateNextRetryTimeout] via reflection. */
+    private fun ImageProcessorQueueManager.invokeCalculateNextRetryTimeout(retryCount: Int): Int {
+        val method = ImageProcessorQueueManager::class.java
+            .getDeclaredMethod("calculateNextRetryTimeout", Int::class.javaPrimitiveType)
+            .apply { isAccessible = true }
+        return method.invoke(this, retryCount) as Int
+    }
 
     private fun createWaitingAssembly(
         assemblyId: String = "test-assembly-123",
@@ -267,5 +281,71 @@ class ImageProcessorQueueManagerTest {
         coVerify(exactly = 0) {
             dao.updateAssembly(match { it.entityId != null })
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // RP-BUG-021: injectable RetryConfig + calculateNextRetryTimeout backoff
+    //
+    // calculateNextRetryTimeout is private and pure, depending only on the
+    // injected RetryConfig. It is exercised via reflection (deterministic, no
+    // Android framework, no coroutine-scope race). This is the core of the
+    // exponential-backoff fix and the only cleanly unit-testable surface of
+    // the failAssemblyWithBackoff helper.
+    // ---------------------------------------------------------------------
+
+    @Test
+    fun `calculateNextRetryTimeout produces exponential backoff with injected config`() {
+        // initial=10s, max=1800s -> 10, 20, 40, 80, 160, 320, 640, 1280, 1800(cap)...
+        val queueManager = createQueueManager(
+            retryConfig = ImageProcessorQueueManager.RetryConfig(
+                maxRetryAttempts = 13,
+                initialRetryTimeoutSeconds = 10,
+                maxRetryTimeoutSeconds = 1800
+            )
+        )
+
+        val expected = listOf(10, 20, 40, 80, 160, 320, 640, 1280)
+        expected.forEachIndexed { retryCount, seconds ->
+            assertEquals(
+                "retryCount=$retryCount should back off to $seconds",
+                seconds,
+                queueManager.invokeCalculateNextRetryTimeout(retryCount)
+            )
+        }
+    }
+
+    @Test
+    fun `calculateNextRetryTimeout caps at maxRetryTimeoutSeconds`() {
+        val queueManager = createQueueManager(
+            retryConfig = ImageProcessorQueueManager.RetryConfig(
+                maxRetryAttempts = 13,
+                initialRetryTimeoutSeconds = 10,
+                maxRetryTimeoutSeconds = 1800
+            )
+        )
+
+        // retryCount=8 -> 10 * 2^8 = 2560 -> capped to 1800
+        assertEquals(1800, queueManager.invokeCalculateNextRetryTimeout(8))
+        // Large retryCount within attempt range stays capped (never exceeds max)
+        assertEquals(1800, queueManager.invokeCalculateNextRetryTimeout(12))
+        assertTrue(queueManager.invokeCalculateNextRetryTimeout(12) <= 1800)
+    }
+
+    @Test
+    fun `calculateNextRetryTimeout honors a different injected initial timeout`() {
+        // Custom config: initial=5s, max=60s -> 5, 10, 20, 40, 60(cap), 60...
+        val queueManager = createQueueManager(
+            retryConfig = ImageProcessorQueueManager.RetryConfig(
+                maxRetryAttempts = 5,
+                initialRetryTimeoutSeconds = 5,
+                maxRetryTimeoutSeconds = 60
+            )
+        )
+
+        assertEquals(5, queueManager.invokeCalculateNextRetryTimeout(0))
+        assertEquals(10, queueManager.invokeCalculateNextRetryTimeout(1))
+        assertEquals(20, queueManager.invokeCalculateNextRetryTimeout(2))
+        assertEquals(40, queueManager.invokeCalculateNextRetryTimeout(3))
+        assertEquals(60, queueManager.invokeCalculateNextRetryTimeout(4)) // 80 capped to 60
     }
 }

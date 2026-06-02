@@ -1,11 +1,12 @@
-**Bug ID:** RP-HD-002, RP-HD-003
+**Bug ID(s):** RP-HD-002, RP-HD-003
 **Tracker:** [BUG_TRACKER.md](../BUG_TRACKER.md)
-**Related:** [Investigation RP-HD-002](../investigations/RP-HD-002_secure_storage_migration_exception_guard.md) · [Investigation RP-HD-003](../investigations/RP-HD-003_secure_storage_clear_save_ordering.md) · [Review](../reviews/code_review_RP-BUG-001_006_2026-05-18.md)
+**Related:** [Investigation RP-HD-002](../investigations/RP-HD-002_secure_storage_migration_exception_guard.md) · [Investigation RP-HD-003](../investigations/RP-HD-003_secure_storage_clear_save_ordering.md) · [Plan](./plan_rp_hd_002_003_secure_storage_2026-05-18.md) · [Review](../reviews/code_review_RP-HD-002_003_2026-05-18.md)
 
 ---
 
 # Fix Plan: SecureStorage Hardening (RP-HD-002, RP-HD-003)
 
+**Bug ID(s):** RP-HD-002, RP-HD-003
 **Author:** jeremie@rocketplantech.com
 **Date:** 2026-05-18
 **State:** draft

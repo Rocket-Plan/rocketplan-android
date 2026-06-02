@@ -41,6 +41,7 @@ import com.example.rocketplan_android.data.network.SyncNetworkMonitor
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.example.rocketplan_android.thermal.FlirSdkManager
 import com.example.rocketplan_android.config.AppConfig
@@ -77,6 +78,25 @@ class RocketPlanApplication : Application() {
 
     lateinit var syncCheckpointStore: SyncCheckpointStore
         private set
+
+    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    private fun launchStartupTask(name: String, block: suspend () -> Unit) {
+        applicationScope.launch {
+            runCatching { block() }
+                .onFailure { error ->
+                    Log.w(TAG, "Startup task failed: $name", error)
+                    runCatching {
+                        remoteLogger.log(
+                            level = LogLevel.ERROR,
+                            tag = TAG,
+                            message = "Startup task failed",
+                            metadata = mapOf("task" to name)
+                        )
+                    }
+                }
+        }
+    }
 
     lateinit var imageProcessingConfigurationRepository: ImageProcessingConfigurationRepository
         private set
@@ -304,7 +324,7 @@ class RocketPlanApplication : Application() {
 
         // Cold-start recovery: Resume any existing assemblies that were interrupted
         // First, recover any assemblies left in UPLOADING state, then restart the queue
-        CoroutineScope(Dispatchers.IO).launch {
+        launchStartupTask("recover_stranded_assemblies") {
             imageProcessorQueueManager.recoverStrandedAssemblies()
             imageProcessorQueueManager.processNextQueuedAssembly()
             runCatching { imageProcessorRepository.cleanupOldAssemblies() }
@@ -314,7 +334,7 @@ class RocketPlanApplication : Application() {
         }
 
         // One-time data repair: Fix photos with mismatched roomIds from previous sync bugs
-        CoroutineScope(Dispatchers.IO).launch {
+        launchStartupTask("repair_mismatched_photo_room_ids") {
             val reassignedCount = localDataService.repairMismatchedPhotoRoomIds()
             if (reassignedCount > 0) {
                 remoteLogger.log(
@@ -327,7 +347,7 @@ class RocketPlanApplication : Application() {
         }
 
         // Cleanup orphaned pending properties not referenced by any active project
-        CoroutineScope(Dispatchers.IO).launch {
+        launchStartupTask("cleanup_orphaned_properties") {
             val cleaned = localDataService.cleanupOrphanedProperties()
             if (cleaned > 0) {
                 remoteLogger.log(

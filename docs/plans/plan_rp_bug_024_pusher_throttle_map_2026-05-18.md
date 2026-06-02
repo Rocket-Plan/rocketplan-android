@@ -1,6 +1,6 @@
-**Bug ID:** RP-BUG-024
+**Bug ID(s):** RP-BUG-024
 **Tracker:** [BUG_TRACKER.md](../BUG_TRACKER.md)
-**Related:** [Investigation](../investigations/RP-BUG-024_pusher_throttle_map.md) · [Review](../reviews/code_review_full_2026-05-18.md)
+**Related:** [Investigation](../investigations/RP-BUG-024_pusher_throttle_map.md) · [Plan](./plan_rp_bug_024_pusher_throttle_map_2026-05-18.md) · [Review](../reviews/code_review_rp_bug_024_027_2026-05-18.md)
 
 # Fix Plan: [RP-BUG-024] Bound Pusher error-throttle cache growth
 

@@ -12,6 +12,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import io.sentry.Sentry
+import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
@@ -114,12 +115,6 @@ class SecureStorage internal constructor(
             withTimeoutOrNull(MIGRATION_TIMEOUT_MS) { migrateLegacyAuthToken() }
         }
 
-    private suspend fun initMigrationDeferred(scope: CoroutineScope) {
-        migrationMutex.withLock {
-            migrationDeferred = createMigrationDeferred(scope)
-        }
-    }
-
     // ==================== Token Management ====================
 
     /**
@@ -127,7 +122,13 @@ class SecureStorage internal constructor(
      */
     suspend fun saveAuthToken(token: String) {
         withContext(Dispatchers.IO) {
-            saveAuthTokenInternal(token)
+            // Only publish the token to in-memory state once it is durably on
+            // disk. If commit() fails, throw so the caller can surface a login
+            // failure instead of presenting a session that vanishes on next
+            // cold start (RP-BUG-005).
+            if (!saveAuthTokenInternal(token)) {
+                throw IOException("Failed to persist auth token to encrypted storage")
+            }
             authTokenState.value = token
         }
     }
@@ -144,8 +145,14 @@ class SecureStorage internal constructor(
      */
     suspend fun getAuthTokenSync(): String? {
         authTokenState.value?.let { return it }
-        val deferred = migrationMutex.withLock { migrationDeferred }
-            ?: scope.async { null }.also { migrationDeferred = it }
+        // Start the one-shot legacy migration on first read if it hasn't run yet,
+        // then await it. Done under the mutex so concurrent callers share a single
+        // migration (and clearAll() can cancel/replace it). Previously this
+        // substituted a no-op `async { null }`, which left the legacy
+        // DataStore -> encrypted token migration as dead code (RP-BUG-006).
+        val deferred = migrationMutex.withLock {
+            migrationDeferred ?: createMigrationDeferred(scope).also { migrationDeferred = it }
+        }
         deferred.await()
         return authTokenState.value
     }
@@ -347,10 +354,25 @@ class SecureStorage internal constructor(
     }
 
     /**
-     * Persist token in encrypted prefs and migrate away from legacy DataStore storage.
+     * Persist token in encrypted prefs synchronously.
+     *
+     * Uses commit() (not apply()) so the write is durable before we return:
+     * apply() schedules the write off-thread, so a process kill between
+     * saveAuthToken() returning and the write flushing would silently lose the
+     * token and sign the user out on next cold start (RP-BUG-005). saveAuthToken()
+     * and migrateLegacyAuthToken() already run on Dispatchers.IO, so the
+     * synchronous disk write does not block the main thread.
      */
-    private fun saveAuthTokenInternal(token: String) {
-        encryptedPrefs.edit().putString(AUTH_TOKEN_PREF_KEY, token).apply()
+    private fun saveAuthTokenInternal(token: String): Boolean {
+        val committed = encryptedPrefs.edit().putString(AUTH_TOKEN_PREF_KEY, token).commit()
+        if (!committed) {
+            Sentry.withScope { scope ->
+                scope.setTag("event", "auth_token_commit_failed")
+                Sentry.captureMessage("Auth token commit() returned false")
+            }
+            Log.w(TAG, "auth token commit returned false")
+        }
+        return committed
     }
 
     private suspend fun migrateLegacyAuthToken(): String? {
@@ -367,7 +389,12 @@ class SecureStorage internal constructor(
             //      crashed, the token would be lost.
             //   3. compareAndSet — publish to in-memory state last so flow consumers
             //      can't observe a token that isn't yet persisted.
-            saveAuthTokenInternal(legacyToken)
+            if (!saveAuthTokenInternal(legacyToken)) {
+                // Encrypted write failed: keep the legacy token in place so the
+                // next cold start can retry the migration rather than losing it.
+                Log.w(TAG, "legacy auth token migration: commit failed, retaining legacy token")
+                return null
+            }
             clearLegacyToken()
             authTokenState.compareAndSet(null, legacyToken)
             Log.d(TAG, "legacy auth token migration: migrated")

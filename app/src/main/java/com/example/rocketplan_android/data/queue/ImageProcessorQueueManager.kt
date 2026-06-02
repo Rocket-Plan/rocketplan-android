@@ -26,6 +26,7 @@ import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.realtime.ImageProcessorRealtimeManager
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,18 +72,28 @@ class ImageProcessorQueueManager(
     private val configRepository: ImageProcessingConfigurationRepository,
     private val secureStorage: SecureStorage,
     private val remoteLogger: RemoteLogger?,
-    private val realtimeManager: ImageProcessorRealtimeManager? = null
+    private val realtimeManager: ImageProcessorRealtimeManager? = null,
+    private val retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
 ) {
     companion object {
         private const val TAG = "ImgProcessorQueueMgr"
-        private const val MAX_RETRY_ATTEMPTS = 13
-        private const val INITIAL_RETRY_TIMEOUT_SECONDS = 10
-        // Match iOS cap: exponential backoff up to 30 minutes
-        private const val MAX_RETRY_TIMEOUT_SECONDS = 1800
         private const val ONE_OFF_RETRY_WORK_NAME = "image_processor_retry_one_off"
         // If server says "pending" for longer than this, consider it stuck and retry (5 minutes)
         private const val PENDING_STUCK_THRESHOLD_MS = 5 * 60 * 1000L
+        private const val SHUTDOWN_GRACE_SECONDS = 3L
+
+        val DEFAULT_RETRY_CONFIG = RetryConfig(
+            maxRetryAttempts = 13,
+            initialRetryTimeoutSeconds = 10,
+            maxRetryTimeoutSeconds = 1800,
+        )
     }
+
+    data class RetryConfig(
+        val maxRetryAttempts: Int,
+        val initialRetryTimeoutSeconds: Int,
+        val maxRetryTimeoutSeconds: Int,
+    )
 
     private val isProcessingQueue = AtomicBoolean(false)
     private val queueMutex = Mutex()
@@ -124,10 +135,24 @@ class ImageProcessorQueueManager(
     /**
      * Shutdown the queue manager, canceling all pending work and releasing resources.
      * Call this when the app is terminating or the manager is no longer needed.
+     *
+     * Blocks the calling thread for up to [SHUTDOWN_GRACE_SECONDS] waiting for
+     * in-flight uploads to finish, so it MUST NOT be called on the main thread
+     * (it would risk an ANR). Invoke from a background dispatcher.
      */
     fun shutdown() {
         scope.cancel()
-        okHttpClient.dispatcher.executorService.shutdown()
+        val executor = okHttpClient.dispatcher.executorService
+        executor.shutdown()
+        try {
+            if (!executor.awaitTermination(SHUTDOWN_GRACE_SECONDS, TimeUnit.SECONDS)) {
+                Log.w(TAG, "⏱️ Shutdown grace period elapsed with in-flight uploads; forcing stop")
+                executor.shutdownNow()
+            }
+        } catch (e: InterruptedException) {
+            executor.shutdownNow()
+            Thread.currentThread().interrupt()
+        }
         okHttpClient.connectionPool.evictAll()
     }
 
@@ -660,6 +685,7 @@ class ImageProcessorQueueManager(
     fun processNextQueuedAssembly() {
         scope.launch {
             queueMutex.withLock {
+                var processingAssembly: ImageProcessorAssemblyEntity? = null
                 try {
                     Log.d(TAG, "🔍 Checking for next queued assembly (isProcessing=${isProcessingQueue.get()})")
 
@@ -688,6 +714,8 @@ class ImageProcessorQueueManager(
                         return@launch
                     }
 
+                    processingAssembly = nextAssembly
+
                     // Lock queue
                     isProcessingQueue.set(true)
                     Log.d(TAG, "🔒 Queue locked, processing assembly ${nextAssembly.assemblyId}")
@@ -705,14 +733,28 @@ class ImageProcessorQueueManager(
 
                     // Upload assembly
                     uploadAssembly(nextAssembly)
+                } catch (e: CancellationException) {
+                    isProcessingQueue.set(false)
+                    throw e
                 } catch (e: Exception) {
                     Log.e(TAG, "❌ Error processing queue", e)
                     isProcessingQueue.set(false)
+                    processingAssembly?.let { assembly ->
+                        runCatching {
+                            failAssemblyWithBackoff(
+                                assembly.assemblyId,
+                                "Queue processing failed: ${e.message}"
+                            )
+                        }
+                    }
                     remoteLogger?.log(
                         level = LogLevel.ERROR,
                         tag = TAG,
                         message = "Queue processing failed: ${e.message}",
-                        metadata = mapOf("error" to (e.message ?: "unknown"))
+                        metadata = mapOf(
+                            "error" to (e.message ?: "unknown"),
+                            "assembly_id" to (processingAssembly?.assemblyId ?: "unknown")
+                        )
                     )
                 }
             }
@@ -775,7 +817,7 @@ class ImageProcessorQueueManager(
                         AssemblyStatus.QUEUED.value  // QUEUED = network failed during creation
                     ),
                     currentTimeMillis = if (bypassTimeout) Long.MAX_VALUE else currentTime
-                ).filter { it.failsCount < MAX_RETRY_ATTEMPTS }
+                ).filter { it.failsCount < retryConfig.maxRetryAttempts }
 
                 if (retryableAssemblies.isEmpty()) {
                     Log.d(TAG, "✅ No assemblies ready for retry")
@@ -1063,7 +1105,7 @@ class ImageProcessorQueueManager(
             val serverSaysPending = mappedStatus == AssemblyStatus.PENDING
             val stuckTooLong = (System.currentTimeMillis() - assembly.lastUpdatedAt) > PENDING_STUCK_THRESHOLD_MS
 
-            if (localIsPending && serverSaysPending && stuckTooLong && assembly.failsCount < MAX_RETRY_ATTEMPTS) {
+            if (localIsPending && serverSaysPending && stuckTooLong && assembly.failsCount < retryConfig.maxRetryAttempts) {
                 // Server never processed this - mark as FAILED to trigger retry
                 Log.w(TAG, "⚠️ Assembly $assemblyId stuck in server pending for > 5 min, marking for retry")
                 remoteLogger?.log(
@@ -1097,7 +1139,7 @@ class ImageProcessorQueueManager(
                 dao.updateAssembly(updated)
 
                 // Schedule retry
-                if (updated.failsCount < MAX_RETRY_ATTEMPTS) {
+                if (updated.failsCount < retryConfig.maxRetryAttempts) {
                     scheduleOneOffRetry(nextTimeout.toLong())
                 }
 
@@ -1161,7 +1203,7 @@ class ImageProcessorQueueManager(
                 if (current != null) {
                     dao.updateAssembly(current.copy(
                         status = AssemblyStatus.FAILED.value,
-                        failsCount = MAX_RETRY_ATTEMPTS,
+                        failsCount = retryConfig.maxRetryAttempts,
                         errorMessage = errorMessage,
                         lastUpdatedAt = System.currentTimeMillis()
                     ))
@@ -1253,30 +1295,7 @@ class ImageProcessorQueueManager(
             checkIfAssemblyComplete(assembly.assemblyId)
         } catch (e: Exception) {
             Log.e(TAG, "❌ Assembly upload failed for ${assembly.assemblyId}", e)
-
-            // Mark assembly as FAILED before completing
-            updateAssemblyStatus(assembly.assemblyId, AssemblyStatus.FAILED, e.message)
-
-            // Calculate exponential backoff for retry
-            val currentAssembly = dao.getAssembly(assembly.assemblyId)
-            if (currentAssembly != null) {
-                val nextTimeout = calculateNextRetryTimeout(currentAssembly.retryCount)
-                val nextRetryAt = System.currentTimeMillis() + (nextTimeout * 1000L)
-
-                val updated = currentAssembly.copy(
-                    failsCount = currentAssembly.failsCount + 1,
-                    retryCount = currentAssembly.retryCount + 1,
-                    nextRetryAt = nextRetryAt,
-                    lastTimeout = nextTimeout
-                )
-                dao.updateAssembly(updated)
-
-                if (updated.failsCount < MAX_RETRY_ATTEMPTS) {
-                    scheduleOneOffRetry(nextTimeout.toLong())
-                }
-            }
-
-            onAssemblyCompleted(assembly.assemblyId, success = false, errorMessage = e.message)
+            failAssemblyWithBackoff(assembly.assemblyId, e.message)
         }
     }
 
@@ -1501,7 +1520,7 @@ class ImageProcessorQueueManager(
                     )
                     dao.updateAssembly(updated)
 
-                    if (updated.failsCount < MAX_RETRY_ATTEMPTS) {
+                    if (updated.failsCount < retryConfig.maxRetryAttempts) {
                         scheduleOneOffRetry(nextTimeout.toLong())
                     }
                 }
@@ -1513,6 +1532,38 @@ class ImageProcessorQueueManager(
                 Log.d(TAG, "⏳ Assembly $assemblyId still uploading: $completedCount/$totalCount")
             }
         }
+    }
+
+    /**
+     * Mark an assembly FAILED and advance its retry state: bump
+     * failsCount/retryCount, set the exponential-backoff nextRetryAt, schedule a
+     * one-off retry while under the attempt cap, and signal completion so the
+     * queue advances. Shared by the upload-failure path and the queue-processing
+     * recovery path so both follow the same retry contract (RP-BUG-020) instead
+     * of stranding the assembly as FAILED with stale retry accounting.
+     */
+    private suspend fun failAssemblyWithBackoff(assemblyId: String, errorMessage: String?) {
+        updateAssemblyStatus(assemblyId, AssemblyStatus.FAILED, errorMessage)
+
+        val currentAssembly = dao.getAssembly(assemblyId)
+        if (currentAssembly != null) {
+            val nextTimeout = calculateNextRetryTimeout(currentAssembly.retryCount)
+            val nextRetryAt = System.currentTimeMillis() + (nextTimeout * 1000L)
+
+            val updated = currentAssembly.copy(
+                failsCount = currentAssembly.failsCount + 1,
+                retryCount = currentAssembly.retryCount + 1,
+                nextRetryAt = nextRetryAt,
+                lastTimeout = nextTimeout
+            )
+            dao.updateAssembly(updated)
+
+            if (updated.failsCount < retryConfig.maxRetryAttempts) {
+                scheduleOneOffRetry(nextTimeout.toLong())
+            }
+        }
+
+        onAssemblyCompleted(assemblyId, success = false, errorMessage = errorMessage)
     }
 
     private suspend fun onAssemblyCompleted(assemblyId: String, success: Boolean, errorMessage: String?) {
@@ -1665,8 +1716,8 @@ class ImageProcessorQueueManager(
 
     private fun calculateNextRetryTimeout(retryCount: Int): Int {
         // Exponential backoff: 10s, 20s, 40s, 80s, ... capped at 30 minutes
-        val timeout = INITIAL_RETRY_TIMEOUT_SECONDS * (1 shl retryCount)
-        return timeout.coerceAtMost(MAX_RETRY_TIMEOUT_SECONDS)
+        val timeout = retryConfig.initialRetryTimeoutSeconds * (1 shl retryCount)
+        return timeout.coerceAtMost(retryConfig.maxRetryTimeoutSeconds)
     }
 
     private fun maskApiKey(apiKey: String?): String =
@@ -1687,7 +1738,7 @@ class ImageProcessorQueueManager(
             .setInitialDelay(delaySeconds, TimeUnit.SECONDS)
             .setBackoffCriteria(
                 BackoffPolicy.EXPONENTIAL,
-                INITIAL_RETRY_TIMEOUT_SECONDS.toLong(),
+                retryConfig.initialRetryTimeoutSeconds.toLong(),
                 TimeUnit.SECONDS
             )
             .build()

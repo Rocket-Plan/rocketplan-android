@@ -8,11 +8,12 @@ source: review
 found_in: "1.0.00+000"
 fixed_in: null
 released_in: null
-state: open
+state: planned
 release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_bug_003_010_015_sync_queue_2026-06-01.md
+last_updated: 2026-06-01
 related_review: null
 related_test: null
 priority: P2

@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.login
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -19,6 +20,10 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
 
     private val secureStorage = SecureStorage.getInstance(application)
     private val authRepository = AuthRepository(secureStorage)
+
+    companion object {
+        private const val TAG = "LoginViewModel"
+    }
 
     // UI State
     private val _email = MutableLiveData<String>()
@@ -165,8 +170,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 val session = result.getOrNull()
                 _authSession.value = session
                 if (AppConfig.isLoggingEnabled) {
-                    println("Sign in successful")
-                    println("User ID: ${session?.user?.id}")
+                    Log.d(TAG, "Sign in successful (userId=${session?.user?.id})")
                 }
                 _signInSuccess.value = true
             } else {
@@ -175,7 +179,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
                 _errorMessage.value = error?.message ?: "Sign in failed. Please try again."
 
                 if (AppConfig.isLoggingEnabled) {
-                    error?.printStackTrace()
+                    Log.e(TAG, "Sign in failed: ${error?.javaClass?.simpleName}")
                 }
             }
             _isLoading.value = false

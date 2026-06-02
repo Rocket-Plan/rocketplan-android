@@ -8,14 +8,15 @@ source: review
 found_in: "1.0.00+000"
 fixed_in: null
 released_in: null
-state: open
+state: planned
 release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_bug_014_016_migration_2026-06-01.md
 related_review: null
 related_test: null
 priority: P1
+last_updated: 2026-06-01
 ---
 
 # Investigation: Missing Migration 27_28 in Database Version Sequence

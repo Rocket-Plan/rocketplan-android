@@ -1,6 +1,6 @@
-**Bug ID:** RP-BUG-027
+**Bug ID(s):** RP-BUG-027
 **Tracker:** [BUG_TRACKER.md](../BUG_TRACKER.md)
-**Related:** [Investigation](../investigations/RP-BUG-027_syncstatus_string_parse.md) · [Review](../reviews/code_review_full_2026-05-18.md)
+**Related:** [Investigation](../investigations/RP-BUG-027_syncstatus_string_parse.md) · [Plan](./plan_rp_bug_027_syncstatus_storage_mapping_2026-05-18.md) · [Review](../reviews/code_review_rp_bug_024_027_2026-05-18.md)
 
 # Fix Plan: [RP-BUG-027] Make SyncStatus storage parsing explicit
 

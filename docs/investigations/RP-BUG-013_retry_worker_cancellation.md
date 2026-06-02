@@ -8,14 +8,15 @@ source: review
 found_in: "1.0.00+000"
 fixed_in: null
 released_in: null
-state: open
+state: fixed
 release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
-related_review: null
+related_plan: docs/plans/plan_rp_bug_013_017_020_image_queue_2026-06-01.md
+related_review: docs/reviews/code_review_bug_bundle_2_2026-06-01.md
 related_test: null
 priority: P1
+last_updated: 2026-06-01
 ---
 
 # Investigation: Swallowed Exception in ImageProcessorRetryWorker

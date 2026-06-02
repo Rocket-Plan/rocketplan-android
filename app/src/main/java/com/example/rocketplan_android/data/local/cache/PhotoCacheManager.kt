@@ -39,7 +39,7 @@ class PhotoCacheManager(
     }
 
     suspend fun cachePhotos(photos: List<OfflinePhotoEntity>) {
-        photos.forEach { photo ->
+        photos.toList().forEach { photo ->
             runCatching { cachePhoto(photo) }.onFailure { error ->
                 Log.w(TAG, "Failed to cache photo ${photo.photoId}", error)
                 remoteLogger?.log(
@@ -165,26 +165,29 @@ class PhotoCacheManager(
                 inPreferredConfig = Bitmap.Config.RGB_565
             }
             val sampled = BitmapFactory.decodeFile(originalFile.absolutePath, decodeOptions) ?: return null
+            var scaled: Bitmap? = null
+            try {
+                val maxDimension = maxOf(sampled.width, sampled.height)
+                scaled = if (maxDimension > THUMBNAIL_MAX_DIMENSION) {
+                    val scale = THUMBNAIL_MAX_DIMENSION.toFloat() / maxDimension
+                    val thumbWidth = (sampled.width * scale).toInt().coerceAtLeast(64)
+                    val thumbHeight = (sampled.height * scale).toInt().coerceAtLeast(64)
+                    Bitmap.createScaledBitmap(sampled, thumbWidth, thumbHeight, true)
+                } else {
+                    sampled
+                }
 
-            val maxDimension = maxOf(sampled.width, sampled.height)
-            val scaled = if (maxDimension > THUMBNAIL_MAX_DIMENSION) {
-                val scale = THUMBNAIL_MAX_DIMENSION.toFloat() / maxDimension
-                val thumbWidth = (sampled.width * scale).toInt().coerceAtLeast(64)
-                val thumbHeight = (sampled.height * scale).toInt().coerceAtLeast(64)
-                Bitmap.createScaledBitmap(sampled, thumbWidth, thumbHeight, true)
-            } else {
-                sampled
+                val thumbnailFile = File(originalFile.parentFile, "${originalFile.nameWithoutExtension}_thumb.jpg")
+                FileOutputStream(thumbnailFile).use { output ->
+                    scaled.compress(Bitmap.CompressFormat.JPEG, 85, output)
+                }
+                thumbnailFile
+            } finally {
+                if (scaled != null && scaled !== sampled) {
+                    scaled.recycle()
+                }
+                sampled.recycle()
             }
-
-            val thumbnailFile = File(originalFile.parentFile, "${originalFile.nameWithoutExtension}_thumb.jpg")
-            FileOutputStream(thumbnailFile).use { output ->
-                scaled.compress(Bitmap.CompressFormat.JPEG, 85, output)
-            }
-            if (scaled != sampled) {
-                scaled.recycle()
-            }
-            sampled.recycle()
-            thumbnailFile
         }.getOrNull()
     }
 
@@ -213,7 +216,7 @@ class PhotoCacheManager(
             }
         }
 
-        var totalBytes = entries.sumOf { it.totalBytes }
+        var totalBytes = entries.sumOf { it.totalBytes } - victims.sumOf { it.totalBytes }
 
         // Enforce maxBytes using LRU (oldest lastAccessedAt first)
         if (totalBytes > maxBytes) {
@@ -221,17 +224,21 @@ class PhotoCacheManager(
                 .filterNot { victims.contains(it) }
                 .sortedBy { it.photo.lastAccessedAt?.time ?: 0L }
 
-            lru.forEach { entry ->
-                if (totalBytes <= maxBytes) return@forEach
+            for (entry in lru) {
+                if (totalBytes <= maxBytes) break
                 victims.add(entry)
                 totalBytes -= entry.totalBytes
             }
         }
 
         victims.forEach { entry ->
-            entry.original?.takeIf { it.exists() }?.delete()
-            entry.thumbnail?.takeIf { it.exists() }?.delete()
-            localDataService.markPhotoCacheFailed(entry.photo.photoId)
+            val originalDeleted = entry.original?.takeIf { it.exists() }?.delete() ?: true
+            val thumbDeleted = entry.thumbnail?.takeIf { it.exists() }?.delete() ?: true
+            if (originalDeleted && thumbDeleted) {
+                localDataService.markPhotoCacheFailed(entry.photo.photoId)
+            } else {
+                Log.w(TAG, "Cache cleanup could not fully delete files for photo ${entry.photo.photoId}")
+            }
         }
     }
 

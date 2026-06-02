@@ -7,7 +7,11 @@ import com.example.rocketplan_android.testing.MainDispatcherRule
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
+import io.mockk.slot
 import io.mockk.unmockkStatic
+import io.mockk.verify
+import io.sentry.ScopeCallback
+import io.sentry.Sentry
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,12 +22,15 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import java.io.IOException
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 
 /**
  * Tests for the auth-token race fix in [SecureStorage] (RP-BUG-006).
@@ -38,6 +45,9 @@ class SecureStorageTest {
     @get:Rule
     val dispatcherRule = MainDispatcherRule()
 
+    @get:Rule
+    val tempFolder = TemporaryFolder()
+
     private lateinit var context: Context
     private lateinit var encryptedPrefs: SharedPreferences
     private lateinit var encryptedEditor: SharedPreferences.Editor
@@ -45,12 +55,21 @@ class SecureStorageTest {
     @Before
     fun setUp() {
         context = mockk(relaxed = true)
+        // clearAll() and the legacy-read defaults touch context.dataStore, whose
+        // delegate builds a real file under context.filesDir. A relaxed mock
+        // returns null there -> File(null) NPE. Point it at a per-test temp dir
+        // (TemporaryFolder gives a fresh root per test, so DataStore files don't
+        // collide across tests).
+        val filesDir = tempFolder.newFolder("files")
+        every { context.applicationContext } returns context
+        every { context.filesDir } returns filesDir
         encryptedPrefs = mockk(relaxed = true)
         encryptedEditor = mockk(relaxed = true)
         every { encryptedPrefs.edit() } returns encryptedEditor
         every { encryptedEditor.putString(any(), any()) } returns encryptedEditor
         every { encryptedEditor.remove(any()) } returns encryptedEditor
         every { encryptedEditor.clear() } returns encryptedEditor
+        every { encryptedEditor.commit() } returns true
 
         // EncryptedSharedPreferences.create() and MasterKey.Builder().build()
         // touch Android Keystore on real devices; stub both to return our mock.
@@ -70,6 +89,7 @@ class SecureStorageTest {
     @After
     fun tearDown() {
         unmockkStatic(EncryptedSharedPreferences::class)
+        unmockkStatic(Sentry::class)
     }
 
     private fun newStorage(
@@ -246,5 +266,40 @@ class SecureStorageTest {
         val result = storage.getAuthTokenSync()
 
         assertNull(result)
+    }
+
+    @Test
+    fun `saveAuthTokenInternal calls commit not apply`() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+        val storage = newStorage(scope = scope)
+
+        storage.saveAuthToken("test-token")
+
+        verify { encryptedPrefs.edit() }
+        verify { encryptedEditor.putString("auth_token", "test-token") }
+        verify { encryptedEditor.commit() }
+        verify(exactly = 0) { encryptedEditor.apply() }
+    }
+
+    @Test
+    fun `failed commit reports to Sentry with auth_token_commit_failed tag`() = runTest {
+        val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+        every { encryptedEditor.commit() } returns false
+
+        mockkStatic(Sentry::class)
+        val sentryScope = mockk<io.sentry.IScope>(relaxed = true)
+        val scopeCallback = slot<ScopeCallback>()
+        every { Sentry.withScope(capture(scopeCallback)) } answers {
+            scopeCallback.captured.run(sentryScope)
+        }
+        every { Sentry.captureMessage(any<String>()) } returns mockk(relaxed = true)
+
+        val storage = newStorage(scope = scope)
+
+        val error = runCatching { storage.saveAuthToken("test-token") }.exceptionOrNull()
+        assertTrue("expected IOException, got $error", error is IOException)
+
+        verify { sentryScope.setTag("event", "auth_token_commit_failed") }
+        verify { Sentry.captureMessage("Auth token commit() returned false") }
     }
 }
