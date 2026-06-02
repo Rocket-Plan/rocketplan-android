@@ -20,6 +20,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import java.io.IOException
@@ -117,6 +118,23 @@ class SecureStorageTest {
             val result = storage.getAuthTokenSync()
 
             assertEquals("legacy-token", result)
+        }
+
+    @Test
+    fun `migration runs eagerly and surfaces via getAuthToken Flow without calling getAuthTokenSync`() =
+        runTest {
+            val scope = CoroutineScope(SupervisorJob() + StandardTestDispatcher(testScheduler))
+            val storage = newStorage(
+                scope = scope,
+                initialEncryptedToken = null,
+                legacyToken = { "legacy-token" },
+            )
+
+            // Never call getAuthTokenSync(); the eager init migration should run on
+            // its own and publish the migrated token to the Flow (RP-BUG-028).
+            advanceUntilIdle()
+
+            assertEquals("legacy-token", storage.getAuthToken().first())
         }
 
     @Test

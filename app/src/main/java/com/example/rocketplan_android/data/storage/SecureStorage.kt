@@ -110,6 +110,14 @@ class SecureStorage internal constructor(
     private val migrationMutex = Mutex()
     private var migrationDeferred: Deferred<String?>? = null
 
+    // Kick the migration off eagerly at construction so it runs no matter which
+    // accessor is hit first — getAuthTokenSync() or the getAuthToken() Flow. Only
+    // launches the async (does not block the constructor). getAuthTokenSync()
+    // awaits it; clearAll() can still cancel and replace it (RP-BUG-028).
+    init {
+        migrationDeferred = createMigrationDeferred(scope)
+    }
+
     private fun createMigrationDeferred(scope: CoroutineScope): Deferred<String?> =
         scope.async {
             withTimeoutOrNull(MIGRATION_TIMEOUT_MS) { migrateLegacyAuthToken() }
@@ -145,11 +153,12 @@ class SecureStorage internal constructor(
      */
     suspend fun getAuthTokenSync(): String? {
         authTokenState.value?.let { return it }
-        // Start the one-shot legacy migration on first read if it hasn't run yet,
-        // then await it. Done under the mutex so concurrent callers share a single
-        // migration (and clearAll() can cancel/replace it). Previously this
-        // substituted a no-op `async { null }`, which left the legacy
-        // DataStore -> encrypted token migration as dead code (RP-BUG-006).
+        // Await the one-shot legacy migration (started eagerly in init); start it
+        // here too as a fallback in case it was never set. Done under the mutex so
+        // concurrent callers share a single migration (and clearAll() can
+        // cancel/replace it). Previously this substituted a no-op `async { null }`,
+        // which left the legacy DataStore -> encrypted token migration as dead
+        // code (RP-BUG-006 / RP-BUG-028).
         val deferred = migrationMutex.withLock {
             migrationDeferred ?: createMigrationDeferred(scope).also { migrationDeferred = it }
         }

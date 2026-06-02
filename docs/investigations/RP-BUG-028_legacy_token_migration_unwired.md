@@ -67,6 +67,25 @@ The dead `initMigrationDeferred` was removed (its body is now inlined here). Thi
 also closed a pre-existing race where the `?:` assignment happened outside the
 mutex.
 
+### Hardening: eager trigger
+
+The lazy start above only fires on `getAuthTokenSync()`. The cold-start gate
+(`MainActivity` → `AuthRepository.isLoggedIn()` → `getAuthTokenSync()`) does hit
+that path, but the `getAuthToken()` **Flow** does not — so triggering depended on
+call order. To remove that dependency, the migration is now also started eagerly
+in an `init {}` block:
+
+```kotlin
+init {
+    migrationDeferred = createMigrationDeferred(scope)
+}
+```
+
+This only launches the async (it does not block the constructor). `getAuthTokenSync()`
+keeps its `?:` fallback as a safety net, and `clearAll()` can still cancel and
+replace the deferred. Verified by a unit test that observes the migrated token via
+the `getAuthToken()` Flow without ever calling `getAuthTokenSync()`.
+
 ## Observability
 
 ### Current Signals
