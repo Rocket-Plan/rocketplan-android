@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.ui.forgotpassword
 
 import android.app.Application
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -18,6 +19,10 @@ class ForgotPasswordViewModel(application: Application) : AndroidViewModel(appli
 
     private val secureStorage = SecureStorage.getInstance(application)
     private val authRepository = AuthRepository(secureStorage)
+
+    companion object {
+        private const val TAG = "ForgotPasswordVM"
+    }
 
     private val _email = MutableLiveData<String>()
     val email: LiveData<String> = _email
@@ -95,7 +100,7 @@ class ForgotPasswordViewModel(application: Application) : AndroidViewModel(appli
                     ?: "Password reset instructions have been sent to your email."
 
                 if (AppConfig.isLoggingEnabled) {
-                    println("Password reset requested for: $emailValue")
+                    Log.d(TAG, "Password reset requested")
                 }
             } else {
                 // Error message is already user-friendly from ApiError
@@ -103,7 +108,7 @@ class ForgotPasswordViewModel(application: Application) : AndroidViewModel(appli
                 _errorMessage.value = error?.message ?: "Failed to send reset email. Please try again."
 
                 if (AppConfig.isLoggingEnabled) {
-                    error?.printStackTrace()
+                    Log.e(TAG, "Password reset failed: ${error?.javaClass?.simpleName}")
                 }
             }
             _isLoading.value = false

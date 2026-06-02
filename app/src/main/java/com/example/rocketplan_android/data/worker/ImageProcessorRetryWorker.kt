@@ -5,6 +5,7 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.rocketplan_android.RocketPlanApplication
+import kotlinx.coroutines.CancellationException
 
 /**
  * Periodic worker that checks for failed assemblies ready for retry.
@@ -32,6 +33,8 @@ class ImageProcessorRetryWorker(
 
             Log.d(TAG, "✅ ImageProcessorRetryWorker completed")
             Result.success()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             Log.e(TAG, "❌ ImageProcessorRetryWorker failed", e)
             Result.retry()

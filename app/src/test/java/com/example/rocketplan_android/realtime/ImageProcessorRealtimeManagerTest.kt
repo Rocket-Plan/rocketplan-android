@@ -11,7 +11,11 @@ import org.junit.Test
  * The shouldIgnoreUpdate function determines whether to accept or reject Pusher updates
  * based on local vs backend status. Key rules:
  * - COMPLETED locally + "processing" from backend = IGNORE (don't go backward)
- * - Any other status + "processing" from backend = ACCEPT (update to processing)
+ * - QUEUED/CREATING/CREATED/UPLOADING locally + "processing" from backend = IGNORE
+ *   (the backend fires "processing" immediately on assembly creation, before the
+ *   photos have finished uploading, so accepting it would advance the UI prematurely)
+ * - RETRYING/FAILED locally + "processing" from backend = ACCEPT (genuine reprocess)
+ * - Any status + "completed" from backend = ACCEPT (terminal forward progress)
  */
 class ImageProcessorRealtimeManagerTest {
 
@@ -24,27 +28,35 @@ class ImageProcessorRealtimeManagerTest {
     }
 
     @Test
-    fun `should accept processing update when local status is CREATED`() {
+    fun `should ignore processing update when local status is CREATED`() {
         val result = ImageProcessorRealtimeManager.shouldIgnoreUpdate(
             AssemblyStatus.CREATED, "processing"
         )
-        assertFalse("Should accept processing when local is created", result)
+        assertTrue("Should ignore premature processing while local is created", result)
     }
 
     @Test
-    fun `should accept processing update when local status is UPLOADING`() {
+    fun `should ignore processing update when local status is UPLOADING`() {
         val result = ImageProcessorRealtimeManager.shouldIgnoreUpdate(
             AssemblyStatus.UPLOADING, "processing"
         )
-        assertFalse("Should accept processing when local is uploading", result)
+        assertTrue("Should ignore premature processing while local is uploading", result)
     }
 
     @Test
-    fun `should accept processing update when local status is CREATING`() {
+    fun `should ignore processing update when local status is CREATING`() {
         val result = ImageProcessorRealtimeManager.shouldIgnoreUpdate(
             AssemblyStatus.CREATING, "processing"
         )
-        assertFalse("Should accept processing when local is creating", result)
+        assertTrue("Should ignore premature processing while local is creating", result)
+    }
+
+    @Test
+    fun `should ignore processing update when local status is QUEUED`() {
+        val result = ImageProcessorRealtimeManager.shouldIgnoreUpdate(
+            AssemblyStatus.QUEUED, "processing"
+        )
+        assertTrue("Should ignore premature processing while local is queued", result)
     }
 
     @Test

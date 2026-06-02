@@ -16,6 +16,7 @@ import com.example.rocketplan_android.realtime.ProjectRealtimeManager
 import com.example.rocketplan_android.realtime.PhotoSyncRealtimeManager
 import com.example.rocketplan_android.work.PhotoCacheScheduler
 import java.util.PriorityQueue
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
@@ -52,6 +53,9 @@ class SyncQueueManager(
     private var projectRealtimeManager: ProjectRealtimeManager? = null
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Track which fallback reasons we've already logged so each distinct reason
+    // is reported once (instead of suppressing all fallbacks after the first).
+    private val loggedConnectivityFallbacks = ConcurrentHashMap.newKeySet<String>()
     private val mutex = Mutex()
     private val queue = PriorityQueue<QueuedTask>(
         compareBy<QueuedTask> { it.priority }.thenBy { it.enqueuedAt }
@@ -232,12 +236,34 @@ class SyncQueueManager(
     }
 
     private fun isNetworkAvailable(): Boolean {
-        val cm = connectivityManager ?: return true // Assume available if no manager provided
+        val cm = connectivityManager
+        if (cm == null) {
+            logConnectivityFallback("connectivity_manager_unavailable")
+            return true
+        }
         return runCatching {
             val network = cm.activeNetwork ?: return false
             val capabilities = cm.getNetworkCapabilities(network) ?: return false
             capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-        }.getOrDefault(true)
+        }.getOrElse { error ->
+            logConnectivityFallback("connectivity_lookup_failed", error)
+            true
+        }
+    }
+
+    private fun logConnectivityFallback(reason: String, error: Throwable? = null) {
+        if (!loggedConnectivityFallbacks.add(reason)) return
+        Log.w(TAG, "Network availability defaulting to true: $reason", error)
+        scope.launch {
+            runCatching {
+                remoteLogger.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Connectivity check fell back to optimistic default",
+                    metadata = mapOf("reason" to reason)
+                )
+            }
+        }
     }
 
     fun processPendingOperations() {
