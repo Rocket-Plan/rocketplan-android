@@ -5,11 +5,11 @@ title: Race Condition in Auth Token Migration on Startup
 type: functional
 classification: pre_existing_latent
 source: review
-found_in: "1.0.00+000"
+found_in: "1.0.00"
 fixed_in: null
 released_in: null
-state: planned
-release_state: unreleased
+state: fixed
+release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_critical_p0_001_006_2026-05-13.md

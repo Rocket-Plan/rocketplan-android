@@ -5,11 +5,11 @@ title: Bitmap Memory Leak in Thumbnail Generation
 type: memory
 classification: pre_existing_latent
 source: review
-found_in: "1.0.00+000"
+found_in: "1.0.00"
 fixed_in: null
 released_in: null
 state: fixed
-release_state: n/a
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_009_019_022_photo_cache_2026-06-01.md

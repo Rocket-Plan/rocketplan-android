@@ -5,11 +5,11 @@ title: Untracked Coroutine Scope in Application Startup
 type: threading
 classification: pre_existing_latent
 source: review
-found_in: "1.0.00+000"
+found_in: "1.0.00"
 fixed_in: null
 released_in: null
 state: fixed
-release_state: n/a
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_012_application_coroutine_scope_2026-06-01.md

@@ -5,7 +5,7 @@ title: Pusher throttledErrorTimestamps Unbounded Growth
 type: functional
 classification: pre_existing_latent
 source: review
-found_in: "1.0.00+000"
+found_in: "1.0.00"
 fixed_in: null
 released_in: null
 state: fixed

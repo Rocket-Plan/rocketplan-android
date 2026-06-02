@@ -5,11 +5,11 @@ title: Session Object Printed in Debug Logging May Contain Sensitive Data
 type: functional
 classification: new_code_bug
 source: review
-found_in: "1.0.00+000"
+found_in: "1.0.00"
 fixed_in: null
 released_in: null
 state: fixed
-release_state: n/a
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_002_018_logging_pii_2026-06-01.md
