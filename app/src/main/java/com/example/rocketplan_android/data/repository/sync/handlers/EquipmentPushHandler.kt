@@ -216,7 +216,12 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
                 else -> throw error
             }
         }.onFailure { error ->
-            val errorBody = (error as? retrofit2.HttpException)?.response()?.errorBody()?.string()
+            // RP-CD-005: a 409 error body is single-use and is consumed downstream by
+            // handle409Conflict/extractUpdatedAt. Never drain it here, or conflict recovery
+            // reads an empty body and silently SKIPs instead of retrying. Log the body only
+            // for non-conflict failures.
+            val errorBody = if (error.isConflict()) null
+            else (error as? retrofit2.HttpException)?.response()?.errorBody()?.string()
             Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Failed to push equipment ${equipment.uuid}: $errorBody", error)
         }.getOrElse { throw it }
 

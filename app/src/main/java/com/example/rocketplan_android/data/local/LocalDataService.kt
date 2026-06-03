@@ -221,9 +221,13 @@ class LocalDataService private constructor(
         companyId: Long,
         items: List<OfflineWorkScopeCatalogItemEntity>
     ) = withContext(ioDispatcher) {
-        dao.clearWorkScopeCatalogItems(companyId)
-        if (items.isNotEmpty()) {
-            dao.upsertWorkScopeCatalogItems(items)
+        // RP-CD-007: clear + upsert must be atomic so observers never see a partially
+        // populated catalog and a crash mid-replace can't leave the table empty.
+        database.withTransaction {
+            dao.clearWorkScopeCatalogItems(companyId)
+            if (items.isNotEmpty()) {
+                dao.upsertWorkScopeCatalogItems(items)
+            }
         }
     }
 
