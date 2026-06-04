@@ -9,17 +9,17 @@ evidence: inferred
 found_in: "1.0.00"
 fixed_in: null
 released_in: null
-state: open
+state: planned
 release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_fr_003_pull_sync_dirty_clobber_2026-06-04.md
 related_review: null
 related_test: null
 parent: RP-HD-001
 violates: RP-CD-002
 priority: P1
-last_updated: 2026-06-02
+last_updated: 2026-06-03
 ---
 
 # RP-FR-003: Pull-sync can clobber locally-dirty rows
@@ -59,12 +59,46 @@ through `saveProjects`/blind upsert, or through a dirty-aware merge first? That 
 done. **Do not "fix" by flipping the mapper default blindly** — merge semantics are load-bearing and
 a wrong change risks the opposite bug (never accepting server updates).
 
+## Per-entity pull-path trace (completed 2026-06-03)
+
+Real package is `com.example.rocketplan_android` (the line refs in the Evidence section above are
+correct for `SyncEntityMappers.kt`; save-layer refs below are verified against current code). A row
+is a **real lost-edit** only if the entity can be locally dirtied (`isDirty=true`) — confirmed by
+the presence of a push handler in `data/repository/sync/handlers/` and/or an `isDirty = true` setter.
+
+Mechanism confirmed: every save below ends in a one-line `dao.upsert*()`. Room `@Upsert` overwrites
+**all** columns with the entity's values, so the mapper's hardcoded `isDirty = false` always wins —
+even where the sync service reads `existing` and passes it to the mapper (Project/Property/Photo),
+the mapper ignores it. `saveProjects` (`LocalDataService.kt:644`) does read nothing of the existing
+dirty state before `dao.upsertProjects()` (`:693`).
+
+| Entity | Pulled by | Save method (blind upsert) | Locally dirtiable? | Verdict |
+|--------|-----------|----------------------------|--------------------|---------|
+| Project | ProjectSyncService:59 | saveProjects → upsertProjects `:693` | yes (ProjectPushHandler) | **CLOBBER** |
+| Property | PropertySyncService:222 | persistSyncedPropertyAtomically → upsertProperty `:345` | yes (PropertyPushHandler) | **CLOBBER** |
+| Location | (project metadata pull) | saveLocations → upsertLocations `:739` | yes (LocationPushHandler) | **CLOBBER** |
+| Photo | PhotoSyncService | savePhotos → upsertPhotos `:1007` | yes (PhotoPushHandler) | **CLOBBER** |
+| AtmosphericLog | ProjectMetadataSyncService | saveAtmosphericLogs → upsertAtmosphericLogs `:948` | yes (AtmosphericLogPushHandler) | **CLOBBER** |
+| MoistureLog | ProjectMetadataSyncService | saveMoistureLogs → upsertMoistureLogs `:1035` | yes (MoistureLogPushHandler) | **CLOBBER** |
+| Equipment | ProjectMetadataSyncService | saveEquipment → upsertEquipment `:1019` | yes (EquipmentPushHandler) | **CLOBBER** |
+| Note | ProjectMetadataSyncService | saveNotes → upsertNotes `:1039` | yes (NotePushHandler) | **CLOBBER** |
+| WorkScope | WorkScopeSyncService | saveWorkScopes → upsertWorkScopes `:1051` | **no** — `addWorkScopeItems` pushes online immediately; no offline-dirty path, no push handler | SAFE-OTHER |
+| Room | OfflineSyncRepository:601 | saveRooms → upsertRooms | mapper `:434` preserves dirt when `serverId == null` | SAFE-MERGE |
+| Timecard | TimecardSyncService | saveTimecards | mapper `:925` `isDirty = existing?.isDirty ?: false` | SAFE-MERGE |
+| Log photos (atmo/moisture) | ProjectMetadataSyncService | saveOrUpdateLogPhotos `:958–990` reads existing, conditional update | n/a | SAFE-OTHER |
+
+**Confirmed CLOBBER (8, real reachable lost-edit):** Project, Property, Location, Photo,
+AtmosphericLog, MoistureLog, Equipment, Note. These are the entities a fix must cover. WorkScope is
+**not** affected (online-only writes, never staged dirty) — drop it from the fix scope.
+
 ## Suggested next step
 
-Trace, per entity, the pull → mapper → save chain and identify which ones land on a blind upsert.
-For those, add a dirty-aware merge at the **save layer** (preserve `isDirty`/local fields when the
-existing row is dirty and the server row isn't newer), not in the mapper. Promote to `RP-BUG` once a
-concrete lost-edit path is demonstrated for a specific entity.
+Add a dirty-aware merge at the **save layer** (not the mapper — merge semantics are load-bearing):
+for each of the 8 CLOBBER saves, read the existing row by id; if `existing.isDirty == true` and the
+incoming server row is not strictly newer (`serverUpdatedAt`), preserve the local row's `isDirty` and
+locally-edited fields rather than blind-replacing. `Timecard` (`:925`) is the template. Add the
+proposed WARN instrumentation in the same pass so the fix is observable. Promote to `RP-BUG` on the
+first demonstrated lost-edit; until then keep `RP-FR` with this trace as the planning basis.
 
 ## Observability
 

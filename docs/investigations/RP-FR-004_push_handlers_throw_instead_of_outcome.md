@@ -9,11 +9,11 @@ evidence: inferred
 found_in: "1.0.00"
 fixed_in: null
 released_in: null
-state: open
+state: planned
 release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_fr_004_push_handler_outcomes_2026-06-04.md
 related_review: null
 related_test: null
 parent: RP-HD-001
