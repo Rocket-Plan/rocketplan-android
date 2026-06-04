@@ -242,6 +242,8 @@ data class MoistureLogRequest(
     val reading: Double? = null,
     val removed: Boolean? = null,
     val location: String? = null,
+    @SerializedName("drying_goal")
+    val dryingGoal: Double? = null,
     @SerializedName("idempotency_key")
     val idempotencyKey: String? = null,
     @SerializedName("updated_at")

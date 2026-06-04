@@ -209,6 +209,26 @@ class IdRemapService(
         totalUpdated
     }
 
+    /**
+     * Remaps material ID in moisture logs.
+     * Called after a material is synced and receives its server ID.
+     *
+     * @param localMaterialId The local (negative) material ID
+     * @param serverId The server-assigned material ID
+     * @return The number of entities updated
+     */
+    suspend fun remapMaterialId(localMaterialId: Long, serverId: Long): Int = withContext(ioDispatcher) {
+        if (localMaterialId == serverId) return@withContext 0
+
+        var totalUpdated = 0
+        Log.d(TAG, "🔄 Remapping material ID: local=$localMaterialId → server=$serverId")
+
+        totalUpdated += localDataService.migrateMoistureLogMaterialIds(localMaterialId, serverId)
+
+        Log.d(TAG, "✅ Material ID remap complete: updated $totalUpdated entities")
+        totalUpdated
+    }
+
     // Private helpers for payload remapping
 
     private suspend fun remapPropertyPayloads(localProjectId: Long, serverId: Long): Int {

@@ -84,15 +84,21 @@ class WorkScopeSyncService(
             .getOrNull() ?: return@withContext 0
 
         val entities = response.data.mapNotNull { it.toEntity(defaultProjectId = projectId, defaultRoomId = roomId) }
-        if (entities.isNotEmpty()) {
-            localDataService.saveWorkScopes(entities)
+        val pending = localDataService.getPendingWorkScopesForRoom(roomId)
+        val fetchedServerIds = entities.mapNotNull { it.serverId }.toSet()
+        val merged = entities + pending.filter { p ->
+            p.serverId == null || p.serverId !in fetchedServerIds
+        }
+        if (merged.isNotEmpty()) {
+            localDataService.saveWorkScopes(merged)
         }
         val duration = System.currentTimeMillis() - startTime
         Log.d(
             TAG,
-            "[syncRoomWorkScopes] Saved ${entities.size} scope items for roomId=$roomId (projectId=$projectId) in ${duration}ms"
+            "[syncRoomWorkScopes] Saved ${merged.size} scope items for roomId=$roomId (projectId=$projectId) in ${duration}ms (fetched=${entities.size} pending=${pending.size})"
         )
-        entities.size
+        Log.d(TAG, "workscope_pending_creates_merged: project_id=$projectId room_id=$roomId pending_count=${pending.size} fetched_count=${entities.size}")
+        merged.size
     }
 
     companion object {

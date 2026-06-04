@@ -567,6 +567,7 @@ data class OfflineMaterialEntity(
     val materialId: Long = 0,
     val serverId: Long? = null,
     val uuid: String,
+    val projectId: Long? = null,
     val name: String,
     val description: String? = null,
     val syncStatus: SyncStatus = SyncStatus.PENDING,

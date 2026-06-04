@@ -816,6 +816,9 @@ interface OfflineDao {
     @Query("UPDATE offline_moisture_logs SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int
 
+    @Query("UPDATE offline_moisture_logs SET materialId = :newMaterialId WHERE materialId = :oldMaterialId")
+    suspend fun migrateMoistureLogMaterialIds(oldMaterialId: Long, newMaterialId: Long): Int
+
     @Query("DELETE FROM offline_moisture_logs WHERE roomId = :roomId")
     suspend fun deleteMoistureLogsByRoomId(roomId: Long): Int
 
@@ -911,6 +914,12 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_work_scopes WHERE roomId = :roomId")
     suspend fun deleteWorkScopesByRoomId(roomId: Long): Int
+
+    @Query("""
+        SELECT * FROM offline_work_scopes
+        WHERE roomId = :roomId AND isDirty = 1 AND syncStatus = 'PENDING'
+    """)
+    suspend fun getPendingWorkScopesForRoom(roomId: Long): List<OfflineWorkScopeEntity>
     // endregion
 
     // region Materials
@@ -919,6 +928,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_materials ORDER BY name")
     fun observeMaterials(): Flow<List<OfflineMaterialEntity>>
+
+    @Query("SELECT * FROM offline_materials WHERE projectId = :projectId ORDER BY name")
+    fun observeMaterialsForProject(projectId: Long): Flow<List<OfflineMaterialEntity>>
 
     @Query("SELECT * FROM offline_materials WHERE uuid = :uuid LIMIT 1")
     suspend fun getMaterialByUuid(uuid: String): OfflineMaterialEntity?

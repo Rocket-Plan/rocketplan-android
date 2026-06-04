@@ -615,7 +615,13 @@ class LocalDataService private constructor(
         dao.getWorkScopeById(id)
     }
 
+    suspend fun getPendingWorkScopesForRoom(roomId: Long): List<OfflineWorkScopeEntity> =
+        withContext(ioDispatcher) { dao.getPendingWorkScopesForRoom(roomId) }
+
     fun observeMaterials(): Flow<List<OfflineMaterialEntity>> = dao.observeMaterials()
+
+    fun observeMaterialsForProject(projectId: Long): Flow<List<OfflineMaterialEntity>> =
+        dao.observeMaterialsForProject(projectId)
 
     suspend fun getMaterialByUuid(uuid: String): OfflineMaterialEntity? = withContext(ioDispatcher) {
         dao.getMaterialByUuid(uuid)
@@ -846,6 +852,9 @@ class LocalDataService private constructor(
 
     suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int =
         withContext(ioDispatcher) { dao.migrateMoistureLogRoomIds(oldRoomId, newRoomId) }
+
+    suspend fun migrateMoistureLogMaterialIds(oldMaterialId: Long, newMaterialId: Long): Int =
+        withContext(ioDispatcher) { dao.migrateMoistureLogMaterialIds(oldMaterialId, newMaterialId) }
 
     suspend fun migrateAtmosphericLogRoomIds(oldRoomId: Long, newRoomId: Long): Int =
         withContext(ioDispatcher) { dao.migrateAtmosphericLogRoomIds(oldRoomId, newRoomId) }

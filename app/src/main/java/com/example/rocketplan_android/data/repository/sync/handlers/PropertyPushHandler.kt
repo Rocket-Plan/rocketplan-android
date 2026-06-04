@@ -35,9 +35,21 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
         val projectServerId = project.serverId
             ?: return OperationOutcome.SKIP
 
+        val typeId = payload.propertyTypeId.takeIf { it > 0 } ?: 1
+        if (payload.propertyTypeId <= 0) {
+            Log.w(SYNC_TAG, "property_type_id_zero_sync_blocked: propertyId=${payload.localPropertyId} uuid=${payload.propertyUuid} - defaulting to SINGLE_UNIT(1)")
+            ctx.remoteLogger?.log(
+                LogLevel.WARN, SYNC_TAG, "property_type_id_zero_sync_blocked",
+                mapOf(
+                    "property_id" to payload.localPropertyId.toString(),
+                    "property_uuid" to (payload.propertyUuid ?: "null")
+                )
+            )
+        }
+
         val request = PropertyMutationRequest(
             uuid = payload.propertyUuid,
-            propertyTypeId = payload.propertyTypeId,
+            propertyTypeId = typeId,
             projectUuid = project.uuid,
             idempotencyKey = payload.idempotencyKey
         )
@@ -46,7 +58,7 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             SYNC_TAG,
             "📤 [handlePendingPropertyCreation] createProperty request: " +
                 "projectServerId=$projectServerId localProjectId=${payload.projectId} " +
-                "propertyTypeId=${payload.propertyTypeId} propertyTypeValue=${payload.propertyTypeValue ?: "null"} " +
+                "propertyTypeId=$typeId propertyTypeValue=${payload.propertyTypeValue ?: "null"} " +
                 "idempotencyKey=${payload.idempotencyKey ?: "null"} localPropertyId=${payload.localPropertyId}"
         )
 
@@ -61,7 +73,7 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             )
             if (error.isValidationError()) {
                 ctx.remoteLogger?.log(
-                    LogLevel.WARN, SYNC_TAG, "Property creation dropped - 422 validation error",
+                    LogLevel.WARN, SYNC_TAG, "property_creation_validation_failure",
                     mapOf("projectServerId" to projectServerId.toString())
                 )
                 return OperationOutcome.DROP

@@ -410,21 +410,26 @@ class ImageProcessorQueueManager(
                 continue
             }
 
-            // Try to resolve server room ID, but don't block if room hasn't synced
-            // Photos will upload to project level and can be associated with room later
+            // Try to resolve server room ID; hold assembly until room syncs if not yet available
             val roomServerId = resolveServerRoomId(assembly.roomId)
             if (assembly.roomId != null && roomServerId == null) {
-                Log.d(TAG, "📤 Assembly ${assembly.assemblyId} proceeding without room sync (roomId=${assembly.roomId}) - will upload to project level")
+                Log.d(TAG, "⏳ Assembly ${assembly.assemblyId} held for unsynced room (roomId=${assembly.roomId})")
                 remoteLogger?.log(
                     level = LogLevel.INFO,
                     tag = TAG,
-                    message = "Assembly proceeding without room sync - uploading to project level",
+                    message = "assembly_waiting_for_room_serverid",
                     metadata = mapOf(
                         "assembly_id" to assembly.assemblyId,
                         "local_room_id" to assembly.roomId.toString(),
                         "project_id" to projectServerId.toString()
                     )
                 )
+                updateAssemblyStatus(
+                    assembly.assemblyId,
+                    AssemblyStatus.WAITING_FOR_ROOM,
+                    "Room not yet synced"
+                )
+                continue
             }
 
             if (roomServerId != null && assembly.roomId != roomServerId) {
@@ -1455,7 +1460,7 @@ class ImageProcessorQueueManager(
     private suspend fun resolveServerRoomId(roomId: Long?): Long? {
         if (roomId == null) return null
         val localRoom = offlineDao.getRoom(roomId)
-        return localRoom?.serverId?.takeIf { it > 0 } ?: roomId.takeIf { it > 0 }
+        return localRoom?.serverId?.takeIf { it > 0 }
     }
 
     private suspend fun updateAssemblyRoomId(assemblyId: String, roomServerId: Long) {

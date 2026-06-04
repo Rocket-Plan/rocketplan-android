@@ -660,6 +660,7 @@ internal fun OfflineMoistureLogEntity.toRequest(
         reading = moistureContent,
         removed = removed,
         location = location,
+        dryingGoal = dryingGoal,
         idempotencyKey = uuid,
         updatedAt = updatedAtOverride ?: updatedAt.toApiTimestamp()
     )
@@ -670,6 +671,7 @@ internal fun DamageMaterialDto.toMaterialEntity(): OfflineMaterialEntity {
         materialId = id,
         serverId = id,
         uuid = uuid ?: UUID.nameUUIDFromBytes("damage-material-$id".toByteArray()).toString(),
+        projectId = projectId,
         name = title ?: "Material $id",
         description = description,
         syncStatus = SyncStatus.SYNCED,

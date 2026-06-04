@@ -48,7 +48,7 @@ class RocketDryRoomViewModel(
             combine(
                 localDataService.observeProjects(),
                 localDataService.observeRooms(projectId),
-                localDataService.observeMaterials(),
+                localDataService.observeMaterialsForProject(projectId),
                 localDataService.observeMoistureLogsForRoom(roomId),
                 localDataService.observeAtmosphericLogsForRoom(roomId)
             ) { projects, rooms, materials, moistureLogs, atmosphericLogs ->
@@ -305,7 +305,7 @@ class RocketDryRoomViewModel(
         removed: Boolean = false
     ): Boolean = withContext(Dispatchers.IO) {
         // Find the material by name (just created)
-        val materials = localDataService.observeMaterials().first()
+        val materials = localDataService.observeMaterialsForProject(projectId).first()
         val material = materials.firstOrNull { it.name.equals(materialName, ignoreCase = true) }
             ?: return@withContext false
         addMaterialMoistureLog(

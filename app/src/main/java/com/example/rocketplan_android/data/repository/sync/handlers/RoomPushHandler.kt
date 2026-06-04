@@ -444,9 +444,18 @@ class RoomPushHandler(
                         )
                         return OperationOutcome.DROP
                     }
-                    throw retryError
+                    Log.w(SYNC_TAG, "room update retry failed (non-409/422); keeping op for retry", retryError)
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "room_update_retry_exhausted",
+                        mapOf(
+                            "roomServerId" to serverId.toString(),
+                            "roomUuid" to room.uuid,
+                            "error_type" to retryError::class.java.simpleName
+                        )
+                    )
+                    return OperationOutcome.RETRY
                 }
-                responseDto = retryResult.getOrNull()
+                responseDto = retryResult.getOrNull() ?: return OperationOutcome.RETRY
                 Log.d(SYNC_TAG, "✅ [handlePendingRoomUpdate] Retry update succeeded for room $serverId")
             } else if (error.isValidationError()) {
                 Log.w(SYNC_TAG, "Dropping room update $serverId: server validation error (422)")
