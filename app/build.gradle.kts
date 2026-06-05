@@ -191,6 +191,12 @@ android {
         buildConfig = true  // Enable BuildConfig generation
     }
 
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true // Robolectric: access merged manifest/resources
+        }
+    }
+
     packaging {
         jniLibs {
             // Keep legacy packaging so the FLIR native binaries load correctly
@@ -325,6 +331,9 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.truth)
     testImplementation(libs.mockwebserver)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.room.testing)
 
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

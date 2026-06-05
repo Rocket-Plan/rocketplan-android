@@ -494,7 +494,8 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
-        private val MIGRATION_29_30 = object : Migration(29, 30) {
+        @androidx.annotation.VisibleForTesting
+        internal val MIGRATION_29_30 = object : Migration(29, 30) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // RP-BUG-029: property identity on locations for surgical cascade.
                 database.execSQL("ALTER TABLE offline_locations ADD COLUMN propertyServerId INTEGER")
