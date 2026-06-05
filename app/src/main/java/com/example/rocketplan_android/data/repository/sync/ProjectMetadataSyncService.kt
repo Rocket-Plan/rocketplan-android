@@ -83,7 +83,7 @@ class ProjectMetadataSyncService(
                     api.getProjectNotes(serverProjectId, page, NOTES_PAGE_LIMIT, notesSince)
                 }
             }.onSuccess { notes ->
-                localDataService.saveNotes(notes.mapNotNull { it.toEntity() })
+                localDataService.saveNotes(notes.mapNotNull { it.toEntity() }, preserveDirty = true)
                 itemCount.addAndGet(notes.size)
                 notes.latestTimestamp { it.updatedAt }
                     ?.let { syncCheckpointStore.updateCheckpoint(notesCheckpointKey, it) }
@@ -94,7 +94,7 @@ class ProjectMetadataSyncService(
         queue.addItem("equipment") {
             runCatching { api.getProjectEquipment(serverProjectId) }
                 .onSuccess { response ->
-                    localDataService.saveEquipment(response.data.map { it.toEntity() })
+                    localDataService.saveEquipment(response.data.map { it.toEntity() }, preserveDirty = true)
                     itemCount.addAndGet(response.data.size)
                 }.isSuccess
         }
@@ -113,7 +113,8 @@ class ProjectMetadataSyncService(
                                 defaultProjectId = projectId,
                                 defaultIsExternal = true
                             )
-                        }
+                        },
+                        preserveDirty = true
                     )
                     itemCount.addAndGet(dtos.size)
 
@@ -326,7 +327,7 @@ class ProjectMetadataSyncService(
         if (entities.size < logs.size) {
             Log.w(TAG, "[syncRoomMoistureLogs] ${logs.size} DTOs -> ${entities.size} entities (${logs.size - entities.size} dropped by toEntity)")
         }
-        localDataService.saveMoistureLogs(entities)
+        localDataService.saveMoistureLogs(entities, preserveDirty = true)
 
         // Create photo entities for logs with photos (enables offline caching)
         val logPhotos = logs.mapNotNull { it.toPhotoEntity(defaultProjectId = projectId, defaultRoomId = roomId) }

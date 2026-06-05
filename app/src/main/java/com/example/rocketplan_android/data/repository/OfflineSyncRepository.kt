@@ -715,7 +715,8 @@ class OfflineSyncRepository(
         val allLocations = levels + nestedLocations
         if (allLocations.isNotEmpty()) {
             localDataService.saveLocations(
-                allLocations.map { it.toEntity(defaultProjectId = projectId) }
+                allLocations.map { it.toEntity(defaultProjectId = projectId) },
+                preserveDirty = true
             )
             itemCount += allLocations.size
         }

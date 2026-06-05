@@ -52,7 +52,11 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
                     mapOf("timecardUuid" to timecard.uuid, "serverId" to (timecard.serverId?.toString() ?: "null"))
                 )
                 OperationOutcome.DROP
-            } else throw e
+            } else {
+                if (e is CancellationException) throw e
+                Log.w(SYNC_TAG, "TimecardPushHandler unknown error; retrying", e)
+                OperationOutcome.RETRY
+            }
         }
     }
 
@@ -72,7 +76,11 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
                     mapOf("timecardUuid" to timecard.uuid, "serverId" to (timecard.serverId?.toString() ?: "null"))
                 )
                 OperationOutcome.DROP
-            } else throw e
+            } else {
+                if (e is CancellationException) throw e
+                Log.w(SYNC_TAG, "TimecardPushHandler delete unknown error; retrying", e)
+                OperationOutcome.RETRY
+            }
         }
     }
 

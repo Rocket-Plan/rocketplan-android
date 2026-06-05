@@ -72,7 +72,11 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
                     mapOf("equipmentUuid" to equipment.uuid, "serverId" to (equipment.serverId?.toString() ?: "null"))
                 )
                 OperationOutcome.DROP
-            } else throw e
+            } else {
+                if (e is CancellationException) throw e
+                Log.w(SYNC_TAG, "EquipmentPushHandler unknown error; retrying", e)
+                OperationOutcome.RETRY
+            }
         }
     }
 
@@ -92,7 +96,11 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
                     mapOf("equipmentUuid" to equipment.uuid, "serverId" to (equipment.serverId?.toString() ?: "null"))
                 )
                 OperationOutcome.DROP
-            } else throw e
+            } else {
+                if (e is CancellationException) throw e
+                Log.w(SYNC_TAG, "EquipmentPushHandler delete unknown error; retrying", e)
+                OperationOutcome.RETRY
+            }
         }
     }
 

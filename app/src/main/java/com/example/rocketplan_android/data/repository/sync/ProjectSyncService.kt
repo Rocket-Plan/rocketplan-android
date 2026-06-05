@@ -57,7 +57,8 @@ class ProjectSyncService(
                 val existing = existingByServerId[dto.id]
                     ?: existingByUuid[dto.uuid ?: dto.uid]?.firstOrNull { it.companyId == companyId }
                 dto.toEntity(existing = existing, fallbackCompanyId = companyId)
-            }
+            },
+            preserveDirty = true
         )
 
         // Note: Deletion sync is handled separately by DeletedRecordsSyncService
@@ -88,7 +89,8 @@ class ProjectSyncService(
                     ?: uuidCandidates?.firstOrNull { dto.companyId != null && it.companyId == dto.companyId }
                     ?: uuidCandidates?.singleOrNull()  // only safe when exactly one match
                 dto.toEntity(existing = existing, fallbackCompanyId = dto.companyId)
-            }
+            },
+            preserveDirty = true
         )
         projects.latestTimestamp { it.updatedAt }
             ?.let { syncCheckpointStore.updateCheckpoint(checkpointKey, it) }

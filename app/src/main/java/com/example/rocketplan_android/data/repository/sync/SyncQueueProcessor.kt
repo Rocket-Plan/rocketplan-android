@@ -278,7 +278,19 @@ class SyncQueueProcessor(
                                 localDataService.enqueueSyncOperation(updated)
                             }
                         }
-                        OperationOutcome.RETRY -> Unit
+                        OperationOutcome.RETRY -> {
+                            val nextRetry = operation.retryCount + 1
+                            val now = Date()
+                            val backoffSeconds = kotlin.math.min(30 * 60, 10 * (1 shl operation.retryCount))
+                            val willRetry = nextRetry < operation.maxRetries
+                            val updated = operation.copy(
+                                retryCount = nextRetry,
+                                lastAttemptAt = now,
+                                scheduledAt = if (willRetry) Date(now.time + backoffSeconds * 1000L) else null,
+                                status = if (willRetry) SyncStatus.PENDING else SyncStatus.FAILED
+                            )
+                            localDataService.enqueueSyncOperation(updated)
+                        }
                         OperationOutcome.CONFLICT_PENDING -> {
                             // Mark operation as having a conflict pending user resolution
                             Log.i(TAG, "⚠️ [$label] Conflict pending for op=${operation.operationId}")

@@ -62,24 +62,23 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
                 "idempotencyKey=${payload.idempotencyKey ?: "null"} localPropertyId=${payload.localPropertyId}"
         )
 
-        val created = try {
+        val created = runCatching {
             ctx.api.createProjectProperty(projectServerId, request).data
-        } catch (error: HttpException) {
-            val errorBody = runCatching { error.response()?.errorBody()?.string() }.getOrNull()
+        }.onFailure { error ->
+            val errorBody = runCatching { (error as? HttpException)?.response()?.errorBody()?.string() }.getOrNull()
             Log.w(
                 SYNC_TAG,
-                "❌ [handlePendingPropertyCreation] createProperty failed: code=${error.code()} " +
-                    "body=${errorBody ?: "null"}"
+                "❌ [handlePendingPropertyCreation] createProperty failed: code=${(error as? HttpException)?.code()} " +
+                    "body=${errorBody ?: "null"}",
+                error
             )
             if (error.isValidationError()) {
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "property_creation_validation_failure",
                     mapOf("projectServerId" to projectServerId.toString())
                 )
-                return OperationOutcome.DROP
             }
-            throw error
-        }
+        }.getOrNull() ?: return OperationOutcome.RETRY
 
         Log.d(
             SYNC_TAG,

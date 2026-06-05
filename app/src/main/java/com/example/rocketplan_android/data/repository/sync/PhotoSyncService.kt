@@ -185,7 +185,7 @@ class PhotoSyncService(
             return@withContext emptyResult
         }
 
-        if (persistPhotos(photos, defaultRoomId = roomId, defaultProjectId = projectId, excludedPhotoServerIds = excludedPhotoServerIds)) {
+        if (persistPhotos(photos, defaultRoomId = roomId, defaultProjectId = projectId, excludedPhotoServerIds = excludedPhotoServerIds, preserveDirty = true)) {
             Log.d(TAG, "💾 [syncRoomPhotos] Saved ${photos.size} photos for room $roomId")
             photoCacheScheduler.schedulePrefetch()
         }
@@ -258,7 +258,7 @@ class PhotoSyncService(
             }
                 .map { it.toPhotoDto(projectId) }
         }.onSuccess { photos ->
-            if (persistPhotos(photos)) {
+            if (persistPhotos(photos, preserveDirty = true)) {
                 totalPhotos += photos.size
                 Log.d(TAG, "📸 [syncProjectLevelPhotos] Saved ${photos.size} floor photos")
             }
@@ -279,7 +279,7 @@ class PhotoSyncService(
             }
                 .map { it.toPhotoDto(projectId) }
         }.onSuccess { photos ->
-            if (persistPhotos(photos)) {
+            if (persistPhotos(photos, preserveDirty = true)) {
                 totalPhotos += photos.size
                 Log.d(TAG, "📸 [syncProjectLevelPhotos] Saved ${photos.size} location photos")
             }
@@ -300,7 +300,7 @@ class PhotoSyncService(
             }
                 .map { it.toPhotoDto(projectId) }
         }.onSuccess { photos ->
-            if (persistPhotos(photos)) {
+            if (persistPhotos(photos, preserveDirty = true)) {
                 totalPhotos += photos.size
                 Log.d(TAG, "📸 [syncProjectLevelPhotos] Saved ${photos.size} unit photos")
             }
@@ -437,7 +437,8 @@ class PhotoSyncService(
         photos: List<PhotoDto>,
         defaultRoomId: Long? = null,
         defaultProjectId: Long? = null,
-        excludedPhotoServerIds: Set<Long> = emptySet()
+        excludedPhotoServerIds: Set<Long> = emptySet(),
+        preserveDirty: Boolean = false,
     ): Boolean {
         if (photos.isEmpty()) {
             return false
@@ -494,7 +495,7 @@ class PhotoSyncService(
             Log.d(TAG, "🗑️ [persistPhotos] Skipped $skippedPendingDeletionCount photos pending local deletion")
         }
 
-        localDataService.savePhotos(entities)
+        localDataService.savePhotos(entities, preserveDirty = preserveDirty)
 
         // Extract and save albums from photos
         val albums = buildList<OfflineAlbumEntity> {

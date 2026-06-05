@@ -7,7 +7,7 @@
 **Bug ID(s):** RP-FR-003 (violates RP-CD-002)
 **Author:** jeremie@rocketplantech.com
 **Date:** 2026-06-04
-**State:** draft
+**State:** implemented
 
 ---
 
@@ -35,7 +35,7 @@ If the merge were unconditional inside `save*()`, a **successful push** (whose e
 | Entity | Save method (blind upsert) | by-serverId lookup exists? |
 |--------|----------------------------|----------------------------|
 | Project | `saveProjects` → `upsertProjects` (`:693`) | ✅ `getProjectByServerId(serverId, companyId)` |
-| Property | `persistSyncedPropertyAtomically` → `upsertProperty` (`:345`) | ✅ `getPropertyByServerId` |
+| Property | `persistSyncedPropertyAtomically` → dirty-preserving (`currentExisting.isDirty` guard before `upsertProperty`) | ✅ `getPropertyByServerId` |
 | Location | `saveLocations` → `upsertLocations` (`:739`) | ✅ `getLocationByServerId` |
 | Photo | `savePhotos` → `upsertPhotos` (`:1007`) | ✅ `getPhotoByServerId` |
 | AtmosphericLog | `saveAtmosphericLogs` → `upsertAtmosphericLogs` (`:948`) | ❌ only by uuid / local id |

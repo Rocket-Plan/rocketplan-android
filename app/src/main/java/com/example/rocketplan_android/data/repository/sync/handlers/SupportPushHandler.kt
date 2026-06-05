@@ -8,6 +8,7 @@ import com.example.rocketplan_android.data.model.offline.CreateSupportMessageReq
 import com.example.rocketplan_android.data.repository.mapper.PendingSupportConversationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingSupportMessagePayload
 import com.example.rocketplan_android.logging.LogLevel
+import kotlinx.coroutines.CancellationException
 import java.util.Date
 
 /**
@@ -82,7 +83,9 @@ class SupportPushHandler(private val ctx: PushHandlerContext) {
                 )
                 return OperationOutcome.DROP
             }
-            throw e
+            if (e is CancellationException) throw e
+            Log.w(SYNC_TAG, "SupportPushHandler conversation create unknown error; retrying", e)
+            OperationOutcome.RETRY
         }
     }
 

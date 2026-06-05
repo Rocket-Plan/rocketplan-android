@@ -76,6 +76,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_projects WHERE serverId = :serverId AND companyId = :companyId AND isDeleted = 0 LIMIT 1")
     suspend fun getProjectByServerId(serverId: Long, companyId: Long): OfflineProjectEntity?
 
+    @Query("SELECT * FROM offline_projects WHERE serverId IN (:serverIds) AND companyId = :companyId AND isDeleted = 0")
+    suspend fun getProjectsByServerIds(serverIds: List<Long>, companyId: Long): List<OfflineProjectEntity>
+
     @Query("SELECT * FROM offline_projects WHERE isDeleted = 0 ORDER BY updatedAt DESC")
     suspend fun getProjectsOnce(): List<OfflineProjectEntity>
 
@@ -114,6 +117,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_locations WHERE serverId = :serverId AND isDeleted = 0 LIMIT 1")
     suspend fun getLocationByServerId(serverId: Long): OfflineLocationEntity?
+
+    @Query("SELECT * FROM offline_locations WHERE serverId IN (:serverIds) AND isDeleted = 0")
+    suspend fun getLocationsByServerIds(serverIds: List<Long>): List<OfflineLocationEntity>
 
     @Query("UPDATE offline_locations SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markLocationsDeleted(serverIds: List<Long>)
@@ -363,6 +369,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_atmospheric_logs WHERE uuid = :uuid LIMIT 1")
     suspend fun getAtmosphericLogByUuid(uuid: String): OfflineAtmosphericLogEntity?
 
+    @Query("SELECT * FROM offline_atmospheric_logs WHERE serverId IN (:serverIds)")
+    suspend fun getAtmosphericLogsByServerIds(serverIds: List<Long>): List<OfflineAtmosphericLogEntity>
+
     @Query("SELECT * FROM offline_atmospheric_logs WHERE logId = :logId LIMIT 1")
     suspend fun getAtmosphericLog(logId: Long): OfflineAtmosphericLogEntity?
 
@@ -402,6 +411,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_photos WHERE serverId = :serverId LIMIT 1")
     suspend fun getPhotoByServerId(serverId: Long): OfflinePhotoEntity?
+
+    @Query("SELECT * FROM offline_photos WHERE serverId IN (:serverIds)")
+    suspend fun getPhotosByServerIds(serverIds: List<Long>): List<OfflinePhotoEntity>
 
     @Query("SELECT * FROM offline_photos WHERE photoId = :photoId LIMIT 1")
     fun observePhoto(photoId: Long): Flow<OfflinePhotoEntity?>
@@ -782,6 +794,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_equipment WHERE uuid = :uuid LIMIT 1")
     suspend fun getEquipmentByUuid(uuid: String): OfflineEquipmentEntity?
 
+    @Query("SELECT * FROM offline_equipment WHERE serverId IN (:serverIds)")
+    suspend fun getEquipmentByServerIds(serverIds: List<Long>): List<OfflineEquipmentEntity>
+
     @Query(
         """
         SELECT * FROM offline_equipment
@@ -812,6 +827,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_moisture_logs WHERE logId = :logId LIMIT 1")
     suspend fun getMoistureLog(logId: Long): OfflineMoistureLogEntity?
+
+    @Query("SELECT * FROM offline_moisture_logs WHERE serverId IN (:serverIds)")
+    suspend fun getMoistureLogsByServerIds(serverIds: List<Long>): List<OfflineMoistureLogEntity>
 
     @Query("UPDATE offline_moisture_logs SET roomId = :newRoomId WHERE roomId = :oldRoomId")
     suspend fun migrateMoistureLogRoomIds(oldRoomId: Long, newRoomId: Long): Int
@@ -860,6 +878,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_notes WHERE noteId = :noteId LIMIT 1")
     suspend fun getNote(noteId: Long): OfflineNoteEntity?
+
+    @Query("SELECT * FROM offline_notes WHERE serverId IN (:serverIds)")
+    suspend fun getNotesByServerIds(serverIds: List<Long>): List<OfflineNoteEntity>
 
     @Query("SELECT * FROM offline_notes WHERE projectId = :projectId AND (isDirty = 1 OR syncStatus != :synced)")
     suspend fun getPendingNotes(projectId: Long, synced: SyncStatus = SyncStatus.SYNCED): List<OfflineNoteEntity>

@@ -342,12 +342,28 @@ class LocalDataService private constructor(
                 dao.deleteProperty(currentExisting!!.propertyId)
             }
 
-            dao.upsertProperty(property)
+            // RP-FR-003: don't let a server pull clobber a locally-dirty property.
+            // Preserve the local pending edit unless this is a forced/pending-upgrade write.
+            val preserveLocalDirty = currentExisting != null
+                && currentExisting.isDirty
+                && !forcePropertyIdUpdate
+                && !isPendingUpgrade
+                && currentExisting.propertyId == property.propertyId
+            val effectiveProperty = if (preserveLocalDirty) {
+                Log.w(
+                    "LocalDataService",
+                    "⚠️ pull_sync_preserved_dirty_row: entity=property serverId=${property.serverId}"
+                )
+                currentExisting!! // keep local pending edit; drop the server overwrite
+            } else {
+                dao.upsertProperty(property)
+                property
+            }
 
             val shouldForce = forcePropertyIdUpdate || isPendingUpgrade
             val timestamp = Date()
             dao.upsertProject(project.copy(
-                propertyId = property.propertyId,
+                propertyId = effectiveProperty.propertyId,
                 propertyType = propertyTypeValue ?: project.propertyType,
                 syncStatus = if (shouldForce) SyncStatus.SYNCED else project.syncStatus,
                 isDirty = if (shouldForce) false else project.isDirty,
@@ -355,21 +371,21 @@ class LocalDataService private constructor(
                 lastSyncedAt = if (shouldForce) timestamp else project.lastSyncedAt
             ))
 
-            val serverId = property.serverId
+            val serverId = effectiveProperty.serverId
             if (serverId != null) {
                 val duplicates = dao.getPropertiesByServerId(serverId)
-                    .filter { it.propertyId != property.propertyId && !it.isDirty }
+                    .filter { it.propertyId != effectiveProperty.propertyId && !it.isDirty }
                 if (duplicates.isNotEmpty()) {
                     val dupIds = duplicates.map { it.propertyId }
                     dao.deleteSyncOpsForPropertyIds(dupIds)
                     for (dup in duplicates) {
-                        dao.reassignProjectProperty(dup.propertyId, property.propertyId)
+                        dao.reassignProjectProperty(dup.propertyId, effectiveProperty.propertyId)
                         dao.deleteProperty(dup.propertyId)
                     }
                 }
             }
 
-            property
+            effectiveProperty
         }
     }
 
@@ -647,16 +663,46 @@ class LocalDataService private constructor(
         }
 
     // region Mutations
-    suspend fun saveProjects(projects: List<OfflineProjectEntity>) = withContext(ioDispatcher) {
+    suspend fun saveProjects(
+        projects: List<OfflineProjectEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
         if (projects.isEmpty()) {
             Log.d("LocalDataService", "💾 saveProjects(): no projects supplied")
             return@withContext
         }
 
         val start = System.currentTimeMillis()
-        Log.d("LocalDataService", "💾 saveProjects(): upserting ${projects.size} projects")
+        Log.d("LocalDataService", "💾 saveProjects(): upserting ${projects.size} projects (preserveDirty=$preserveDirty)")
 
-        // Filter out invalid projects with serverId=0 (indicates a bug in caller)
+        if (!preserveDirty) {
+            saveProjectsDirect(projects, start)
+            return@withContext
+        }
+
+        val validProjects = projects.filter { it.serverId != null && it.serverId != 0L && !it.uuid.equals("project-0", ignoreCase = true) }
+        if (validProjects.isEmpty()) {
+            Log.d("LocalDataService", "💾 saveProjects(): no valid server projects to merge")
+            return@withContext
+        }
+
+        val serverIds = validProjects.mapNotNull { it.serverId }
+        val companyId = validProjects.firstOrNull()?.companyId ?: return@withContext
+        val existing = dao.getProjectsByServerIds(serverIds, companyId).associateBy { it.serverId }
+
+        val merged = validProjects.map { server ->
+            val local = server.serverId?.let { existing[it] }
+            if (local?.isDirty == true) {
+                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=project serverId=${server.serverId}")
+                local
+            } else server
+        }
+
+        dao.upsertProjects(merged)
+        Log.d("LocalDataService", "💾 saveProjects(): finished in ${System.currentTimeMillis() - start}ms")
+    }
+
+    private suspend fun saveProjectsDirect(projects: List<OfflineProjectEntity>, start: Long) {
         val validProjects = mutableListOf<OfflineProjectEntity>()
 
         projects.forEachIndexed { index, project ->
@@ -741,8 +787,29 @@ class LocalDataService private constructor(
         dao.upsertProject(updatedProject)
     }
 
-    suspend fun saveLocations(locations: List<OfflineLocationEntity>) = withContext(ioDispatcher) {
-        dao.upsertLocations(locations)
+    suspend fun saveLocations(
+        locations: List<OfflineLocationEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (locations.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertLocations(locations)
+            return@withContext
+        }
+        val serverIds = locations.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertLocations(locations)
+            return@withContext
+        }
+        val existing = dao.getLocationsByServerIds(serverIds).associateBy { it.serverId }
+        val merged = locations.map { server ->
+            val local = server.serverId?.let { existing[it] }
+            if (local?.isDirty == true) {
+                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=location serverId=${server.serverId}")
+                local
+            } else server
+        }
+        dao.upsertLocations(merged)
     }
 
     suspend fun getLatestLocationUpdate(projectId: Long): Date? = withContext(ioDispatcher) {
@@ -953,8 +1020,29 @@ class LocalDataService private constructor(
         photosToDelete
     }
 
-    suspend fun saveAtmosphericLogs(logs: List<OfflineAtmosphericLogEntity>) = withContext(ioDispatcher) {
-        dao.upsertAtmosphericLogs(logs)
+    suspend fun saveAtmosphericLogs(
+        logs: List<OfflineAtmosphericLogEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (logs.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertAtmosphericLogs(logs)
+            return@withContext
+        }
+        val serverIds = logs.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertAtmosphericLogs(logs)
+            return@withContext
+        }
+        val existing = dao.getAtmosphericLogsByServerIds(serverIds).associateBy { it.serverId }
+        val merged = logs.map { server ->
+            val local = server.serverId?.let { existing[it] }
+            if (local?.isDirty == true) {
+                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=atmospheric_log serverId=${server.serverId}")
+                local
+            } else server
+        }
+        dao.upsertAtmosphericLogs(merged)
     }
 
     /**
@@ -1012,8 +1100,29 @@ class LocalDataService private constructor(
         dao.updateMoistureLogPhotoLocalPath(logId, localPath)
     }
 
-    suspend fun savePhotos(photos: List<OfflinePhotoEntity>) = withContext(ioDispatcher) {
-        dao.upsertPhotos(photos)
+    suspend fun savePhotos(
+        photos: List<OfflinePhotoEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (photos.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertPhotos(photos)
+            return@withContext
+        }
+        val serverIds = photos.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertPhotos(photos)
+            return@withContext
+        }
+        val existing = dao.getPhotosByServerIds(serverIds).associateBy { it.serverId }
+        val merged = photos.map { server ->
+            val local = server.serverId?.let { existing[it] }
+            if (local?.isDirty == true) {
+                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=photo serverId=${server.serverId}")
+                local
+            } else server
+        }
+        dao.upsertPhotos(merged)
     }
 
     suspend fun saveAlbums(albums: List<OfflineAlbumEntity>) = withContext(ioDispatcher) {
@@ -1024,8 +1133,29 @@ class LocalDataService private constructor(
         dao.upsertAlbumPhotos(albumPhotos)
     }
 
-    suspend fun saveEquipment(items: List<OfflineEquipmentEntity>) = withContext(ioDispatcher) {
-        dao.upsertEquipment(items)
+    suspend fun saveEquipment(
+        items: List<OfflineEquipmentEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (items.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertEquipment(items)
+            return@withContext
+        }
+        val serverIds = items.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertEquipment(items)
+            return@withContext
+        }
+        val existing = dao.getEquipmentByServerIds(serverIds).associateBy { it.serverId }
+        val merged = items.map { server ->
+            val local = server.serverId?.let { existing[it] }
+            if (local?.isDirty == true) {
+                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=equipment serverId=${server.serverId}")
+                local
+            } else server
+        }
+        dao.upsertEquipment(merged)
     }
 
     suspend fun getEquipment(equipmentId: Long): OfflineEquipmentEntity? = withContext(ioDispatcher) {
@@ -1040,12 +1170,54 @@ class LocalDataService private constructor(
         dao.getPendingEquipment(projectId)
     }
 
-    suspend fun saveMoistureLogs(logs: List<OfflineMoistureLogEntity>) = withContext(ioDispatcher) {
-        dao.upsertMoistureLogs(logs)
+    suspend fun saveMoistureLogs(
+        logs: List<OfflineMoistureLogEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (logs.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertMoistureLogs(logs)
+            return@withContext
+        }
+        val serverIds = logs.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertMoistureLogs(logs)
+            return@withContext
+        }
+        val existing = dao.getMoistureLogsByServerIds(serverIds).associateBy { it.serverId }
+        val merged = logs.map { server ->
+            val local = server.serverId?.let { existing[it] }
+            if (local?.isDirty == true) {
+                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=moisture_log serverId=${server.serverId}")
+                local
+            } else server
+        }
+        dao.upsertMoistureLogs(merged)
     }
 
-    suspend fun saveNotes(notes: List<OfflineNoteEntity>) = withContext(ioDispatcher) {
-        dao.upsertNotes(notes)
+    suspend fun saveNotes(
+        notes: List<OfflineNoteEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (notes.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertNotes(notes)
+            return@withContext
+        }
+        val serverIds = notes.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertNotes(notes)
+            return@withContext
+        }
+        val existing = dao.getNotesByServerIds(serverIds).associateBy { it.serverId }
+        val merged = notes.map { server ->
+            val local = server.serverId?.let { existing[it] }
+            if (local?.isDirty == true) {
+                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=note serverId=${server.serverId}")
+                local
+            } else server
+        }
+        dao.upsertNotes(merged)
     }
 
     suspend fun saveNote(note: OfflineNoteEntity) = withContext(ioDispatcher) {

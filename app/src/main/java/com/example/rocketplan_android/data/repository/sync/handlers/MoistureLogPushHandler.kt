@@ -46,7 +46,11 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                     mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
                 )
                 OperationOutcome.DROP
-            } else throw e
+            } else {
+                if (e is CancellationException) throw e
+                Log.w(SYNC_TAG, "MoistureLogPushHandler unknown error; retrying", e)
+                OperationOutcome.RETRY
+            }
         }
     }
 
@@ -66,7 +70,11 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                     mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
                 )
                 OperationOutcome.DROP
-            } else throw e
+            } else {
+                if (e is CancellationException) throw e
+                Log.w(SYNC_TAG, "MoistureLogPushHandler delete unknown error; retrying", e)
+                OperationOutcome.RETRY
+            }
         }
     }
 
