@@ -341,4 +341,54 @@ class SupportPushHandlerTest {
 
         assertThat(result).isEqualTo(OperationOutcome.DROP)
     }
+
+    // ===== RP-FR-004: unknown errors map to RETRY; cancellation still propagates =====
+
+    private fun conversationCreateOperation() =
+        PushHandlerTestFixtures.createSyncOperation(
+            entityType = "support_conversation",
+            entityId = 1200L,
+            entityUuid = "conv-uuid",
+            payload = gson.toJson(
+                PendingSupportConversationPayload(
+                    localConversationId = 1200L,
+                    conversationUuid = "conv-uuid",
+                    categoryId = 1L,
+                    subject = "Test Subject",
+                    initialMessageBody = "Hello",
+                    idempotencyKey = "key-123"
+                )
+            ).toByteArray(Charsets.UTF_8)
+        )
+
+    @Test
+    fun `handleConversationCreate returns RETRY on unknown error`() = runTest {
+        val conversation = PushHandlerTestFixtures.createSupportConversation(
+            conversationId = 1200L, serverId = null, uuid = "conv-uuid"
+        )
+        coEvery { localDataService.getSupportConversationByUuid("conv-uuid") } returns conversation
+        coEvery { api.createSupportConversation(any()) } throws RuntimeException("boom")
+
+        val result = handler.handleConversationCreate(conversationCreateOperation())
+
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
+    }
+
+    @Test
+    fun `handleConversationCreate propagates CancellationException`() = runTest {
+        val conversation = PushHandlerTestFixtures.createSupportConversation(
+            conversationId = 1200L, serverId = null, uuid = "conv-uuid"
+        )
+        coEvery { localDataService.getSupportConversationByUuid("conv-uuid") } returns conversation
+        coEvery { api.createSupportConversation(any()) } throws kotlinx.coroutines.CancellationException("cancel")
+
+        var caught: Throwable? = null
+        try {
+            handler.handleConversationCreate(conversationCreateOperation())
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            caught = e
+        }
+
+        assertThat(caught).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+    }
 }

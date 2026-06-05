@@ -632,4 +632,78 @@ class PropertyPushHandlerTest {
         assertThat(result).isEqualTo(OperationOutcome.DROP)
         coVerify(exactly = 0) { localDataService.saveProperty(any<OfflinePropertyEntity>()) }
     }
+
+    // ===== RP-BUG-034: propertyTypeId guard =====
+
+    @Test
+    fun `handleCreate defaults propertyTypeId to 1 when payload is zero`() = runTest {
+        val project = PushHandlerTestFixtures.createProject(projectId = 100L, serverId = 1000L)
+        val existing = PushHandlerTestFixtures.createProperty(propertyId = 200L, serverId = null)
+        val responseDto = createPropertyDto(id = 2000L, uuid = "prop-uuid")
+
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { localDataService.getProperty(200L) } returns existing
+        coEvery { api.createProjectProperty(1000L, any()) } returns PropertyResourceResponse(responseDto)
+        coEvery { api.getProperty(2000L) } returns PropertyResourceResponse(responseDto)
+        coEvery { localDataService.getLocations(100L) } returns emptyList()
+
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "property",
+            entityId = 200L,
+            operationType = SyncOperationType.CREATE,
+            payload = createCreationPayloadBytes(propertyTypeId = 0)
+        )
+
+        val handler = PropertyPushHandler(createContext())
+        val result = handler.handleCreate(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        // the request must never carry propertyTypeId=0 (server 422s on it)
+        coVerify { api.createProjectProperty(1000L, match<PropertyMutationRequest> { it.propertyTypeId == 1 }) }
+    }
+
+    // ===== RP-FR-004: unknown errors map to RETRY; cancellation still propagates =====
+
+    @Test
+    fun `handleCreate returns RETRY on unknown error`() = runTest {
+        val project = PushHandlerTestFixtures.createProject(projectId = 100L, serverId = 1000L)
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { api.createProjectProperty(1000L, any()) } throws RuntimeException("boom")
+
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "property",
+            entityId = 200L,
+            operationType = SyncOperationType.CREATE,
+            payload = createCreationPayloadBytes()
+        )
+
+        val handler = PropertyPushHandler(createContext())
+        val result = handler.handleCreate(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
+    }
+
+    @Test
+    fun `handleCreate propagates CancellationException`() = runTest {
+        val project = PushHandlerTestFixtures.createProject(projectId = 100L, serverId = 1000L)
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { api.createProjectProperty(1000L, any()) } throws kotlinx.coroutines.CancellationException("cancel")
+
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "property",
+            entityId = 200L,
+            operationType = SyncOperationType.CREATE,
+            payload = createCreationPayloadBytes()
+        )
+
+        val handler = PropertyPushHandler(createContext())
+        var caught: Throwable? = null
+        try {
+            handler.handleCreate(operation)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            caught = e
+        }
+
+        assertThat(caught).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+    }
 }

@@ -475,4 +475,62 @@ class TimecardPushHandlerTest {
 
         assertThat(result).isEqualTo(OperationOutcome.DROP)
     }
+
+    // ===== RP-FR-004: unknown errors map to RETRY; cancellation still propagates =====
+
+    @Test
+    fun `handleUpsert returns RETRY on unknown error`() = runTest {
+        val timecard = PushHandlerTestFixtures.createTimecard(
+            serverId = 10000L, uuid = "timecard-uuid", projectId = 100L
+        )
+        val project = PushHandlerTestFixtures.createProject(projectId = 100L, serverId = 1000L)
+        val operation = createOperation(entityUuid = "timecard-uuid")
+
+        coEvery { localDataService.getTimecardByUuid("timecard-uuid") } returns timecard
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { api.updateTimecard(10000L, any()) } throws RuntimeException("boom")
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
+    }
+
+    @Test
+    fun `handleDelete returns RETRY on unknown error`() = runTest {
+        val timecard = PushHandlerTestFixtures.createTimecard(
+            serverId = 10000L, uuid = "timecard-uuid", projectId = 100L
+        )
+        val operation = createOperation(
+            entityUuid = "timecard-uuid", operationType = SyncOperationType.DELETE
+        )
+
+        coEvery { localDataService.getTimecardByUuid("timecard-uuid") } returns timecard
+        coEvery { api.deleteTimecard(10000L, any()) } throws RuntimeException("boom")
+
+        val result = handler.handleDelete(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
+    }
+
+    @Test
+    fun `handleUpsert propagates CancellationException`() = runTest {
+        val timecard = PushHandlerTestFixtures.createTimecard(
+            serverId = 10000L, uuid = "timecard-uuid", projectId = 100L
+        )
+        val project = PushHandlerTestFixtures.createProject(projectId = 100L, serverId = 1000L)
+        val operation = createOperation(entityUuid = "timecard-uuid")
+
+        coEvery { localDataService.getTimecardByUuid("timecard-uuid") } returns timecard
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { api.updateTimecard(10000L, any()) } throws kotlinx.coroutines.CancellationException("cancel")
+
+        var caught: Throwable? = null
+        try {
+            handler.handleUpsert(operation)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            caught = e
+        }
+
+        assertThat(caught).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+    }
 }

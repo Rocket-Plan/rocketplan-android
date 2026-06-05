@@ -334,4 +334,58 @@ class EquipmentPushHandlerTest {
 
         assertThat(result).isEqualTo(OperationOutcome.DROP)
     }
+
+    // ===== RP-FR-004: unknown errors map to RETRY; cancellation still propagates =====
+
+    @Test
+    fun `handleUpsert returns RETRY on unknown error`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
+        val project = PushHandlerTestFixtures.createProject()
+        val room = PushHandlerTestFixtures.createRoom()
+        val operation = createOperation()
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { localDataService.getRoom(400L) } returns room
+        coEvery { api.updateEquipment(6000L, any()) } throws RuntimeException("boom")
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
+    }
+
+    @Test
+    fun `handleDelete returns RETRY on unknown error`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
+        val operation = createOperation(operationType = SyncOperationType.DELETE)
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { api.deleteEquipment(6000L, any()) } throws RuntimeException("boom")
+
+        val result = handler.handleDelete(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
+    }
+
+    @Test
+    fun `handleUpsert propagates CancellationException`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
+        val project = PushHandlerTestFixtures.createProject()
+        val room = PushHandlerTestFixtures.createRoom()
+        val operation = createOperation()
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { localDataService.getRoom(400L) } returns room
+        coEvery { api.updateEquipment(6000L, any()) } throws kotlinx.coroutines.CancellationException("cancel")
+
+        var caught: Throwable? = null
+        try {
+            handler.handleUpsert(operation)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            caught = e
+        }
+
+        assertThat(caught).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+    }
 }

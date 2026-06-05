@@ -109,6 +109,24 @@ class DeletedRecordsSyncServiceTest {
         coVerify { syncCheckpointStore.updateCheckpoint("deleted_records_server_date", any()) }
     }
 
+    // RP-BUG-029: deleted properties go through cascadePropertyDeletion (which reconciles
+    // clean synced child locations/rooms), not the bare markPropertiesDeleted.
+    @Test
+    fun `syncDeletedRecords cascades property deletion`() = runTest(testDispatcher) {
+        val body = DeletedRecordsResponse(properties = listOf(11L, 12L))
+        val apiResponse = createApiResponse(body)
+
+        every { syncCheckpointStore.getCheckpoint("deleted_records_global") } returns null
+        every { syncCheckpointStore.getCheckpoint("deleted_records_server_date") } returns null
+        coEvery { api.getDeletedRecords(any(), any(), any()) } returns apiResponse
+        coEvery { localDataService.cascadeDeleteProjectsByServerIds(any(), any()) } returns emptyList()
+
+        val result = createService().syncDeletedRecords()
+
+        assertThat(result.isSuccess).isTrue()
+        coVerify { localDataService.cascadePropertyDeletion(listOf(11L, 12L)) }
+    }
+
     // ============================================================================
     // syncDeletedRecords - Clock Skew (future checkpoint clamped to server time)
     // ============================================================================

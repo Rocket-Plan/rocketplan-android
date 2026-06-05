@@ -814,4 +814,48 @@ class RoomPushHandlerTest {
         coVerify(exactly = 0) { api.createRoom(any(), any()) }
     }
 
+    // ===== RP-BUG-031: a non-409/422 retry failure must NOT report success =====
+
+    @Test
+    fun `handleUpdate returns RETRY when 409 retry fails with non-409-422 error`() = runTest {
+        val room = PushHandlerTestFixtures.createRoom(
+            roomId = 400L,
+            serverId = 4000L,
+            uuid = "room-uuid"
+        )
+        coEvery { localDataService.getRoomByUuid("room-uuid") } returns room
+
+        val freshRoomDto = RoomDto(
+            id = 4000L,
+            uuid = "room-uuid",
+            projectId = 100L,
+            locationId = 3001L,
+            name = "Living Room",
+            title = "Living Room",
+            typeOccurrence = null,
+            roomType = RoomTypeDto(id = 1L, name = "Standard", type = "internal", isStandard = true),
+            level = null,
+            squareFootage = null,
+            isAccessible = true,
+            createdAt = "2026-01-30T12:00:00.000000Z",
+            updatedAt = "2026-01-30T14:00:00.000000Z"
+        )
+
+        // initial 409 → fetch fresh → retry throws a transient non-409/422 error
+        coEvery { api.updateRoom(4000L, any()) } throws
+            PushHandlerTestFixtures.create409WithUpdatedAt() andThenThrows
+            RuntimeException("network blip")
+        coEvery { api.getRoomDetail(4000L) } returns freshRoomDto
+
+        val operation = updatePayloadOperation(defaultUpdatePayload())
+
+        val result = handler().handleUpdate(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
+        // must NOT mark the room synced when the server was never updated
+        coVerify(exactly = 0) {
+            localDataService.saveRooms(match { rooms -> rooms.any { !it.isDirty } })
+        }
+    }
+
 }
