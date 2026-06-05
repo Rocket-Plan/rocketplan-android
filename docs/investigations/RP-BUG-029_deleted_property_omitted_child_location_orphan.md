@@ -9,7 +9,7 @@ found_in: "1.0.00 (DeletedRecordsSyncService / LocalDataService deletion apply p
 fixed_in: "1.29 (32)"
 released_in: null
 state: fixed
-release_state: n/a
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_029_deleted_property_child_orphan_2026-06-04.md
