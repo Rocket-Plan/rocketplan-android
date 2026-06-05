@@ -188,6 +188,7 @@ Column key: **Class.** = Classification · **Rel** = Release State · **Reg. Of*
 | `RP-HD-001` | P2 | — | Audit every codebase touchpoint against every RP-CD rule | hardening | pre_existing_latent | 1.0.00 | — | closed | n/a | — | [RP-HD-001](investigations/RP-HD-001_rp_cd_rule_audit.md) |
 | `RP-HD-002` | P2 | — | Guard SecureStorage migration body against non-cancellation exceptions | hardening | new_code_bug | 1.0.00 | — | fixed | unreleased | — | [RP-HD-002](investigations/RP-HD-002_secure_storage_migration_exception_guard.md) · [plan](plans/plan_rp_hd_002_003_secure_storage_2026-05-18.md) · [review](reviews/code_review_RP-HD-002_003_2026-05-18.md) |
 | `RP-HD-003` | P3 | — | Document ordering of legacy-token clear vs encrypted save in SecureStorage | hardening | new_code_bug | 1.0.00 | — | fixed | unreleased | — | [RP-HD-003](investigations/RP-HD-003_secure_storage_clear_save_ordering.md) · [plan](plans/plan_rp_hd_002_003_secure_storage_2026-05-18.md) · [review](reviews/code_review_RP-HD-002_003_2026-05-18.md) |
+| `RP-HD-004` | P2 | — | Add unit-test coverage for the 2026-06 sync-fix batch (RP-BUG-029..035, RP-FR-003/004, RP-BUG-031) | hardening | pre_existing_latent | 1.29 (32) | — | open | n/a | — | [RP-HD-004](investigations/RP-HD-004_test_coverage_sync_fix_batch.md) |
 
 ---
 
