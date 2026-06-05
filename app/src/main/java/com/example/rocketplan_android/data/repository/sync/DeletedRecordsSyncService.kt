@@ -225,7 +225,9 @@ class DeletedRecordsSyncService(
         // Delete child entities - properties, rooms, locations, photos, notes, etc.
         // Note: We don't delete the project itself here since we're syncing it
         if (response.properties.isNotEmpty()) {
-            localDataService.markPropertiesDeleted(response.properties)
+            // RP-BUG-029: cascade to clean synced child locations/rooms in case the
+            // response omits them (backend MONGOOSE-BUG-013).
+            localDataService.cascadePropertyDeletion(response.properties)
             count += response.properties.size
         }
         if (response.rooms.isNotEmpty()) {
@@ -285,7 +287,9 @@ class DeletedRecordsSyncService(
 
         // Apply remaining deletions for entities the server explicitly listed
         // (these may be redundant for project children but are idempotent)
-        localDataService.markPropertiesDeleted(response.properties)
+        // RP-BUG-029: cascade clean synced child locations/rooms under deleted properties
+        // in case the response omits them (backend MONGOOSE-BUG-013).
+        localDataService.cascadePropertyDeletion(response.properties)
         localDataService.markRoomsDeleted(response.rooms)
         localDataService.markLocationsDeleted(response.locations)
         localDataService.markPhotosDeleted(response.photos)

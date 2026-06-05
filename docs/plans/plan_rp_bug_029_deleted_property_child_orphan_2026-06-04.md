@@ -7,7 +7,7 @@
 **Bug ID(s):** RP-BUG-029
 **Author:** jeremie@rocketplantech.com
 **Date:** 2026-06-04
-**State:** draft
+**State:** implemented
 
 ---
 

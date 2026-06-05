@@ -204,7 +204,7 @@ Room DB → Flow<List<Entity>> → ViewModel (map/filter) → StateFlow → Frag
 
 ### Room Database
 
-**Class:** `OfflineDatabase` (version 28)
+**Class:** `OfflineDatabase` (version 30)
 **Database name:** `rocketplan_offline.db`
 **DAOs:** `OfflineDao` (main), `ImageProcessorDao` (assemblies)
 **Migrations:** Explicit migrations from 10 → 27 (`MIGRATION_10_11` … `MIGRATION_26_27`). The jump 27 → 28 currently relies on `fallbackToDestructiveMigration()` — schema changes after 27 will wipe local data on upgrade. Track this as a hardening item (`RP-HD-###`) before shipping a release that bumps past 28.

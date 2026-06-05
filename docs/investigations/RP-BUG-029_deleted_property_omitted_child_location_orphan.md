@@ -6,9 +6,9 @@ type: functional
 classification: pre_existing_latent
 source: "Parity review 2026-06-04 against iOS RP-BUG-268 / backend MONGOOSE-BUG-013 field incident; no Android field incident confirmed yet"
 found_in: "1.0.00 (DeletedRecordsSyncService / LocalDataService deletion apply path)"
-fixed_in: null
+fixed_in: "1.29 (32)"
 released_in: null
-state: planned
+state: fixed
 release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md

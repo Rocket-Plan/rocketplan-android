@@ -169,7 +169,8 @@ data class OfflineProjectEntity(
         Index(value = ["projectId"]),
         Index(value = ["parentLocationId"]),
         Index(value = ["serverId"]),
-        Index(value = ["projectId", "isDeleted"])
+        Index(value = ["projectId", "isDeleted"]),
+        Index(value = ["propertyServerId"])
     ]
 )
 data class OfflineLocationEntity(
@@ -178,6 +179,10 @@ data class OfflineLocationEntity(
     val serverId: Long? = null,
     val uuid: String,
     val projectId: Long,
+    // RP-BUG-029: server-side property this location belongs to (supplied by the
+    // /api/properties/{id}/locations pull; LocationDto has no property_id). Enables a
+    // surgical property→location→room cascade when the deletion sync omits children.
+    val propertyServerId: Long? = null,
     val title: String,
     val type: String,
     val parentLocationId: Long? = null,

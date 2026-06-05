@@ -327,7 +327,10 @@ internal fun PropertyDto.toEntity(
 
 internal fun LocationDto.toEntity(
     defaultProjectId: Long? = null,
-    existing: OfflineLocationEntity? = null
+    existing: OfflineLocationEntity? = null,
+    // RP-BUG-029: LocationDto carries no property_id; the property-locations pull
+    // supplies it. Falls back to the existing row so non-property pulls don't wipe it.
+    propertyServerId: Long? = null
 ): OfflineLocationEntity {
     val timestamp = now()
     // Filter out purely numeric/dash strings to prevent IDs from becoming display titles
@@ -347,6 +350,7 @@ internal fun LocationDto.toEntity(
         serverId = id,
         uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
+        propertyServerId = propertyServerId ?: existing?.propertyServerId,
         title = resolvedTitle,
         type = resolvedType,
         parentLocationId = parentLocationId,

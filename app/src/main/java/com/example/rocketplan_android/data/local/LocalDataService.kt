@@ -1437,6 +1437,33 @@ class LocalDataService private constructor(
         dao.markPropertiesDeletedByServerIds(serverIds)
     }
 
+    /**
+     * RP-BUG-029: mark properties deleted and surgically cascade to their clean synced
+     * child locations and rooms in one transaction. Guards against backend
+     * `/sync/deleted` responses that omit cascade-deleted children (MONGOOSE-BUG-013):
+     * those children would otherwise stay live and cause 404s / stale UI.
+     *
+     * Only clean synced descendants (serverId != null && isDirty == 0) are cascaded;
+     * dirty or local-only rows are preserved. offline_rooms.locationId is a LOCAL PK,
+     * so locations are resolved to their local ids before cascading rooms.
+     */
+    suspend fun cascadePropertyDeletion(propertyServerIds: List<Long>) = withContext(ioDispatcher) {
+        if (propertyServerIds.isEmpty()) return@withContext
+        database.withTransaction {
+            dao.markPropertiesDeletedByServerIds(propertyServerIds)
+            val localLocationIds = dao.getCleanSyncedLocationLocalIdsForProperties(propertyServerIds)
+            if (localLocationIds.isNotEmpty()) {
+                dao.markRoomsDeletedCleanByLocalLocationIds(localLocationIds)
+                dao.markLocationsDeletedByLocalIds(localLocationIds)
+                Log.w(
+                    "LocalDataService",
+                    "⚠️ deleted_property_cascade_orphan_reconciled: " +
+                        "properties=${propertyServerIds.size} locations=${localLocationIds.size}"
+                )
+            }
+        }
+    }
+
     suspend fun markLocationsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
         dao.markLocationsDeleted(serverIds)

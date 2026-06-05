@@ -126,6 +126,17 @@ interface OfflineDao {
 
     @Query("UPDATE offline_locations SET isDeleted = 1 WHERE projectId = :projectId")
     suspend fun markLocationsDeletedByProject(projectId: Long)
+
+    // RP-BUG-029: surgical property -> location -> room cascade. Only clean synced rows
+    // (serverId != null && isDirty == 0) are eligible; dirty/local-only rows are preserved.
+    @Query(
+        "SELECT locationId FROM offline_locations " +
+            "WHERE propertyServerId IN (:propertyServerIds) AND serverId IS NOT NULL AND isDirty = 0"
+    )
+    suspend fun getCleanSyncedLocationLocalIdsForProperties(propertyServerIds: List<Long>): List<Long>
+
+    @Query("UPDATE offline_locations SET isDeleted = 1 WHERE locationId IN (:localLocationIds) AND isDirty = 0")
+    suspend fun markLocationsDeletedByLocalIds(localLocationIds: List<Long>)
     // endregion
 
     // region Rooms
@@ -149,6 +160,15 @@ interface OfflineDao {
 
     @Query("UPDATE offline_rooms SET isDeleted = 1, isDirty = 1 WHERE locationId = :locationId")
     suspend fun markRoomsDeletedByLocation(locationId: Long)
+
+    // RP-BUG-029: cascade clean synced rooms under cascade-deleted locations.
+    // offline_rooms.locationId is the LOCAL location PK, so callers pass local ids.
+    // No isDirty=1 here: this reflects a server-side deletion, not a local edit.
+    @Query(
+        "UPDATE offline_rooms SET isDeleted = 1 " +
+            "WHERE locationId IN (:localLocationIds) AND serverId IS NOT NULL AND isDirty = 0"
+    )
+    suspend fun markRoomsDeletedCleanByLocalLocationIds(localLocationIds: List<Long>)
 
     @Query("SELECT * FROM offline_rooms WHERE roomId = :roomId LIMIT 1")
     suspend fun getRoom(roomId: Long): OfflineRoomEntity?

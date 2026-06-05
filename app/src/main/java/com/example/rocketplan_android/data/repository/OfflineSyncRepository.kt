@@ -715,7 +715,8 @@ class OfflineSyncRepository(
         val allLocations = levels + nestedLocations
         if (allLocations.isNotEmpty()) {
             localDataService.saveLocations(
-                allLocations.map { it.toEntity(defaultProjectId = projectId) },
+                // RP-BUG-029: stamp the owning property so deletion sync can cascade children.
+                allLocations.map { it.toEntity(defaultProjectId = projectId, propertyServerId = property.id) },
                 preserveDirty = true
             )
             itemCount += allLocations.size
