@@ -185,7 +185,7 @@ class EquipmentPushHandlerTest {
     // rather than the intended retry-with-fresh-timestamp behavior. See EquipmentPushHandler:219.
 
     @Test
-    fun `handleUpsert returns SKIP on 409 conflict due to consumed error body`() = runTest {
+    fun `handleUpsert records conflict on double-409`() = runTest {
         val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
         val project = PushHandlerTestFixtures.createProject()
         val room = PushHandlerTestFixtures.createRoom()
@@ -200,9 +200,9 @@ class EquipmentPushHandlerTest {
 
         val result = handler.handleUpsert(operation)
 
-        // Returns SKIP because pushPendingEquipmentUpsert's .onFailure consumes the error body
-        // before handle409Conflict can extract updated_at from it
-        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+        // RP-FR-002: the 409 error body is no longer consumed before handle409Conflict reads
+        // updated_at, so the retry path runs; a second 409 records a pending conflict.
+        assertThat(result).isEqualTo(OperationOutcome.CONFLICT_PENDING)
     }
 
     @Test

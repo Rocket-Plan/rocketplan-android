@@ -625,8 +625,10 @@ class MoistureLogPushHandlerTest {
     // Edge cases
     // ===================================================================
 
+    // RP-FR-004: unknown errors now map to OperationOutcome.RETRY (kept in queue with
+    // backoff) instead of being thrown. CancellationException still propagates.
     @Test
-    fun `handleUpsert propagates unexpected exceptions`() = runTest {
+    fun `handleUpsert returns RETRY on unexpected exceptions`() = runTest {
         val log = PushHandlerTestFixtures.createMoistureLog(serverId = null)
         val operation = PushHandlerTestFixtures.createSyncOperation(
             entityType = "moisture_log",
@@ -637,19 +639,13 @@ class MoistureLogPushHandlerTest {
         coEvery { api.createMoistureLog(4000L, 8000L, any()) } throws
             RuntimeException("Unexpected network error")
 
-        var thrown: Exception? = null
-        try {
-            handler.handleUpsert(operation)
-        } catch (e: Exception) {
-            thrown = e
-        }
+        val result = handler.handleUpsert(operation)
 
-        assertThat(thrown).isInstanceOf(RuntimeException::class.java)
-        assertThat(thrown!!.message).isEqualTo("Unexpected network error")
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
     }
 
     @Test
-    fun `handleDelete propagates unexpected exceptions`() = runTest {
+    fun `handleDelete returns RETRY on unexpected exceptions`() = runTest {
         val log = PushHandlerTestFixtures.createMoistureLog(serverId = 7000L)
         val operation = PushHandlerTestFixtures.createSyncOperation(
             entityType = "moisture_log",
@@ -660,15 +656,9 @@ class MoistureLogPushHandlerTest {
         coEvery { api.deleteMoistureLog(7000L, any()) } throws
             RuntimeException("Unexpected network error")
 
-        var thrown: Exception? = null
-        try {
-            handler.handleDelete(operation)
-        } catch (e: Exception) {
-            thrown = e
-        }
+        val result = handler.handleDelete(operation)
 
-        assertThat(thrown).isInstanceOf(RuntimeException::class.java)
-        assertThat(thrown!!.message).isEqualTo("Unexpected network error")
+        assertThat(result).isEqualTo(OperationOutcome.RETRY)
     }
 
     @Test

@@ -78,7 +78,11 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
                     mapOf("projectServerId" to projectServerId.toString())
                 )
             }
-        }.getOrNull() ?: return OperationOutcome.RETRY
+        }.getOrElse { error ->
+            if (error is CancellationException) throw error
+            // 422 is a permanent validation error → drop; unknown errors → retry with backoff.
+            return if (error.isValidationError()) OperationOutcome.DROP else OperationOutcome.RETRY
+        }
 
         Log.d(
             SYNC_TAG,

@@ -243,7 +243,7 @@ class OfflineSyncRepositoryTest {
             companyId = companyId
         )
         val savedPhotos = mutableListOf<List<OfflinePhotoEntity>>()
-        coEvery { localDataService.savePhotos(capture(savedPhotos)) } just runs
+        coEvery { localDataService.savePhotos(capture(savedPhotos), any()) } just runs
         val savedAlbums = mutableListOf<List<OfflineAlbumEntity>>()
         coEvery { localDataService.saveAlbums(capture(savedAlbums)) } just runs
         val savedAlbumPhotos = mutableListOf<List<OfflineAlbumPhotoEntity>>()
@@ -414,7 +414,7 @@ class OfflineSyncRepositoryTest {
             companyId = 1L
         )
         val savedPhotos = mutableListOf<List<OfflinePhotoEntity>>()
-        coEvery { localDataService.savePhotos(capture(savedPhotos)) } just runs
+        coEvery { localDataService.savePhotos(capture(savedPhotos), any()) } just runs
         val scheduler = mockk<PhotoCacheScheduler>(relaxed = true)
         val checkpointStore = mockk<SyncCheckpointStore>(relaxed = true)
 
@@ -510,7 +510,7 @@ class OfflineSyncRepositoryTest {
 
         coEvery { api.getRoomPhotos(roomId, any(), any(), any(), any()) } returns roomPhotosResponse(photo)
         coEvery { localDataService.getPhotoByServerId(photo.id) } returns null
-        coEvery { localDataService.savePhotos(any()) } just runs
+        coEvery { localDataService.savePhotos(any(), any()) } just runs
 
         val repository = OfflineSyncRepository(
             api = api,
@@ -590,7 +590,7 @@ class OfflineSyncRepositoryTest {
             api.getRoomPhotos(roomId, any(), any(), any(), captureNullable(updatedSince))
         } returns roomPhotosResponse(photo)
         coEvery { localDataService.getPhotoByServerId(photo.id) } returns null
-        coEvery { localDataService.savePhotos(any()) } just runs
+        coEvery { localDataService.savePhotos(any(), any()) } just runs
 
         val repository = OfflineSyncRepository(
             api = api,
@@ -678,7 +678,7 @@ class OfflineSyncRepositoryTest {
         )
         coEvery { localDataService.getPhotoByServerId(any()) } returns null
         val savedPhotos = mutableListOf<List<OfflinePhotoEntity>>()
-        coEvery { localDataService.savePhotos(capture(savedPhotos)) } just runs
+        coEvery { localDataService.savePhotos(capture(savedPhotos), any()) } just runs
 
         val repository = OfflineSyncRepository(
             api = api,
@@ -734,7 +734,7 @@ class OfflineSyncRepositoryTest {
         coEvery { localDataService.deleteLocalPendingRoomPhoto(localProjectId, roomId, any()) } returns 1
         coEvery { localDataService.refreshRoomPhotoSnapshot(roomId) } just runs
         val savedPhotos = mutableListOf<List<OfflinePhotoEntity>>()
-        coEvery { localDataService.savePhotos(capture(savedPhotos)) } just runs
+        coEvery { localDataService.savePhotos(capture(savedPhotos), any()) } just runs
 
         val repository = OfflineSyncRepository(
             api = api,
@@ -987,7 +987,7 @@ class OfflineSyncRepositoryTest {
         repository.syncDeletedRecords()
 
         coVerify { localDataService.cascadeDeleteProjectsByServerIds(body.projects, null) }
-        coVerify { localDataService.markPropertiesDeleted(body.properties) }
+        coVerify { localDataService.cascadePropertyDeletion(body.properties) }
         coVerify { localDataService.markRoomsDeleted(body.rooms) }
         coVerify { localDataService.markLocationsDeleted(body.locations) }
         coVerify { localDataService.markPhotosDeleted(body.photos) }
