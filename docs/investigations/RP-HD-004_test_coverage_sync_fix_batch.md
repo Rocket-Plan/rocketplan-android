@@ -7,15 +7,15 @@ classification: pre_existing_latent
 source: internal
 evidence: preventive
 found_in: "1.29 (32)"
-fixed_in: null
+fixed_in: "1.29 (32)"
 released_in: null
-state: open
-release_state: n/a
+state: fixed
+release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: null
 related_review: null
-related_test: null
+related_test: "app/src/test: handler/service/mapper + Robolectric Room (OfflineDaoCascadeTest, OfflineDatabaseMigrationTest)"
 priority: P2
 last_updated: 2026-06-05
 ---
@@ -85,10 +85,30 @@ Highest-value gap; the merge gates on a boolean and an `isDirty` check per entit
 3. Remaining handler RETRY guards and the lighter 030/032/033/034/035 assertions.
 4. RP-BUG-029 Room migration test under `androidTest` (separate from JVM unit tests).
 
-## Notes
+## Outcome (implemented 2026-06-05)
 
-- JVM unit tests live in `app/src/test/...`; the migration test needs `app/src/androidTest/...`
-  (there is currently no Room migration harness — adding one is part of this ticket).
+408 unit tests, 0 failures (was 384). Two phases:
+
+- **Phase 1 (mockk):** FR-004 handler RETRY + cancellation (Equipment/Timecard/Property/Support/
+  MoistureLog), RP-BUG-031 Room retry-failure → RETRY, RP-BUG-034 propertyTypeId guard,
+  RP-BUG-029 DeletedRecordsSyncService cascade call, RP-BUG-035 WorkScopeSyncService merge,
+  RP-BUG-032/033 mapper tests.
+- **Phase 2 (Robolectric + room-testing):** the cascade/merge SQL has no JVM seam via
+  `LocalDataService`, so it is covered against an in-memory Room DB —
+  `OfflineDaoCascadeTest` (clean-synced-only cascade, dirty/local/other-property preserved,
+  rooms matched by LOCAL location PK; by-serverIds merge lookup) and
+  `OfflineDatabaseMigrationTest` (real `MIGRATION_29_30` applied to a hand-built v29 table;
+  `exportSchema=false` ruled out `MigrationTestHelper`).
+
+### Coverage deliberately not added
+- RP-FR-003 per-entity dirty-merge matrix at the `LocalDataService` level (private ctor builds
+  its own file DB → no seam). The risky **SQL** (`getXByServerIds`) is covered via the Room
+  in-memory DAO test; the thin Kotlin merge gating is covered indirectly. A full matrix would
+  need DI refactor or a Robolectric `LocalDataService` harness — out of scope here.
+- `SyncQueueProcessor` `RETRY`-backoff direct unit test (processor needs many ctor deps and the
+  outcome handling is private); the RETRY behavior is asserted at the handler boundary instead.
+
+### Notes
 - A pre-existing red test (`EquipmentPushHandlerTest` consumed-409 SKIP) was corrected to
   `CONFLICT_PENDING` during this batch; suite is green as of `1.29 (32)`.
 
