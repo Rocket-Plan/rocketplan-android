@@ -114,6 +114,33 @@ Rule: The remote-log POST goes to `/api/logs/ios` even on Android. Do not "fix" 
 Why: Backend deliberately consolidated mobile logs on the single endpoint; the path is a name, not a platform discriminator. The DTO carries a `platform` field.
 How to apply: If a future review surfaces this as a smell, link this rule. Endpoint rename requires a coordinated backend change.
 
+### RP-CD-014 — List-replacing pulls merge locally-staged offline creates
+Status: active
+Rule: A pull that fetches the authoritative list for a scope and persists it as that scope's set must first merge in locally-staged offline *creates* for that scope — rows with `serverId == null` and `syncStatus == PENDING` that are absent from the server response. Do not persist the server list alone.
+Why: `preserveDirty` (RP-CD-002) only protects dirty rows that already have a `serverId`; it cannot protect an offline create the server has not seen yet. If the save deletes-then-inserts the scope, or a unique-index upsert/observe path drops the un-synced row, the user's offline-created item vanishes on refresh before its push lands. This is distinct from RP-CD-002.
+How to apply: Pattern after `WorkScopeSyncService.syncRoomWorkScopes` — fetch pending via a dedicated `getPending*` query, then `serverList + pending.filter { it.serverId == null || it.serverId !in fetchedServerIds }` before the save. Required for any `*SyncService` / repository path that pulls a per-scope list (room work scopes, damages, albums, support threads, etc.). Emit a `*_pending_creates_merged` debug log with `fetched`/`pending` counts.
+Violations: RP-BUG-035 (WorkScope, fixed). Other per-scope pulls (damages, albums, support conversations/messages) are unverified for this pattern — trace each before asserting safe.
+
+### RP-CD-015 — Cache writers set the synced fingerprint explicitly
+Status: active
+Rule: When persisting an authoritative server row from a pull/push-success path, explicitly set `isDirty = 0` and `syncStatus = SYNCED` on both the insert and update branches (unless that exact row is being preserved under RP-CD-002/014).
+Why: A server row inserted without resetting the fingerprint is born "phantom-dirty" and gets re-pushed on the next queue tick, causing spurious 409s and self-conflicts. Relying on default field values or on `toEntity()` to "usually" do it is how inserts silently skip the reset.
+How to apply: Audit every `toEntity()` mapper and `save*` insert branch reachable from sync. The synced fingerprint is set by the mapper for synced rows; pending/dirty rows keep their flags. Push handlers writing the just-synced state use the default (`preserveDirty = false`).
+
+### RP-CD-016 — Server deletions must not remove locally-dirty or pending rows
+Status: active
+Rule: Before applying a server-driven deletion (tombstone from `/api/sync/deleted`), check that the local row is not `isDirty = 1` and has no pending operation in the sync queue. If it does, defer the deletion rather than dropping the local edit/create.
+Why: A tombstone applied while the user has an unsynced edit or an offline create in flight destroys local work and can orphan children. Deletion reconciliation is a separate path from update-merge (RP-CD-002), so the dirty guard must be repeated here.
+How to apply: `DeletedRecordsSyncService` applies deletions only after a `isDirty == 0 && !hasPendingOperation(entityType, entityId)` check. Cascade children (locations/rooms) must be reconciled, not blind-deleted — see RP-BUG-029.
+Violations: none filed (preventive). Related: RP-BUG-029 (omitted-child orphan).
+
+### RP-CD-017 — Unsynced IDs never reach server path construction
+Status: active
+Rule: An identifier that is a local-only placeholder (`serverId == null`, or a server id `<= 0`) must never be used to build a server API path or request body field that the server treats as a server id. Resolve it to the real server id first, or hold the operation until the parent has synced.
+Why: Sending a local/zero id produces 404s, 422s, or silent writes against the wrong resource. `IdRemapService` fixes ids *reactively* after a parent syncs; this rule is the *preventive* guard at the call site so an un-remapped id is never transmitted.
+How to apply: Resolver helpers (e.g. `resolveServerRoomId`) must block/return "not ready" instead of falling back to the local id. Request DTOs must not default a missing required id to `0`. Audit `OfflineSyncApi` call sites and push-handler request builders.
+Violations: RP-BUG-030 (room id fell back to local id, fixed), RP-BUG-034 (`propertyTypeId = 0` sent, fixed).
+
 ---
 
 ## Adding a rule

@@ -215,6 +215,7 @@ Capture ─► LocalDB (pending) ─► Upload ─► Server Processing ─► P
 
 All project docs live under `docs/`. See `docs/README.md` for the folder structure — use it to decide where to place a new doc or where to look for an existing one. If `docs/README.md` does not exist yet, follow the structure below:
 
+- **Architecture & coding rules**: `docs/architecture/ARCHITECTURE.md` is descriptive architecture and rationale; `docs/architecture/RP-CD_rules.md` holds the normative, code-reviewable `RP-CD-###` rules. `RP-CD_rules.md` wins if it conflicts with architecture prose or local comments. Consult it before writing or reviewing sync/offline code. For offline/sync fixes, explicitly note which `RP-CD-###` rules the change touches and add targeted regression coverage (or a manual verification note when an automated test is not practical); cite the violated rule when filing an `RP-FR-###` bug.
 - **Bug tracker**: `docs/BUG_TRACKER.md` is the single source of truth for bug status. Always check it first when investigating a bug. Update it at every lifecycle step (register, plan, fix, release).
 - For bug/fix documentation flow, follow the "Bug doc lifecycle" section in `docs/README.md` (or the pattern from `docs/BUG_TRACKER.md` if README doesn't exist).
 - When asked to perform a code review and save it, save the review under `docs/reviews/`.

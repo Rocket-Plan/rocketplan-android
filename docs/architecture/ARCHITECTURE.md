@@ -207,7 +207,7 @@ Room DB → Flow<List<Entity>> → ViewModel (map/filter) → StateFlow → Frag
 **Class:** `OfflineDatabase` (version 30)
 **Database name:** `rocketplan_offline.db`
 **DAOs:** `OfflineDao` (main), `ImageProcessorDao` (assemblies)
-**Migrations:** Explicit migrations from 10 → 27 (`MIGRATION_10_11` … `MIGRATION_26_27`). The jump 27 → 28 currently relies on `fallbackToDestructiveMigration()` — schema changes after 27 will wipe local data on upgrade. Track this as a hardening item (`RP-HD-###`) before shipping a release that bumps past 28.
+**Migrations:** Explicit migrations from 10 → 30 (`MIGRATION_10_11` … `MIGRATION_29_30`), all registered in `addMigrations()`. Notable recent ones: `MIGRATION_27_28` (no-op), `MIGRATION_28_29` (`offline_materials.projectId`), `MIGRATION_29_30` (`offline_locations.propertyServerId`). `fallbackToDestructiveMigration()` is gated to **dev builds only** (`BuildConfig.ALLOW_DESTRUCTIVE_MIGRATION`); staging/prod surface a missing-migration `IllegalStateException` to Sentry instead of wiping data (see RP-BUG-001).
 
 **38 entities across these categories:**
 
@@ -225,7 +225,7 @@ Room DB → Flow<List<Entity>> → ViewModel (map/filter) → StateFlow → Frag
 | **Image processor** | ImageProcessorAssembly, ImageProcessorPhoto |
 
 **Files:**
-- `data/local/OfflineDatabase.kt` - Database definition, migrations (10→27, 28 via destructive fallback)
+- `data/local/OfflineDatabase.kt` - Database definition, explicit migrations (10→30; destructive fallback is dev-only)
 - `data/local/entity/OfflineEntities.kt` - All entity data classes
 - `data/local/dao/OfflineDao.kt` - Single DAO with all queries
 
@@ -336,7 +336,7 @@ Push to server  → syncStatus=SYNCED, isDirty=0, serverUpdatedAt=<server value>
 Edit locally    → isDirty=1
 Delete locally  → isDeleted=1, isDirty=1
 Push delete     → Row removed from DB
-Server update   → Row replaced, isDirty preserved if locally dirty
+Server update   → Row merged; if local isDirty=1 the local row wins (preserveDirty, see below)
 ```
 
 ### LocalDataService
@@ -349,6 +349,27 @@ Wrapper around `OfflineDao` providing transaction safety and batch operations. H
 - Clearing all data on logout
 
 **File:** `data/local/LocalDataService.kt`
+
+#### Dirty-row preservation on pull (`preserveDirty`)
+
+Pull-sync save paths must not overwrite a row the user has edited locally but not yet pushed. The
+`save*` methods that are reachable from a server pull take a `preserveDirty: Boolean = false`
+parameter (e.g. `saveProjects`, `saveLocations`, `saveRooms`-callers, `saveNotes`, `saveEquipment`,
+`saveMoistureLogs`, `saveAtmosphericLogs`, `savePhotos`):
+
+- **Push handlers** call with the default (`preserveDirty = false`) — they are writing the
+  authoritative just-synced state, so they should set the synced fingerprint.
+- **Pull paths** (incremental/essentials/refresh) pass `preserveDirty = true`. The save then looks up
+  each incoming row by `serverId`; if the existing local row has `isDirty == true` it keeps the local
+  row and discards the server copy, emitting a throttled `pull_sync_preserved_dirty_row` WARN.
+
+This is the enforcement of **RP-CD-002** (server updates must not clobber local dirt); the missed
+embedded-locations pull path was closed in **RP-FR-003**.
+
+> **Scope note:** `preserveDirty` protects locally-*dirty rows that already have a `serverId`. It does
+> **not** by itself protect offline *creates* (`serverId == null`) that the server omits from a list
+> response — see **RP-CD-024 / pending-create merge** under Sync Architecture for that separate
+> concern.
 
 ### DTOs & Mappers
 
