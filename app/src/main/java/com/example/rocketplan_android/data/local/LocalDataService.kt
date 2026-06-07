@@ -1628,8 +1628,34 @@ class LocalDataService private constructor(
         dao.markWorkScopesDeleted(serverIds)
     }
 
-    suspend fun saveMaterials(materials: List<OfflineMaterialEntity>) = withContext(ioDispatcher) {
-        dao.upsertMaterials(materials)
+    suspend fun saveMaterials(
+        materials: List<OfflineMaterialEntity>,
+        reconcileByServerId: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (materials.isEmpty()) return@withContext
+        if (!reconcileByServerId) {
+            dao.upsertMaterials(materials)
+            return@withContext
+        }
+        val serverIds = materials.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertMaterials(materials)
+            return@withContext
+        }
+        // RP-BUG-038: a material created offline keeps a local (negative) PK + client uuid and only
+        // gains a serverId on push; the server mints its own uuid (HasUuid), so a pulled material has
+        // a different PK + uuid. Reconcile by serverId — adopt the existing local PK + uuid — so the
+        // upsert updates in place instead of inserting a duplicate. (Materials have no isDirty column,
+        // so there is no dirty branch.)
+        val existing = dao.getMaterialsByServerIds(serverIds).associateBy { it.serverId }
+        val merged = mergePulledRowsByServerId(
+            incoming = materials,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { false },
+            adoptLocalIdentity = { server, local -> server.copy(materialId = local.materialId, uuid = local.uuid) },
+        )
+        dao.upsertMaterials(merged)
     }
 
     suspend fun saveCompany(company: OfflineCompanyEntity) = withContext(ioDispatcher) {

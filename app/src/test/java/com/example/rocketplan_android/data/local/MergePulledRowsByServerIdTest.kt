@@ -63,6 +63,27 @@ class MergePulledRowsByServerIdTest {
     }
 
     @Test
+    fun `materials config (no isDirty) always adopts local identity on serverId match (RP-BUG-038)`() {
+        // Materials have no isDirty column, so the pull passes isDirty = { false }: every existing
+        // serverId match must adopt the local PK + uuid (update in place), never duplicate.
+        val local = Row(pk = -700L, serverId = 900L, uuid = "client-uuid", content = "old")
+        val server = Row(pk = 900L, serverId = 900L, uuid = "server-uuid", content = "new")
+
+        val merged = mergePulledRowsByServerId(
+            incoming = listOf(server),
+            existingByServerId = mapOf(900L to local),
+            serverIdOf = { it.serverId },
+            isDirty = { false },
+            adoptLocalIdentity = { s, l -> s.copy(pk = l.pk, uuid = l.uuid) },
+        )
+
+        assertThat(merged).hasSize(1)
+        assertThat(merged[0].pk).isEqualTo(-700L)
+        assertThat(merged[0].uuid).isEqualTo("client-uuid")
+        assertThat(merged[0].content).isEqualTo("new")
+    }
+
+    @Test
     fun `server row with no local match is inserted as-is`() {
         val server = Row(pk = 501L, serverId = 501L, uuid = "server-uuid", content = "new")
 

@@ -152,7 +152,7 @@ class ProjectMetadataSyncService(
 
                     if (scopedDamages.isNotEmpty()) {
                         localDataService.saveDamages(scopedDamages)
-                        localDataService.saveMaterials(damages.map { it.toMaterialEntity() })
+                        localDataService.saveMaterials(damages.map { it.toMaterialEntity() }, reconcileByServerId = true)
                         itemCount.addAndGet(scopedDamages.size)
                         projectDamagesHaveRoomIds = true
                         damages.latestTimestamp { it.updatedAt }
@@ -235,7 +235,7 @@ class ProjectMetadataSyncService(
             localDataService.saveDamages(entities)
             val materialEntities = damages.map { it.toMaterialEntity() }
             if (materialEntities.isNotEmpty()) {
-                localDataService.saveMaterials(materialEntities)
+                localDataService.saveMaterials(materialEntities, reconcileByServerId = true)
             }
         }
         val duration = System.currentTimeMillis() - startTime

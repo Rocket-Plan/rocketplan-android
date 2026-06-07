@@ -967,6 +967,9 @@ interface OfflineDao {
     @Upsert
     suspend fun upsertMaterials(materials: List<OfflineMaterialEntity>)
 
+    @Query("SELECT * FROM offline_materials WHERE serverId IN (:serverIds)")
+    suspend fun getMaterialsByServerIds(serverIds: List<Long>): List<OfflineMaterialEntity>
+
     @Query("SELECT * FROM offline_materials ORDER BY name")
     fun observeMaterials(): Flow<List<OfflineMaterialEntity>>
 
