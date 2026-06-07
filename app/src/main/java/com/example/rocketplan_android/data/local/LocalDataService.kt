@@ -1892,6 +1892,9 @@ class LocalDataService private constructor(
     suspend fun getSupportMessageByUuid(uuid: String): OfflineSupportMessageEntity? =
         withContext(ioDispatcher) { dao.getSupportMessageByUuid(uuid) }
 
+    suspend fun getSupportMessageByServerId(serverId: Long): OfflineSupportMessageEntity? =
+        withContext(ioDispatcher) { dao.getSupportMessageByServerId(serverId) }
+
     suspend fun saveSupportMessage(message: OfflineSupportMessageEntity): Long =
         withContext(ioDispatcher) {
             if (message.messageId == 0L) {

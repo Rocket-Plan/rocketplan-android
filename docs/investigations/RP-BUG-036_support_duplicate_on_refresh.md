@@ -7,15 +7,15 @@ classification: pre_existing_latent
 source: review
 evidence: inferred
 found_in: "1.0.00"
-fixed_in: null
+fixed_in: "1.0.00"
 released_in: null
-state: open
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
-related_review: null
-related_test: null
+related_plan: docs/plans/plan_rp_bug_036_support_identity_reconcile_2026-06-07.md
+related_review: docs/reviews/code_review_rp_bug_036_2026-06-07.md
+related_test: app/src/test/java/com/example/rocketplan_android/data/repository/sync/SupportSyncServiceTest.kt
 violates: RP-CD-014
 priority: P2
 last_updated: 2026-06-07
@@ -78,17 +78,40 @@ is an *extra* row, caused by identity mismatch (client uuid vs server uuid) plus
 | Pull plain upsert, no reconcile | `SupportSyncService.syncConversations` (~:79) / `syncMessages` (~:96); `LocalDataService.saveSupportConversations` (:1858) / `saveSupportMessages` (:1905); `OfflineDao.upsertSupportConversations` / `upsertSupportMessages` |
 | Observe (no dedup) | `OfflineDao.observeSupportConversations`, `OfflineDao.observeSupportMessages` |
 
-## Suggested fix (not yet implemented)
+## Fix (implemented 2026-06-07)
+
+Implemented per the [plan](../plans/plan_rp_bug_036_support_identity_reconcile_2026-06-07.md):
+`getSupportMessageByServerId` added; `SupportSyncService.syncConversations` reconciles by `serverId`
+(preserving local PK + uuid); `syncMessages` reconciles by `serverId` **and** attaches pulled rows to
+the canonical local `conversationId` resolved from `conversationServerId`. A `support_pull_reconciled`
+debug log reports reconciled/inserted counts. Covered by `SupportSyncServiceTest` (5 cases). Original
+design notes below.
+
+### Design notes
 
 Reconcile by `serverId` on the support pull, mirroring how other entities resolve an existing local
 row before upsert. For each incoming server row, if a local row already exists with that `serverId`,
-update **that** row in place (preserve its local PK) instead of inserting a new one. A
-`getSupportMessageByServerId` query must be added (the conversation equivalent already exists). The
-WorkScope merge pattern (`WorkScopeSyncService.syncRoomWorkScopes`) is the closest template, but note
-the reconciliation key here is `serverId`, not pending-create absence. Alternatively/additionally,
-send the client `uuid` on create and have the server echo it, making `uuid` a stable cross-side
-identity — but that requires a coordinated backend change, so the `serverId` reconciliation on the
-client is the self-contained fix.
+update **that** row in place (preserve its local PK) instead of inserting a new one. The WorkScope
+merge pattern (`WorkScopeSyncService.syncRoomWorkScopes`) is the closest template, but note the
+reconciliation key here is `serverId`, not pending-create absence.
+
+**Conversation side:** add a `getSupportConversationByServerId`-based reconcile to
+`saveSupportConversations` (the query already exists at `LocalDataService.kt:1842` but is unused by the
+pull) — update the existing local row rather than inserting a second.
+
+**Message side (extra constraint — see review):** reconciling a message by its own `serverId` is
+necessary but **not sufficient**. A message authored offline references its conversation by the
+**local** `conversationId` (PK = X), while pulled messages arrive keyed to the conversation's
+`serverId` (= Y). The pull must (a) add a `getSupportMessageByServerId` query (none exists today) to
+update an existing message row in place, AND (b) resolve the incoming message's `conversationServerId`
+(Y) back to the **canonical local `conversationId`** (X) and attach the row there. Without (b), pulled
+messages land on the duplicate/foreign conversation row and the conversation-side dedup does not save
+them. Conversation reconciliation (above) must therefore land first so the canonical local
+`conversationId` is resolvable.
+
+Alternatively/additionally, send the client `uuid` on create and have the server echo it, making
+`uuid` a stable cross-side identity — but that requires a coordinated backend change, so the
+client-side `serverId` reconciliation is the self-contained fix.
 
 ## Observability
 

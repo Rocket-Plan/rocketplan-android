@@ -1357,6 +1357,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_support_messages WHERE uuid = :uuid LIMIT 1")
     suspend fun getSupportMessageByUuid(uuid: String): OfflineSupportMessageEntity?
 
+    @Query("SELECT * FROM offline_support_messages WHERE serverId = :serverId LIMIT 1")
+    suspend fun getSupportMessageByServerId(serverId: Long): OfflineSupportMessageEntity?
+
     @Query("UPDATE offline_support_messages SET isRead = 1 WHERE conversationId = :conversationId AND isRead = 0")
     suspend fun markSupportMessagesAsRead(conversationId: Long)
 

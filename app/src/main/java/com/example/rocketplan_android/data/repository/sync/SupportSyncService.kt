@@ -75,8 +75,22 @@ class SupportSyncService(
         try {
             Log.d(TAG, "Syncing support conversations...")
             val response = api.getSupportConversations()
-            val entities = response.data.map { dto -> dto.toEntity() }
+            // RP-BUG-036: reconcile by serverId so a conversation created offline (local PK +
+            // client uuid, later assigned serverId by push) is updated in place rather than
+            // inserted again as a duplicate when the server's own uuid comes back on pull.
+            var reconciled = 0
+            val entities = response.data.map { dto ->
+                val mapped = dto.toEntity()
+                val existing = mapped.serverId?.let { localDataService.getSupportConversationByServerId(it) }
+                if (existing != null) {
+                    reconciled++
+                    mapped.copy(conversationId = existing.conversationId, uuid = existing.uuid)
+                } else {
+                    mapped
+                }
+            }
             localDataService.saveSupportConversations(entities)
+            Log.d(TAG, "support_pull_reconciled: type=conversation reconciled=$reconciled inserted=${entities.size - reconciled}")
             Log.d(TAG, "Synced ${entities.size} support conversations")
             Result.success(entities)
         } catch (e: Exception) {
@@ -92,8 +106,37 @@ class SupportSyncService(
         try {
             Log.d(TAG, "Syncing messages for conversation $conversationServerId...")
             val response = api.getSupportMessages(conversationServerId)
-            val entities = response.data.map { dto -> dto.toEntity(conversationServerId) }
+            // RP-BUG-036: resolve the canonical LOCAL conversationId from the conversation's
+            // serverId. Pulled messages are keyed to conversationServerId, but locally-authored
+            // messages reference the conversation by its local PK — attach pulled rows to that
+            // same local PK so they don't orphan onto a duplicate/foreign conversation row.
+            // (Conversations are synced before messages, so this is resolvable.)
+            val localConversationId =
+                localDataService.getSupportConversationByServerId(conversationServerId)?.conversationId
+            var reconciled = 0
+            val entities = response.data.map { dto ->
+                val mapped = dto.toEntity(conversationServerId)
+                val attached = if (localConversationId != null) {
+                    mapped.copy(conversationId = localConversationId)
+                } else {
+                    mapped
+                }
+                // Reconcile by serverId so a message created offline (local PK + client uuid,
+                // later assigned serverId by push) is updated in place rather than duplicated.
+                val existing = attached.serverId?.let { localDataService.getSupportMessageByServerId(it) }
+                if (existing != null) {
+                    reconciled++
+                    attached.copy(messageId = existing.messageId, uuid = existing.uuid)
+                } else {
+                    attached
+                }
+            }
             localDataService.saveSupportMessages(entities)
+            Log.d(
+                TAG,
+                "support_pull_reconciled: type=message reconciled=$reconciled inserted=${entities.size - reconciled} " +
+                    "conversationServerId=$conversationServerId localConversationId=$localConversationId"
+            )
 
             // Save attachments
             val attachments = response.data.flatMap { dto ->

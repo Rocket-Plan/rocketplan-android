@@ -236,6 +236,114 @@ class SupportSyncServiceTest {
     }
 
     // ============================================================================
+    // RP-BUG-036: identity reconciliation on pull (no duplicate-on-refresh)
+    // ============================================================================
+
+    @Test
+    fun `syncConversations reconciles by serverId preserving local PK and uuid`() = runTest(testDispatcher) {
+        // Conversation created offline: local PK 500, serverId 900 (set by push), client uuid.
+        coEvery { localDataService.getSupportConversationByServerId(900L) } returns
+            OfflineSupportConversationEntity(
+                conversationId = 500L, serverId = 900L, uuid = "client-uuid",
+                userId = 5L, categoryId = 1L, subject = "Test"
+            )
+        // Server returns the same conversation with its OWN uuid ("conv-900").
+        coEvery { api.getSupportConversations() } returns
+            PaginatedResponse(data = listOf(createConversationDto(id = 900L, subject = "Test")))
+        val savedSlot = slot<List<OfflineSupportConversationEntity>>()
+        coJustRun { localDataService.saveSupportConversations(capture(savedSlot)) }
+
+        createService().syncConversations()
+
+        assertThat(savedSlot.captured).hasSize(1)
+        // Updated in place: keep local PK + local uuid, do not insert a second row.
+        assertThat(savedSlot.captured.first().conversationId).isEqualTo(500L)
+        assertThat(savedSlot.captured.first().uuid).isEqualTo("client-uuid")
+        assertThat(savedSlot.captured.first().serverId).isEqualTo(900L)
+    }
+
+    @Test
+    fun `syncConversations inserts new conversation with no local match`() = runTest(testDispatcher) {
+        coEvery { localDataService.getSupportConversationByServerId(any()) } returns null
+        coEvery { api.getSupportConversations() } returns
+            PaginatedResponse(data = listOf(createConversationDto(id = 901L, subject = "Test")))
+        val savedSlot = slot<List<OfflineSupportConversationEntity>>()
+        coJustRun { localDataService.saveSupportConversations(capture(savedSlot)) }
+
+        createService().syncConversations()
+
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured.first().conversationId).isEqualTo(0L) // autoGenerate insert
+        assertThat(savedSlot.captured.first().uuid).isEqualTo("conv-901")
+    }
+
+    @Test
+    fun `syncMessages reconciles by serverId and attaches to canonical local conversationId`() = runTest(testDispatcher) {
+        // Conversation: local PK 500, serverId 900.
+        coEvery { localDataService.getSupportConversationByServerId(900L) } returns
+            OfflineSupportConversationEntity(
+                conversationId = 500L, serverId = 900L, uuid = "client-uuid",
+                userId = 5L, categoryId = 1L, subject = "Test"
+            )
+        // Message created offline: local PK 700, serverId 950 (set by push), client uuid.
+        coEvery { localDataService.getSupportMessageByServerId(950L) } returns
+            OfflineSupportMessageEntity(
+                messageId = 700L, serverId = 950L, uuid = "client-msg-uuid",
+                conversationId = 500L, senderId = 5L, senderType = "user", body = "hi"
+            )
+        coEvery { api.getSupportMessages(any()) } returns
+            PaginatedResponse(data = listOf(createMessageDto(id = 950L, body = "hi")))
+        val savedSlot = slot<List<OfflineSupportMessageEntity>>()
+        coJustRun { localDataService.saveSupportMessages(capture(savedSlot)) }
+
+        createService().syncMessages(conversationServerId = 900L)
+
+        assertThat(savedSlot.captured).hasSize(1)
+        val m = savedSlot.captured.first()
+        // Updated in place AND attached to the canonical local conversationId (500), not 900.
+        assertThat(m.messageId).isEqualTo(700L)
+        assertThat(m.uuid).isEqualTo("client-msg-uuid")
+        assertThat(m.conversationId).isEqualTo(500L)
+        assertThat(m.serverId).isEqualTo(950L)
+    }
+
+    @Test
+    fun `syncMessages inserts new message attached to canonical local conversationId`() = runTest(testDispatcher) {
+        coEvery { localDataService.getSupportConversationByServerId(900L) } returns
+            OfflineSupportConversationEntity(
+                conversationId = 500L, serverId = 900L, uuid = "client-uuid",
+                userId = 5L, categoryId = 1L, subject = "Test"
+            )
+        coEvery { localDataService.getSupportMessageByServerId(any()) } returns null
+        coEvery { api.getSupportMessages(any()) } returns
+            PaginatedResponse(data = listOf(createMessageDto(id = 951L, body = "hi")))
+        val savedSlot = slot<List<OfflineSupportMessageEntity>>()
+        coJustRun { localDataService.saveSupportMessages(capture(savedSlot)) }
+
+        createService().syncMessages(conversationServerId = 900L)
+
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured.first().messageId).isEqualTo(0L) // autoGenerate insert
+        assertThat(savedSlot.captured.first().conversationId).isEqualTo(500L) // canonical local id, not 900
+    }
+
+    @Test
+    fun `syncMessages falls back to server conversation id when conversation not synced locally`() = runTest(testDispatcher) {
+        coEvery { localDataService.getSupportConversationByServerId(900L) } returns null
+        coEvery { localDataService.getSupportMessageByServerId(any()) } returns null
+        coEvery { api.getSupportMessages(any()) } returns
+            PaginatedResponse(data = listOf(createMessageDto(id = 952L, body = "hi")))
+        val savedSlot = slot<List<OfflineSupportMessageEntity>>()
+        coJustRun { localDataService.saveSupportMessages(capture(savedSlot)) }
+
+        createService().syncMessages(conversationServerId = 900L)
+
+        // No local conversation yet → keep the DTO's conversationId mapping (no crash, no orphan logic).
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured.first().conversationId).isEqualTo(100L)
+    }
+
+    // ============================================================================
     // Create Conversation Tests
     // ============================================================================
 
