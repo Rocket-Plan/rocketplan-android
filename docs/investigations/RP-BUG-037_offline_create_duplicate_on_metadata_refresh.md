@@ -7,9 +7,9 @@ classification: pre_existing_latent
 source: review
 evidence: reproducible
 found_in: "1.0.00"
-fixed_in: null
+fixed_in: "1.0.00"
 released_in: null
-state: open
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
@@ -75,15 +75,21 @@ and a different `uuid`**, and nothing reconciles them, so Room inserts a second 
 
 End-to-end: create offline → push → trigger `syncProjectMetadata` → two rows for one server id.
 
-## Suggested fix
+## Fix (implemented 2026-06-07)
 
-Reconcile each pulled row to the existing local row **by `serverId`** before upsert (resolve the local
-PK + preserve the local `uuid`), mirroring `RoomSyncService.resolveExistingRoomForSync` and the
-[[RP-BUG-036]] support fix. Apply to the Note / Equipment / MoistureLog / AtmosphericLog pull paths
-(in the mapper via an `existing` lookup, or in the `save*` merge: when a local row exists for the
-incoming `serverId`, update it in place rather than inserting a server-id-PK row). A `getXByServerId`
-lookup exists or is trivial for each. The client-side fix is self-contained; alternatively the backend
-could echo the client uuid, but that is a coordinated change.
+The four `preserveDirty` pull merges (`saveNotes`/`saveEquipment`/`saveMoistureLogs`/
+`saveAtmosphericLogs`) now reconcile by `serverId`: when a **clean** local row already exists for the
+incoming `serverId`, the merged row adopts that local row's PK + `uuid`, so the upsert updates it **in
+place** instead of inserting a server-id-PK duplicate. (Dirty local rows are still preserved per
+RP-FR-003; rows with no local match insert as new.) The merge policy was extracted into a pure
+`mergePulledRowsByServerId` helper so it is unit-testable independent of Room.
+
+Tests: `MergePulledRowsByServerIdTest` (3 cases: clean→update-in-place, dirty→preserve, new→insert);
+`UpsertIdentityProbeTest` documents the underlying `@Upsert` hazard the merge now avoids. Full suite
+green (422 tests).
+
+> Pre-existing duplicates (created before this fix) are not retroactively cleaned — this prevents *new*
+> duplicates. A one-time dedup-by-serverId cleanup could be added if any are found in the wild.
 
 ## Scope
 

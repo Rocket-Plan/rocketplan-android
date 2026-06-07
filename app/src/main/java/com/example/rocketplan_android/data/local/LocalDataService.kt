@@ -1035,13 +1035,14 @@ class LocalDataService private constructor(
             return@withContext
         }
         val existing = dao.getAtmosphericLogsByServerIds(serverIds).associateBy { it.serverId }
-        val merged = logs.map { server ->
-            val local = server.serverId?.let { existing[it] }
-            if (local?.isDirty == true) {
-                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=atmospheric_log serverId=${server.serverId}")
-                local
-            } else server
-        }
+        val merged = mergePulledRowsByServerId(
+            incoming = logs,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=atmospheric_log serverId=$it") },
+            adoptLocalIdentity = { server, local -> server.copy(logId = local.logId, uuid = local.uuid) },
+        )
         dao.upsertAtmosphericLogs(merged)
     }
 
@@ -1148,13 +1149,14 @@ class LocalDataService private constructor(
             return@withContext
         }
         val existing = dao.getEquipmentByServerIds(serverIds).associateBy { it.serverId }
-        val merged = items.map { server ->
-            val local = server.serverId?.let { existing[it] }
-            if (local?.isDirty == true) {
-                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=equipment serverId=${server.serverId}")
-                local
-            } else server
-        }
+        val merged = mergePulledRowsByServerId(
+            incoming = items,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=equipment serverId=$it") },
+            adoptLocalIdentity = { server, local -> server.copy(equipmentId = local.equipmentId, uuid = local.uuid) },
+        )
         dao.upsertEquipment(merged)
     }
 
@@ -1185,13 +1187,14 @@ class LocalDataService private constructor(
             return@withContext
         }
         val existing = dao.getMoistureLogsByServerIds(serverIds).associateBy { it.serverId }
-        val merged = logs.map { server ->
-            val local = server.serverId?.let { existing[it] }
-            if (local?.isDirty == true) {
-                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=moisture_log serverId=${server.serverId}")
-                local
-            } else server
-        }
+        val merged = mergePulledRowsByServerId(
+            incoming = logs,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=moisture_log serverId=$it") },
+            adoptLocalIdentity = { server, local -> server.copy(logId = local.logId, uuid = local.uuid) },
+        )
         dao.upsertMoistureLogs(merged)
     }
 
@@ -1210,13 +1213,14 @@ class LocalDataService private constructor(
             return@withContext
         }
         val existing = dao.getNotesByServerIds(serverIds).associateBy { it.serverId }
-        val merged = notes.map { server ->
-            val local = server.serverId?.let { existing[it] }
-            if (local?.isDirty == true) {
-                Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=note serverId=${server.serverId}")
-                local
-            } else server
-        }
+        val merged = mergePulledRowsByServerId(
+            incoming = notes,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=note serverId=$it") },
+            adoptLocalIdentity = { server, local -> server.copy(noteId = local.noteId, uuid = local.uuid) },
+        )
         dao.upsertNotes(merged)
     }
 
@@ -2141,4 +2145,34 @@ private data class ReferenceMigrationCounts(
 ) {
     fun hasAnyUpdates(): Boolean =
         photos + notes + damages + equipment + atmosphericLogs + moistureLogs + albums + workScopes > 0
+}
+
+/**
+ * Shared pull-merge for entities that are created offline (local autoGenerate PK) and pulled back as a
+ * server list. For each incoming server row, resolve any local row with the same `serverId`:
+ *  - no local row            → take the server row (insert as new),
+ *  - local row is dirty       → keep it (RP-FR-003: do not clobber unsynced local edits),
+ *  - local row is clean       → update it in place by adopting its local PK + uuid (RP-BUG-037: prevents
+ *                               a second row, since the server-minted uuid differs from the local uuid
+ *                               so the unique(uuid) index does not collapse a blind server-id-PK insert).
+ *
+ * Kept as a pure function (no DB/IO) so the merge policy is unit-testable independently of Room.
+ */
+internal fun <T> mergePulledRowsByServerId(
+    incoming: List<T>,
+    existingByServerId: Map<Long?, T>,
+    serverIdOf: (T) -> Long?,
+    isDirty: (T) -> Boolean,
+    onPreserveDirty: (Long?) -> Unit = {},
+    adoptLocalIdentity: (server: T, local: T) -> T,
+): List<T> = incoming.map { server ->
+    val local = serverIdOf(server)?.let { existingByServerId[it] }
+    when {
+        local == null -> server
+        isDirty(local) -> {
+            onPreserveDirty(serverIdOf(server))
+            local
+        }
+        else -> adoptLocalIdentity(server, local)
+    }
 }
