@@ -34,6 +34,13 @@ A user creates a support conversation (or sends a support message) while offline
 syncs successfully, and then the user refreshes (or the conversation/message list re-syncs). The
 conversation/message then appears **twice** in the UI — two rows representing the same server record.
 
+> **Follow-on fix (2026-06-07, line-by-line review):** the initial `syncMessages` reconcile kept the
+> server DTO's `conversationId` in the branch where the conversation was unresolvable
+> (`localConversationId == null`) but the message already existed locally — which could re-point an
+> existing message at the wrong conversation FK. Fixed by also preserving `existing.conversationId`
+> when reconciling an existing message row. Covered by the test "keeps existing local conversationId
+> when conversation unresolvable but message exists."
+
 ## Root Cause (traced, not yet reproduced on device)
 
 The local create and the subsequent server pull produce two rows that share a `serverId` but differ

@@ -369,6 +369,29 @@ class SupportSyncServiceTest {
         assertThat(savedSlot.captured.first().conversationId).isEqualTo(100L)
     }
 
+    @Test
+    fun `syncMessages keeps existing local conversationId when conversation unresolvable but message exists`() = runTest(testDispatcher) {
+        // Conversation not resolvable by serverId here...
+        coEvery { localDataService.getSupportConversationByServerId(900L) } returns null
+        // ...but the message already exists locally, linked to local conversation PK 500.
+        coEvery { localDataService.getSupportMessageByServerId(950L) } returns
+            OfflineSupportMessageEntity(
+                messageId = 700L, serverId = 950L, uuid = "client-msg-uuid",
+                conversationId = 500L, senderId = 5L, senderType = "user", body = "hi"
+            )
+        coEvery { api.getSupportMessages(any()) } returns
+            PaginatedResponse(data = listOf(createMessageDto(id = 950L, body = "hi")))
+        val savedSlot = slot<List<OfflineSupportMessageEntity>>()
+        coJustRun { localDataService.saveSupportMessages(capture(savedSlot)) }
+
+        createService().syncMessages(conversationServerId = 900L)
+
+        // Must preserve the existing local link (500), not overwrite with the DTO's conversationId (100).
+        assertThat(savedSlot.captured).hasSize(1)
+        assertThat(savedSlot.captured.first().messageId).isEqualTo(700L)
+        assertThat(savedSlot.captured.first().conversationId).isEqualTo(500L)
+    }
+
     // ============================================================================
     // Create Conversation Tests
     // ============================================================================

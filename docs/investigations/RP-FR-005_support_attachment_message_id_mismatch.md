@@ -14,7 +14,7 @@ release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: null
-related_review: null
+related_review: docs/reviews/code_review_rp_fr_005_2026-06-07.md
 related_test: app/src/test/java/com/example/rocketplan_android/data/repository/sync/SupportSyncServiceTest.kt
 violates: RP-CD-014
 priority: P3

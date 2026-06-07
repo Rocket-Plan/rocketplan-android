@@ -126,7 +126,15 @@ class SupportSyncService(
                 val existing = attached.serverId?.let { localDataService.getSupportMessageByServerId(it) }
                 if (existing != null) {
                     reconciled++
-                    attached.copy(messageId = existing.messageId, uuid = existing.uuid)
+                    // Preserve the existing local row's canonical conversation FK as well: when the
+                    // conversation isn't resolvable here (localConversationId == null), `attached`
+                    // still carries the server DTO's conversation id, which must not overwrite the
+                    // message's existing local link.
+                    attached.copy(
+                        messageId = existing.messageId,
+                        uuid = existing.uuid,
+                        conversationId = existing.conversationId
+                    )
                 } else {
                     attached
                 }
