@@ -1384,6 +1384,9 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_support_message_attachments WHERE messageId = :messageId ORDER BY attachmentId")
     suspend fun getAttachmentsForSupportMessage(messageId: Long): List<OfflineSupportMessageAttachmentEntity>
+
+    @Query("SELECT * FROM offline_support_message_attachments WHERE serverId = :serverId LIMIT 1")
+    suspend fun getSupportMessageAttachmentByServerId(serverId: Long): OfflineSupportMessageAttachmentEntity?
     // endregion
 
     // region Roles

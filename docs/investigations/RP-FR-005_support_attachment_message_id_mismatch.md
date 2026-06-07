@@ -79,6 +79,10 @@ the attachment. If the owning message cannot be resolved, the attachments are sk
 `SupportSyncServiceTest` ("saves attachments when present" asserts the local PK; "skips attachments
 when owning message cannot be resolved").
 
+> While fixing this, the attachment **duplicate-on-refresh** sibling was found and tracked as
+> [[RP-FR-006]] (now also fixed): the attachment pull did no `serverId` reconciliation, so a re-pull
+> inserted a new row per server attachment id.
+
 ### Original suggested fix (for reference)
 
 Resolve the attachment's owning message to its **canonical local message PK** before persisting —

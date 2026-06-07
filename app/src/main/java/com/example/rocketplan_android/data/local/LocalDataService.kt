@@ -1940,6 +1940,9 @@ class LocalDataService private constructor(
 
     suspend fun getAttachmentsForSupportMessage(messageId: Long): List<OfflineSupportMessageAttachmentEntity> =
         withContext(ioDispatcher) { dao.getAttachmentsForSupportMessage(messageId) }
+
+    suspend fun getSupportMessageAttachmentByServerId(serverId: Long): OfflineSupportMessageAttachmentEntity? =
+        withContext(ioDispatcher) { dao.getSupportMessageAttachmentByServerId(serverId) }
     // endregion
 
     // region Roles

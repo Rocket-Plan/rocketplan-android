@@ -239,6 +239,38 @@ class SupportSyncServiceTest {
     }
 
     @Test
+    fun `syncMessages reconciles attachment by serverId preserving local PK (RP-FR-006)`() = runTest(testDispatcher) {
+        val attachment = SupportMessageAttachmentDto(
+            id = 50L, messageId = 10L, fileName = "screenshot.png",
+            fileUrl = "https://example.com/screenshot.png", fileSize = 2048, mimeType = "image/png"
+        )
+        val dto = createMessageDto(id = 10L, body = "See attached", attachments = listOf(attachment))
+        coEvery { api.getSupportMessages(any()) } returns PaginatedResponse(data = listOf(dto))
+        coEvery { localDataService.getSupportMessageByServerId(10L) } returns
+            OfflineSupportMessageEntity(
+                messageId = 700L, serverId = 10L, uuid = "msg-uuid",
+                conversationId = 500L, senderId = 5L, senderType = "user", body = "See attached"
+            )
+        // Attachment already exists locally (serverId 50 → local PK 999, with a downloaded localPath).
+        coEvery { localDataService.getSupportMessageAttachmentByServerId(50L) } returns
+            OfflineSupportMessageAttachmentEntity(
+                attachmentId = 999L, serverId = 50L, messageId = 700L, fileName = "screenshot.png",
+                fileUrl = "https://example.com/screenshot.png", localPath = "/cache/x.png",
+                fileSize = 2048, mimeType = "image/png"
+            )
+        val saved = slot<List<OfflineSupportMessageAttachmentEntity>>()
+        coJustRun { localDataService.saveSupportMessageAttachments(capture(saved)) }
+
+        createService().syncMessages(100L)
+
+        assertThat(saved.captured).hasSize(1)
+        // Updated in place: keep the local PK (and the cached localPath), do not insert a duplicate.
+        assertThat(saved.captured.first().attachmentId).isEqualTo(999L)
+        assertThat(saved.captured.first().messageId).isEqualTo(700L)
+        assertThat(saved.captured.first().localPath).isEqualTo("/cache/x.png")
+    }
+
+    @Test
     fun `syncMessages does not save attachments when none present`() = runTest(testDispatcher) {
         val dto = createMessageDto(id = 10L, body = "No attachment")
         val response = PaginatedResponse(data = listOf(dto))

@@ -159,12 +159,17 @@ class SupportSyncService(
                     return@flatMap emptyList()
                 }
                 dtoAttachments.map { attachment ->
+                    // RP-FR-006: reconcile by serverId so a re-pull updates the existing attachment
+                    // row in place instead of inserting a duplicate (PK is autoGenerate and the
+                    // serverId index is non-unique, so a blind upsert would duplicate per re-pull).
+                    val existingAttachment = localDataService.getSupportMessageAttachmentByServerId(attachment.id)
                     OfflineSupportMessageAttachmentEntity(
+                        attachmentId = existingAttachment?.attachmentId ?: 0,
                         serverId = attachment.id,
                         messageId = localMessageId,
                         fileName = attachment.fileName ?: "",
                         fileUrl = attachment.fileUrl,
-                        localPath = null,
+                        localPath = existingAttachment?.localPath,
                         fileSize = attachment.fileSize ?: 0,
                         mimeType = attachment.mimeType
                     )
