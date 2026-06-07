@@ -2051,10 +2051,35 @@ class LocalDataService private constructor(
         dao.upsertTimecard(timecard)
     }
 
-    suspend fun saveTimecards(timecards: List<OfflineTimecardEntity>) = withContext(ioDispatcher) {
-        if (timecards.isNotEmpty()) {
+    suspend fun saveTimecards(
+        timecards: List<OfflineTimecardEntity>,
+        reconcileByServerId: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (timecards.isEmpty()) return@withContext
+        if (!reconcileByServerId) {
             dao.upsertTimecards(timecards)
+            return@withContext
         }
+        val serverIds = timecards.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertTimecards(timecards)
+            return@withContext
+        }
+        // RP-BUG-039 (+ RP-BUG-038 class): a timecard created offline keeps a local (negative) PK and
+        // gains a serverId on push; the backend returns no timecard uuid so a pulled timecard has a
+        // server-id PK and a freshly-generated uuid. Reconcile by serverId — keep a dirty local row
+        // (RP-FR-003) or adopt the local PK + uuid for a clean one — so the pull updates in place
+        // instead of inserting a duplicate.
+        val existing = dao.getTimecardsByServerIds(serverIds).associateBy { it.serverId }
+        val merged = mergePulledRowsByServerId(
+            incoming = timecards,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=timecard serverId=$it") },
+            adoptLocalIdentity = { server, local -> server.copy(timecardId = local.timecardId, uuid = local.uuid) },
+        )
+        dao.upsertTimecards(merged)
     }
 
     suspend fun markTimecardDeleted(timecardId: Long) = withContext(ioDispatcher) {

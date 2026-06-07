@@ -70,12 +70,20 @@ class TimecardViewModel(
     init {
         loadUserContext()
         syncTimecardTypes()
+        syncTimecards()
         observeTimecards()
     }
 
     private fun syncTimecardTypes() {
         viewModelScope.launch(Dispatchers.IO) {
             timecardSyncService.syncTimecardTypes()
+        }
+    }
+
+    // RP-BUG-039: pull server-side timecards (admin/web/other-device) so they appear locally.
+    private fun syncTimecards() {
+        viewModelScope.launch(Dispatchers.IO) {
+            timecardSyncService.syncTimecards(projectId)
         }
     }
 

@@ -1458,6 +1458,9 @@ interface OfflineDao {
     @Upsert
     suspend fun upsertTimecards(timecards: List<OfflineTimecardEntity>)
 
+    @Query("SELECT * FROM offline_timecards WHERE serverId IN (:serverIds)")
+    suspend fun getTimecardsByServerIds(serverIds: List<Long>): List<OfflineTimecardEntity>
+
     @Query("SELECT * FROM offline_timecards WHERE projectId = :projectId AND isDeleted = 0 ORDER BY timeIn DESC")
     fun observeTimecardsForProject(projectId: Long): Flow<List<OfflineTimecardEntity>>
 

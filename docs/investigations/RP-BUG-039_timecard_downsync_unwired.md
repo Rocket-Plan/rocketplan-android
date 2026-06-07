@@ -7,15 +7,15 @@ classification: pre_existing_latent
 source: review
 evidence: inferred
 found_in: "1.0.00"
-fixed_in: null
+fixed_in: "1.0.00"
 released_in: null
-state: open
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: null
 related_review: null
-related_test: null
+related_test: app/src/test/java/com/example/rocketplan_android/data/repository/sync/TimecardSyncServiceTest.kt
 priority: P2
 last_updated: 2026-06-07
 ---
@@ -75,15 +75,20 @@ must wire the pull **and** add serverId reconcile to `saveTimecards` in the same
 | Backend list source | `ProjectTimecardsController.index` (paginated `TimeCardResource`) |
 | System assumes round-trip | `DeletedRecordsSyncService` → `markTimecardsDeleted` |
 
-## Suggested fix
+## Fix (implemented 2026-06-07)
 
-1. Wire a timecard down-sync (e.g. in the project-metadata or a dedicated timecard sync step), calling
-   `getTimecards(projectId, updatedSince)` with the incremental checkpoint and persisting via
-   `saveTimecards`.
-2. In the same change, add serverId reconciliation to `saveTimecards` (mirror
-   `mergePulledRowsByServerId`: `isDirty = { it.isDirty }`, adopt local `timecardId` + `uuid`) so the
-   newly-wired pull does not duplicate offline-created timecards (RP-BUG-038 class).
-3. Add a checkpoint store entry for incremental timecard pull if appropriate.
+1. `TimecardSyncService.syncTimecards(projectId)` pulls `GET /api/projects/{id}/timecards` and persists
+   via `saveTimecards(..., reconcileByServerId = true)`. Wired into `TimecardViewModel.init` (alongside
+   `syncTimecardTypes`), so opening the timecard screen pulls server-side timecards.
+2. `saveTimecards` gained a `reconcileByServerId` path using the shared `mergePulledRowsByServerId`
+   helper (`isDirty = { it.isDirty }`, adopt local `timecardId` + `uuid`) + a new
+   `getTimecardsByServerIds` query — so the now-live pull updates an offline-created timecard in place
+   instead of duplicating it (RP-BUG-038 class).
+3. Tests: `TimecardSyncServiceTest` (pull persists with reconcile enabled; API-error path). Full suite
+   green (425 tests).
+
+> Follow-up (not blocking): the pull is currently a full fetch on screen open; the `updatedSince`
+> incremental filter + a checkpoint-store entry could be added later as an optimization.
 
 ## Observability
 

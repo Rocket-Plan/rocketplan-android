@@ -45,6 +45,25 @@ class TimecardSyncService(
     }
 
     /**
+     * RP-BUG-039: pulls the project's timecards from the server and persists them, so timecards
+     * created elsewhere (admin/web, or another device) appear locally. Reconciles by serverId so an
+     * offline-created timecard that has synced is updated in place rather than duplicated.
+     */
+    suspend fun syncTimecards(projectId: Long): Result<List<OfflineTimecardEntity>> = withContext(ioDispatcher) {
+        try {
+            Log.d(TAG, "Syncing timecards for project $projectId...")
+            val response = api.getTimecards(projectId)
+            val entities = response.data.map { it.toEntity() }
+            localDataService.saveTimecards(entities, reconcileByServerId = true)
+            Log.d(TAG, "Synced ${entities.size} timecards for project $projectId")
+            Result.success(entities)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to sync timecards for project $projectId: ${e.message}", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
      * Clock in: Create a new timecard with the current time as timeIn.
      */
     suspend fun clockIn(
