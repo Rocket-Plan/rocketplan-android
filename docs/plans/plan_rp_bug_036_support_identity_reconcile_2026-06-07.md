@@ -61,7 +61,9 @@ longer be created, so a counted reconcile log is the more useful signal.
 ## Out of scope
 - Sending/echoing client `uuid` on create (needs coordinated backend change). Client-side `serverId`
   reconciliation is the self-contained fix.
-- Attachment keying (`messageId = dto.id` in `syncMessages`) — separate concern, not addressed here.
+- Attachment keying (`messageId = dto.id` in `syncMessages`) — separate concern, tracked as
+  [RP-FR-005](../investigations/RP-FR-005_support_attachment_message_id_mismatch.md) (latent). Not
+  addressed here.
 
 ## Lifecycle
 `open → planned` on writing this; `→ fixed` when the change + tests land.
