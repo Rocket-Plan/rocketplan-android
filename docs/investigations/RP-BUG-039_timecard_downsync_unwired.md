@@ -14,7 +14,7 @@ release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: null
-related_review: null
+related_review: docs/reviews/code_review_rp_bug_039_2026-06-07.md
 related_test: app/src/test/java/com/example/rocketplan_android/data/repository/sync/TimecardSyncServiceTest.kt
 priority: P2
 last_updated: 2026-06-07

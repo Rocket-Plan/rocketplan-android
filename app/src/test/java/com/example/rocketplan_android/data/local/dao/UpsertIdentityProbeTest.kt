@@ -6,6 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.rocketplan_android.data.local.OfflineDatabase
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
+import com.example.rocketplan_android.data.local.entity.OfflineTimecardEntity
+import com.example.rocketplan_android.data.local.mergePulledRowsByServerId
 import com.google.common.truth.Truth.assertThat
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -14,6 +16,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Date
 
 /**
  * Deterministic probe for the RP-BUG-036-family question: when a server pull maps a row to a NEW
@@ -73,5 +76,53 @@ class UpsertIdentityProbeTest {
         val rows = dao.getNotesByServerIds(listOf(500L))
         // PROBE RESULT: the unique(uuid) index collapses them — exactly one row survives.
         assertThat(rows).hasSize(1)
+    }
+
+    private fun timecard(timecardId: Long, serverId: Long?, uuid: String, isDirty: Boolean = false) =
+        OfflineTimecardEntity(
+            timecardId = timecardId,
+            serverId = serverId,
+            uuid = uuid,
+            projectId = 100L,
+            userId = 5L,
+            timeIn = Date(0L),
+            companyId = 7L,
+            isDirty = isDirty,
+            syncStatus = if (serverId == null) SyncStatus.PENDING else SyncStatus.SYNCED,
+        )
+
+    @Test
+    fun `timecard plain upsert duplicates an offline-created row on pull (RP-BUG-039 baseline)`() = runTest {
+        // Offline-created timecard, synced: local negative PK, client uuid, serverId 900.
+        dao.upsertTimecards(listOf(timecard(timecardId = -100L, serverId = 900L, uuid = "client-uuid")))
+        // Backend returns no timecard uuid → mapper makes a fresh random uuid; pull PK = server id.
+        dao.upsertTimecards(listOf(timecard(timecardId = 900L, serverId = 900L, uuid = "server-uuid")))
+
+        // Without reconciliation a plain upsert leaves TWO rows for the same serverId.
+        assertThat(dao.getTimecardsByServerIds(listOf(900L))).hasSize(2)
+    }
+
+    @Test
+    fun `timecard saveTimecards serverId reconcile keeps one row with local identity (RP-BUG-039)`() = runTest {
+        // Offline-created timecard, synced: local negative PK, client uuid, serverId 900.
+        dao.upsertTimecards(listOf(timecard(timecardId = -100L, serverId = 900L, uuid = "client-uuid")))
+        val pulled = listOf(timecard(timecardId = 900L, serverId = 900L, uuid = "server-uuid"))
+
+        // Mirror LocalDataService.saveTimecards(reconcileByServerId = true).
+        val existing = dao.getTimecardsByServerIds(listOf(900L)).associateBy { it.serverId }
+        val merged = mergePulledRowsByServerId(
+            incoming = pulled,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            adoptLocalIdentity = { server, local -> server.copy(timecardId = local.timecardId, uuid = local.uuid) },
+        )
+        dao.upsertTimecards(merged)
+
+        val rows = dao.getTimecardsByServerIds(listOf(900L))
+        // Exactly one row, updated in place under the local identity — no duplicate.
+        assertThat(rows).hasSize(1)
+        assertThat(rows.first().timecardId).isEqualTo(-100L)
+        assertThat(rows.first().uuid).isEqualTo("client-uuid")
     }
 }
