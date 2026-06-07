@@ -83,26 +83,46 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val equipment = ctx.localDataService.getEquipmentByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
+        val serverId = equipment.serverId
+        if (serverId == null) {
+            // Never reached server; resolve the delete locally.
+            ctx.localDataService.saveEquipment(listOf(deletedCopy(equipment)))
+            return OperationOutcome.SUCCESS
+        }
         val lockUpdatedAt = (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
-        return try {
-            val synced = pushPendingEquipmentDeletion(equipment, lockUpdatedAt)
-            synced?.let { ctx.localDataService.saveEquipment(listOf(it)) }
-            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
-        } catch (e: Exception) {
-            if (e.isValidationError()) {
+        // RP-BUG-040: Response<Unit> never throws on HTTP errors — inspect the response, recover from a
+        // stale-timestamp 409 by retrying without the lock, and DROP on 422. Transient errors → RETRY.
+        val outcome = try {
+            resolveDeleteWithStaleRetry(lockUpdatedAt) { ts ->
+                ctx.api.deleteEquipment(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Log.w(SYNC_TAG, "EquipmentPushHandler delete error; retrying", e)
+            return OperationOutcome.RETRY
+        }
+        outcome?.let {
+            if (it == OperationOutcome.DROP) {
                 Log.w(SYNC_TAG, "Dropping equipment delete ${equipment.uuid}: server validation error (422)")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "Equipment delete dropped - 422 validation error",
-                    mapOf("equipmentUuid" to equipment.uuid, "serverId" to (equipment.serverId?.toString() ?: "null"))
+                    mapOf("equipmentUuid" to equipment.uuid, "serverId" to serverId.toString())
                 )
-                OperationOutcome.DROP
-            } else {
-                if (e is CancellationException) throw e
-                Log.w(SYNC_TAG, "EquipmentPushHandler delete unknown error; retrying", e)
-                OperationOutcome.RETRY
             }
+            return it
         }
+        DeletionTombstoneCache.clearTombstone("equipment", serverId)
+        ctx.localDataService.saveEquipment(listOf(deletedCopy(equipment)))
+        return OperationOutcome.SUCCESS
     }
+
+    private fun deletedCopy(equipment: OfflineEquipmentEntity) = equipment.copy(
+        isDeleted = true,
+        isDirty = false,
+        syncStatus = SyncStatus.SYNCED,
+        lastSyncedAt = ctx.now()
+    )
 
     private suspend fun handle409Conflict(
         error: HttpException,
@@ -236,51 +256,6 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         return synced
     }
 
-    private suspend fun pushPendingEquipmentDeletion(
-        equipment: OfflineEquipmentEntity,
-        lockUpdatedAt: String? = null
-    ): OfflineEquipmentEntity? {
-        if (equipment.serverId == null) {
-            // Never reached server; treat as resolved locally
-            return equipment.copy(
-                isDeleted = true,
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = ctx.now()
-            )
-        }
-
-        val deleteRequest = DeleteWithTimestampRequest(
-            updatedAt = lockUpdatedAt ?: (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
-        )
-        return runCatching {
-            ctx.api.deleteEquipment(equipment.serverId, deleteRequest)
-            // Clear tombstone now that server confirmed deletion
-            DeletionTombstoneCache.clearTombstone("equipment", equipment.serverId)
-            equipment.copy(
-                isDeleted = true,
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = ctx.now()
-            )
-        }.recoverCatching { error ->
-            when {
-                error.isMissingOnServer() -> {
-                    // Clear tombstone - item is already gone from server
-                    DeletionTombstoneCache.clearTombstone("equipment", equipment.serverId)
-                    equipment.copy(
-                        isDeleted = true,
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED,
-                        lastSyncedAt = ctx.now()
-                    )
-                }
-                else -> throw error
-            }
-        }.onFailure {
-            Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Failed to delete equipment ${equipment.uuid}", it)
-        }.getOrElse { throw it }
-    }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
         val project = ctx.localDataService.getProject(projectId)

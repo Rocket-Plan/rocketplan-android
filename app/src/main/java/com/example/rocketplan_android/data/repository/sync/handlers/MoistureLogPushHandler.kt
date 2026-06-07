@@ -57,26 +57,46 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val log = ctx.localDataService.getMoistureLogByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
+        val serverId = log.serverId
+        if (serverId == null) {
+            // Never reached server; resolve the delete locally.
+            ctx.localDataService.saveMoistureLogs(listOf(deletedCopy(log)))
+            return OperationOutcome.SUCCESS
+        }
         val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
-        return try {
-            val synced = pushPendingMoistureLogDeletion(log, lockUpdatedAt)
-            synced?.let { ctx.localDataService.saveMoistureLogs(listOf(it)) }
-            if (synced != null) OperationOutcome.SUCCESS else OperationOutcome.SKIP
-        } catch (e: Exception) {
-            if (e.isValidationError()) {
+        // RP-BUG-040: Response<Unit> never throws on HTTP errors — inspect the response, recover from a
+        // stale-timestamp 409 by retrying without the lock, and DROP on 422. Transient errors → RETRY.
+        val outcome = try {
+            resolveDeleteWithStaleRetry(lockUpdatedAt) { ts ->
+                ctx.api.deleteMoistureLog(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            Log.w(SYNC_TAG, "MoistureLogPushHandler delete error; retrying", e)
+            return OperationOutcome.RETRY
+        }
+        outcome?.let {
+            if (it == OperationOutcome.DROP) {
                 Log.w(SYNC_TAG, "Dropping moisture log delete ${log.uuid}: server validation error (422)")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "Moisture log delete dropped - 422 validation error",
-                    mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
+                    mapOf("logUuid" to log.uuid, "serverId" to serverId.toString())
                 )
-                OperationOutcome.DROP
-            } else {
-                if (e is CancellationException) throw e
-                Log.w(SYNC_TAG, "MoistureLogPushHandler delete unknown error; retrying", e)
-                OperationOutcome.RETRY
             }
+            return it
         }
+        DeletionTombstoneCache.clearTombstone("moisture_log", serverId)
+        ctx.localDataService.saveMoistureLogs(listOf(deletedCopy(log)))
+        return OperationOutcome.SUCCESS
     }
+
+    private fun deletedCopy(log: OfflineMoistureLogEntity) = log.copy(
+        isDeleted = true,
+        isDirty = false,
+        syncStatus = SyncStatus.SYNCED,
+        lastSyncedAt = ctx.now()
+    )
 
     private suspend fun handle409Conflict(
         error: HttpException,
@@ -239,51 +259,6 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
         }.getOrElse { throw it }
 
         return synced
-    }
-
-    private suspend fun pushPendingMoistureLogDeletion(
-        log: OfflineMoistureLogEntity,
-        lockUpdatedAt: String? = null
-    ): OfflineMoistureLogEntity? {
-        if (log.serverId == null) {
-            return log.copy(
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                isDeleted = true,
-                lastSyncedAt = ctx.now()
-            )
-        }
-
-        val deleteRequest = DeleteWithTimestampRequest(
-            updatedAt = lockUpdatedAt ?: (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
-        )
-        return runCatching {
-            ctx.api.deleteMoistureLog(log.serverId, deleteRequest)
-            // Clear tombstone now that server confirmed deletion
-            DeletionTombstoneCache.clearTombstone("moisture_log", log.serverId)
-            log.copy(
-                isDeleted = true,
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                lastSyncedAt = ctx.now()
-            )
-        }.recoverCatching { error ->
-            when {
-                error.isMissingOnServer() -> {
-                    // Clear tombstone - item is already gone from server
-                    DeletionTombstoneCache.clearTombstone("moisture_log", log.serverId)
-                    log.copy(
-                        isDeleted = true,
-                        isDirty = false,
-                        syncStatus = SyncStatus.SYNCED,
-                        lastSyncedAt = ctx.now()
-                    )
-                }
-                else -> throw error
-            }
-        }.onFailure {
-            Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLog] Failed to delete log ${log.uuid}", it)
-        }.getOrElse { throw it }
     }
 
     private suspend fun ensureMaterialSynced(

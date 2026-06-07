@@ -281,20 +281,19 @@ class LocationPushHandler(private val ctx: PushHandlerContext) {
             return OperationOutcome.SUCCESS
         }
         val lockUpdatedAt = (location.serverUpdatedAt ?: location.updatedAt).toApiTimestamp()
-        try {
-            ctx.api.deleteLocation(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
-        } catch (error: Throwable) {
-            if (error.isValidationError()) {
+        // RP-BUG-040: Response<Unit> never throws on HTTP errors — inspect the response, recover from a
+        // stale-timestamp 409 by retrying without the lock, and DROP on 422.
+        resolveDeleteThrowingWithStaleRetry(lockUpdatedAt) { ts ->
+            ctx.api.deleteLocation(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+        }?.let { outcome ->
+            if (outcome == OperationOutcome.DROP) {
                 Log.w(SYNC_TAG, "Dropping location delete $serverId: server validation error (422)")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "Location delete dropped - 422 validation error",
                     mapOf("locationServerId" to serverId.toString(), "locationUuid" to location.uuid)
                 )
-                return OperationOutcome.DROP
             }
-            if (!error.isMissingOnServer()) {
-                throw error
-            }
+            return outcome
         }
         cascadeDeleteLocation(location)
         // Clear tombstone now that server confirmed deletion

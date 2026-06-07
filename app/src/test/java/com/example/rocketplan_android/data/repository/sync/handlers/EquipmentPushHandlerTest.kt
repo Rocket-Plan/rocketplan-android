@@ -294,7 +294,7 @@ class EquipmentPushHandlerTest {
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } throws PushHandlerTestFixtures.create404Response()
+        coEvery { api.deleteEquipment(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(404)
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleDelete(operation)
@@ -311,7 +311,7 @@ class EquipmentPushHandlerTest {
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } throws PushHandlerTestFixtures.create410Response()
+        coEvery { api.deleteEquipment(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(410)
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleDelete(operation)
@@ -328,7 +328,7 @@ class EquipmentPushHandlerTest {
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } throws PushHandlerTestFixtures.create422Response()
+        coEvery { api.deleteEquipment(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(422)
 
         val result = handler.handleDelete(operation)
 

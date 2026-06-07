@@ -529,7 +529,7 @@ class MoistureLogPushHandlerTest {
         )
 
         coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
-        coEvery { api.deleteMoistureLog(7000L, any()) } throws PushHandlerTestFixtures.create404Response()
+        coEvery { api.deleteMoistureLog(7000L, any()) } returns PushHandlerTestFixtures.errorResponse(404)
 
         val result = handler.handleDelete(operation)
 
@@ -550,7 +550,7 @@ class MoistureLogPushHandlerTest {
         )
 
         coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
-        coEvery { api.deleteMoistureLog(7000L, any()) } throws PushHandlerTestFixtures.create410Response()
+        coEvery { api.deleteMoistureLog(7000L, any()) } returns PushHandlerTestFixtures.errorResponse(410)
 
         val result = handler.handleDelete(operation)
 
@@ -571,7 +571,7 @@ class MoistureLogPushHandlerTest {
         )
 
         coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
-        coEvery { api.deleteMoistureLog(7000L, any()) } throws PushHandlerTestFixtures.create422Response()
+        coEvery { api.deleteMoistureLog(7000L, any()) } returns PushHandlerTestFixtures.errorResponse(422)
 
         val result = handler.handleDelete(operation)
 

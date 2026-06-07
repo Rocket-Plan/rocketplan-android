@@ -486,20 +486,19 @@ class RoomPushHandler(
         val serverId = room.serverId
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = (room.serverUpdatedAt ?: room.updatedAt).toApiTimestamp()
-        try {
-            ctx.api.deleteRoom(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
-        } catch (error: Throwable) {
-            if (error.isValidationError()) {
+        // RP-BUG-040: Response<Unit> never throws on HTTP errors — inspect the response, recover from a
+        // stale-timestamp 409 by retrying without the lock, and DROP on 422.
+        resolveDeleteThrowingWithStaleRetry(lockUpdatedAt) { ts ->
+            ctx.api.deleteRoom(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+        }?.let { outcome ->
+            if (outcome == OperationOutcome.DROP) {
                 Log.w(SYNC_TAG, "Dropping room delete $serverId: server validation error (422)")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "Room delete dropped - 422 validation error",
                     mapOf("roomServerId" to serverId.toString(), "roomUuid" to room.uuid)
                 )
-                return OperationOutcome.DROP
             }
-            if (!error.isMissingOnServer()) {
-                throw error
-            }
+            return outcome
         }
         val cleaned = room.copy(
             isDeleted = true,

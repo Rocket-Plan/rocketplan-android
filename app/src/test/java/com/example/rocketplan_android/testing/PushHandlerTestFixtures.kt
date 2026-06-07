@@ -393,6 +393,14 @@ object PushHandlerTestFixtures {
 
     // ===== HTTP Error Helpers =====
 
+    /**
+     * A non-2xx `Response<Unit>` for delete endpoints that return `Response<Unit>` — Retrofit RETURNS
+     * this (it does NOT throw) on an HTTP error, which is the realistic behaviour the delete handlers
+     * must inspect (RP-BUG-040).
+     */
+    fun errorResponse(code: Int): Response<Unit> =
+        Response.error(code, """{"error":"$code"}""".toResponseBody("application/json".toMediaType()))
+
     fun create409WithUpdatedAt(updatedAt: String = "2026-01-30T12:00:00.000000Z"): HttpException {
         val body = """{"updated_at":"$updatedAt"}"""
         val responseBody = body.toResponseBody("application/json".toMediaType())

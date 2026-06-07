@@ -184,20 +184,18 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = (note.serverUpdatedAt ?: note.updatedAt).toApiTimestamp()
 
-        val response = ctx.api.deleteNote(
-            serverId,
-            DeleteWithTimestampRequest(updatedAt = lockUpdatedAt)
-        )
-        if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
-            if (response.code() == 422) {
+        // RP-BUG-040: recover from a stale-timestamp 409 by retrying the delete without the lock; DROP on 422.
+        resolveDeleteWithStaleRetry(lockUpdatedAt) { ts ->
+            ctx.api.deleteNote(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+        }?.let { outcome ->
+            if (outcome == OperationOutcome.DROP) {
                 Log.w(SYNC_TAG, "Dropping note delete ${note.uuid}: server validation error (422)")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "Note delete dropped - 422 validation error",
                     mapOf("noteUuid" to note.uuid, "serverId" to (note.serverId?.toString() ?: "null"))
                 )
-                return OperationOutcome.DROP
             }
-            throw HttpException(response)
+            return outcome
         }
 
         val cleaned = note.copy(

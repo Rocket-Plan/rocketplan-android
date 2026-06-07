@@ -218,26 +218,18 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.SUCCESS
         val lockUpdatedAt = (log.serverUpdatedAt ?: log.updatedAt).toApiTimestamp()
 
-        try {
-            val response = ctx.api.deleteAtmosphericLog(
-                serverId,
-                DeleteWithTimestampRequest(updatedAt = lockUpdatedAt)
-            )
-            if (!response.isSuccessful && response.code() !in listOf(404, 410)) {
-                throw HttpException(response)
-            }
-        } catch (error: Throwable) {
-            if (error.isValidationError()) {
+        // RP-BUG-040: recover from a stale-timestamp 409 by retrying the delete without the lock; DROP on 422.
+        resolveDeleteWithStaleRetry(lockUpdatedAt) { ts ->
+            ctx.api.deleteAtmosphericLog(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+        }?.let { outcome ->
+            if (outcome == OperationOutcome.DROP) {
                 Log.w(TAG, "Dropping atmospheric log delete ${log.uuid}: server validation error (422)")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, TAG, "Atmospheric log delete dropped - 422 validation error",
                     mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
                 )
-                return OperationOutcome.DROP
             }
-            if (!error.isMissingOnServer()) {
-                throw error
-            }
+            return outcome
         }
 
         val cleaned = log.copy(

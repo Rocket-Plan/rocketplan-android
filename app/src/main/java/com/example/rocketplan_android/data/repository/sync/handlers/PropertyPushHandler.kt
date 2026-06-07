@@ -324,20 +324,19 @@ class PropertyPushHandler(private val ctx: PushHandlerContext) {
             return OperationOutcome.SUCCESS
         }
         val lockUpdatedAt = (property.serverUpdatedAt ?: property.updatedAt).toApiTimestamp()
-        try {
-            ctx.api.deleteProperty(serverId, DeleteWithTimestampRequest(updatedAt = lockUpdatedAt))
-        } catch (error: Throwable) {
-            if (error.isValidationError()) {
+        // RP-BUG-040: Response<Unit> never throws on HTTP errors — inspect the response, recover from a
+        // stale-timestamp 409 by retrying without the lock, and DROP on 422.
+        resolveDeleteThrowingWithStaleRetry(lockUpdatedAt) { ts ->
+            ctx.api.deleteProperty(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+        }?.let { outcome ->
+            if (outcome == OperationOutcome.DROP) {
                 Log.w(SYNC_TAG, "Dropping property delete $serverId: server validation error (422)")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "Property delete dropped - 422 validation error",
                     mapOf("propertyServerId" to serverId.toString())
                 )
-                return OperationOutcome.DROP
             }
-            if (!error.isMissingOnServer()) {
-                throw error
-            }
+            return outcome
         }
         // Mark as soft-deleted following Room/Photo pattern
         val cleaned = property.copy(
