@@ -205,11 +205,37 @@ class SupportSyncServiceTest {
         val response = PaginatedResponse(data = listOf(dto))
 
         coEvery { api.getSupportMessages(100L) } returns response
+        // RP-FR-005: attachment FK is resolved to the LOCAL message PK via the server message id.
+        coEvery { localDataService.getSupportMessageByServerId(10L) } returns
+            OfflineSupportMessageEntity(
+                messageId = 700L, serverId = 10L, uuid = "msg-uuid",
+                conversationId = 500L, senderId = 5L, senderType = "user", body = "See attached"
+            )
 
         val service = createService()
         service.syncMessages(100L)
 
-        coVerify { localDataService.saveSupportMessageAttachments(match { it.size == 1 && it.first().fileName == "screenshot.png" }) }
+        coVerify {
+            localDataService.saveSupportMessageAttachments(
+                match { it.size == 1 && it.first().fileName == "screenshot.png" && it.first().messageId == 700L }
+            )
+        }
+    }
+
+    @Test
+    fun `syncMessages skips attachments when owning message cannot be resolved (RP-FR-005)`() = runTest(testDispatcher) {
+        val attachment = SupportMessageAttachmentDto(
+            id = 50L, messageId = 10L, fileName = "x.png",
+            fileUrl = "https://example.com/x.png", fileSize = 1, mimeType = "image/png"
+        )
+        val dto = createMessageDto(id = 10L, body = "See attached", attachments = listOf(attachment))
+        coEvery { api.getSupportMessages(any()) } returns PaginatedResponse(data = listOf(dto))
+        coEvery { localDataService.getSupportMessageByServerId(any()) } returns null
+
+        createService().syncMessages(100L)
+
+        // Better to skip than key the attachment by the wrong (server) id.
+        coVerify(exactly = 0) { localDataService.saveSupportMessageAttachments(any()) }
     }
 
     @Test

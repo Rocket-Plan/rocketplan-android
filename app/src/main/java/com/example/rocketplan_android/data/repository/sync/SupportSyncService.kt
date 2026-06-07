@@ -139,18 +139,28 @@ class SupportSyncService(
             )
 
             // Save attachments
+            // RP-FR-005: the attachment FK must hold the LOCAL message PK, not dto.id (the server
+            // message id). Resolve it via getSupportMessageByServerId — messages are saved above, so
+            // both reconciled and newly-inserted rows are now resolvable by their server id.
             val attachments = response.data.flatMap { dto ->
-                dto.attachments?.map { attachment ->
+                val dtoAttachments = dto.attachments ?: return@flatMap emptyList()
+                if (dtoAttachments.isEmpty()) return@flatMap emptyList()
+                val localMessageId = localDataService.getSupportMessageByServerId(dto.id)?.messageId
+                if (localMessageId == null) {
+                    Log.w(TAG, "support_attachment_unresolved_message: serverMessageId=${dto.id} skipped=${dtoAttachments.size}")
+                    return@flatMap emptyList()
+                }
+                dtoAttachments.map { attachment ->
                     OfflineSupportMessageAttachmentEntity(
                         serverId = attachment.id,
-                        messageId = dto.id,
+                        messageId = localMessageId,
                         fileName = attachment.fileName ?: "",
                         fileUrl = attachment.fileUrl,
                         localPath = null,
                         fileSize = attachment.fileSize ?: 0,
                         mimeType = attachment.mimeType
                     )
-                } ?: emptyList()
+                }
             }
             if (attachments.isNotEmpty()) {
                 localDataService.saveSupportMessageAttachments(attachments)

@@ -7,15 +7,15 @@ classification: pre_existing_latent
 source: review
 evidence: inferred
 found_in: "1.0.00"
-fixed_in: null
+fixed_in: "1.0.00"
 released_in: null
-state: open
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: null
 related_review: null
-related_test: null
+related_test: app/src/test/java/com/example/rocketplan_android/data/repository/sync/SupportSyncServiceTest.kt
 violates: RP-CD-014
 priority: P3
 last_updated: 2026-06-07
@@ -69,14 +69,22 @@ attachment rendering is wired up: attachments would silently fail to appear unde
 | Read keys on local PK | `OfflineDao.getAttachmentsForSupportMessage` (`OfflineDao.kt:1385`) |
 | No callers (latent) | no references in `ui/support` |
 
-## Suggested fix (when attachment rendering lands, or if persistence is touched)
+## Fix (implemented 2026-06-07)
+
+`SupportSyncService.syncMessages` now resolves each attachment's owning message to its **canonical
+local message PK** via `getSupportMessageByServerId(dto.id)` (messages are saved first, so both
+reconciled and newly-inserted rows are resolvable by server id) and stores that local `messageId` on
+the attachment. If the owning message cannot be resolved, the attachments are skipped (with a
+`support_attachment_unresolved_message` WARN) rather than keyed by the wrong id. Covered by
+`SupportSyncServiceTest` ("saves attachments when present" asserts the local PK; "skips attachments
+when owning message cannot be resolved").
+
+### Original suggested fix (for reference)
 
 Resolve the attachment's owning message to its **canonical local message PK** before persisting —
 look up the message by its server id (`getSupportMessageByServerId`, added in RP-BUG-036) and store
-that local `messageId` on the attachment. Equivalently, store the server message id in a clearly-named
-server-scoped column and have the read query resolve through it. Mirror the message reconciliation
-already implemented for RP-BUG-036. Keep this **out of RP-BUG-036** unless attachment persistence is
-already being touched.
+that local `messageId` on the attachment. Mirror the message reconciliation already implemented for
+RP-BUG-036.
 
 ## Rule note
 
