@@ -647,27 +647,36 @@ Uses explicit deletion endpoint (`/api/sync/deleted?since=<timestamp>`) rather t
 | `DROP` | Permanently invalid (e.g., 422) | Remove from queue |
 | `CONFLICT_PENDING` | 409 conflict needs resolution | Keep with CONFLICT status |
 
-### ID Remapping
+### Parent-ID resolution for offline-created entities
 
-When an offline-created entity (local negative ID) is pushed to the server, the server assigns a real positive ID. `IdRemapService` updates all pending queue operations that reference the old local ID.
+An offline-created entity keeps its **local** primary key for its whole life; children reference their
+parent by that local id. The parent's server id is resolved **dynamically at push time**, not by
+rewriting the child's stored id.
 
-**Remap hierarchy:**
-```
-Project → Property, Location, Room, Note, Equipment, Logs
-Property → Location
-Location → Room
-Room → Note, Equipment, MoistureLog, AtmosphericLog
-```
+**Mechanism (push-time re-resolution + dependency gating):**
+1. A child push handler looks up its parent's current row and reads `parent.serverId`
+   (e.g. `getRoom(localRoomId)?.serverId`, `resolveServerProjectId(localProjectId)`).
+2. If the parent has not synced yet (`serverId == null`), the handler returns `OperationOutcome.SKIP`;
+   `SyncQueueProcessor` increments `skipCount` and retries later. This gates children behind parents
+   (Project → Property/Location/Room → Note/Equipment/MoistureLog/AtmosphericLog/Photo/Damage).
+3. Once the parent has synced, the next attempt resolves the real server id and the create succeeds.
 
-**Process:**
-1. Push handler creates entity on server, receives server ID
-2. Calls `IdRemapService.remap*Id(localId, serverId)`
-3. Service finds all pending operations referencing old ID
-4. Deserializes each operation's payload JSON
-5. Updates the ID reference
-6. Re-serializes and updates the operation in the queue
+This is verified across `NotePushHandler`, `EquipmentPushHandler`, `AtmosphericLogPushHandler`,
+`MoistureLogPushHandler` (each re-resolves project/room and SKIPs until ready). When a room's local
+row id actually changes, child `roomId`s are migrated by the room-relink path in `LocalDataService`
+(`migrate*RoomIds`).
 
-**File:** `data/repository/sync/IdRemapService.kt`
+> **Note:** `data/repository/sync/IdRemapService.kt` (a queue-payload remapper) is currently **unused
+> dead code** — no caller constructs or invokes it. Remapping does **not** flow through it; do not wire
+> new entities into it expecting them to sync. (Tracked as a cleanup candidate.)
+
+### Reconciling pulled rows by serverId (duplicate prevention)
+
+Separately from parent resolution, pull paths must reconcile a server row to an existing local row
+**by `serverId`** before upsert — otherwise an offline-created row (local PK + local/client uuid) and
+its pulled copy (server-id PK + server-minted uuid) both persist as duplicates. See the
+`preserveDirty` / `mergePulledRowsByServerId` merge under §3 (closed for support and metadata entities
+in RP-BUG-036 / RP-BUG-037; rooms/projects reconcile via `resolveExistingRoomForSync` / serverId+uuid).
 
 ### Conflict Resolution (409 Handling)
 
