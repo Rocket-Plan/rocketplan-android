@@ -570,7 +570,10 @@ class OfflineSyncRepository(
 
             // Save embedded SNAPSHOTS from detail (quick preview)
             detail.locations?.let {
-                localDataService.saveLocations(it.map { loc -> loc.toEntity(defaultProjectId = detail.id) })
+                localDataService.saveLocations(
+                    it.map { loc -> loc.toEntity(defaultProjectId = detail.id) },
+                    preserveDirty = true,
+                )
                 itemCount += it.size
             }
             ensureActive()

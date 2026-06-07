@@ -15,16 +15,32 @@ regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_fr_003_pull_sync_dirty_clobber_2026-06-04.md
 related_review: null
-related_test: null
+related_test: app/src/test/java/com/example/rocketplan_android/data/repository/OfflineSyncRepositoryTest.kt
 parent: RP-HD-001
 violates: RP-CD-002
 priority: P1
-last_updated: 2026-06-03
+last_updated: 2026-06-07
 ---
 
 # RP-FR-003: Pull-sync can clobber locally-dirty rows
 
 > Filed by the `RP-HD-001` RP-CD audit sweep. Violates **`RP-CD-002` — server updates must not clobber local dirt**.
+
+## 2026-06-07 follow-up — residual clobber path closed
+
+The original fix added the dirty-aware `preserveDirty` merge to the save layer and flipped the
+known pull callers. A 40-agent verification sweep (2026-06-07) found **one CLOBBER path that was
+missed**: `OfflineSyncRepository.syncProjectEssentials` persists the embedded
+`detail.locations` snapshot via `saveLocations(...)` **without** `preserveDirty = true` (was
+`OfflineSyncRepository.kt:573`), so a pull could still overwrite a locally-dirty Location row.
+
+- **Fix:** that call now passes `preserveDirty = true`, matching the other pull paths and the
+  `saveLocations` merge that preserves rows where `local.isDirty == true`.
+- **Regression test:** `OfflineSyncRepositoryTest.syncProjectEssentials preserves locally-dirty
+  locations on embedded pull (RP-FR-003)` verifies the embedded-locations pull calls
+  `saveLocations(any(), preserveDirty = true)` and never with `preserveDirty = false`.
+- Scope unchanged: only **Location** is classed CLOBBER for this path; other entity pull paths were
+  not altered.
 
 ## Symptom (potential, not yet reproduced)
 

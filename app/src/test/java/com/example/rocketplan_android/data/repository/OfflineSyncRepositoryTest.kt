@@ -1513,6 +1513,57 @@ class OfflineSyncRepositoryTest {
         coVerify(exactly = 0) { api.getProjectDetail(any()) }
     }
 
+    @Test
+    fun `syncProjectEssentials preserves locally-dirty locations on embedded pull (RP-FR-003)`() = runTest {
+        val api = mockk<OfflineSyncApi>()
+        val localDataService = mockk<LocalDataService>(relaxed = true)
+        coEvery { localDataService.currentCompanyIdOrNull } returns companyId
+        coEvery { localDataService.getProject(projectId) } returns OfflineProjectEntity(
+            projectId = projectId,
+            serverId = 100L,
+            uuid = "project-uuid",
+            title = "Test Project",
+            status = "wip",
+            companyId = companyId
+        )
+        coEvery { api.getProjectDetail(100L) } returns ProjectDetailResourceResponse(
+            data = ProjectDetailDto(
+                id = projectId,
+                title = "Test Project",
+                status = "wip",
+                companyId = companyId,
+                locations = listOf(
+                    LocationDto(
+                        id = 500L,
+                        uuid = "loc-500",
+                        parentLocationId = null,
+                        isAccessible = null,
+                        createdAt = null,
+                        updatedAt = null
+                    )
+                )
+            )
+        )
+        coEvery { api.getProjectProperties(any()) } returns PaginatedResponse(data = emptyList())
+        every { localDataService.observeDamages(any()) } returns flowOf(emptyList<OfflineDamageEntity>())
+
+        val repository = OfflineSyncRepository(
+            api = api,
+            localDataService = localDataService,
+            photoCacheScheduler = mockk(relaxed = true),
+            syncCheckpointStore = mockk(relaxed = true),
+            roomTypeRepository = mockk(relaxed = true)
+        )
+
+        repository.syncProjectEssentials(projectId)
+
+        // RP-FR-003: the embedded-locations snapshot pull must not blind-upsert over
+        // locally-dirty rows. It must pass preserveDirty = true so saveLocations merges
+        // (keeping pending local edits) instead of clobbering them.
+        coVerify { localDataService.saveLocations(any(), preserveDirty = true) }
+        coVerify(exactly = 0) { localDataService.saveLocations(any(), preserveDirty = false) }
+    }
+
     // Conflict handling is exercised at queue-processing time, not during local delete.
 }
 
