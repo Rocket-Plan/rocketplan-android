@@ -94,8 +94,8 @@ class SyncQueueManager(
     private val deferredProjectSyncs = mutableSetOf<SyncJob.SyncProjectGraph>()
     @Volatile
     private var foregroundProjectId: Long? = null
-    // Track projects with pending photo sync jobs to avoid duplicates
-    private val pendingPhotoSyncs = mutableSetOf<Long>()
+    // RP-BUG-043: photo-syncing state is derived from active/queued/deferred jobs (see
+    // isPhotoBearingSyncPendingLocked / updateProjectSyncingProjectsLocked) — no hand-maintained flag.
     private val _photoSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
     val photoSyncingProjects: StateFlow<Set<Long>> = _photoSyncingProjects
     private val _projectSyncingProjects = MutableStateFlow<Set<Long>>(emptySet())
@@ -326,14 +326,14 @@ class SyncQueueManager(
 
             Log.d(TAG, "📷 Refreshing photos for current project $projectId (triggered by Pusher)")
 
-            // Queue a photo-only sync at high priority
+            // Queue a photo-only sync at high priority. RP-BUG-043: dedup against actual queue state
+            // (active/queued/deferred photo-bearing job) rather than a strand-able flag; enqueue's
+            // per-key coalescing is the real double-queue guard, and it recomputes photo-syncing state.
             val shouldEnqueue = mutex.withLock {
-                if (pendingPhotoSyncs.contains(projectId)) {
+                if (isPhotoBearingSyncPendingLocked(projectId)) {
                     Log.d(TAG, "⏭️ Photo sync already pending for project $projectId, skipping duplicate")
                     false
                 } else {
-                    pendingPhotoSyncs.add(projectId)
-                    updatePhotoSyncingProjectsLocked()
                     true
                 }
             }
@@ -358,7 +358,7 @@ class SyncQueueManager(
     suspend fun isProjectSyncInFlight(projectId: Long): Boolean = mutex.withLock {
         activeProjectSyncJobs.containsKey(projectId) ||
             taskIndex.containsKey("project_$projectId") ||
-            pendingPhotoSyncs.contains(projectId)
+            isPhotoBearingSyncPendingLocked(projectId)
     }
 
     /**
@@ -384,9 +384,12 @@ class SyncQueueManager(
                     taskIndex.remove(key)
                 }
 
-                // Clear pending photo sync flag
-                pendingPhotoSyncs.remove(projectId)
-                updatePhotoSyncingProjectsLocked()
+                // RP-BUG-043: also drop any deferred job for this project so derived photo-syncing
+                // state clears (a parked job lives outside taskIndex).
+                deferredProjectSyncs.removeAll { it.projectId == projectId }
+
+                // Recompute derived sync/photo state from the (now updated) active/queue/deferred sources.
+                updateProjectSyncingProjectsLocked()
             }
         }
     }
@@ -411,10 +414,13 @@ class SyncQueueManager(
                         Log.d(TAG, "🗑️ Removing queued photo sync for project $projectId")
                         queue.remove(task)
                         taskIndex.remove(key)
-                        pendingPhotoSyncs.remove(projectId)
-                        updatePhotoSyncingProjectsLocked()
                     }
                 }
+
+                // RP-BUG-043: also drop any deferred photo-bearing job for this project, then recompute
+                // derived photo-syncing state from active/queue/deferred.
+                deferredProjectSyncs.removeAll { it.projectId == projectId && it.mode.includesPhotos() }
+                updateProjectSyncingProjectsLocked()
             }
         }
     }
@@ -422,13 +428,7 @@ class SyncQueueManager(
     fun resumeProjectPhotoSync(projectId: Long, priority: Int = FOREGROUND_PHOTO_PRIORITY) {
         scope.launch {
             val shouldEnqueue = mutex.withLock {
-                if (pendingPhotoSyncs.contains(projectId)) {
-                    false
-                } else {
-                    pendingPhotoSyncs.add(projectId)
-                    updatePhotoSyncingProjectsLocked()
-                    true
-                }
+                !isPhotoBearingSyncPendingLocked(projectId)
             }
 
             if (shouldEnqueue) {
@@ -460,7 +460,6 @@ class SyncQueueManager(
                 foregroundProjectId = null
 
                 clearLocked()
-                pendingPhotoSyncs.clear()
                 updatePhotoSyncingProjectsLocked()
                 initialSyncStarted.set(false)
                 _initialSyncCompleted.value = false
@@ -542,8 +541,7 @@ class SyncQueueManager(
                     mutex.withLock {
                         activeProjectSyncJobs.remove(projectId)
                         activeProjectModes.remove(projectId)
-                        pendingPhotoSyncs.remove(projectId)
-                        updatePhotoSyncingProjectsLocked()
+                        deferredProjectSyncs.removeAll { it.projectId == projectId }
                         updateProjectSyncingProjectsLocked()
                     }
                     Log.d(TAG, "🧹 Cleaned up stuck state for failed project sync $projectId")
@@ -936,13 +934,14 @@ class SyncQueueManager(
                         // If fast sync succeeded, queue photo sync (unless skipContentSync or already pending)
                         if (syncSucceeded && mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY) {
                             if (!job.skipContentSync) {
+                                // RP-BUG-043: dedup against actual queue state; the follow-up enqueue
+                                // (and its per-key coalescing) is what records/guards the photo job, so
+                                // a coalesced drop can no longer strand a "photo syncing" flag.
                                 val shouldEnqueuePhotos = mutex.withLock {
-                                    if (pendingPhotoSyncs.contains(job.projectId)) {
+                                    if (isPhotoBearingSyncPendingLocked(job.projectId)) {
                                         Log.d(TAG, "⏭️ Photo sync already pending for project ${job.projectId}, skipping duplicate")
                                         false
                                     } else {
-                                        pendingPhotoSyncs.add(job.projectId)
-                                        updatePhotoSyncingProjectsLocked()
                                         true
                                     }
                                 }
@@ -982,10 +981,8 @@ class SyncQueueManager(
                         val pendingDeferred = mutex.withLock {
                             activeProjectSyncJobs.remove(job.projectId)
                             activeProjectModes.remove(job.projectId)
-                            if (mode.includesPhotos()) {
-                                pendingPhotoSyncs.remove(job.projectId)
-                                updatePhotoSyncingProjectsLocked()
-                            }
+                            // RP-BUG-043: photo-syncing state is derived; removing this job from
+                            // activeProjectModes above is sufficient — the recompute below reflects it.
                             updateProjectSyncingProjectsLocked()
                             if (mode == SyncJob.ProjectSyncMode.ESSENTIALS_ONLY || mode == SyncJob.ProjectSyncMode.FULL) {
                                 if (syncSucceeded) {
@@ -1011,6 +1008,8 @@ class SyncQueueManager(
                     if (activeProjectSyncJobs.size >= MAX_CONCURRENT_PROJECT_SYNCS) {
                         Log.d(TAG, "⏳ Project sync for ${job.projectId} deferred (max ${MAX_CONCURRENT_PROJECT_SYNCS} concurrent)")
                         deferredProjectSyncs.add(job)
+                        // RP-BUG-043: a parked photo-bearing job must still count as "photo syncing".
+                        updateProjectSyncingProjectsLocked()
                         false
                     } else {
                         activeProjectSyncJobs[job.projectId] = syncJob
@@ -1136,7 +1135,7 @@ class SyncQueueManager(
             Log.w(TAG, "⚠️ Failed to sync deleted records before focusing project $projectId", t)
         }
         val shouldEnqueueFast = mutex.withLock {
-            if (pendingPhotoSyncs.contains(projectId)) {
+            if (isPhotoBearingSyncPendingLocked(projectId)) {
                 Log.d(TAG, "📷 Photo sync already queued for project $projectId; skipping extra FAST request")
                 return@withLock false
             }
@@ -1172,10 +1171,25 @@ class SyncQueueManager(
         enqueue(SyncJob.SyncProjectGraph(projectId = projectId, prio = FOREGROUND_PRIORITY, skipPhotos = true, skipContentSync = false))
     }
 
-    private fun updatePhotoSyncingProjectsLocked() {
-        _photoSyncingProjects.value = pendingPhotoSyncs.toSet()
-        updateProjectSyncingProjectsLocked()
-    }
+    /**
+     * Retained as an alias for back-compat with existing call sites. Both the project-syncing and
+     * photo-syncing StateFlows are now derived from actual queue state in
+     * [updateProjectSyncingProjectsLocked], so there is no separate photo flag to maintain.
+     */
+    private fun updatePhotoSyncingProjectsLocked() = updateProjectSyncingProjectsLocked()
+
+    /**
+     * RP-BUG-043: true iff the project has a photo-bearing [SyncJob.SyncProjectGraph]
+     * (mode.includesPhotos()) that is currently active, queued, OR deferred. Replaces the
+     * hand-maintained `pendingPhotoSyncs` dedup flag, which could strand when an enqueue was coalesced
+     * away (leaking a permanent "photo syncing" state → stuck room-card spinner + photos never fetched).
+     * The deferred source is essential: a parked job (RP-BUG-010 no-busy-spin) lives outside `taskIndex`,
+     * so omitting it would clear the spinner / drop dedup protection too early.
+     */
+    private fun isPhotoBearingSyncPendingLocked(projectId: Long): Boolean =
+        activeProjectModes[projectId]?.includesPhotos() == true ||
+            (taskIndex["project_$projectId"]?.job as? SyncJob.SyncProjectGraph)?.mode?.includesPhotos() == true ||
+            deferredProjectSyncs.any { it.projectId == projectId && it.mode.includesPhotos() }
 
     private fun updateProjectSyncingProjectsLocked() {
         val activeProjects = activeProjectModes
@@ -1191,12 +1205,28 @@ class SyncQueueManager(
                     job.mode != SyncJob.ProjectSyncMode.CONTENT_ONLY
             }
         }
-        // Note: pendingPhotoSyncs intentionally excluded - photo uploads shouldn't block room creation
+        // Note: photo-only/content-only jobs intentionally excluded - photo uploads shouldn't block room creation
         val newSet = (activeProjects + queuedProjects).toSet()
         val oldSet = _projectSyncingProjects.value
         if (newSet != oldSet) {
             Log.d(TAG, "🔄 projectSyncingProjects changed: $oldSet → $newSet")
         }
         _projectSyncingProjects.value = newSet
+
+        // RP-BUG-043: derive photo-syncing from active + queued + DEFERRED photo-bearing jobs, instead
+        // of a separate flag that could strand. All three sources are required (see review fix).
+        val activePhoto = activeProjectModes.filterValues { it.includesPhotos() }.keys
+        val queuedPhoto = taskIndex.values
+            .mapNotNull { it.job as? SyncJob.SyncProjectGraph }
+            .filter { it.mode.includesPhotos() }
+            .map { it.projectId }
+        val deferredPhoto = deferredProjectSyncs
+            .filter { it.mode.includesPhotos() }
+            .map { it.projectId }
+        val newPhotoSet = (activePhoto + queuedPhoto + deferredPhoto).toSet()
+        if (newPhotoSet != _photoSyncingProjects.value) {
+            Log.d(TAG, "📷 photoSyncingProjects changed: ${_photoSyncingProjects.value} → $newPhotoSet")
+        }
+        _photoSyncingProjects.value = newPhotoSet
     }
 }
