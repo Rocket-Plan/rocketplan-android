@@ -7,6 +7,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutio
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
+import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.example.rocketplan_android.testing.PushHandlerTestFixtures
@@ -17,6 +18,7 @@ import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
 import io.mockk.slot
+import io.mockk.verify
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -449,6 +451,70 @@ class MoistureLogPushHandlerTest {
         val result = handler.handleUpsert(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.DROP)
+    }
+
+    // ===================================================================
+    // RP-BUG-046: 422 drop must capture the response body for diagnosability,
+    // on BOTH the initial upsert path and the 409 -> retry -> 422 path.
+    // ===================================================================
+
+    @Test
+    fun `handleUpsert logs 422 response body detail when dropping (RP-BUG-046)`() = runTest {
+        val log = PushHandlerTestFixtures.createMoistureLog(serverId = null)
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "moisture_log",
+            entityUuid = log.uuid
+        )
+
+        coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
+        coEvery { api.createMoistureLog(4000L, 8000L, any()) } throws
+            PushHandlerTestFixtures.create422Response() // body: {"error":"validation failed"}
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.DROP)
+        verify {
+            remoteLogger.log(
+                LogLevel.WARN,
+                any(),
+                match { it.contains("422") },
+                match { it?.get("detail")?.contains("validation failed") == true },
+            )
+        }
+    }
+
+    @Test
+    fun `handle409Conflict logs 422 response body detail when dropping after retry (RP-BUG-046)`() = runTest {
+        val log = PushHandlerTestFixtures.createMoistureLog(serverId = 7000L)
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "moisture_log",
+            entityUuid = log.uuid
+        )
+        val freshUpdatedAt = "2026-01-31T10:00:00.000000Z"
+
+        coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
+        var callCount = 0
+        coEvery { api.updateMoistureLog(7000L, any()) } answers {
+            callCount++
+            if (callCount == 1) {
+                throw PushHandlerTestFixtures.create409WithUpdatedAt(freshUpdatedAt)
+            } else {
+                throw PushHandlerTestFixtures.create422Response() // body: {"error":"validation failed"}
+            }
+        }
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.DROP)
+        // The retry-path drop must also carry the captured body (the must-fix from review).
+        verify {
+            remoteLogger.log(
+                LogLevel.WARN,
+                any(),
+                match { it.contains("after 409 retry") },
+                match { it?.get("detail")?.contains("validation failed") == true },
+            )
+        }
     }
 
     // ===================================================================

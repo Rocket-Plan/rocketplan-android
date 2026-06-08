@@ -154,7 +154,19 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                 return OperationOutcome.CONFLICT_PENDING
             }
             if (retryError.isValidationError()) {
-                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422)")
+                // RP-BUG-046: capture the 422 body on the 409->retry->422 path too (not just the initial
+                // upsert), so the failing backend rule is diagnosable wherever the drop happens.
+                val detail = runCatching { (retryError as? HttpException)?.response()?.errorBody()?.string() }
+                    .getOrNull()?.take(500)
+                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid} after 409 retry: server validation error (422); detail=$detail")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 validation error (after 409 retry)",
+                    mapOf(
+                        "logUuid" to log.uuid,
+                        "serverId" to (log.serverId?.toString() ?: "null"),
+                        "detail" to (detail ?: "unavailable"),
+                    )
+                )
                 return OperationOutcome.DROP
             }
             throw retryError

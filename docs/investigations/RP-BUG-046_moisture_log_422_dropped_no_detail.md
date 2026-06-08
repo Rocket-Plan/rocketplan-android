@@ -14,7 +14,7 @@ release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: null
-related_review: null
+related_review: docs/reviews/code_review_rp_bug_046_047_2026-06-07.md
 related_test: null
 last_updated: 2026-06-07
 ---
@@ -84,6 +84,11 @@ ctx.remoteLogger?.log(LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 valid
 Terminal DROP path, so draining the error body is safe. The validation `details` are field messages
 (e.g. "not eligible for drying"), not raw user content.
 
+**Review follow-up (2026-06-07):** the body-capture was extended to the **409 → retry → 422** path in
+`handle409Conflict()` (it previously dropped without the body — a diagnosability gap). Both drop sites now
+log `detail=…`. Tests added in `MoistureLogPushHandlerTest`: `handleUpsert logs 422 response body detail
+when dropping` and `handle409Conflict logs 422 response body detail when dropping after retry`.
+
 ## Fix — part 2 (PENDING): the actual rejection
 
 Deliberately **not** fixed blind. Once the captured `detail` identifies the field:
@@ -93,6 +98,29 @@ Deliberately **not** fixed blind. Once the captured `detail` identifies the fiel
   before its logs) is the real bug — a push-time SKIP-until-parent-ready guard, like other child handlers.
 - Also reconsider whether a hard `DROP` is right at all: a 422 that's actually a *transient ordering*
   problem should SKIP/RETRY, not silently discard the reading (data loss).
+
+## Update 2026-06-07 — DROP strands the reading (confirmed data loss)
+
+After installing the diagnostic build and re-syncing, the device state shows the **drop is worse than
+"the reading didn't sync"**:
+- The **sync queue is empty** (`offline_sync_queue` has no rows), yet the 4 room-6804 readings are still
+  `offline_moisture_logs.syncStatus = PENDING`.
+- Every reading that *pulled down* (RP-BUG-047 fix) is `SYNCED` with a **positive** server `materialId`;
+  the 4 stuck ones carry **negative** local `materialId`s (`-1780893355626`, …) though their material
+  resolves to server id `512922`.
+
+So the earlier `OperationOutcome.DROP` on 422 **removed the queue op but left the row PENDING** → the
+reading is **orphaned and un-retryable**: it will never push again and shows as forever-pending. This is
+silent **data loss**, independent of *which* validation rule fired.
+
+**Implication for the fix:** the DROP-vs-keep decision is now the primary bug, not just a detail. A 422
+that is actually a *recoverable* condition (missing `damage_material_room` link / ordering) must not be
+silently discarded. Options: keep the op retryable (bounded), mark the row with an error/conflict state
+the UI can surface, or re-enqueue — but do **not** strand it in PENDING with no op.
+
+**Capturing the exact rule:** the 4 stranded logs can no longer be replayed (no queue op), so the precise
+422 `details` must be captured from a **fresh reading authored on the same affected material/room**
+(room 6804 / material 512922 "Concrete") with the diagnostic build installed.
 
 ## Observability
 
