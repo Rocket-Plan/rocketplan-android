@@ -7,9 +7,9 @@ classification: pre_existing_latent
 source: review
 evidence: inferred
 found_in: "1.0.00"
-fixed_in: null
+fixed_in: "1.0.00"
 released_in: null
-state: planned
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
@@ -60,13 +60,27 @@ P3: the gap bites a **fresh-install / first-use / offline-create-before-sync** p
 metadata has synced, the relevant types are cached. Worth confirming with product which pickers are
 truly global vs project-scoped before deciding how much to seed.
 
-## Suggested approach
+## Step 0 finding (verified 2026-06-07) — scope corrected
 
-Mirror iOS: at company-context-ready (after `EnsureUserContext`, before/alongside `SyncProjects`),
-prefetch the global reference catalogs (damage types, damage causes, claim types, scope actions,
-project types) via their existing `get*`/sync paths, and re-seed on reconnect. Reuse the
-`RoomTypeRepository.prefetchOfflineCatalog` pattern. Verify each type's endpoint exists and is global
-(not project-scoped) before wiring.
+Most of the iOS-seeded types are **project-scoped** on the Android backend, so they cannot be seeded
+globally before a project exists:
+- `getProjectDamageTypes(projectId)` and `getDamageCauses(projectId)` — project-scoped (cached by
+  `projectServerId`).
+- Claims/claim types — `getProjectClaims(projectId, include=claimType)` — project-scoped.
+- Room/property/level types — already prefetched (`RoomTypeRepository.prefetchOfflineCatalog`, `MainActivity:352`).
+
+The only genuinely **company-scoped (global)** catalog that was **not** seeded up front is the
+**WorkScope catalog** (`getWorkScopeCatalog(companyId)`), which was fetched only on-demand when a user
+opened the work-scope picker (`RoomDetailViewModel:614`).
+
+## Fix (implemented 2026-06-07)
+
+Seed the company-scoped WorkScope catalog at company-context-ready: `MainActivity` now calls
+`offlineSyncRepository.fetchWorkScopeCatalog(companyId)` (best-effort, non-blocking, in its own
+coroutine) right after the room-type prefetch, so the work-scope picker is populated offline before the
+user first opens it. The project-scoped types (damage types/causes, claims) remain on the per-project
+metadata path — seeding them globally is not possible without a backend global endpoint (out of scope;
+would require a backend change to match iOS).
 
 ## Observability
 

@@ -354,6 +354,19 @@ class MainActivity : AppCompatActivity() {
 
             // Check if user needs onboarding (has token but no company)
             val companyId = authRepository.getStoredCompanyId()
+
+            // RP-BUG-042: seed the company-scoped WorkScope catalog up front (best-effort, non-blocking)
+            // so the work-scope picker is populated offline before the user first opens it. Room/property/
+            // level types are already prefetched above; damage types/causes/claims are project-scoped on
+            // the backend and arrive with each project's metadata, so they can't be seeded globally.
+            companyId?.let { cid ->
+                val syncRepo = (application as RocketPlanApplication).offlineSyncRepository
+                lifecycleScope.launch {
+                    runCatching { syncRepo.fetchWorkScopeCatalog(cid) }
+                        .onFailure { Log.w(TAG, "⚠️ Prefetch work-scope catalog failed", it) }
+                }
+            }
+
             val userId = authRepository.getStoredUserId() ?: 0L
             val needsOnboarding = companyId == null && userId > 0L
             val cachedEmail = if (needsOnboarding) authRepository.getSavedEmail() ?: "" else ""
