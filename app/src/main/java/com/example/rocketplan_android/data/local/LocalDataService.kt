@@ -652,6 +652,40 @@ class LocalDataService private constructor(
         withContext(ioDispatcher) {
             dao.getMaterialByNameInRoom(roomId, name)
         }
+
+    /**
+     * RP-BUG-048 (collapse + backfill): when multiple local material rows share one `serverId` (the
+     * server collapsed several offline-created materials into one), merge them — re-point every child
+     * moisture log to a single keeper, then delete the extras. Runs as a sync-path repair so existing
+     * duplicate data is cleaned up and any new collision is reconciled. Returns the number of duplicate
+     * rows removed. The keeper is the lowest `materialId` for determinism.
+     */
+    suspend fun collapseDuplicateMaterialsByServerId(): Int = withContext(ioDispatcher) {
+        val duplicates = dao.getDuplicateServerIdMaterials()
+        if (duplicates.isEmpty()) return@withContext 0
+
+        var removed = 0
+        duplicates.groupBy { it.serverId }.forEach { (serverId, group) ->
+            if (serverId == null || group.size < 2) return@forEach
+            val keeper = group.minByOrNull { it.materialId } ?: return@forEach
+            val extras = group.filter { it.materialId != keeper.materialId }
+            extras.forEach { extra ->
+                // Re-point this duplicate's readings onto the keeper, then drop the duplicate row.
+                val moved = dao.migrateMoistureLogMaterialIds(extra.materialId, keeper.materialId)
+                Log.w(
+                    "LocalDataService",
+                    "🔧 [collapseDuplicateMaterials] serverId=$serverId: re-pointed $moved log(s) " +
+                        "from materialId=${extra.materialId} to keeper=${keeper.materialId}"
+                )
+            }
+            dao.deleteMaterialsByIds(extras.map { it.materialId })
+            removed += extras.size
+        }
+        if (removed > 0) {
+            Log.w("LocalDataService", "🔧 [collapseDuplicateMaterials] removed $removed duplicate material row(s)")
+        }
+        removed
+    }
     // endregion
 
     /**

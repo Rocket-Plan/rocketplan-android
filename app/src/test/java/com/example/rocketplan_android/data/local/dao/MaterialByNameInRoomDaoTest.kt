@@ -8,6 +8,7 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineMaterialEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.google.common.truth.Truth.assertThat
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -105,5 +106,57 @@ class MaterialByNameInRoomDaoTest {
         dao.upsertMoistureLogs(listOf(log(-1L, roomId = 400L, materialId = 50L, isDeleted = true)))
 
         assertThat(dao.getMaterialByNameInRoom(400L, "Concrete")).isNull()
+    }
+
+    // RP-BUG-048 collapse: dedupe local materials that share one serverId.
+
+    @Test
+    fun `getDuplicateServerIdMaterials returns only rows sharing a serverId`() = runTest {
+        dao.upsertMaterials(listOf(
+            material(-3L, serverId = 512922L, name = "Concrete"),
+            material(-2L, serverId = 512922L, name = "Concrete"),
+            material(-1L, serverId = 512922L, name = "Concrete"),
+            material(50L, serverId = 999L, name = "Drywall"), // unique serverId — must NOT be returned
+        ))
+
+        val dupes = dao.getDuplicateServerIdMaterials()
+
+        assertThat(dupes.map { it.materialId }).containsExactly(-3L, -2L, -1L)
+        assertThat(dupes.map { it.materialId }).doesNotContain(50L)
+    }
+
+    @Test
+    fun `collapse re-points all readings to one keeper and removes the duplicate material rows`() = runTest {
+        // 3 phantom "Concrete" rows for one server material, each with a reading; plus an unrelated material.
+        dao.upsertMaterials(listOf(
+            material(-3L, serverId = 512922L, name = "Concrete"),
+            material(-2L, serverId = 512922L, name = "Concrete"),
+            material(-1L, serverId = 512922L, name = "Concrete"),
+            material(50L, serverId = 999L, name = "Drywall"),
+        ))
+        dao.upsertMoistureLogs(listOf(
+            log(-10L, roomId = 6804L, materialId = -3L),
+            log(-11L, roomId = 6804L, materialId = -2L),
+            log(-12L, roomId = 6804L, materialId = -1L),
+            log(-20L, roomId = 6804L, materialId = 50L), // unrelated
+        ))
+
+        // Replicate the collapse: keeper = lowest materialId per serverId; re-point extras; delete them.
+        val keeper = dao.getDuplicateServerIdMaterials()
+            .groupBy { it.serverId }.values.first().minByOrNull { it.materialId }!!
+        val extras = dao.getDuplicateServerIdMaterials().filter { it.materialId != keeper.materialId }
+        extras.forEach { dao.migrateMoistureLogMaterialIds(it.materialId, keeper.materialId) }
+        dao.deleteMaterialsByIds(extras.map { it.materialId })
+
+        // One "Concrete" row left (the keeper, -3), and all three of its readings point to it.
+        assertThat(dao.getDuplicateServerIdMaterials()).isEmpty()
+        assertThat(keeper.materialId).isEqualTo(-3L)
+        assertThat(dao.getMaterial(-3L)).isNotNull()
+        assertThat(dao.getMaterial(-2L)).isNull()
+        assertThat(dao.getMaterial(-1L)).isNull()
+        val keeperLogs = dao.observeMoistureLogsForRoom(6804L).first().filter { it.materialId == -3L }
+        assertThat(keeperLogs.map { it.logId }).containsExactly(-10L, -11L, -12L)
+        // The unrelated material + its reading are untouched.
+        assertThat(dao.getMaterial(50L)).isNotNull()
     }
 }

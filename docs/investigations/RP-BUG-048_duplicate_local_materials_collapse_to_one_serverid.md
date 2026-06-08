@@ -110,11 +110,24 @@ Stops new duplicates and the wrong-row attachment:
   re-resolution that attached readings to an arbitrary duplicate). `SetLatestAverageFragment` now threads
   the returned `materialId` straight into `addMaterialMoistureLog(materialId = …)`.
 
-### Remaining (follow-up — not in this change)
-- **Collapse-on-collision:** when a push assigns a `serverId` already held by another local material row,
-  merge the duplicates (re-point child readings to the keeper, delete extras) — iOS's merge-to-keeper.
-- **Backfill** the existing stranded rows (the 4 phantom `512922` "Concrete" rows + their readings).
-- Until those land, *pre-existing* duplicate data persists; the create-side fix only prevents new ones.
+### Collapse + backfill (implemented 2026-06-08 — follow-up landed)
+
+`LocalDataService.collapseDuplicateMaterialsByServerId()` merges any materials sharing one `serverId`:
+re-points every child moisture log to a single keeper (lowest `materialId`) via
+`migrateMoistureLogMaterialIds`, then deletes the extras (`getDuplicateServerIdMaterials` /
+`deleteMaterialsByIds`). It runs in the sync-path repair step (`syncProjectEssentials`, right after
+`relinkRoomScopedData`), so it **repairs the existing duplicate data** (the 4 phantom `512922` "Concrete"
+rows) and reconciles any new collision as defense-in-depth. Test:
+`MaterialByNameInRoomDaoTest` (`getDuplicateServerIdMaterials` scoping + end-to-end collapse: 3 dupes +
+readings → 1 keeper with all readings re-pointed, unrelated material untouched). Full suite green.
+
+So RP-BUG-048 is now fully fixed: create-side prevention + collapse/backfill repair.
+
+### Note on RP-BUG-046 (stranded readings)
+The collapse re-points the 4 stranded readings onto the single keeper material (cleaning the *material*
+side), but those readings remain `PENDING` with no queue op, so they still don't push. Fully un-stranding
+them needs the **422 root cause** (still pending a live repro to capture the body) plus a re-enqueue —
+tracked under RP-BUG-046, not closed by this change.
 
 ## Observability
 ### Current Signals

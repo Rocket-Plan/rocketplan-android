@@ -998,6 +998,25 @@ interface OfflineDao {
         """
     )
     suspend fun getMaterialByNameInRoom(roomId: Long, name: String): OfflineMaterialEntity?
+
+    /**
+     * RP-BUG-048: materials whose serverId is shared by more than one local row (the duplicate signature
+     * — multiple offline-created rows the server collapsed to one serverId). Ordered so callers can pick a
+     * deterministic keeper per serverId (lowest materialId first).
+     */
+    @Query(
+        """
+        SELECT * FROM offline_materials
+        WHERE serverId IN (
+            SELECT serverId FROM offline_materials WHERE serverId > 0 GROUP BY serverId HAVING COUNT(*) > 1
+        )
+        ORDER BY serverId, materialId
+        """
+    )
+    suspend fun getDuplicateServerIdMaterials(): List<OfflineMaterialEntity>
+
+    @Query("DELETE FROM offline_materials WHERE materialId IN (:materialIds)")
+    suspend fun deleteMaterialsByIds(materialIds: List<Long>)
     // endregion
 
     // region Company & Users & Properties

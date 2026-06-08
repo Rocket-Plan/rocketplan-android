@@ -775,6 +775,15 @@ class OfflineSyncRepository(
             }
         ensureActive()
 
+        // 4b. RP-BUG-048: collapse duplicate local materials that share one serverId (re-point readings
+        // to a keeper, delete extras) — repairs existing duplicate data and any new collision.
+        runCatching { localDataService.collapseDuplicateMaterialsByServerId() }
+            .onFailure { error ->
+                if (error is CancellationException) throw error
+                Log.e("API", "❌ [syncProjectEssentials] Material collapse failed", error)
+            }
+        ensureActive()
+
         // 5. Albums (needed for photo organization)
         runCatching {
             fetchAllPages { page -> api.getProjectAlbums(serverProjectId, page) }
