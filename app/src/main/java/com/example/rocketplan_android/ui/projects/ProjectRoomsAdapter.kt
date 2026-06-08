@@ -14,6 +14,9 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.ui.common.bindDownloadSyncIndicator
+import com.example.rocketplan_android.ui.common.downloadSyncState
 import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.abs
@@ -101,8 +104,10 @@ class ProjectRoomsAdapter(
         private val roomTypeIcon: ImageView = view.findViewById(R.id.roomTypeIcon)
         private val roomScopeTotal: TextView = view.findViewById(R.id.roomScopeTotal)
         private val gradientOverlay: View = view.findViewById(R.id.roomGradientOverlay)
+        private val cloudIndicator: ImageView = view.findViewById(R.id.roomCloudIndicator)
 
         fun bind(room: RoomCard) {
+            cloudIndicator.visibility = View.GONE // RP-BUG-041: default hidden; set in the photo branch below
             val mode = this@ProjectRoomsAdapter.statMode
             val previousRoom = thumbnail.getTag(R.id.tag_room_photo_id) as? RoomCard
             val previousMode = thumbnail.getTag(R.id.tag_room_card_mode) as? RoomStatMode
@@ -195,6 +200,19 @@ class ProjectRoomsAdapter(
                 } else {
                     processingContainer.isVisible = room.isLoadingPhotos
                     processingProgress.isVisible = false
+                }
+
+                // RP-BUG-041: surface offline-availability on the room card. Cloud-down when the room
+                // has photos that aren't downloaded yet (no cached thumbnail); cloud-up when there are
+                // local photos pending upload. Hidden while loading/processing (the spinner shows).
+                if (progress == null && !room.isLoadingPhotos) {
+                    cloudIndicator.bindDownloadSyncIndicator(
+                        downloadSyncState(
+                            isDirty = room.pendingPhotoCount > 0,
+                            syncStatus = SyncStatus.SYNCED,
+                            isDownloaded = !room.thumbnailUrl.isNullOrBlank(),
+                        )
+                    )
                 }
             }
             thumbnail.isVisible = true

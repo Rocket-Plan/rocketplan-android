@@ -63,6 +63,20 @@
                 android:src="@drawable/ic_door" />
         </FrameLayout>
 
+        <!-- RP-BUG-041: per-room cloud indicator (cloud-down = photos not downloaded, cloud-up = pending upload) -->
+        <ImageView
+            android:id="@+id/roomCloudIndicator"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_margin="10dp"
+            android:contentDescription="@string/project_sync_indicator_desc"
+            android:visibility="gone"
+            app:tint="@android:color/white"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:src="@drawable/ic_cloud_off"
+            tools:visibility="visible" />
+
         <TextView
             android:id="@+id/roomScopeTotal"
             android:layout_width="wrap_content"

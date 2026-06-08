@@ -90,10 +90,16 @@ Shipped the reusable framework + the **project-list** surface (the canonical iOS
   → cloud-down); `ProjectsAdapter` binds it.
 - Test: `DownloadSyncStateTest` (5 cases incl. precedence). Full suite green (445).
 
+### Rollout 2 (2026-06-07): room cards
+Extended to the **room cards** on Project Detail (`item_room_card.xml` + `ProjectRoomsAdapter`): a room
+with photos but no cached thumbnail (`photoCount > 0 && thumbnailUrl.isNullOrBlank()`) shows **cloud-down**
+— directly explaining the purple-diamond placeholders (Project Detail syncs with `skipPhotos = true`, so
+room photos/thumbnails aren't bulk-downloaded; they load per-room on open). `pendingPhotoCount > 0` shows
+**cloud-up**; hidden while loading/processing (the spinner is shown instead).
+
 ### Remaining (follow-on, same helper)
-Extend the indicator to the **photo gallery** (cloud-down until the file is cached via
-`PhotoCacheManager`) and documents/PDF, per the plan's rollout order. Tracked here; not in this first
-increment.
+Extend to the **photo gallery / individual photos** (cloud-down until the file is cached via
+`PhotoCacheManager`) and documents/PDF.
 
 ## Observability
 
