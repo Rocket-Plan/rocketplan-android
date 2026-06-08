@@ -42,7 +42,7 @@ android {
         targetSdk = 35
         val buildNumber = 33
         versionCode = buildNumber
-        versionName = "1.29 ($buildNumber)"
+        versionName = "1.30 ($buildNumber)"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         val mapsApiKey = localProperties.getProperty("maps.api.key", "")
