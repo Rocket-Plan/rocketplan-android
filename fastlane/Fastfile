@@ -47,6 +47,64 @@ platform :android do
     )
   end
 
+  # Reads a key from local.properties (Fastfile runs from the fastlane/ dir, so ../local.properties).
+  def read_local_property(key)
+    file = File.join(Dir.pwd, "..", "local.properties")
+    return nil unless File.exist?(file)
+    line = File.readlines(file).find { |l| l.strip.start_with?("#{key}=") }
+    line&.split("=", 2)&.last&.strip
+  end
+
+  desc "Firebase Test Lab robo pre-flight: drives the recorded login robo-script against the matching " \
+       "environment's APK so a broken login / crash is caught before upload. Pass env: dev|staging|prod " \
+       "(default prod) so the flavor AND credentials match the backend that build points at. Skips " \
+       "gracefully if no Firebase project is configured (RP_FIREBASE_PROJECT env or firebase.project " \
+       "in local.properties)."
+  lane :robo_test do |options|
+    project = ENV["RP_FIREBASE_PROJECT"] || read_local_property("firebase.project")
+    if project.nil? || project.empty?
+      UI.important("⚠️  robo_test skipped: no Firebase project configured " \
+                   "(set RP_FIREBASE_PROJECT or firebase.project in local.properties).")
+      next
+    end
+
+    env = (options[:env] || "prod").to_s          # dev | staging | prod — must match the deploy's flavor
+    flavor = env.capitalize                        # Dev | Staging | Prod
+
+    # The robo-script bakes in login credentials, which are valid only against THAT environment's backend
+    # (prod creds work on api-public, not on dev/staging). Use a per-env script if present; the default
+    # script holds prod creds, so non-prod envs without their own script are skipped rather than fed the
+    # wrong credentials (which would fail login and false-fail the gate).
+    env_script = "app/src/test/resources/robo-script.#{env}.json"
+    script =
+      if File.exist?(File.join(Dir.pwd, "..", env_script))
+        env_script
+      elsif env == "prod"
+        "app/src/test/resources/robo-script.json"
+      else
+        nil
+      end
+    if script.nil?
+      UI.important("⚠️  robo_test skipped for '#{env}': no #{env_script} (the default robo-script.json " \
+                   "carries prod credentials and won't authenticate against the #{env} backend).")
+      next
+    end
+
+    # Robo runs against an APK (not an AAB).
+    gradle(task: "assemble#{flavor}StandardRelease")
+    apk = "app/build/outputs/apk/#{env}Standard/release/app-#{env}-standard-release.apk"
+
+    UI.message("🤖 Firebase Test Lab robo (#{env}) with #{script} on project #{project}...")
+    sh(
+      "gcloud firebase test android run --type robo " \
+      "--app '../#{apk}' " \
+      "--robo-script '../#{script}' " \
+      "--timeout 5m " \
+      "--project '#{project}'"
+    )
+    UI.success("✅ Firebase Test Lab robo (#{env}) passed")
+  end
+
   desc "Bump version and build debug"
   lane :bump_and_build do
     bump
@@ -80,6 +138,7 @@ platform :android do
   desc "Deploy to Play Store internal track"
   lane :deploy_internal do
     build = bump
+    robo_test(env: "prod")
     build_release
     upload_to_play_store(
       track: "internal",
@@ -92,6 +151,7 @@ platform :android do
   desc "Deploy to Play Store open testing track"
   lane :deploy_open do
     build = bump
+    robo_test(env: "prod")
     build_release
     upload_to_play_store(
       track: "beta",
@@ -123,6 +183,7 @@ platform :android do
   desc "Deploy to Play Store beta track"
   lane :deploy_beta do
     build = bump
+    robo_test(env: "prod")
     build_release
     upload_to_play_store(
       track: "beta",
@@ -139,6 +200,7 @@ platform :android do
   desc "Deploy to Play Store production"
   lane :deploy_production do
     build = bump
+    robo_test(env: "prod")
     build_release
     upload_to_play_store(
       track: "production",
