@@ -9,11 +9,11 @@ evidence: inferred
 found_in: "1.0.00"
 fixed_in: null
 released_in: null
-state: open
+state: planned
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_bug_041_download_sync_indicator_2026-06-07.md
 related_review: null
 related_test: null
 priority: P3
