@@ -6,16 +6,16 @@ type: functional
 classification: pre_existing_latent
 source: internal
 found_in: "1.0.00"
-found_at: "2026-06-08 00:30:00 PST"
-fixed_in: null
+found_at: "2026-06-08 00:30:00 PDT"
+fixed_in: "1.0.00"
 released_in: null
-state: investigating
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: null
-related_review: null
-related_test: null
+related_review: docs/reviews/code_review_rp_bug_048_2026-06-08.md
+related_test: app/src/test/java/com/example/rocketplan_android/data/local/dao/MaterialByNameInRoomDaoTest.kt
 last_updated: 2026-06-08
 ---
 
@@ -74,14 +74,47 @@ unsynced-at-author-time) material rows, and the push then fails/duplicates. Fixi
 prerequisite for fully closing RP-BUG-046 (and would prevent the stranding in the first place).
 
 ## Suggested fix
+
+> **Must (RP-BUG-048 review, 2026-06-08 — `docs/reviews/code_review_rp_bug_048_2026-06-08.md`):** the fix
+> must **not** keep the current post-create *re-resolve-by-name* flow. Today `addMaterialDryingGoal`
+> creates/loads a material row, but the caller then calls `addMaterialMoistureLogByName(...)`, which
+> re-resolves the material via a **project-wide name match** —
+> `observeMaterialsForProject(projectId).first().firstOrNull { it.name == name }`
+> (`RocketDryRoomViewModel.kt:308–309`). With duplicate "Concrete" rows that `firstOrNull` picks an
+> **arbitrary** copy (possibly on a different room), so the goal and the reading can land on **different**
+> material rows. The fix must **carry the canonical `materialId` through directly** — have
+> `addMaterialDryingGoal` return the created/reused `materialId` and pass it straight to
+> `addMaterialMoistureLog(materialId = …)`. Eliminate the name re-resolution entirely (or scope it to
+> room + exact id), even after dedup lands — otherwise the dedup is undermined by the lookup.
+
 - **Create side:** before inserting, look up an existing material by (project/room, name) — add
   `getMaterialByName(...)` to `LocalDataService` — and **reuse** it (attach the reading to the existing
-  materialId) instead of minting a new row. Mirrors how readings should share one material.
+  materialId) instead of minting a new row. Mirrors how readings should share one material. **Then thread
+  that canonical `materialId` to the reading directly (see the Must above) — do not re-find by name.**
 - **Reconcile side (defense in depth):** when a push assigns a serverId that already exists on another
   local material row, **collapse** the duplicates (re-point child readings to the keeper, delete the
   extras) — the same "merge to keeper" pattern iOS uses (`OfflineSync+Materials.swift` re-points reading
   rows before deleting the duplicate). Cite RP-CD identity-reconciliation rules.
 - Backfill/repair the existing stranded rows (re-point the 4 readings to one keeper material).
+
+## Fix (implemented 2026-06-08 — create side + must-fix)
+
+Stops new duplicates and the wrong-row attachment:
+- **`OfflineDao.getMaterialByNameInRoom(roomId, name)`** (+ `LocalDataService` wrapper) — the material
+  already present in the room with that name (join through non-deleted moisture logs), preferring a synced
+  (`serverId>0`) canonical row. Test: `MaterialByNameInRoomDaoTest` (reuse-canonical, case-insensitive,
+  room-scoped, none, deleted-excluded).
+- **`RocketDryRoomViewModel.addMaterialDryingGoal` now returns the canonical `Long?` materialId** and
+  **reuses** an existing room material via the lookup instead of minting a new row each call.
+- **Must-fix (review):** removed `addMaterialMoistureLogByName` (the project-wide `firstOrNull` name
+  re-resolution that attached readings to an arbitrary duplicate). `SetLatestAverageFragment` now threads
+  the returned `materialId` straight into `addMaterialMoistureLog(materialId = …)`.
+
+### Remaining (follow-up — not in this change)
+- **Collapse-on-collision:** when a push assigns a `serverId` already held by another local material row,
+  merge the duplicates (re-point child readings to the keeper, delete extras) — iOS's merge-to-keeper.
+- **Backfill** the existing stranded rows (the 4 phantom `512922` "Concrete" rows + their readings).
+- Until those land, *pre-existing* duplicate data persists; the create-side fix only prevents new ones.
 
 ## Observability
 ### Current Signals

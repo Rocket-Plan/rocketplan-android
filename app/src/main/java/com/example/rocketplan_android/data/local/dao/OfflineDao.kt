@@ -981,6 +981,23 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_materials WHERE materialId = :materialId LIMIT 1")
     suspend fun getMaterial(materialId: Long): OfflineMaterialEntity?
+
+    /**
+     * RP-BUG-048: the material already used in [roomId] with the given [name] (case-insensitive), if any.
+     * "In the room" = has a non-deleted moisture log there. Lets RocketDry reuse an existing material
+     * instead of minting a new local row per reading. Prefers a synced (serverId>0) row, then lowest PK,
+     * for a deterministic canonical pick.
+     */
+    @Query(
+        """
+        SELECT m.* FROM offline_materials m
+        INNER JOIN offline_moisture_logs l ON l.materialId = m.materialId
+        WHERE l.roomId = :roomId AND l.isDeleted = 0 AND m.name = :name COLLATE NOCASE
+        ORDER BY (CASE WHEN m.serverId > 0 THEN 0 ELSE 1 END), m.materialId
+        LIMIT 1
+        """
+    )
+    suspend fun getMaterialByNameInRoom(roomId: Long, name: String): OfflineMaterialEntity?
     // endregion
 
     // region Company & Users & Properties

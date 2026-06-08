@@ -189,44 +189,65 @@ class RocketDryRoomViewModel(
         }
     }
 
+    /**
+     * Adds (or updates) the drying goal for a material in this room and returns the **canonical**
+     * `materialId` the caller must thread straight into [addMaterialMoistureLog] — never re-resolve by
+     * name (RP-BUG-048). Returns null on failure.
+     *
+     * RP-BUG-048: reuse an existing material of this name already in the room instead of minting a new
+     * local row per call (which produced duplicate "Concrete" rows that collapse to one server id and
+     * strand child readings).
+     */
     suspend fun addMaterialDryingGoal(
         name: String,
         targetMoisture: Double?
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Long? = withContext(Dispatchers.IO) {
         val now = Date()
-        val materialUuid = UuidUtils.generateUuidV7()
         val materialName = name.trim().ifBlank {
             rocketPlanApp.getString(R.string.rocketdry_material_fallback_name)
         }
-        android.util.Log.d(
-            "RocketDryRoomVM",
-            "🎯 Creating material goal materialUuid=$materialUuid name='$materialName' targetMoisture=$targetMoisture roomId=$roomId"
-        )
-        val material = OfflineMaterialEntity(
-            materialId = -System.currentTimeMillis(),
-            uuid = materialUuid,
-            name = materialName,
-            description = targetMoisture?.let {
-                rocketPlanApp.getString(
-                    R.string.rocketdry_material_goal_description,
-                    it
-                )
-            },
-            syncStatus = SyncStatus.PENDING,
-            syncVersion = 0,
-            createdAt = now,
-            updatedAt = now,
-            lastSyncedAt = null
-        )
-        localDataService.saveMaterials(listOf(material))
-        val savedMaterial = localDataService.getMaterialByUuid(materialUuid)
-            ?: run {
-                android.util.Log.e(
-                    "RocketDryRoomVM",
-                    "❌ Failed to load material after insert: uuid=$materialUuid"
-                )
-                return@withContext false
-            }
+
+        // RP-BUG-048: reuse the material already present in this room with this name, if any.
+        val existing = localDataService.getMaterialByNameInRoom(roomId, materialName)
+        val materialId: Long = if (existing != null) {
+            android.util.Log.d(
+                "RocketDryRoomVM",
+                "🎯 Reusing existing material id=${existing.materialId} name='$materialName' roomId=$roomId"
+            )
+            existing.materialId
+        } else {
+            val materialUuid = UuidUtils.generateUuidV7()
+            android.util.Log.d(
+                "RocketDryRoomVM",
+                "🎯 Creating material goal materialUuid=$materialUuid name='$materialName' targetMoisture=$targetMoisture roomId=$roomId"
+            )
+            val material = OfflineMaterialEntity(
+                materialId = -System.currentTimeMillis(),
+                uuid = materialUuid,
+                name = materialName,
+                description = targetMoisture?.let {
+                    rocketPlanApp.getString(
+                        R.string.rocketdry_material_goal_description,
+                        it
+                    )
+                },
+                syncStatus = SyncStatus.PENDING,
+                syncVersion = 0,
+                createdAt = now,
+                updatedAt = now,
+                lastSyncedAt = null
+            )
+            localDataService.saveMaterials(listOf(material))
+            val savedMaterial = localDataService.getMaterialByUuid(materialUuid)
+                ?: run {
+                    android.util.Log.e(
+                        "RocketDryRoomVM",
+                        "❌ Failed to load material after insert: uuid=$materialUuid"
+                    )
+                    return@withContext null
+                }
+            savedMaterial.materialId
+        }
 
         // Anchor the material to the room with a goal log so it appears immediately.
         val log = OfflineMoistureLogEntity(
@@ -234,7 +255,7 @@ class RocketDryRoomViewModel(
             uuid = UuidUtils.generateUuidV7(),
             projectId = projectId,
             roomId = roomId,
-            materialId = savedMaterial.materialId,
+            materialId = materialId,
             date = now,
             moistureContent = targetMoisture ?: 0.0,
             location = rocketPlanApp.getString(R.string.rocketdry_material_goal_location),
@@ -253,9 +274,9 @@ class RocketDryRoomViewModel(
                     "❌ Failed to save material drying goal log uuid=${log.uuid}",
                     it
                 )
-                return@withContext false
+                return@withContext null
             }
-        true
+        materialId
     }
 
     suspend fun addMaterialMoistureLog(
@@ -296,27 +317,10 @@ class RocketDryRoomViewModel(
         true
     }
 
-    suspend fun addMaterialMoistureLogByName(
-        materialName: String,
-        moistureContent: Double,
-        location: String?,
-        dryingGoal: Double? = null,
-        photoLocalPath: String? = null,
-        removed: Boolean = false
-    ): Boolean = withContext(Dispatchers.IO) {
-        // Find the material by name (just created)
-        val materials = localDataService.observeMaterialsForProject(projectId).first()
-        val material = materials.firstOrNull { it.name.equals(materialName, ignoreCase = true) }
-            ?: return@withContext false
-        addMaterialMoistureLog(
-            materialId = material.materialId,
-            moistureContent = moistureContent,
-            location = location,
-            dryingGoal = dryingGoal,
-            photoLocalPath = photoLocalPath,
-            removed = removed
-        )
-    }
+    // RP-BUG-048: addMaterialMoistureLogByName was removed. It re-resolved the material via a project-wide
+    // name match (firstOrNull), which with duplicate rows attached the reading to an arbitrary/wrong
+    // material. Callers must thread the canonical materialId from addMaterialDryingGoal() into
+    // addMaterialMoistureLog(materialId = …) directly.
 
     private suspend fun createMoistureLogAssembly(logUuid: String, photoLocalPath: String) {
         val filename = "moisture_${logUuid}_${System.currentTimeMillis()}.jpg"

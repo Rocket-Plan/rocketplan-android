@@ -124,10 +124,11 @@ class SetLatestAverageFragment : Fragment() {
 
         viewLifecycleOwner.lifecycleScope.launch {
             val success = if (args.materialId == -1L) {
-                val created = viewModel.addMaterialDryingGoal(args.materialName, goalValue)
-                if (created) {
-                    viewModel.addMaterialMoistureLogByName(
-                        materialName = args.materialName,
+                // RP-BUG-048: thread the canonical materialId through directly — never re-resolve by name.
+                val newMaterialId = viewModel.addMaterialDryingGoal(args.materialName, goalValue)
+                if (newMaterialId != null) {
+                    viewModel.addMaterialMoistureLog(
+                        materialId = newMaterialId,
                         moistureContent = reading,
                         location = null,
                         dryingGoal = goalValue,
@@ -170,10 +171,11 @@ class SetLatestAverageFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val goalValue = args.goalValue.toDouble()
             val success = if (args.materialId == -1L) {
-                val created = viewModel.addMaterialDryingGoal(args.materialName, goalValue)
-                if (created) {
-                    viewModel.addMaterialMoistureLogByName(
-                        materialName = args.materialName,
+                // RP-BUG-048: thread the canonical materialId through directly — never re-resolve by name.
+                val newMaterialId = viewModel.addMaterialDryingGoal(args.materialName, goalValue)
+                if (newMaterialId != null) {
+                    viewModel.addMaterialMoistureLog(
+                        materialId = newMaterialId,
                         moistureContent = reading ?: 0.0,
                         location = "Removed",
                         dryingGoal = goalValue,

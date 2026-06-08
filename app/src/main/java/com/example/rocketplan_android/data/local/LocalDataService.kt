@@ -646,6 +646,12 @@ class LocalDataService private constructor(
     suspend fun getMaterial(materialId: Long): OfflineMaterialEntity? = withContext(ioDispatcher) {
         dao.getMaterial(materialId)
     }
+
+    /** RP-BUG-048: the canonical material already present in [roomId] with [name], or null. */
+    suspend fun getMaterialByNameInRoom(roomId: Long, name: String): OfflineMaterialEntity? =
+        withContext(ioDispatcher) {
+            dao.getMaterialByNameInRoom(roomId, name)
+        }
     // endregion
 
     /**
