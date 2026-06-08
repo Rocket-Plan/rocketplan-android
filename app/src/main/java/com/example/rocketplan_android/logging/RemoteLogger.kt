@@ -25,11 +25,13 @@ import com.example.rocketplan_android.util.UuidUtils
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 
-enum class LogLevel {
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR
+enum class LogLevel(val wireValue: String) {
+    DEBUG("DEBUG"),
+    INFO("INFO"),
+    // RP-BUG-045: backend /api/logs/ios validates level in:DEBUG,INFO,WARNING,ERROR,CRITICAL.
+    // Sending the enum name "WARN" makes Laravel reject the entire batch (HTTP 400) and drop it.
+    WARN("WARNING"),
+    ERROR("ERROR"),
 }
 
 class RemoteLogger(
@@ -75,7 +77,7 @@ class RemoteLogger(
     ) {
         val entry = RemoteLogEntry(
             timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now()),
-            level = level.name,
+            level = level.wireValue,
             category = tag,
             message = message,
             tags = listOf(tag),
