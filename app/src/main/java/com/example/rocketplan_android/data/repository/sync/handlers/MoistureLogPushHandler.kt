@@ -40,10 +40,20 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                 return handle409Conflict(e as HttpException, log, operation)
             }
             if (e.isValidationError()) {
-                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422)")
+                // RP-BUG-046: capture the 422 response body so the failing field is diagnosable.
+                // Previously only the UUID was logged, so a dropped moisture log gave no clue which
+                // backend rule (reading regex/range, damage_type drying-eligibility, room_id existence)
+                // rejected it. Terminal DROP path, so draining the error body is safe.
+                val detail = runCatching { (e as? HttpException)?.response()?.errorBody()?.string() }
+                    .getOrNull()?.take(500)
+                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422); detail=$detail")
                 ctx.remoteLogger?.log(
                     LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 validation error",
-                    mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
+                    mapOf(
+                        "logUuid" to log.uuid,
+                        "serverId" to (log.serverId?.toString() ?: "null"),
+                        "detail" to (detail ?: "unavailable"),
+                    )
                 )
                 OperationOutcome.DROP
             } else {
