@@ -40,7 +40,7 @@ android {
         applicationId = "com.rocketplantech.rocketplan"
         minSdk = 24
         targetSdk = 35
-        val buildNumber = 34
+        val buildNumber = 35
         versionCode = buildNumber
         versionName = "1.30 ($buildNumber)"
 
