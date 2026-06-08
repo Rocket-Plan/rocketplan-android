@@ -12,6 +12,7 @@
 
 | Version | Build | Status |
 |---------|-------|--------|
+| **1.30** | 34 | Promoted to **Production** (100%, in Google review) + on internal track — 2026-06-08. Bundles **RP-BUG-043, 044, 045, 047** and **RP-BUG-048** (create-side). |
 | **1.0.00** | — | — |
 
 ---

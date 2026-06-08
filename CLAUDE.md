@@ -69,12 +69,40 @@ alias fastlane='/opt/homebrew/opt/ruby/bin/bundle exec fastlane'
 | `build_debug` | Build dev debug APK |
 | `build_staging` | Build staging APK |
 | `build_release` | Build production release AAB |
+| `build_dev_release` / `build_staging_release` | Build dev / staging release AAB |
 | `test` | Run unit tests |
+| `robo_test` | Firebase Test Lab robo pre-flight (login robo-script). Gates the prod deploy lanes; see below |
 | `bump_and_build` | Bump version + build debug |
 | `clean` | Clean build directory |
-| `deploy_internal` | Bump + build + deploy to Play Store internal track |
-| `deploy_beta` | Bump + build + deploy to Play Store beta track |
-| `deploy_production` | Bump + build + deploy to Play Store production |
+| `deploy_dev` | Bump + build + deploy dev AAB to Play internal (draft) |
+| `deploy_internal` | Bump + robo_test + build + deploy to Play internal track (draft) |
+| `deploy_staging` | Bump + build + deploy staging AAB to Play alpha (closed) |
+| `deploy_open` | Bump + robo_test + build + deploy to Play beta (open testing) |
+| `deploy_beta` | Bump + robo_test + build + deploy to Play beta track |
+| `deploy_production` | Bump + robo_test + build + deploy to Play production |
+
+Every `deploy_*` lane also creates+finalizes a **Sentry release** (`finalize_sentry`), so deploys need
+`sentry-cli` installed and authed.
+
+### Firebase Test Lab robo gate (`robo_test`)
+
+`deploy_internal/open/beta/production` run a **Firebase Test Lab robo** pre-flight before upload: it builds
+the matching-flavor APK and drives the recorded login robo-script (`app/src/test/resources/robo-script.json`)
+on a real device, failing the deploy if login breaks or the app crashes.
+
+- Enable by setting the Firebase/GCP project: `firebase.project=<gcp-project-id>` in `local.properties`
+  (or `RP_FIREBASE_PROJECT` env). Project: `rocketplan-ios-1587164275435`. Needs `gcloud` authed with
+  Firebase Test Lab access. **Skips gracefully** if unset, so deploys work without it.
+- Environment-aware: pass `env: dev|staging|prod` (default prod). The default script carries **prod**
+  credentials (valid only against `api-public`); non-prod envs need their own `robo-script.<env>.json`.
+- The Play Console **Pre-launch report** robo-script (which silences the "Failed Login" alert emails) is a
+  separate, one-time **manual** console upload — there is no Play API for it.
+
+### Sync duplicate detector
+
+`scripts/check_sync_duplicates.sh <adb-serial>` pulls the device Room DB and flags any reconcile-by-serverId
+duplicate (the RP-BUG-036/037/038/048 signature). Run after a create→sync→refresh cycle; exits non-zero on
+a duplicate.
 
 ### Play Store Deployment
 
@@ -130,12 +158,13 @@ adb connect <device-ip>:5555
 Build number is in `app/build.gradle.kts`:
 
 ```kotlin
-val buildNumber = 12  // Current as of Feb 2026
+val buildNumber = 34  // Current as of Jun 2026
 versionCode = buildNumber
-versionName = "1.29 ($buildNumber)"
+versionName = "1.30 ($buildNumber)"
 ```
 
-Use `fastlane bump` to increment automatically.
+Use `fastlane bump` to increment automatically. Note: `bump` only increments `buildNumber`; the marketing
+version (`1.30`) is edited by hand when you want a new minor.
 
 ## Architecture
 
