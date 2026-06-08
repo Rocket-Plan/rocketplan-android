@@ -248,8 +248,11 @@ class ProjectMetadataSyncService(
 
     suspend fun syncRoomMoistureLogs(projectId: Long, roomId: Long): Int = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
-        // API returns {"data": {"materialId": [{log}, ...], ...}} — dict keyed by material ID inside "data" wrapper
-        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "photo,moisture_log") }
+        // API returns {"data": {"materialId": [{log}, ...], ...}} — dict keyed by material ID inside "data" wrapper.
+        // RP-BUG-047: include must be "photo" only. The backend rejects the invalid "moisture_log" relation
+        // with HTTP 400 (every room), so moisture logs never pull down. iOS (DamageService.getRoomMoistureLogs)
+        // sends include=photo.
+        val response = runCatching { api.getRoomMoistureLogs(roomId, include = "photo") }
             .onFailure { error ->
                 Log.e(TAG, "[syncRoomMoistureLogs] Failed for roomId=$roomId (projectId=$projectId)", error)
             }
