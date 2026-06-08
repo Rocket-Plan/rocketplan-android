@@ -3,6 +3,8 @@
 > **Single source of truth for all user-facing bugs, crashes, hangs, and functional defects.**
 > Every investigation doc, plan, and review must link back here.
 > Investigation docs carry YAML front matter that mirrors the fields below.
+>
+> **Matching a new report or checking regression risk?** Start in [`SYMPTOM_INDEX.md`](SYMPTOM_INDEX.md) — concrete user-visible symptoms ("room card spinner never stops", "room shows N photos but none load") mapped to the most likely existing ticket. Faster than scanning this file's prose rows.
 
 ---
 
@@ -38,6 +40,12 @@
 - `pre_existing_worsened` — existed before, amplified by increased scale or data pressure
 
 **Source**: `sentry` | `qa` | `review` | `customer` | `internal`
+
+**Found Timestamp** (`found_at`) — record the exact moment the bug was first observed or first registered, in repo-local Pacific time (`America/Los_Angeles`) with the correct seasonal abbreviation:
+- `PST` for Pacific Standard Time
+- `PDT` for Pacific Daylight Time
+
+Use an exact timestamp, not just a date. Format: `YYYY-MM-DD HH:MM:SS PST` / `YYYY-MM-DD HH:MM:SS PDT`. If the true first-observed time is known (Sentry, QA notes, `adb logcat`, backend `log_entries`), record that; if only the registration time is known, record it and say so in the investigation body. The table **Found** column holds the build/version (`found_in`); the precise timestamp lives in front-matter `found_at` + the investigation body. (Mirrors the iOS tracker convention.)
 
 **ID Conventions** — prefix is chosen by **failure concreteness**, not by where the issue was discovered. (Discovery is captured in `Source`; evidence strength is captured in `Evidence` — see below.)
 
@@ -78,6 +86,7 @@ type: crash | hang | threading | memory | ui_bug | performance | functional
 classification: pre_existing_latent | new_code_bug | regression | pre_existing_worsened
 source: sentry | qa | review | customer | internal
 found_in: "1.0.XX+XXX"
+found_at: "YYYY-MM-DD HH:MM:SS PST"
 fixed_in: null
 released_in: null
 state: investigating | open | planned | fixed | closed
@@ -181,8 +190,8 @@ Column key: **Class.** = Classification · **Rel** = Release State · **Reg. Of*
 | `RP-BUG-033` | P3 | — | MoistureLogRequest missing dryingGoal field — user-set drying goals not persisted to server, silently lost on sync | functional | pre_existing_latent | Parity review 2026-06-03 vs iOS RP-BUG-124 | 1.29 (32) | fixed | unreleased | — | [RP-BUG-033](investigations/RP-BUG-033_moisture_log_missing_drying_goal.md) · iOS `RP-BUG-124` |
 | `RP-BUG-034` | P2 | — | PropertyPushHandler sends propertyTypeId=0 for offline-created properties — server returns 422 and operation silently dropped | functional | pre_existing_latent | Parity review 2026-06-03 vs iOS RP-BUG-166 | 1.29 (32) | fixed | unreleased | — | [RP-BUG-034](investigations/RP-BUG-034_property_type_id_missing.md) · iOS `RP-BUG-166` |
 | `RP-BUG-035` | P2 | — | WorkScopeSyncService.syncRoomWorkScopes fetches from API without merging pending local creates — locally-staged items vanish on refresh | functional | pre_existing_latent | Parity review 2026-06-03 vs iOS RP-BUG-027 | 1.29 (32) | fixed | unreleased | — | [RP-BUG-035](investigations/RP-BUG-035_workscope_pending_create_merge_gap.md) · iOS `RP-BUG-027` |
-| `RP-BUG-044` | P2 | — | syncAllRoomPhotos swallows per-room photo-fetch failures — segment returns success with 0 photos, no retry, room left with photoCount>0 and no local photos | functional | pre_existing_latent | On-device DB trace 2026-06-07 | 1.0.00 | fixed | unreleased | — | [RP-BUG-044](investigations/RP-BUG-044_sync_all_room_photos_swallows_per_room_failures.md) · [plan](plans/plan_rp_bug_044_sync_all_room_photos_partial_failure_2026-06-07.md) · [test](../app/src/test/java/com/example/rocketplan_android/data/repository/sync/PhotoSyncServiceTest.kt) · pairs with RP-BUG-043 |
-| `RP-BUG-043` | P2 | — | pendingPhotoSyncs leaks when the CONTENT_ONLY follow-up is coalesced/dropped by enqueue (key ignores mode) — room-card spinner hangs forever and the project's photos never download | hang | pre_existing_latent | On-device DB trace 2026-06-07 | 1.0.00 | fixed | unreleased | — | [RP-BUG-043](investigations/RP-BUG-043_pending_photo_syncs_leak_stuck_spinner.md) · [plan](plans/plan_rp_bug_043_pending_photo_syncs_leak_2026-06-07.md) · [review](reviews/code_review_rp_bug_043_2026-06-07.md) · [test](../app/src/test/java/com/example/rocketplan_android/data/sync/SyncQueueManagerPhotoSyncFlagTest.kt) |
+| `RP-BUG-044` | P2 | — | syncAllRoomPhotos swallows per-room photo-fetch failures — segment returns success with 0 photos, no retry, room left with photoCount>0 and no local photos | functional | pre_existing_latent | 1.0.00 | 1.0.00 | fixed | unreleased | — | [RP-BUG-044](investigations/RP-BUG-044_sync_all_room_photos_swallows_per_room_failures.md) · [plan](plans/plan_rp_bug_044_sync_all_room_photos_partial_failure_2026-06-07.md) · [test](../app/src/test/java/com/example/rocketplan_android/data/repository/sync/PhotoSyncServiceTest.kt) · pairs with RP-BUG-043 |
+| `RP-BUG-043` | P2 | — | pendingPhotoSyncs leaks when the CONTENT_ONLY follow-up is coalesced/dropped by enqueue (key ignores mode) — room-card spinner hangs forever and the project's photos never download | hang | pre_existing_latent | 1.0.00 | 1.0.00 | fixed | unreleased | — | [RP-BUG-043](investigations/RP-BUG-043_pending_photo_syncs_leak_stuck_spinner.md) · [plan](plans/plan_rp_bug_043_pending_photo_syncs_leak_2026-06-07.md) · [review](reviews/code_review_rp_bug_043_2026-06-07.md) · [test](../app/src/test/java/com/example/rocketplan_android/data/sync/SyncQueueManagerPhotoSyncFlagTest.kt) |
 | `RP-BUG-042` | P3 | — | Global reference data (damage/claim/scope/project types) not seeded before Phase 2 — offline pickers can be empty until a project's metadata has synced (iOS seeds globally up front) | functional | pre_existing_latent | iOS parity review 2026-06-07 | 1.0.00 | fixed | unreleased | — | [RP-BUG-042](investigations/RP-BUG-042_reference_data_not_seeded_before_phase2.md) · iOS `AppViewModel` RP-BUG-177 |
 | `RP-BUG-041` | P3 | — | Android shows no per-item cloud/download indicator — users can't tell which content isn't downloaded yet (cloud-down) or has unsynced local changes (cloud-up) like iOS does | ui_bug | pre_existing_latent | iOS parity review 2026-06-07 | 1.0.00 | fixed | unreleased | — | [RP-BUG-041](investigations/RP-BUG-041_no_per_item_download_sync_cloud_indicator.md) · iOS `ProjectListPageViewModel` / `FileDownloaderManager` |
 | `RP-BUG-040` | P2 | — | Offline delete of a server-modified entity fails — delete handlers send a stale updated_at and the backend returns 409; Group A (Note/AtmosphericLog/Room/Location/Property) retry the stale timestamp until abandoned, Group B (Equipment/MoistureLog) silently swallow it as success (Photo safe) | functional | pre_existing_latent | 409 sweep 2026-06-07 (backend verified) | 1.0.00 | fixed | unreleased | — | [RP-BUG-040](investigations/RP-BUG-040_delete_409_stale_timestamp_retry_loop.md) · rule RP-CD-005 |

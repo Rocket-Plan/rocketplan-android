@@ -6,6 +6,7 @@ type: functional
 classification: pre_existing_latent
 source: internal
 found_in: "1.0.00"
+found_at: "2026-06-07 18:21:56 PDT"
 fixed_in: "1.0.00"
 released_in: null
 state: fixed
