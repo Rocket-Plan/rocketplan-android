@@ -32,6 +32,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -76,7 +77,11 @@ class PhotoSyncService(
      * Fetches room list from database and syncs photos for each room in parallel.
      * Matches iOS DispatchGroup pattern for concurrent room photo fetching.
      */
-    suspend fun syncAllRoomPhotos(projectId: Long): SyncResult = withContext(ioDispatcher) {
+    suspend fun syncAllRoomPhotos(
+        projectId: Long,
+        maxRoomRetries: Int = MAX_ROOM_PHOTO_RETRIES,
+        retryDelayMs: Long = ROOM_PHOTO_RETRY_DELAY_MS,
+    ): SyncResult = withContext(ioDispatcher) {
         val startTime = System.currentTimeMillis()
         Log.d(TAG, "🔄 [syncAllRoomPhotos] Starting for project $projectId")
 
@@ -90,25 +95,42 @@ class PhotoSyncService(
         val roomIds = rooms.mapNotNull { it.serverId }
         Log.d(TAG, "📸 [syncAllRoomPhotos] Fetching photos for ${roomIds.size} rooms (parallel)")
 
-        // Fetch photos for all rooms in parallel (matching iOS DispatchGroup pattern)
-        val results = coroutineScope {
-            roomIds.map { roomId ->
-                async {
-                    roomId to syncRoomPhotos(projectId, roomId)
-                }
-            }.awaitAll()
-        }
-
-        // Aggregate results
+        // RP-BUG-044: fetch all rooms in parallel, then bounded-retry only the rooms that fail. A
+        // per-room failure used to be swallowed (segment returned success with the room left empty and
+        // no retry). syncRoomPhotos only advances the per-room checkpoint on success, so retries are
+        // incremental and already-synced rooms are untouched.
         var totalPhotos = 0
-        var failedRooms = 0
-        for ((roomId, result) in results) {
-            if (result.success) {
-                totalPhotos += result.itemsSynced
-            } else {
-                failedRooms++
-                Log.w(TAG, "⚠️ [syncAllRoomPhotos] Failed room $roomId", result.error)
+        var pendingRoomIds = roomIds
+        var lastError: Throwable? = null
+        var lastFailedRoomId: Long? = null
+        var attempt = 0
+        while (true) {
+            val results = coroutineScope {
+                pendingRoomIds.map { roomId ->
+                    async { roomId to syncRoomPhotos(projectId, roomId) }
+                }.awaitAll()
             }
+
+            val stillFailed = mutableListOf<Long>()
+            for ((roomId, result) in results) {
+                if (result.success) {
+                    totalPhotos += result.itemsSynced
+                } else {
+                    stillFailed.add(roomId)
+                    lastError = result.error
+                    lastFailedRoomId = roomId
+                    Log.w(TAG, "⚠️ [syncAllRoomPhotos] Failed room $roomId (attempt ${attempt + 1})", result.error)
+                }
+            }
+
+            if (stillFailed.isEmpty() || attempt >= maxRoomRetries) {
+                pendingRoomIds = stillFailed
+                break
+            }
+            attempt++
+            Log.d(TAG, "🔁 [syncAllRoomPhotos] Retrying ${stillFailed.size} failed room(s) for project $projectId (attempt ${attempt + 1}/${maxRoomRetries + 1})")
+            if (retryDelayMs > 0) delay(retryDelayMs)
+            pendingRoomIds = stillFailed
         }
 
         if (totalPhotos > 0) {
@@ -116,8 +138,40 @@ class PhotoSyncService(
         }
 
         val duration = System.currentTimeMillis() - startTime
-        Log.d(TAG, "✅ [syncAllRoomPhotos] Synced $totalPhotos photos from ${roomIds.size - failedRooms}/${roomIds.size} rooms in ${duration}ms (parallel)")
-        SyncResult.success(SyncSegment.ALL_ROOM_PHOTOS, totalPhotos, duration)
+        val failedRooms = pendingRoomIds.size
+        val syncedRoomCount = roomIds.size - failedRooms
+
+        if (failedRooms == 0) {
+            Log.d(TAG, "✅ [syncAllRoomPhotos] Synced $totalPhotos photos from $syncedRoomCount/${roomIds.size} rooms in ${duration}ms")
+            return@withContext SyncResult.success(SyncSegment.ALL_ROOM_PHOTOS, totalPhotos, duration)
+        }
+
+        // RP-BUG-044: rooms still failing after retries → report terminal failure (no more silent
+        // success). totalPhotos is preserved so partial progress isn't lost. One-shot remote log.
+        Log.w(TAG, "❌ [syncAllRoomPhotos] $failedRooms/${roomIds.size} room(s) still failed after ${maxRoomRetries + 1} attempts for project $projectId (synced $totalPhotos photos)")
+        remoteLogger?.log(
+            level = LogLevel.WARN,
+            tag = "SyncTelemetry",
+            message = "Room photo bulk sync partial failure",
+            metadata = buildMap {
+                put("segment", SyncSegment.ALL_ROOM_PHOTOS.name)
+                put("projectId", projectId.toString())
+                put("failedRooms", failedRooms.toString())
+                put("totalRooms", roomIds.size.toString())
+                put("attempts", (maxRoomRetries + 1).toString())
+                put("itemsSynced", totalPhotos.toString())
+                put("failedRoomIds", pendingRoomIds.joinToString(","))
+                lastError?.let { put("error", it.message ?: it.javaClass.simpleName) }
+            }
+        )
+        val cause = lastError ?: IllegalStateException("Room photo sync failed for rooms $pendingRoomIds (room $lastFailedRoomId)")
+        // Use the Failure constructor directly (the factory drops itemsSynced) so partial progress is kept.
+        SyncResult.Failure(
+            segment = SyncSegment.ALL_ROOM_PHOTOS,
+            cause = cause,
+            durationMs = duration,
+            itemsSynced = totalPhotos,
+        )
     }
 
     /**
@@ -588,5 +642,10 @@ class PhotoSyncService(
 
     companion object {
         private const val TAG = "API"
+
+        // RP-BUG-044: bounded retry of per-room photo fetches that fail transiently, so a momentary
+        // error doesn't leave a room permanently at photoCount>0 / local=0.
+        const val MAX_ROOM_PHOTO_RETRIES = 2
+        const val ROOM_PHOTO_RETRY_DELAY_MS = 400L
     }
 }
