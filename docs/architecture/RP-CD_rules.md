@@ -141,6 +141,41 @@ Why: Sending a local/zero id produces 404s, 422s, or silent writes against the w
 How to apply: Resolver helpers (e.g. `resolveServerRoomId`) must block/return "not ready" instead of falling back to the local id. Request DTOs must not default a missing required id to `0`. Audit `OfflineSyncApi` call sites and push-handler request builders.
 Violations: RP-BUG-030 (room id fell back to local id, fixed), RP-BUG-034 (`propertyTypeId = 0` sent, fixed).
 
+### RP-CD-018 — Reuse local rows by natural key on user-create; thread the canonical id
+Status: active
+Rule: When a user action creates a child of a named/identified parent (e.g. a moisture reading on a material), first reuse an existing local parent matched by its natural key (name within the room/project) instead of minting a new local row per action. After create-or-reuse, pass the **canonical local id** straight to the child write — never re-resolve the parent by a non-unique attribute (e.g. a project-wide name `firstOrNull`).
+Why: Minting a new local row per action produces duplicate parents that the server collapses to one `serverId`, which `mergePulledRowsByServerId` cannot dedupe (it maps one local row per serverId) — leaving phantom duplicates and stranding children. Re-resolving by name then attaches the child to an arbitrary/wrong duplicate.
+How to apply: Add a room/project-scoped `get*ByName` lookup and reuse it; have the create method return the canonical `id`; delete `*ByName` write paths that re-find via `observe*(project).firstOrNull { name == … }`. See `RocketDryRoomViewModel.addMaterialDryingGoal` / `getMaterialByNameInRoom`.
+Violations: RP-BUG-048 (duplicate "Concrete" materials collapse to one serverId; create-side fixed).
+
+### RP-CD-019 — A terminal DROP must not strand the row, and must capture the error body
+Status: active
+Rule: A push handler that returns `DROP` on a non-retryable server error (e.g. 422) must (a) also resolve the local row — clear `PENDING` / mark errored / reconcile — so it is not left `PENDING` with no queue op, and (b) capture the response body before dropping so the failing rule is diagnosable. Conditions that are actually recoverable (offline parent-ordering) use `SKIP`/`RETRY`, never `DROP`.
+Why: `DROP` removes the queue op but leaves the row `PENDING` forever → silent data loss with no retry and no signal. Logging only the status code ("HTTP 422") makes the root rule undiagnosable in the field.
+How to apply: In each `handle*` 422 branch, drain `errorBody()?.string()` into the local + remote log (terminal path, safe to read once); decide `DROP` vs `SKIP` by whether the condition is recoverable. Cover both the initial push and the 409→retry→422 path.
+Violations: RP-BUG-046 (moisture 422 dropped, row stranded PENDING, body not logged; diagnostics fixed, drop-vs-skip follow-up open).
+
+### RP-CD-020 — Bulk sync segments must report partial failure, not success
+Status: active
+Rule: A bulk sync segment that fans out per-item work must not return `success` when items failed. Bounded-retry the failed items, preserve partial progress (`itemsSynced`), then return `failure` if any remain — so the orchestrator and UI see the truth and can retry.
+Why: Reporting success while items failed silently abandons work (e.g. a room left with `photoCount>0` and no photos) with no retry; `results.all { it.success }` then reads green.
+How to apply: Aggregate per-item outcomes; collect the still-failed set; retry it (bounded, with backoff) before the final result. Return `SyncResult.Failure(segment, cause, itemsSynced = partial)` when non-empty. See `PhotoSyncService.syncAllRoomPhotos`.
+Violations: RP-BUG-044 (per-room photo failures swallowed as success; fixed).
+
+### RP-CD-021 — UI sync-state is derived from queue state, not a hand-maintained flag
+Status: active
+Rule: Per-project/entity "syncing" state surfaced to the UI (spinners, badges) must be **derived** from the actual queue — active + queued + **deferred** jobs — not a separately-maintained set mutated alongside enqueues.
+Why: A hand-maintained flag mutated before an enqueue strands when the enqueue is coalesced/dropped (mode-agnostic key), leaving a permanent spinner and suppressing future syncs. The deferred source is required: a parked job lives outside `taskIndex`.
+How to apply: Compute the flow in one `recompute*Locked()` from `activeProjectModes` + `taskIndex` + `deferredProjectSyncs`; replace dedup checks with a derived predicate. Delete the side-set. See `SyncQueueManager.isPhotoBearingSyncPendingLocked`.
+Violations: RP-BUG-043 (`pendingPhotoSyncs` leak → stuck room-card spinner; fixed).
+
+### RP-CD-022 — Client-sent values must be a subset of the backend's accepted set
+Status: active
+Rule: Any value the client sends that the backend validates against a fixed set — enum strings (log levels), API `include` relations, status codes — must be a subset of the backend's accepted set, and pinned with a contract test. Prefer parity with the iOS client, which hits the same backend.
+Why: A single out-of-set value is rejected by the whole request (Laravel `in:` rules fail the batch), silently dropping data/telemetry for every payload that contains it.
+How to apply: Map wire values explicitly (don't send `enum.name` blindly); add a test asserting `clientValues ⊆ backendAccepted`; diff `include`/enum params against iOS. See `LogLevel.wireValue`, `getRoomMoistureLogs(include = "photo")`.
+Violations: RP-BUG-045 (`WARN` vs backend `WARNING`, batch dropped; fixed), RP-BUG-047 (`include=photo,moisture_log` 400; fixed).
+
 ---
 
 ## Adding a rule

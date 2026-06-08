@@ -2,12 +2,12 @@
 **Tracker:** [BUG_TRACKER.md](../BUG_TRACKER.md)
 **Related:** [Investigation](../investigations/RP-BUG-048_duplicate_local_materials_collapse_to_one_serverid.md)
 
-# Code Review: RP-BUG-048 duplicate local materials collapse to one server id
+# Code Review: RP-BUG-048 create-side duplicate-material fix
 
 **Bug ID(s):** RP-BUG-048
 **Reviewer:** Codex
 **Date:** 2026-06-08
-**Timestamp:** 2026-06-08 07:57:32 PDT
+**Timestamp:** 2026-06-08 09:18:35 PDT
 **Uncommitted files at review start (`git status --porcelain`):**
 ```text
 ?? data/
@@ -17,78 +17,66 @@
 
 ## Summary
 
-The investigation is strong: the live-device duplicate detector, the RocketDry create path, and the
-material reconcile path all line up with the reported failure mode.
+The implementation addresses the core create-side failure correctly.
 
-I agree that RP-BUG-048 is a real bug and very likely the root cause behind the stranded moisture logs in
-RP-BUG-046. The main thing to tighten is the proposed fix shape: preventing duplicate inserts is necessary,
-but the current RocketDry flow also re-resolves the material by **name** afterward, project-wide, which is
-too weak to be a trustworthy identity link even after create-side dedup is added.
+The prior must-fix from the investigation review is now satisfied:
+- RocketDry no longer re-resolves the material by a project-wide name match
+- `addMaterialDryingGoal` now returns the canonical `materialId`
+- `SetLatestAverageFragment` threads that `materialId` directly into `addMaterialMoistureLog`
+
+The new `getMaterialByNameInRoom(roomId, name)` lookup is appropriately room-scoped, case-insensitive,
+and deterministic. I did not find a new must-fix issue in the landed code.
 
 ## Findings
 
 ### Must Fix
 
-1. **Do not keep the post-create "find by name" flow in the eventual fix.**
-
-   Today the new-material path is:
-
-   - `addMaterialDryingGoal(name, goal)` inserts a new `OfflineMaterialEntity`
-   - then `SetLatestAverageFragment` calls `addMaterialMoistureLogByName(materialName, ...)`
-   - which does `observeMaterialsForProject(projectId).first().firstOrNull { it.name.equals(...) }`
-
-   That second step is project-scoped and name-based, so it can attach the reading to the wrong row if:
-
-   - duplicates already exist locally
-   - two materials legitimately share the same display name
-   - the intended reuse should be room-scoped but the lookup is project-wide
-
-   The eventual fix should return or resolve a **canonical materialId** directly and pass that through to
-   `addMaterialMoistureLog`, ideally in one transaction/helper, rather than creating/reusing a material and
-   then looking it up again by name.
+None.
 
 ### Should Fix
 
-1. **Tighten the investigation's suggested helper contract.**
+1. **Add a higher-level regression test for the full RocketDry flow, not just the DAO lookup.**
 
-   The doc suggests `getMaterialByName(project/room, name)`, but `OfflineMaterialEntity` only stores
-   `projectId`, not `roomId`. If room scoping matters, the fix likely needs to resolve via the current
-   room's moisture-log/material relationships or explicitly document why project-wide name reuse is safe.
+   `MaterialByNameInRoomDaoTest` is good coverage for the canonical-pick query, but the bug was really in
+   the end-to-end "new material + goal + first reading" flow. A focused view-model or repository-level
+   test should pin that:
 
-2. **Fix the investigation timestamp abbreviation.**
+   - repeated by-name authoring in the same room reuses one `materialId`
+   - the returned `materialId` is the one used for the reading insert
+   - no caller can regress back to name re-resolution
 
-   The front matter says `found_at: "2026-06-08 00:30:00 PST"`, but June 8, 2026 in
-   `America/Los_Angeles` is **PDT**, not PST.
+2. **Keep the collapse/backfill follow-up explicit in implementation tracking.**
+
+   This commit prevents **new** duplicates, but it intentionally does not repair **existing** duplicate
+   rows or collapse future serverId collisions if old data is already bad. That is acceptable for this fix,
+   but the follow-up should remain clearly tracked until the four stranded rows are repaired.
 
 ### Consider
 
-1. **Add a regression test around the full RocketDry "new material + first reading" flow.**
+1. **Add an observability rerun note once the detector is re-executed after authoring fresh data.**
 
-   The key guard is not just "dedup by name exists", but:
-
-   - repeated readings for the same chosen material produce one local material row
-   - both readings attach to the same `materialId`
-   - sync/reconcile does not leave multiple local rows with one `serverId`
-
-2. **Add a local repair path in the eventual fix.**
-
-   The investigation already notes this, and I agree: the implementation should not only prevent new
-   duplicates but also re-point existing moisture logs to a keeper material and remove orphan duplicates.
+   The detector script is a strong production-like check. After QA creates multiple readings for the same
+   material on a clean path, recording a fresh `scripts/check_sync_duplicates.sh` pass for materials would
+   make the closure evidence stronger.
 
 ### Verified Safe
 
-1. **The detector script is useful and appropriately targeted.**
+1. **The prior review's identity-threading concern is resolved.**
 
-   `scripts/check_sync_duplicates.sh` checks the exact many-local-to-one-server signature across every
-   reconcile-by-serverId table, which is a good observability complement to unit tests.
+   `addMaterialMoistureLogByName` was removed, so the reading no longer attaches via an arbitrary
+   project-wide `firstOrNull` match.
 
-2. **The create-side evidence is direct.**
+2. **The reuse lookup is room-scoped in a way that matches the bug.**
 
-   `RocketDryRoomViewModel.addMaterialDryingGoal` always generates a fresh UUID and negative PK and inserts
-   a new material without any existing-row lookup.
+   `OfflineDao.getMaterialByNameInRoom(roomId, name)` joins through non-deleted moisture logs in the room,
+   which matches the RocketDry concept of "a material already present here."
 
-3. **The reconcile-side limitation is real.**
+3. **Canonical selection is deterministic.**
 
-   `LocalDataService.saveMaterials(..., reconcileByServerId = true)` builds `existingByServerId` with
-   `associateBy`, which can only retain one local row per `serverId` and therefore cannot collapse an
-   already-duplicated N→1 local set by itself.
+   The DAO prefers a synced row (`serverId > 0`) and then lowest `materialId`, which is a sensible and
+   stable tie-breaker when duplicates already exist locally.
+
+4. **The fix is narrowly scoped.**
+
+   The change is contained to RocketDry material authoring plus a DAO/helper addition; it does not alter
+   broader sync reconciliation behavior.
