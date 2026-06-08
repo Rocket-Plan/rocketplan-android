@@ -2,6 +2,7 @@ package com.example.rocketplan_android.ui.projects
 
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.model.ProjectStatus
+import com.example.rocketplan_android.ui.common.downloadSyncState
 
 fun OfflineProjectEntity.toListItem(): ProjectListItem {
     val displayTitle = listOfNotNull(
@@ -18,7 +19,14 @@ fun OfflineProjectEntity.toListItem(): ProjectListItem {
         projectCode = displayCode,
         alias = displayAlias,
         status = status,
-        propertyId = propertyId
+        propertyId = propertyId,
+        // RP-BUG-041: cloud-up if the project has unpushed local changes; cloud-down if its content
+        // hasn't been pulled to the device yet (lastSyncedAt == null); else no icon.
+        downloadSyncState = downloadSyncState(
+            isDirty = isDirty,
+            syncStatus = syncStatus,
+            isDownloaded = lastSyncedAt != null,
+        )
     )
 }
 

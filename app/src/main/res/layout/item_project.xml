@@ -20,16 +20,37 @@
         android:orientation="vertical"
         android:padding="16dp">
 
-        <TextView
-            android:id="@+id/projectTitle"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="@dimen/text_size_card_title"
-            android:textColor="@color/black"
-            android:textStyle="bold"
-            android:maxLines="2"
-            android:ellipsize="end"
-            tools:text="176 Street" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/projectTitle"
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textSize="@dimen/text_size_card_title"
+                android:textColor="@color/black"
+                android:textStyle="bold"
+                android:maxLines="2"
+                android:ellipsize="end"
+                tools:text="176 Street" />
+
+            <!-- RP-BUG-041: per-item cloud indicator (cloud-up = unsynced, cloud-down = not downloaded) -->
+            <ImageView
+                android:id="@+id/projectCloudIndicator"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp"
+                android:visibility="gone"
+                android:contentDescription="@string/project_sync_indicator_desc"
+                app:tint="@color/light_text_rp"
+                tools:src="@drawable/ic_cloud_off"
+                tools:visibility="visible" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/projectNumber"

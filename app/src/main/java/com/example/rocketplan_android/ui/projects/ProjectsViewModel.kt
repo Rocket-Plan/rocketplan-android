@@ -258,7 +258,10 @@ data class ProjectListItem(
     val status: String,
     val propertyId: Long? = null,
     val latitude: Double? = null,
-    val longitude: Double? = null
+    val longitude: Double? = null,
+    // RP-BUG-041: per-item cloud indicator state (cloud-up = unsynced, cloud-down = not downloaded)
+    val downloadSyncState: com.example.rocketplan_android.ui.common.DownloadSyncState =
+        com.example.rocketplan_android.ui.common.DownloadSyncState.Synced
 )
 
 sealed class ProjectsUiState {

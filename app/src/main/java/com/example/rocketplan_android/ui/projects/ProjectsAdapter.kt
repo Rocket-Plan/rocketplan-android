@@ -3,11 +3,13 @@ package com.example.rocketplan_android.ui.projects
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.ui.common.bindDownloadSyncIndicator
 
 class ProjectsAdapter(
     private val onProjectClick: (ProjectListItem) -> Unit
@@ -31,10 +33,12 @@ class ProjectsAdapter(
         private val projectTitle: TextView = itemView.findViewById(R.id.projectTitle)
         private val projectCode: TextView = itemView.findViewById(R.id.projectNumber)
         private val projectAlias: TextView = itemView.findViewById(R.id.projectSubtitle)
+        private val cloudIndicator: ImageView = itemView.findViewById(R.id.projectCloudIndicator)
 
         fun bind(project: ProjectListItem) {
             projectTitle.text = project.title
             projectCode.text = project.projectCode
+            cloudIndicator.bindDownloadSyncIndicator(project.downloadSyncState)
 
             if (project.alias.isNullOrBlank()) {
                 projectAlias.visibility = View.GONE

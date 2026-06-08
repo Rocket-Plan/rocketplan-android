@@ -7,15 +7,15 @@ classification: pre_existing_latent
 source: review
 evidence: inferred
 found_in: "1.0.00"
-fixed_in: null
+fixed_in: "1.0.00"
 released_in: null
-state: planned
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_041_download_sync_indicator_2026-06-07.md
-related_review: null
-related_test: null
+related_review: docs/reviews/code_review_rp_bug_041_2026-06-07.md
+related_test: app/src/test/java/com/example/rocketplan_android/ui/common/DownloadSyncStateTest.kt
 priority: P3
 last_updated: 2026-06-07
 ---
@@ -77,6 +77,23 @@ offline-availability and sync state at a glance.
    the highest-value adapters first — **project list** and **photo gallery** — then extend.
 4. Mirror iOS's "only cache positive results" so the icon doesn't strand after Phase 2 completes
    (relates to RP-BUG-041-adjacent Phase 2 banner work).
+
+## Fix (implemented 2026-06-07 — first rollout)
+
+Shipped the reusable framework + the **project-list** surface (the canonical iOS surface):
+- `ui/common/DownloadSyncState.kt` — `DownloadSyncState { Synced, PendingUpload, NotDownloaded }`, a
+  pure `downloadSyncState(isDirty, syncStatus, isDownloaded)` (cloud-up > cloud-down precedence), and an
+  `ImageView.bindDownloadSyncIndicator(...)` helper.
+- Drawables: `ic_cloud_upload` (cloud-up) added; `ic_cloud_off` reused (cloud-down).
+- Project list: `item_project.xml` gains a `projectCloudIndicator`; `ProjectListItem` carries the state;
+  `ProjectListMappers.toListItem` derives it (`isDirty`/`syncStatus` → cloud-up; `lastSyncedAt == null`
+  → cloud-down); `ProjectsAdapter` binds it.
+- Test: `DownloadSyncStateTest` (5 cases incl. precedence). Full suite green (445).
+
+### Remaining (follow-on, same helper)
+Extend the indicator to the **photo gallery** (cloud-down until the file is cached via
+`PhotoCacheManager`) and documents/PDF, per the plan's rollout order. Tracked here; not in this first
+increment.
 
 ## Observability
 
