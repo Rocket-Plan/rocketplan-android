@@ -9,8 +9,8 @@ evidence: inferred
 found_in: "1.0.00"
 fixed_in: null
 released_in: null
-state: planned
-release_state: unreleased
+state: closed
+release_state: n/a
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_fr_008_phase2_edit_gate_2026-06-07.md
@@ -22,6 +22,23 @@ last_updated: 2026-06-07
 ---
 
 # RP-FR-008: No Phase-2 edit gate (iOS parity)
+
+> **Phase 0 outcome (2026-06-07): CLOSED — WONTFIX.** The iOS gate's motivation does not transfer to
+> Android, and the data-loss half is already covered. Verified:
+> - `LocalDataService.ioDispatcher = Dispatchers.IO`; all 191 `save*`/query methods run
+>   `withContext(ioDispatcher)` — **Room writes are off the main thread**.
+> - The UI observes via `Flow` (`RocketDryRoomViewModel` `observeMoistureLogsForRoom`/`...Atmospheric`
+>   `.collect`); forms watch a single entity / small list, not the 100-entity metadata set.
+> - `OfflineDatabase` has **no** `allowMainThreadQueries`/`automaticallyMerges` — there is no
+>   main-thread auto-merge analog to iOS Core Data's `automaticallyMergesChangesFromParent`, which is
+>   iOS's reason for `Phase2GatingService`.
+> - `preserveDirty` (RP-FR-003) prevents the edited dirty row from being clobbered by a Phase-2 pull.
+>
+> So there is no demonstrated user-visible failure (no data loss, no main-thread merge jank). If QA
+> later observes input lag while editing during a Phase-2 sync, the Phase-1 `EditSessionTracker` gate in
+> the [plan](../plans/plan_rp_fr_008_phase2_edit_gate_2026-06-07.md) is ready to implement and this can
+> be reopened.
+
 
 > iOS-parity review (2026-06-07). Filed `RP-FR` (not `RP-BUG`) because the **data-loss** half is already
 > covered on Android by `preserveDirty`, and iOS's main motivation for the gate is a Core-Data-specific
