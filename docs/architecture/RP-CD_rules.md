@@ -176,6 +176,13 @@ Why: A single out-of-set value is rejected by the whole request (Laravel `in:` r
 How to apply: Map wire values explicitly (don't send `enum.name` blindly); add a test asserting `clientValues ⊆ backendAccepted`; diff `include`/enum params against iOS. See `LogLevel.wireValue`, `getRoomMoistureLogs(include = "photo")`.
 Violations: RP-BUG-045 (`WARN` vs backend `WARNING`, batch dropped; fixed), RP-BUG-047 (`include=photo,moisture_log` 400; fixed).
 
+### RP-CD-023 — Declare only permissions the app uses; no vestigial media permissions
+Status: active
+Rule: Never declare a `uses-permission` the code doesn't exercise. Specifically: an app that captures to app-specific storage and never reads the device media library must **not** declare `READ_MEDIA_IMAGES` / `READ_MEDIA_VIDEO` (nor broad `READ_EXTERNAL_STORAGE`). For one-time/infrequent gallery import, use the Android **Photo Picker** (`PickVisualMedia` / `ACTION_PICK_IMAGES`), which needs no permission.
+Why: Google Play's **Photo & Video Permissions** policy rejects declared-but-unused broad media permissions ("Invalid use of the photo and video permissions") at *pre-submission* review — silently blocking the release (the rejection can sit unnoticed and make a promote appear to "not take").
+How to apply: Before each release, audit every `uses-permission` against real call sites. Remove any media permission with no `MediaStore` / Photo Picker / `ACTION_GET_CONTENT` usage. If occasional media access is added later, route it through the Photo Picker, not a broad permission.
+Violations: `1.30 (34)` rejected by Play pre-submission — `READ_MEDIA_IMAGES`/`READ_MEDIA_VIDEO` declared but unused; removed in `1.30 (35)`.
+
 ---
 
 ## Adding a rule
