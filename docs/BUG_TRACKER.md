@@ -12,8 +12,8 @@
 
 | Version | Build | Status |
 |---------|-------|--------|
-| **1.30** | 34 | **Draft on Internal track** (uploaded 2026-06-08, not rolled out; production promote did NOT take — prod still on 1.29 (32)). Bundles **RP-BUG-043, 044, 045, 047, 048**. |
-| **1.29** | 32 | Live on **Production** (completed) — predates this session. |
+| **1.30** | 34 | **Staged on Production** (completed/100%, 2026-06-08) — committed via API but held by managed publishing; needs a manual "Send for review" in Play Console to go live. Bundles **RP-BUG-043, 044, 045, 047, 048**. |
+| **1.29** | 32 | Live on **Production** (completed) until 1.30 (34) is sent for review + approved. |
 | **1.0.00** | — | — |
 
 ---
