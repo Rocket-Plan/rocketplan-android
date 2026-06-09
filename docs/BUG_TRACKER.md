@@ -12,7 +12,7 @@
 
 | Version | Build | Status |
 |---------|-------|--------|
-| **1.30** | 35 | **Production, sent for review** (completed/100%, 2026-06-08). Replaces 34, which Play rejected for unused READ_MEDIA_IMAGES/VIDEO (removed — see RP-CD-023). Bundles **RP-BUG-043, 044, 045, 047, 048**. Goes live to 100% once Google approves. |
+| **1.30** | 35 | **In Google review** on Production (100%) + beta + alpha (2026-06-08). Auto-publishes on approval (managed publishing off). Replaces 34 (Play-rejected for unused READ_MEDIA_IMAGES/VIDEO — removed, RP-CD-023; cleared the app-wide flag by superseding old 1.29 builds on all tracks). Bundles **RP-BUG-043, 044, 045, 047, 048**. |
 | **1.30** | 34 | Superseded by 35 (rejected: media-permission policy). |
 | **1.29** | 32 | Live on **Production** until 1.30 (35) is approved. |
 | **1.0.00** | — | — |
