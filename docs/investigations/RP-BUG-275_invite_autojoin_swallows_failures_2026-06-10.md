@@ -13,7 +13,7 @@ state: fixed
 release_state: unreleased
 regression_of: RP-BUG-270
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_bug_275_invite_autojoin_failures_2026-06-11.md
 related_review: docs/reviews/code_review_rp_bug_269_270_2026-06-10.md
 related_test: null
 last_updated: 2026-06-10

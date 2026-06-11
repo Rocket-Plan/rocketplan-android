@@ -13,7 +13,7 @@ state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_bug_278_oauth_gate_routing_2026-06-11.md
 related_review: docs/reviews/code_review_rp_bug_269_270_2026-06-10.md
 related_test: null
 last_updated: 2026-06-10
