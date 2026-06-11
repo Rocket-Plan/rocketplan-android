@@ -43,19 +43,37 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
                 // RP-BUG-046: capture the 422 response body so the failing field is diagnosable.
                 // Previously only the UUID was logged, so a dropped moisture log gave no clue which
                 // backend rule (reading regex/range, damage_type drying-eligibility, room_id existence)
-                // rejected it. Terminal DROP path, so draining the error body is safe.
+                // rejected it. Defer with SKIP while the exact rule is confirmed (RP-BUG-046 part 2).
+                // materialId <= 0 is the offline-originated marker; room.serverId is always resolved
+                // at this point (pushPendingMoistureLogUpsert returns SKIP before the API call if not).
                 val detail = runCatching { (e as? HttpException)?.response()?.errorBody()?.string() }
                     .getOrNull()?.take(500)
-                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422); detail=$detail")
-                ctx.remoteLogger?.log(
-                    LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 validation error",
-                    mapOf(
-                        "logUuid" to log.uuid,
-                        "serverId" to (log.serverId?.toString() ?: "null"),
-                        "detail" to (detail ?: "unavailable"),
+                val roomServerId = ctx.localDataService.getRoom(log.roomId)?.serverId
+                val shouldDefer = log.materialId <= 0 || roomServerId == null
+                if (shouldDefer) {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLogs] 422 for moisture log ${log.uuid} (materialId=${log.materialId}); deferring — cause unconfirmed (RP-BUG-046 part 2)", )
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Moisture log 422 - deferred SKIP (cause unconfirmed; RP-BUG-046 part 2)",
+                        mapOf(
+                            "logUuid" to log.uuid,
+                            "serverId" to (log.serverId?.toString() ?: "null"),
+                            "materialId" to log.materialId.toString(),
+                            "detail" to (detail ?: "unavailable"),
+                        )
                     )
-                )
-                OperationOutcome.DROP
+                    OperationOutcome.SKIP
+                } else {
+                    Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid}: server validation error (422); detail=$detail")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 validation error",
+                        mapOf(
+                            "logUuid" to log.uuid,
+                            "serverId" to (log.serverId?.toString() ?: "null"),
+                            "detail" to (detail ?: "unavailable"),
+                        )
+                    )
+                    OperationOutcome.DROP
+                }
             } else {
                 if (e is CancellationException) throw e
                 Log.w(SYNC_TAG, "MoistureLogPushHandler unknown error; retrying", e)
@@ -156,18 +174,35 @@ class MoistureLogPushHandler(private val ctx: PushHandlerContext) {
             if (retryError.isValidationError()) {
                 // RP-BUG-046: capture the 422 body on the 409->retry->422 path too (not just the initial
                 // upsert), so the failing backend rule is diagnosable wherever the drop happens.
+                // Defer with SKIP while the exact rule is confirmed (RP-BUG-046 part 2).
                 val detail = runCatching { (retryError as? HttpException)?.response()?.errorBody()?.string() }
                     .getOrNull()?.take(500)
-                Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid} after 409 retry: server validation error (422); detail=$detail")
-                ctx.remoteLogger?.log(
-                    LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 validation error (after 409 retry)",
-                    mapOf(
-                        "logUuid" to log.uuid,
-                        "serverId" to (log.serverId?.toString() ?: "null"),
-                        "detail" to (detail ?: "unavailable"),
+                val roomServerId = ctx.localDataService.getRoom(log.roomId)?.serverId
+                val shouldDefer = log.materialId <= 0 || roomServerId == null
+                if (shouldDefer) {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingMoistureLogs] 422 on retry for moisture log ${log.uuid} (materialId=${log.materialId}); deferring — cause unconfirmed (RP-BUG-046 part 2)")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Moisture log 422 on retry - deferred SKIP (cause unconfirmed; RP-BUG-046 part 2)",
+                        mapOf(
+                            "logUuid" to log.uuid,
+                            "serverId" to (log.serverId?.toString() ?: "null"),
+                            "materialId" to log.materialId.toString(),
+                            "detail" to (detail ?: "unavailable"),
+                        )
                     )
-                )
-                return OperationOutcome.DROP
+                    return OperationOutcome.SKIP
+                } else {
+                    Log.w(SYNC_TAG, "Dropping moisture log ${log.uuid} after 409 retry: server validation error (422); detail=$detail")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Moisture log dropped - 422 validation error (after 409 retry)",
+                        mapOf(
+                            "logUuid" to log.uuid,
+                            "serverId" to (log.serverId?.toString() ?: "null"),
+                            "detail" to (detail ?: "unavailable"),
+                        )
+                    )
+                    return OperationOutcome.DROP
+                }
             }
             throw retryError
         }

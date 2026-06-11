@@ -881,6 +881,19 @@ interface OfflineDao {
 
     @Query("UPDATE offline_moisture_logs SET photoLocalPath = :localPath WHERE logId = :logId")
     suspend fun updateMoistureLogPhotoLocalPath(logId: Long, localPath: String)
+
+    @Query(
+        """
+        SELECT m.* FROM offline_moisture_logs m
+        WHERE m.syncStatus = :pendingStatus
+          AND NOT EXISTS (
+              SELECT 1 FROM offline_sync_queue q
+              WHERE q.entityType = 'moisture_log' AND q.entityId = m.logId
+          )
+        ORDER BY m.updatedAt DESC
+        """
+    )
+    suspend fun getOrphanedMoistureLogs(pendingStatus: SyncStatus = SyncStatus.PENDING): List<OfflineMoistureLogEntity>
     // endregion
 
     // region Notes & Damages & Work Scopes

@@ -346,6 +346,20 @@ class RocketPlanApplication : Application() {
             }
         }
 
+        // RP-BUG-046: Re-enqueue orphaned moisture logs that 422'd due to unreconciled parent
+        // (negative materialId) and have no sync queue op — prevents data loss from stranded PENDING rows
+        launchStartupTask("repair_orphaned_moisture_logs") {
+            val enqueuedCount = localDataService.repairOrphanedMoistureLogs()
+            if (enqueuedCount > 0) {
+                remoteLogger.log(
+                    level = LogLevel.WARN,
+                    tag = TAG,
+                    message = "Data repair: re-enqueued orphaned moisture logs (RP-BUG-046)",
+                    metadata = mapOf("enqueued_count" to enqueuedCount.toString())
+                )
+            }
+        }
+
         // Cleanup orphaned pending properties not referenced by any active project
         launchStartupTask("cleanup_orphaned_properties") {
             val cleaned = localDataService.cleanupOrphanedProperties()

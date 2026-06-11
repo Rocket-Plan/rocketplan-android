@@ -1638,6 +1638,51 @@ class LocalDataService private constructor(
         return@withContext reassigned
     }
 
+    suspend fun repairOrphanedMoistureLogs(): Int = withContext(ioDispatcher) {
+        val orphaned = dao.getOrphanedMoistureLogs()
+        if (orphaned.isEmpty()) {
+            Log.d("LocalDataService", "✅ No orphaned moisture logs found")
+            return@withContext 0
+        }
+
+        Log.w("LocalDataService", "🔧 RP-BUG-046: Found ${orphaned.size} orphaned moisture logs (PENDING with negative materialId and no sync queue op):")
+        orphaned.take(10).forEach { log ->
+            Log.w("LocalDataService", "  MoistureLog ${log.logId}: uuid=${log.uuid}, materialId=${log.materialId}, syncStatus=${log.syncStatus}")
+        }
+        if (orphaned.size > 10) {
+            Log.w("LocalDataService", "  ... and ${orphaned.size - 10} more")
+        }
+
+        val enqueued = orphaned.count { log ->
+            try {
+                val existingOp = dao.getSyncOperationForEntity("moisture_log", log.logId, SyncStatus.PENDING)
+                if (existingOp != null) {
+                    Log.d("LocalDataService", "  MoistureLog ${log.logId} already has a PENDING sync op, skipping")
+                    false
+                } else {
+                    val operation = OfflineSyncQueueEntity(
+                        operationId = java.util.UUID.randomUUID().toString(),
+                        entityType = "moisture_log",
+                        entityId = log.logId,
+                        entityUuid = log.uuid,
+                        operationType = if (log.serverId == null) com.example.rocketplan_android.data.local.SyncOperationType.CREATE else com.example.rocketplan_android.data.local.SyncOperationType.UPDATE,
+                        payload = "{}".toByteArray(Charsets.UTF_8),
+                        priority = com.example.rocketplan_android.data.local.SyncPriority.MEDIUM,
+                        status = SyncStatus.PENDING
+                    )
+                    dao.upsertSyncOperation(operation)
+                    Log.d("LocalDataService", "  Re-enqueued orphaned MoistureLog ${log.logId}")
+                    true
+                }
+            } catch (e: Exception) {
+                Log.e("LocalDataService", "  Failed to re-enqueue MoistureLog ${log.logId}", e)
+                false
+            }
+        }
+        Log.w("LocalDataService", "📎 Re-enqueued $enqueued orphaned moisture logs (of ${orphaned.size} found)")
+        return@withContext enqueued
+    }
+
     suspend fun markNotesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
         dao.markNotesDeleted(serverIds)

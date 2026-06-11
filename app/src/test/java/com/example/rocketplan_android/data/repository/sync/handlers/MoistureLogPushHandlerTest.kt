@@ -518,6 +518,102 @@ class MoistureLogPushHandlerTest {
     }
 
     // ===================================================================
+    // RP-BUG-046: 422 with unreconciled parent (negative materialId or room not synced)
+    // must SKIP instead of DROP to allow retry once parent is ready.
+    // ===================================================================
+
+    @Test
+    fun `handleUpsert returns SKIP on 422 when materialId is negative (unreconciled parent)`() = runTest {
+        val log = PushHandlerTestFixtures.createMoistureLog(
+            serverId = null,
+            materialId = -512922L  // negative = unreconciled local material
+        )
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "moisture_log",
+            entityUuid = log.uuid
+        )
+
+        coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
+        coEvery { localDataService.getRoom(400L) } returns room.copy(serverId = 4000L)  // room is synced
+        coEvery { api.createMoistureLog(any(), any(), any()) } throws PushHandlerTestFixtures.create422Response()
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+        verify {
+            remoteLogger.log(
+                LogLevel.WARN,
+                any(),
+                match { it.contains("deferred SKIP") || it.contains("RP-BUG-046 part 2") },
+                match { it?.get("materialId") == "-512922" },
+            )
+        }
+    }
+
+    @Test
+    fun `handleUpsert returns SKIP on 422 when room has no serverId — documents unreachable path`() = runTest {
+        val log = PushHandlerTestFixtures.createMoistureLog(serverId = null)
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "moisture_log",
+            entityUuid = log.uuid
+        )
+
+        coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
+        coEvery { localDataService.getRoom(400L) } returns room.copy(serverId = null)
+        coEvery { api.createMoistureLog(any(), any(), any()) } throws PushHandlerTestFixtures.create422Response()
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+    }
+
+    @Test
+    fun `handleUpsert returns DROP on 422 when material is valid and room is synced (genuinely invalid)`() = runTest {
+        val log = PushHandlerTestFixtures.createMoistureLog(serverId = null)  // positive materialId=800, room synced
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "moisture_log",
+            entityUuid = log.uuid
+        )
+
+        coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
+        coEvery { localDataService.getRoom(400L) } returns room.copy(serverId = 4000L)  // room IS synced
+        coEvery { api.createMoistureLog(any(), any(), any()) } throws PushHandlerTestFixtures.create422Response()
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.DROP)
+    }
+
+    @Test
+    fun `handle409Conflict returns SKIP on 422 retry when materialId is negative`() = runTest {
+        val log = PushHandlerTestFixtures.createMoistureLog(
+            serverId = 7000L,
+            materialId = -512922L  // negative = unreconciled
+        )
+        val operation = PushHandlerTestFixtures.createSyncOperation(
+            entityType = "moisture_log",
+            entityUuid = log.uuid
+        )
+        val freshUpdatedAt = "2026-01-31T10:00:00.000000Z"
+
+        coEvery { localDataService.getMoistureLogByUuid(log.uuid) } returns log
+        coEvery { localDataService.getRoom(400L) } returns room.copy(serverId = 4000L)
+        var callCount = 0
+        coEvery { api.updateMoistureLog(7000L, any()) } answers {
+            callCount++
+            if (callCount == 1) {
+                throw PushHandlerTestFixtures.create409WithUpdatedAt(freshUpdatedAt)
+            } else {
+                throw PushHandlerTestFixtures.create422Response()
+            }
+        }
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+    }
+
+    // ===================================================================
     // handleDelete - Happy path
     // ===================================================================
 
