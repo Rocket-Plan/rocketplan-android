@@ -7,15 +7,15 @@ classification: pre_existing_latent
 source: review
 found_in: "1.30 (35)"
 found_at: "2026-06-10 23:04:27 PDT"
-fixed_in: null
+fixed_in: 3dff3e0
 released_in: null
-state: planned
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_hd_007_invitelink_join_tests_2026-06-11.md
 related_review: docs/reviews/code_review_rp_bug_269_270_2026-06-10.md
-related_test: null
+related_test: app/src/test/java/com/example/rocketplan_android/util/InviteLinkTest.kt, app/src/test/java/com/example/rocketplan_android/ui/auth/JoinCompanyViewModelTest.kt
 last_updated: 2026-06-10
 ---
 

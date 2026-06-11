@@ -55,3 +55,12 @@ existing `RemoteLogger` already used by `AuthRepository` for "Company context se
 ### Success Criteria
 - A single `log_entries` query reconstructs a user's signup routing (parity with the iOS SQL in
   the iOS AUTH_SIGNUP_FLOW.md §4).
+
+## Update 2026-06-11 — partial: gating mechanism only
+
+Commit `3dff3e0` added a `RemoteLogGate` interface (`RemoteLogGateAlwaysOn` default,
+`RemoteLogger.updateGate()`, early-return in `log()`) — the **build/env gating** building block from
+the proposal. It does **not** emit the auth gate-decision logs, so the ticket is not satisfied: the
+`auth_sms` / `auth_company` / `auth_invite_join` logs in `MainActivity.checkAuthenticationStatus`
+(+ the OAuth path) are still outstanding. State stays `planned`; see
+`docs/plans/plan_rp_hd_005_remote_log_auth_gates_2026-06-11.md`.
