@@ -12,12 +12,12 @@ import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.util.InviteLink
 import kotlinx.coroutines.launch
 
-class JoinCompanyViewModel(
+open class JoinCompanyViewModel(
     application: Application,
     private val userId: Long
 ) : AndroidViewModel(application) {
 
-    private val authRepository = AuthRepository(SecureStorage.getInstance(application))
+    protected open val authRepository = AuthRepository(SecureStorage.getInstance(application))
 
     private val _companyCode = MutableLiveData("")
     val companyCode: LiveData<String> = _companyCode

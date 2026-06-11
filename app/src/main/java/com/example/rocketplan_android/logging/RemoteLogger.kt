@@ -34,13 +34,22 @@ enum class LogLevel(val wireValue: String) {
     ERROR("ERROR"),
 }
 
+interface RemoteLogGate {
+    fun isEnabled(): Boolean
+}
+
+object RemoteLogGateAlwaysOn : RemoteLogGate {
+    override fun isEnabled(): Boolean = true
+}
+
 class RemoteLogger(
     private val loggingService: LoggingService,
     context: Context,
     private val secureStorage: SecureStorage,
     private val store: PendingRemoteLogStore = PendingRemoteLogStore(context.applicationContext),
     private val retryStore: RemoteLogRetryStore = RemoteLogRetryStore(context.applicationContext),
-    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private var gate: RemoteLogGate = RemoteLogGateAlwaysOn
 ) {
 
     private val mutex = Mutex()
@@ -75,6 +84,8 @@ class RemoteLogger(
         message: String,
         metadata: Map<String, String>? = null
     ) {
+        if (!gate.isEnabled()) return
+
         val entry = RemoteLogEntry(
             timestamp = DateTimeFormatter.ISO_INSTANT.format(Instant.now()),
             level = level.wireValue,
@@ -91,6 +102,10 @@ class RemoteLogger(
 
     fun flush() {
         scheduleProcessing(0)
+    }
+
+    fun updateGate(newGate: RemoteLogGate) {
+        gate = newGate
     }
 
     private fun isNetworkAvailable(): Boolean {
