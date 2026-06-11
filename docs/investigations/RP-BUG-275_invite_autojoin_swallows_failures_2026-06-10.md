@@ -7,7 +7,7 @@ classification: new_code_bug
 source: review
 found_in: "1.30 (35)"
 found_at: "2026-06-10 23:04:27 PDT"
-fixed_in: null
+fixed_in: 6634854
 released_in: null
 state: fixed
 release_state: unreleased
