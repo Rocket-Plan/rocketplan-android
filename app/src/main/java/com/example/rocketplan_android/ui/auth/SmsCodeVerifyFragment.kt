@@ -23,9 +23,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
+import kotlinx.coroutines.launch
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.databinding.FragmentSmsCodeVerifyBinding
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
@@ -41,6 +46,8 @@ class SmsCodeVerifyFragment : Fragment() {
     private val viewModel: SmsCodeVerifyViewModel by viewModels {
         SmsCodeVerifyViewModelFactory(requireActivity().application, args.phone, args.countryCode)
     }
+
+    private val authRepository by lazy { AuthRepository(SecureStorage.getInstance(requireContext())) }
 
     private lateinit var codeBoxes: List<EditText>
 
@@ -259,14 +266,25 @@ class SmsCodeVerifyFragment : Fragment() {
             if (verified == true) {
                 viewModel.onVerifiedHandled()
                 if (findNavController().currentDestination?.id != R.id.smsCodeVerifyFragment) return@observe
-                val action = SmsCodeVerifyFragmentDirections
-                    .actionSmsCodeVerifyFragmentToAccountTypeFragment(
-                        userId = args.userId,
-                        email = args.email,
-                        phone = args.phone,
-                        countryCode = args.countryCode
-                    )
-                findNavController().navigate(action)
+                // RP-BUG-269: if user already has a company, go directly to app after verification
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val hasCompany = authRepository.getStoredCompanyId() != null
+                    if (hasCompany) {
+                        val navOptions = NavOptions.Builder()
+                            .setPopUpTo(R.id.emailCheckFragment, true)
+                            .build()
+                        findNavController().navigate(R.id.nav_projects, null, navOptions)
+                    } else {
+                        val action = SmsCodeVerifyFragmentDirections
+                            .actionSmsCodeVerifyFragmentToAccountTypeFragment(
+                                userId = args.userId,
+                                email = args.email,
+                                phone = args.phone,
+                                countryCode = args.countryCode
+                            )
+                        findNavController().navigate(action)
+                    }
+                }
             }
         }
     }

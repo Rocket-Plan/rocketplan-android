@@ -45,6 +45,7 @@ import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.ui.syncstatus.SyncStatusBannerManager
 import com.example.rocketplan_android.ui.syncstatus.SyncStatusBannerState
+import com.example.rocketplan_android.util.InviteLink
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.card.MaterialCardView
 import io.sentry.Sentry
@@ -173,6 +174,9 @@ class MainActivity : AppCompatActivity() {
 
         // Check if this was launched from OAuth callback deep link
         handleOAuthCallback(intent)
+
+        // Check if this was launched from invite deep link
+        handleInviteDeepLink(intent)
 
         // Check authentication status and navigate accordingly
         checkAuthenticationStatus(navController)
@@ -335,6 +339,8 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Check if user is logged in and navigate to appropriate screen
+     * RP-BUG-269: also checks SMS verification status and routes unverified users
+     * to the verification screen.
      */
     private fun checkAuthenticationStatus(navController: NavController) {
         lifecycleScope.launch {
@@ -346,6 +352,13 @@ class MainActivity : AppCompatActivity() {
                 Log.d(TAG, "User logged in: $isLoggedIn")
             }
             if (!isLoggedIn) return@launch
+
+            // RP-BUG-269: call refreshUserContext to get SMS verification status
+            val userContextResult = authRepository.refreshUserContext()
+            val currentUser = userContextResult.getOrNull()
+            // RP-BUG-269: fall back to cached value on offline/transient failure
+            val isSmsVerified = currentUser?.isSmsVerified
+                ?: authRepository.getCachedSmsVerified()
 
             preloadImageProcessorConfiguration()
             checkCrmAccess()
@@ -373,6 +386,46 @@ class MainActivity : AppCompatActivity() {
 
             // Navigate directly — no listener needed since we already know auth state
             withContext(Dispatchers.Main.immediate) {
+                // RP-BUG-269: route unverified users to phone verification regardless of company status
+                if (!isSmsVerified) {
+                    Log.d(TAG, "User authenticated but not SMS-verified, redirecting to phone verification")
+                    val bundle = Bundle().apply {
+                        putLong("userId", userId)
+                        putString("email", cachedEmail)
+                    }
+                    val navOptions = NavOptions.Builder()
+                        .setPopUpTo(R.id.emailCheckFragment, true)
+                        .build()
+                    navController.navigate(R.id.phoneVerificationFragment, bundle, navOptions)
+                    return@withContext
+                }
+
+                // RP-BUG-270: check for pending invite and auto-join if user is authenticated
+                val pendingInviteUuid = authRepository.getPendingInviteCompanyUuid()
+                if (pendingInviteUuid != null) {
+                    Log.d(TAG, "Processing pending invite for company UUID: $pendingInviteUuid")
+                    val joinResult = authRepository.resolveCompanyByUuid(pendingInviteUuid)
+                    if (joinResult.isSuccess) {
+                        val company = joinResult.getOrNull()
+                        if (company != null) {
+                            authRepository.addCompanyUser(company.id, userId)
+                            authRepository.setActiveCompany(company.id)
+                            authRepository.clearPendingInviteCompanyUuid()
+                            Log.d(TAG, "Successfully joined company via invite: ${company.id}")
+                            // S4: navigate directly to app — needsOnboarding was computed before this block
+                            val navOptions = NavOptions.Builder()
+                                .setPopUpTo(R.id.emailCheckFragment, true)
+                                .build()
+                            navController.navigate(R.id.nav_projects, null, navOptions)
+                            lifecycleScope.launch { syncQueueManager.ensureInitialSync() }
+                            return@withContext
+                        }
+                    } else {
+                        Log.w(TAG, "Failed to resolve invite company, clearing pending invite")
+                        authRepository.clearPendingInviteCompanyUuid()
+                    }
+                }
+
                 if (needsOnboarding) {
                     Log.d(TAG, "User authenticated but no company, redirecting to onboarding")
                     val bundle = Bundle().apply {
@@ -440,6 +493,8 @@ class MainActivity : AppCompatActivity() {
         }
         // Handle OAuth callback when app is already running
         handleOAuthCallback(intent)
+        // Handle invite deep link
+        handleInviteDeepLink(intent)
     }
 
     /**
@@ -560,6 +615,24 @@ class MainActivity : AppCompatActivity() {
             ).show()
         }
         return true
+    }
+
+    /**
+     * Handle invite deep link.
+     * Parses the company UUID from the invite link and stores it for later processing
+     * during auth state resolution (RP-BUG-270).
+     */
+    private fun handleInviteDeepLink(intent: Intent?) {
+        val uri = intent?.data ?: return
+        val inviteLink = InviteLink.parse(uri) ?: return
+
+        if (BuildConfig.ENABLE_LOGGING) {
+            Log.d(TAG, "Invite deep link received: companyUuid=${inviteLink.companyUuid}")
+        }
+
+        // Store the pending invite company UUID durably
+        // RP-BUG-328: stored durably, not tied to fragment lifecycle
+        authRepository.savePendingInviteCompanyUuid(inviteLink.companyUuid)
     }
 
     override fun onSupportNavigateUp(): Boolean {

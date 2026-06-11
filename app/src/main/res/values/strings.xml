@@ -286,6 +286,11 @@
     <string name="onboarding_join_title">Join a Company</string>
     <string name="onboarding_join_message">To join an existing company, you\'ll need an invite link from your team admin. Check your email for an invitation.</string>
     <string name="onboarding_join_create_instead">Create a Company Instead</string>
+    <string name="onboarding_join_company_code_hint">Company Code or Invite Link</string>
+    <string name="onboarding_join_button">Join Company</string>
+    <string name="onboarding_join_company_code_required">Company code is required</string>
+    <string name="onboarding_join_company_not_found">Company not found. Check the code and try again.</string>
+    <string name="onboarding_join_failed">Failed to join company. Please try again.</string>
     <string name="onboarding_phone_title">Verify Your Phone</string>
     <string name="onboarding_phone_subtitle">We\'ll send a verification code to confirm your number.</string>
     <string name="onboarding_phone_label">Phone Number</string>

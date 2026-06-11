@@ -133,6 +133,8 @@ object RetrofitClient {
     /**
      * Interceptor that detects 401/403 responses and triggers forced sign-out.
      * Only fires for authenticated requests (token was set) and skips auth endpoints.
+     * RP-BUG-269:403 with "sms…verified" body is a verification gate, not a
+     * session-invalid signal — do not force sign-out in that case.
      */
     private val unauthorizedInterceptor = Interceptor { chain ->
         val response = chain.proceed(chain.request())
@@ -141,6 +143,15 @@ object RetrofitClient {
             val path = chain.request().url.encodedPath
             // Don't trigger on login/auth endpoints — 401 there means wrong credentials
             if (!path.contains("/auth/login") && !path.contains("/auth/google")) {
+                // RP-BUG-269: check if this is a verification-gate 403 (any path)
+                if (code == 403) {
+                    val peeked = response.peekBody(1024)?.string()
+                    if (peeked?.contains("sms", ignoreCase = true) == true &&
+                        peeked.contains("verified", ignoreCase = true)) {
+                        android.util.Log.w("RetrofitClient", "403 on $path — SMS verification gate, not signing out")
+                        return@Interceptor response
+                    }
+                }
                 // Only treat small JSON responses as real auth rejections.
                 // Large responses (>1KB) are HTML error pages from misconfigured endpoints.
                 val contentLength = response.header("Content-Length")?.toLongOrNull()

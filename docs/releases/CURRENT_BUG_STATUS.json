@@ -1,33 +1,55 @@
 {
-  "generated_at": "2026-06-02T10:26:54-07:00",
+  "generated_at": "2026-06-10T22:52:01-07:00",
   "source_tracker": "docs/BUG_TRACKER.md",
-  "current_shipping_release": null,
+  "current_shipping_release": {
+    "version": "1.30",
+    "build": "35",
+    "status": "\u2705 **Released to Production** (100%, 2026-06-08 5:07 PM). Bundles **RP-BUG-043, 044, 045, 047, 048**. Replaced 34 (Play-rejected for unused READ_MEDIA_IMAGES/VIDEO \u2014 removed, RP-CD-023; app-wide flag cleared by superseding old 1.29 builds on all tracks)."
+  },
   "counts": {
-    "all_canonical_bugs": 31,
+    "all_canonical_bugs": 61,
     "global_state_counts": {
-      "fixed": 19,
-      "planned": 10,
-      "open": 1,
+      "fixed": 56,
+      "closed": 4,
       "investigating": 1
     },
     "global_release_state_counts": {
-      "n/a": 14,
-      "unreleased": 17
+      "n/a": 6,
+      "unreleased": 55
     },
     "global_active_priority_counts": {
       "P0": 4,
-      "P1": 6,
-      "P2": 14,
-      "P3": 5
+      "P1": 7,
+      "P2": 32,
+      "P3": 12
     },
     "current_release_line_fixed_count": 0,
-    "current_release_line_active_count": 0,
-    "global_active_count": 29
+    "current_release_line_active_count": 2,
+    "global_active_count": 55
   },
   "current_release_line": {
-    "version": null,
+    "version": "1.30",
     "fixed_bugs": [],
-    "active_followups": []
+    "active_followups": [
+      {
+        "id": "RP-BUG-269",
+        "priority": "P1",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "06f5eb9",
+        "found_in": "1.30 (35)",
+        "title": "Company activation (refreshUserContext \u2192 setActiveCompany, POST /api/active-company) is not gated behind SMS verification \u2014 client has no sms_verified_at awareness, so an unverified user with a company fires the call on every login/startup, backend 403s \"sms code is not verified\", and unauthorizedInterceptor force-signs-out the user (iOS RP-BUG-330 counterpart)"
+      },
+      {
+        "id": "RP-BUG-270",
+        "priority": "P2",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "06f5eb9 (in-app join; email-link auto-open gated on assetlinks.json)",
+        "found_in": "1.30 (35)",
+        "title": "Invite-based company joining is not implemented on Android \u2014 no invite-redirect deep-link handler (manifest only registers oauth2), onNewIntent handles only OAuth, JoinCompanyViewModel is an empty stub, \"Join Company\" offers only \"Create instead\"; an invited user cannot join the company (iOS RP-BUG-327/328 area \u2014 feature gap, not the iOS parser defect)"
+      }
+    ]
   },
   "global_active_bugs": [
     {
@@ -42,8 +64,8 @@
     {
       "id": "RP-BUG-003",
       "priority": "P1",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "PriorityQueue Thread-Safety Violation in SyncQueueManager"
@@ -69,8 +91,8 @@
     {
       "id": "RP-BUG-007",
       "priority": "P2",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Unshared OkHttpClient Configuration for Photo Cache"
@@ -78,8 +100,8 @@
     {
       "id": "RP-BUG-008",
       "priority": "P0",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Sync Checkpoints Stored in Cleartext SharedPreferences"
@@ -96,8 +118,8 @@
     {
       "id": "RP-BUG-010",
       "priority": "P1",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Unbounded Photo Sync Job Blocking Other Operations"
@@ -105,8 +127,8 @@
     {
       "id": "RP-BUG-011",
       "priority": "P2",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Certificate Pinning Not Implemented"
@@ -122,7 +144,7 @@
     },
     {
       "id": "RP-BUG-013",
-      "priority": "P1",
+      "priority": "P3",
       "state": "fixed",
       "release_state": "unreleased",
       "fixed_in": "\u2014",
@@ -132,8 +154,8 @@
     {
       "id": "RP-BUG-014",
       "priority": "P1",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Realm-like ID Pattern Fragile Migration Logic"
@@ -141,8 +163,8 @@
     {
       "id": "RP-BUG-015",
       "priority": "P2",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Debounce May Not Prevent Rapid Re-enqueues"
@@ -150,8 +172,8 @@
     {
       "id": "RP-BUG-016",
       "priority": "P1",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Missing Migration 27_28 in Database Version Sequence"
@@ -211,15 +233,6 @@
       "title": "Inefficient LRU Calculation in Photo Cleanup"
     },
     {
-      "id": "RP-BUG-023",
-      "priority": "P3",
-      "state": "open",
-      "release_state": "n/a",
-      "fixed_in": "\u2014",
-      "found_in": "1.0.00",
-      "title": "TODO Comments for Incomplete Features in PeopleFragment"
-    },
-    {
       "id": "RP-BUG-024",
       "priority": "P2",
       "state": "fixed",
@@ -265,19 +278,235 @@
       "title": "Legacy Auth-Token Migration Never Runs (Dead Wiring)"
     },
     {
-      "id": "RP-HD-001",
+      "id": "RP-BUG-029",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "Parity review 2026-06-04 vs iOS RP-BUG-268 / backend MONGOOSE-BUG-013",
+      "title": "Android deletion sync marks omitted deleted properties but does not reconcile child locations/rooms, leaving orphaned stale locations when backend omits cascade children"
+    },
+    {
+      "id": "RP-BUG-030",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "Parity review 2026-06-03 vs iOS RP-BUG-065",
+      "title": "ImageProcessorQueueManager.resolveServerRoomId returns local ID instead of blocking when room not synced \u2014 photo uploads go to wrong room"
+    },
+    {
+      "id": "RP-BUG-031",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "Parity review 2026-06-03 vs iOS RP-BUG-012",
+      "title": "RoomPushHandler.handleUpdate returns SUCCESS after retry failures \u2014 operation removed from queue but server never updated, room stays stale"
+    },
+    {
+      "id": "RP-BUG-032",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "Parity review 2026-06-03 vs iOS RP-BUG-160 / RP-BUG-177",
+      "title": "OfflineMaterialEntity missing projectId field \u2014 materials cannot be scoped to project during sync, global observe returns all materials"
+    },
+    {
+      "id": "RP-BUG-033",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "Parity review 2026-06-03 vs iOS RP-BUG-124",
+      "title": "MoistureLogRequest missing dryingGoal field \u2014 user-set drying goals not persisted to server, silently lost on sync"
+    },
+    {
+      "id": "RP-BUG-034",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "Parity review 2026-06-03 vs iOS RP-BUG-166",
+      "title": "PropertyPushHandler sends propertyTypeId=0 for offline-created properties \u2014 server returns 422 and operation silently dropped"
+    },
+    {
+      "id": "RP-BUG-035",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "Parity review 2026-06-03 vs iOS RP-BUG-027",
+      "title": "WorkScopeSyncService.syncRoomWorkScopes fetches from API without merging pending local creates \u2014 locally-staged items vanish on refresh"
+    },
+    {
+      "id": "RP-BUG-048",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "RocketDry creates a new local material per reading/goal (no name-based dedup) \u2014 repeated readings on one material spawn duplicate local materials that collapse to one server id but are never deduped locally, stranding child moisture readings (root of RP-BUG-046)"
+    },
+    {
+      "id": "RP-BUG-047",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "Room moisture-log pull sends include=photo,moisture_log \u2014 backend rejects the invalid \"moisture_log\" relation with HTTP 400 for every room, so moisture readings never download (iOS sends include=photo)"
+    },
+    {
+      "id": "RP-BUG-046",
       "priority": "P2",
       "state": "investigating",
-      "release_state": "n/a",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
-      "title": "Audit every codebase touchpoint against every RP-CD rule"
+      "title": "Offline-created moisture logs rejected with HTTP 422 and silently dropped (reading 8.0 is valid \u2192 likely route-derived damage_type drying-eligibility or room_id existence); handler logged only \"HTTP 422\" not the body, so the failing rule couldn't be diagnosed"
+    },
+    {
+      "id": "RP-BUG-045",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "Remote log batches containing a WARN-level entry are rejected by the backend (HTTP 400 \u2014 sends \"WARN\", backend requires \"WARNING\") and the whole batch is dropped \u2014 warning-class telemetry never reaches LogEntry (incl. the RP-BUG-044 partial-failure log)"
+    },
+    {
+      "id": "RP-BUG-044",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "syncAllRoomPhotos swallows per-room photo-fetch failures \u2014 segment returns success with 0 photos, no retry, room left with photoCount>0 and no local photos"
+    },
+    {
+      "id": "RP-BUG-043",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "pendingPhotoSyncs leaks when the CONTENT_ONLY follow-up is coalesced/dropped by enqueue (key ignores mode) \u2014 room-card spinner hangs forever and the project's photos never download"
+    },
+    {
+      "id": "RP-BUG-042",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "iOS parity review 2026-06-07",
+      "title": "Global reference data (damage/claim/scope/project types) not seeded before Phase 2 \u2014 offline pickers can be empty until a project's metadata has synced (iOS seeds globally up front)"
+    },
+    {
+      "id": "RP-BUG-041",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "iOS parity review 2026-06-07",
+      "title": "Android shows no per-item cloud/download indicator \u2014 users can't tell which content isn't downloaded yet (cloud-down) or has unsynced local changes (cloud-up) like iOS does"
+    },
+    {
+      "id": "RP-BUG-040",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "409 sweep 2026-06-07 (backend verified)",
+      "title": "Offline delete of a server-modified entity fails \u2014 delete handlers send a stale updated_at and the backend returns 409; Group A (Note/AtmosphericLog/Room/Location/Property) retry the stale timestamp until abandoned, Group B (Equipment/MoistureLog) silently swallow it as success (Photo safe)"
+    },
+    {
+      "id": "RP-BUG-039",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "sweep + iOS parity 2026-06-07",
+      "title": "Timecard down-sync is unwired \u2014 getTimecards/saveTimecards exist but are never called, so server-side timecards (admin/web/other-device) never appear locally (iOS pulls them; would also need serverId reconcile to avoid RP-BUG-038 duplicates once wired)"
+    },
+    {
+      "id": "RP-BUG-038",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "model review 2026-06-07 (backend + Room probe verified)",
+      "title": "Offline-created materials duplicate after metadata refresh \u2014 material pull maps to a server-id PK with no serverId reconciliation, and the server-minted uuid differs from the local uuid (missed by the RP-BUG-037 sweep)"
+    },
+    {
+      "id": "RP-BUG-037",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "RP-BUG-036 class sweep 2026-06-07 (backend + Room probe verified)",
+      "title": "Offline-created notes/equipment/moisture logs/atmospheric logs duplicate after metadata refresh \u2014 pull maps server rows to a server-id PK with no serverId reconciliation, and the server-minted uuid differs from the local uuid so the unique index does not collapse them"
+    },
+    {
+      "id": "RP-BUG-036",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "RP-CD-014 verification trace 2026-06-07",
+      "title": "Support conversations/messages duplicate on refresh \u2014 pull does no serverId reconciliation and client UUID is never sent, so a second row is inserted per server id"
+    },
+    {
+      "id": "RP-FR-002",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "EquipmentPushHandler drains 409 body before conflict recovery (RP-CD-005)"
+    },
+    {
+      "id": "RP-FR-003",
+      "priority": "P1",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "Pull-sync save path can overwrite locally-dirty rows (RP-CD-002)"
+    },
+    {
+      "id": "RP-FR-004",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "1.0.00",
+      "title": "Some push handlers throw instead of returning OperationOutcome (RP-CD-004)"
+    },
+    {
+      "id": "RP-FR-005",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "RP-BUG-036 identity trace 2026-06-07",
+      "title": "Support message attachments store server message id in local FK field, so future attachment reads will not reconcile (latent \u2014 attachment rendering not wired)"
+    },
+    {
+      "id": "RP-FR-006",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.0.00",
+      "found_in": "RP-FR-005 fix 2026-06-07",
+      "title": "Support message attachments duplicate on refresh \u2014 attachment pull does no serverId reconciliation, so re-pull inserts a new row per server attachment id (latent \u2014 attachment rendering not wired)"
     },
     {
       "id": "RP-HD-002",
       "priority": "P2",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Guard SecureStorage migration body against non-cancellation exceptions"
@@ -285,11 +514,38 @@
     {
       "id": "RP-HD-003",
       "priority": "P3",
-      "state": "planned",
-      "release_state": "n/a",
+      "state": "fixed",
+      "release_state": "unreleased",
       "fixed_in": "\u2014",
       "found_in": "1.0.00",
       "title": "Document ordering of legacy-token clear vs encrypted save in SecureStorage"
+    },
+    {
+      "id": "RP-HD-004",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "1.29 (32)",
+      "found_in": "1.29 (32)",
+      "title": "Add unit-test coverage for the 2026-06 sync-fix batch (RP-BUG-029..035, RP-FR-003/004, RP-BUG-031)"
+    },
+    {
+      "id": "RP-BUG-269",
+      "priority": "P1",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "06f5eb9",
+      "found_in": "1.30 (35)",
+      "title": "Company activation (refreshUserContext \u2192 setActiveCompany, POST /api/active-company) is not gated behind SMS verification \u2014 client has no sms_verified_at awareness, so an unverified user with a company fires the call on every login/startup, backend 403s \"sms code is not verified\", and unauthorizedInterceptor force-signs-out the user (iOS RP-BUG-330 counterpart)"
+    },
+    {
+      "id": "RP-BUG-270",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "06f5eb9 (in-app join; email-link auto-open gated on assetlinks.json)",
+      "found_in": "1.30 (35)",
+      "title": "Invite-based company joining is not implemented on Android \u2014 no invite-redirect deep-link handler (manifest only registers oauth2), onNewIntent handles only OAuth, JoinCompanyViewModel is an empty stub, \"Join Company\" offers only \"Create instead\"; an invited user cannot join the company (iOS RP-BUG-327/328 area \u2014 feature gap, not the iOS parser defect)"
     }
   ]
 }

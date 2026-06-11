@@ -74,6 +74,64 @@
                     android:host="oauth2"
                     android:path="/redirect" />
             </intent-filter>
+
+            <!-- Invite deep link for all environments (custom schemes) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Dev/local environment -->
+                <data
+                    android:scheme="rocketplan-local"
+                    android:host="invite-redirect"
+                    android:pathPrefix="/" />
+
+                <!-- Dev environment (legacy) -->
+                <data
+                    android:scheme="rocketplan-dev"
+                    android:host="invite-redirect"
+                    android:pathPrefix="/" />
+
+                <!-- Staging environment -->
+                <data
+                    android:scheme="rocketplan-staging"
+                    android:host="invite-redirect"
+                    android:pathPrefix="/" />
+
+                <!-- Production environment -->
+                <data
+                    android:scheme="rocketplan"
+                    android:host="invite-redirect"
+                    android:pathPrefix="/" />
+            </intent-filter>
+
+            <!-- HTTPS App Links for web URLs (emailed/copied invite links) -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <!-- Production webapp (iOS applinks: aasa.rocketplantech.com) -->
+                <data
+                    android:scheme="https"
+                    android:host="aasa.rocketplantech.com"
+                    android:pathPrefix="/invite-redirect" />
+
+                <!-- Staging webapp (iOS applinks: web-staging-mongoose-n5tr2spgf.rocketplantech.com) -->
+                <data
+                    android:scheme="https"
+                    android:host="web-staging-mongoose-n5tr2spgf.rocketplantech.com"
+                    android:pathPrefix="/invite-redirect" />
+
+                <!-- Dev/QA webapp (iOS applinks: web-qa-mongoose-br2wu78v1.rocketplantech.com) -->
+                <data
+                    android:scheme="https"
+                    android:host="web-qa-mongoose-br2wu78v1.rocketplantech.com"
+                    android:pathPrefix="/invite-redirect" />
+            </intent-filter>
         </activity>
 
         <provider

@@ -55,8 +55,10 @@ class SecureStorage internal constructor(
         private val COMPANY_ID_KEY = longPreferencesKey("company_id")
         private val USER_NAME_KEY = stringPreferencesKey("user_name")
         private val COMPANY_NAME_KEY = stringPreferencesKey("company_name")
+        private val SMS_VERIFIED_KEY = booleanPreferencesKey("sms_verified")
         private const val OAUTH_STATE_KEY = "oauth_state"
         private const val AUTH_TOKEN_PREF_KEY = "auth_token"
+        private const val PENDING_INVITE_COMPANY_UUID_KEY = "pending_invite_company_uuid"
 
         // EncryptedSharedPreferences name
         private const val ENCRYPTED_PREFS_NAME = "rocketplan_encrypted_prefs"
@@ -273,6 +275,38 @@ class SecureStorage internal constructor(
      */
     fun clearOAuthState() {
         encryptedPrefs.edit().remove(OAUTH_STATE_KEY).apply()
+    }
+
+    // ==================== Pending Invite (RP-BUG-270) ====================
+
+    fun savePendingInviteCompanyUuid(uuid: String) {
+        encryptedPrefs.edit().putString(PENDING_INVITE_COMPANY_UUID_KEY, uuid).apply()
+    }
+
+    fun getPendingInviteCompanyUuid(): String? {
+        return encryptedPrefs.getString(PENDING_INVITE_COMPANY_UUID_KEY, null)
+    }
+
+    fun clearPendingInviteCompanyUuid() {
+        encryptedPrefs.edit().remove(PENDING_INVITE_COMPANY_UUID_KEY).apply()
+    }
+
+    // ==================== SMS Verification (RP-BUG-269) ====================
+
+    suspend fun saveSmsVerified(verified: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[SMS_VERIFIED_KEY] = verified
+        }
+    }
+
+    suspend fun getSmsVerifiedSync(): Boolean {
+        return context.dataStore.data.map { it[SMS_VERIFIED_KEY] ?: false }.first()
+    }
+
+    suspend fun clearSmsVerified() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(SMS_VERIFIED_KEY)
+        }
     }
 
     // ==================== User Context ====================

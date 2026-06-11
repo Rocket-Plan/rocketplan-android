@@ -7,6 +7,7 @@ import com.example.rocketplan_android.data.model.ApiError
 import com.example.rocketplan_android.data.model.ApiErrorException
 import com.example.rocketplan_android.data.model.CheckEmailRequest
 import com.example.rocketplan_android.data.model.CheckEmailResponse
+import com.example.rocketplan_android.data.model.CheckCompanyByUuidRequest
 import com.example.rocketplan_android.data.model.GoogleAuthRequest
 import com.example.rocketplan_android.data.model.ResetPasswordRequest
 import com.example.rocketplan_android.data.model.ResetPasswordResponse
@@ -351,6 +352,20 @@ class AuthRepository(
         secureStorage.clearOAuthState()
     }
 
+    // ==================== Pending Invite (RP-BUG-270) ====================
+
+    fun savePendingInviteCompanyUuid(uuid: String) {
+        secureStorage.savePendingInviteCompanyUuid(uuid)
+    }
+
+    fun getPendingInviteCompanyUuid(): String? {
+        return secureStorage.getPendingInviteCompanyUuid()
+    }
+
+    fun clearPendingInviteCompanyUuid() {
+        secureStorage.clearPendingInviteCompanyUuid()
+    }
+
     // ==================== User Data ====================
 
     /**
@@ -401,6 +416,7 @@ class AuthRepository(
                     .ifBlank { currentUser.email }
                 // Always save (even empty) to clear stale data when user context changes
                 secureStorage.saveUserName(userName)
+ secureStorage.saveSmsVerified(currentUser.isSmsVerified)
                 if (selectedCompanyId != null) {
                     Log.d("AuthRepository", "Saving companyId=$selectedCompanyId")
                     // Cache company name for offline display
@@ -417,29 +433,44 @@ class AuthRepository(
                         secureStorage.saveCompanyName("")
                     }
                     // Notify the backend which company is active for this session
-                    runCatching {
-                        val activeCompanyResponse = authService.setActiveCompany(SetActiveCompanyRequest(selectedCompanyId))
-                        if (activeCompanyResponse.isSuccessful) {
-                            Log.d("AuthRepository", "Active company set on server: $selectedCompanyId")
-                        } else {
-                            Log.w("AuthRepository", "Failed to set active company on server: ${activeCompanyResponse.code()}")
+                    // RP-BUG-269: skip entirely for unverified users — no company context, no server call
+                    if (currentUser.isSmsVerified) {
+                        runCatching {
+                            val activeCompanyResponse = authService.setActiveCompany(SetActiveCompanyRequest(selectedCompanyId))
+                            if (activeCompanyResponse.isSuccessful) {
+                                Log.d("AuthRepository", "Active company set on server: $selectedCompanyId")
+                            } else {
+                                Log.w("AuthRepository", "Failed to set active company on server: ${activeCompanyResponse.code()}")
+                            }
+                        }.onFailure { e ->
+                            Log.w("AuthRepository", "Failed to set active company on server", e)
                         }
-                    }.onFailure { e ->
-                        Log.w("AuthRepository", "Failed to set active company on server", e)
-                    }
-                    secureStorage.saveCompanyId(selectedCompanyId)
-                    localDataService.setCurrentCompanyId(selectedCompanyId)
-                    RetrofitClient.setCompanyId(selectedCompanyId)
-                    remoteLogger?.log(
-                        LogLevel.INFO,
-                        TAG,
-                        "Company context set",
-                        mapOf(
-                            "companyId" to selectedCompanyId.toString(),
-                            "userId" to currentUser.id.toString(),
-                            "source" to "refreshUserContext"
+                        secureStorage.saveCompanyId(selectedCompanyId)
+                        localDataService.setCurrentCompanyId(selectedCompanyId)
+                        RetrofitClient.setCompanyId(selectedCompanyId)
+                        remoteLogger?.log(
+                            LogLevel.INFO,
+                            TAG,
+                            "Company context set",
+                            mapOf(
+                                "companyId" to selectedCompanyId.toString(),
+                                "userId" to currentUser.id.toString(),
+                                "source" to "refreshUserContext"
+                            )
                         )
-                    )
+                    } else {
+                        remoteLogger?.log(
+                            LogLevel.INFO,
+                            TAG,
+                            "Skipped company context: user not SMS-verified",
+                            mapOf(
+                                "companyId" to selectedCompanyId.toString(),
+                                "userId" to currentUser.id.toString(),
+                                "source" to "refreshUserContext",
+                                "reason" to "sms_unverified"
+                            )
+                        )
+                    }
                 } else {
                     Log.w("AuthRepository", "No company found in API response - clearing stored companyId and name")
                     secureStorage.clearCompanyId()
@@ -478,6 +509,8 @@ class AuthRepository(
     suspend fun getStoredUserName(): String? = secureStorage.getUserNameSync()
 
     suspend fun getStoredCompanyName(): String? = secureStorage.getCompanyNameSync()
+
+    suspend fun getCachedSmsVerified(): Boolean = secureStorage.getSmsVerifiedSync()
 
     fun observeCompanyId(): Flow<Long?> = secureStorage.getCompanyId()
 
@@ -645,6 +678,28 @@ class AuthRepository(
             val response = companyApi.addCompanyUser(companyId, userId)
             if (response.isSuccessful) {
                 Result.success(Unit)
+            } else {
+                val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
+                Result.failure(Exception(apiError.displayMessage))
+            }
+        } catch (e: Exception) {
+            val apiError = ApiError.fromException(e)
+            Result.failure(Exception(apiError.displayMessage))
+        }
+    }
+
+    /**
+     * Resolve a company by its UUID (used for invite-based joining).
+     * POST /api/companies/check body: { "uuid": "<uuid>" }
+     * Returns the company if found.
+     */
+    suspend fun resolveCompanyByUuid(uuid: String): Result<Company> {
+        return try {
+            val response = companyApi.checkCompanyByUuid(CheckCompanyByUuidRequest(uuid))
+            if (response.isSuccessful) {
+                val company = response.body()?.data
+                    ?: return Result.failure(Exception("Empty response"))
+                Result.success(company)
             } else {
                 val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())
                 Result.failure(Exception(apiError.displayMessage))

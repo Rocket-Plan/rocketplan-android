@@ -98,8 +98,12 @@ data class CurrentUserResponse(
     @SerializedName("company")
     val company: Company? = null,
     @SerializedName("companies")
-    val companies: List<Company>? = null
+    val companies: List<Company>? = null,
+    @SerializedName("sms_verified_at")
+    val smsVerifiedAt: String? = null
 ) {
+    val isSmsVerified: Boolean get() = !smsVerifiedAt.isNullOrBlank()
+
     /**
      * Get the primary company ID. Prefers the top-level company_id if available,
      * otherwise takes the first company from the companies array.
@@ -182,4 +186,12 @@ data class CreateCompanyRequest(
 
 data class CreateCompanyResponse(
     val data: Company
+)
+
+data class CompanyEnvelope(
+    val data: Company
+)
+
+data class CheckCompanyByUuidRequest(
+    val uuid: String
 )
