@@ -14,10 +14,13 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.databinding.FragmentFinalDetailsBinding
 import kotlinx.coroutines.launch
 
@@ -36,6 +39,7 @@ class FinalDetailsFragment : Fragment() {
             args.email
         )
     }
+    private val authRepository by lazy { AuthRepository(SecureStorage.getInstance(requireContext())) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -49,7 +53,6 @@ class FinalDetailsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Show company name field only when creating
         binding.companyNameInputLayout.visibility = if (args.isCreating) View.VISIBLE else View.GONE
 
         setupInputListeners()
@@ -77,6 +80,16 @@ class FinalDetailsFragment : Fragment() {
             hideKeyboard()
             viewModel.finish()
         }
+
+        binding.logoutButton.setOnClickListener {
+            lifecycleScope.launch {
+                authRepository.logout()
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(R.id.emailCheckFragment, true)
+                    .build()
+                findNavController().navigate(R.id.emailCheckFragment, null, navOptions)
+            }
+        }
     }
 
     private fun setupObservers() {
@@ -97,7 +110,6 @@ class FinalDetailsFragment : Fragment() {
             if (complete == true) {
                 viewModel.onSetupCompleteHandled()
                 if (findNavController().currentDestination?.id != R.id.finalDetailsFragment) return@observe
-                // Trigger initial sync on activity scope so it survives navigation
                 (requireActivity() as? AppCompatActivity)?.lifecycleScope?.launch {
                     (requireActivity().application as RocketPlanApplication)
                         .syncQueueManager

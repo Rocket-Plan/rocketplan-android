@@ -12,12 +12,17 @@ import android.widget.ArrayAdapter
 import androidx.core.content.getSystemService
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.data.model.CountryCode
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.databinding.FragmentPhoneVerificationBinding
+import kotlinx.coroutines.launch
 
 class PhoneVerificationFragment : Fragment() {
 
@@ -26,6 +31,7 @@ class PhoneVerificationFragment : Fragment() {
 
     private val args: PhoneVerificationFragmentArgs by navArgs()
     private val viewModel: PhoneVerificationViewModel by viewModels()
+    private val authRepository by lazy { AuthRepository(SecureStorage.getInstance(requireContext())) }
 
     companion object {
         private const val TAG = "PhoneVerification"
@@ -60,7 +66,6 @@ class PhoneVerificationFragment : Fragment() {
 
         binding.countryCodeDropdown.setOnItemClickListener { _, _, position, _ ->
             viewModel.setSelectedCountry(countries[position])
-            // Reformat phone number for new country format
             val current = binding.phoneInput.text?.toString() ?: ""
             val digits = current.replace(Regex("[^0-9]"), "")
             if (digits.isNotEmpty()) {
@@ -103,15 +108,18 @@ class PhoneVerificationFragment : Fragment() {
             hideKeyboard()
             validateAndSend()
         }
+
+        binding.logoutButton.setOnClickListener {
+            lifecycleScope.launch {
+                authRepository.logout()
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(R.id.emailCheckFragment, true)
+                    .build()
+                findNavController().navigate(R.id.emailCheckFragment, null, navOptions)
+            }
+        }
     }
 
-    /**
-     * Format phone digits for display based on the selected country.
-     * US/Canada (+1): (XXX) XXX-XXXX
-     * UK (+44): XXXX XXX XXXX
-     * Australia (+61): XXXX XXX XXX
-     * Others: groups of 3-4 digits
-     */
     private fun formatPhoneNumber(digits: String): String {
         if (digits.isEmpty()) return ""
         val country = viewModel.selectedCountry.value ?: CountryCode.DEFAULT
@@ -124,7 +132,6 @@ class PhoneVerificationFragment : Fragment() {
     }
 
     private fun formatNorthAmerican(digits: String): String {
-        // (XXX) XXX-XXXX
         return buildString {
             if (digits.length >= 1) append("(")
             append(digits.take(3))
@@ -138,7 +145,6 @@ class PhoneVerificationFragment : Fragment() {
     }
 
     private fun formatUk(digits: String): String {
-        // XXXX XXX XXXX
         return buildString {
             append(digits.take(4))
             if (digits.length > 4) {
@@ -153,7 +159,6 @@ class PhoneVerificationFragment : Fragment() {
     }
 
     private fun formatAustralian(digits: String): String {
-        // XXXX XXX XXX
         return buildString {
             append(digits.take(4))
             if (digits.length > 4) {
@@ -168,7 +173,6 @@ class PhoneVerificationFragment : Fragment() {
     }
 
     private fun formatGeneric(digits: String): String {
-        // XXX XXX XXXX
         return buildString {
             append(digits.take(3))
             if (digits.length > 3) {
@@ -193,7 +197,6 @@ class PhoneVerificationFragment : Fragment() {
             binding.errorText.visibility = View.VISIBLE
             return
         }
-        // Basic length check - digits only should be at least 7 characters
         val digitsOnly = phone.replace(Regex("[^0-9]"), "")
         if (digitsOnly.length < 7) {
             binding.errorText.text = getString(R.string.onboarding_phone_invalid)

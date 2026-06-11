@@ -10,10 +10,15 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.databinding.FragmentJoinCompanyBinding
+import kotlinx.coroutines.launch
 
 class JoinCompanyFragment : Fragment() {
 
@@ -24,6 +29,7 @@ class JoinCompanyFragment : Fragment() {
     private val viewModel: JoinCompanyViewModel by viewModels {
         JoinCompanyViewModelFactory(requireActivity().application, args.userId)
     }
+    private val authRepository by lazy { AuthRepository(SecureStorage.getInstance(requireContext())) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -61,6 +67,16 @@ class JoinCompanyFragment : Fragment() {
             findNavController().navigate(action)
         }
 
+        binding.logoutButton.setOnClickListener {
+            lifecycleScope.launch {
+                authRepository.logout()
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(R.id.emailCheckFragment, true)
+                    .build()
+                findNavController().navigate(R.id.emailCheckFragment, null, navOptions)
+            }
+        }
+
         viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
             binding.loadingIndicator.isVisible = isLoading
             binding.joinButton.isEnabled = !isLoading
@@ -75,7 +91,7 @@ class JoinCompanyFragment : Fragment() {
         viewModel.joinComplete.observe(viewLifecycleOwner) { complete ->
             if (complete == true) {
                 viewModel.onJoinCompleteHandled()
-                val navOptions = androidx.navigation.NavOptions.Builder()
+                val navOptions = NavOptions.Builder()
                     .setPopUpTo(R.id.emailCheckFragment, true)
                     .build()
                 findNavController().navigate(R.id.nav_projects, null, navOptions)

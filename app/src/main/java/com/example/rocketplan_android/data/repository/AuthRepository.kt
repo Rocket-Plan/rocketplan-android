@@ -43,6 +43,9 @@ class AuthRepository(
 
     companion object {
         private const val TAG = "AuthRepository"
+        private const val MAX_SET_ACTIVE_COMPANY_RETRIES = 2
+        @Volatile
+        var sessionSmsVerifiedJustConfirmed: Boolean = false
     }
 
     // ==================== API Operations ====================
@@ -434,16 +437,25 @@ class AuthRepository(
                     }
                     // Notify the backend which company is active for this session
                     // RP-BUG-269: skip entirely for unverified users — no company context, no server call
+                    // RP-BUG-274: bounded retry if 403 is a stale verification-gate error
                     if (currentUser.isSmsVerified) {
-                        runCatching {
+                        var setActiveCompanySuccess = false
+                        val maxRetries = if (sessionSmsVerifiedJustConfirmed) MAX_SET_ACTIVE_COMPANY_RETRIES else 1
+                        repeat(maxRetries) { attempt ->
+                            if (setActiveCompanySuccess) return@repeat
                             val activeCompanyResponse = authService.setActiveCompany(SetActiveCompanyRequest(selectedCompanyId))
                             if (activeCompanyResponse.isSuccessful) {
+                                setActiveCompanySuccess = true
                                 Log.d("AuthRepository", "Active company set on server: $selectedCompanyId")
+                            } else if (activeCompanyResponse.code() == 403 && attempt < maxRetries - 1) {
+                                Log.w("AuthRepository", "403 on setActiveCompany (attempt ${attempt + 1}), retrying...")
+                                kotlinx.coroutines.delay(500L * (attempt + 1))
                             } else {
                                 Log.w("AuthRepository", "Failed to set active company on server: ${activeCompanyResponse.code()}")
                             }
-                        }.onFailure { e ->
-                            Log.w("AuthRepository", "Failed to set active company on server", e)
+                        }
+                        if (!setActiveCompanySuccess && sessionSmsVerifiedJustConfirmed) {
+                            sessionSmsVerifiedJustConfirmed = false
                         }
                         secureStorage.saveCompanyId(selectedCompanyId)
                         localDataService.setCurrentCompanyId(selectedCompanyId)
@@ -618,6 +630,7 @@ class AuthRepository(
                 SmsVerifyCodeRequest(phone, code)
             )
             if (response.isSuccessful) {
+                sessionSmsVerifiedJustConfirmed = true
                 Result.success(Unit)
             } else {
                 val apiError = ApiError.fromHttpResponse(response.code(), response.errorBody()?.string())

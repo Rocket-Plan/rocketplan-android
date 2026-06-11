@@ -81,7 +81,9 @@ data class Company(
     @SerializedName("name")
     val name: String?,
     @SerializedName("logoUrl")
-    val logoUrl: String? = null
+    val logoUrl: String? = null,
+    @SerializedName("is_approved")
+    val isApproved: Boolean? = null
 )
 
 data class CurrentUserResponse(
@@ -100,9 +102,12 @@ data class CurrentUserResponse(
     @SerializedName("companies")
     val companies: List<Company>? = null,
     @SerializedName("sms_verified_at")
-    val smsVerifiedAt: String? = null
+    val smsVerifiedAt: String? = null,
+    @SerializedName("email_verified_at")
+    val emailVerifiedAt: String? = null
 ) {
     val isSmsVerified: Boolean get() = !smsVerifiedAt.isNullOrBlank()
+    val isEmailVerified: Boolean get() = !emailVerifiedAt.isNullOrBlank()
 
     /**
      * Get the primary company ID. Prefers the top-level company_id if available,

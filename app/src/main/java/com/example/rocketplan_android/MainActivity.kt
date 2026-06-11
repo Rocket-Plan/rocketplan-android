@@ -401,6 +401,8 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 // RP-BUG-270: check for pending invite and auto-join if user is authenticated
+                // RP-BUG-275: check addCompanyUser/setActiveCompany Results; only clear pending
+                // invite on full success, retain+retry on failure, don't navigate as if joined
                 val pendingInviteUuid = authRepository.getPendingInviteCompanyUuid()
                 if (pendingInviteUuid != null) {
                     Log.d(TAG, "Processing pending invite for company UUID: $pendingInviteUuid")
@@ -408,17 +410,26 @@ class MainActivity : AppCompatActivity() {
                     if (joinResult.isSuccess) {
                         val company = joinResult.getOrNull()
                         if (company != null) {
-                            authRepository.addCompanyUser(company.id, userId)
-                            authRepository.setActiveCompany(company.id)
-                            authRepository.clearPendingInviteCompanyUuid()
-                            Log.d(TAG, "Successfully joined company via invite: ${company.id}")
-                            // S4: navigate directly to app — needsOnboarding was computed before this block
-                            val navOptions = NavOptions.Builder()
-                                .setPopUpTo(R.id.emailCheckFragment, true)
-                                .build()
-                            navController.navigate(R.id.nav_projects, null, navOptions)
-                            lifecycleScope.launch { syncQueueManager.ensureInitialSync() }
-                            return@withContext
+                            val addUserResult = authRepository.addCompanyUser(company.id, userId)
+                            if (addUserResult.isFailure) {
+                                Log.w(TAG, "Failed to add user to company: ${addUserResult.exceptionOrNull()?.message}")
+                                // Retain pending invite for retry, don't navigate to projects
+                            } else {
+                                val setCompanyResult = authRepository.setActiveCompany(company.id)
+                                if (setCompanyResult.isSuccess) {
+                                    authRepository.clearPendingInviteCompanyUuid()
+                                    Log.d(TAG, "Successfully joined company via invite: ${company.id}")
+                                    val navOptions = NavOptions.Builder()
+                                        .setPopUpTo(R.id.emailCheckFragment, true)
+                                        .build()
+                                    navController.navigate(R.id.nav_projects, null, navOptions)
+                                    lifecycleScope.launch { syncQueueManager.ensureInitialSync() }
+                                    return@withContext
+                                } else {
+                                    Log.w(TAG, "Failed to set active company: ${setCompanyResult.exceptionOrNull()?.message}")
+                                    // Retain pending invite for retry, don't navigate to projects
+                                }
+                            }
                         }
                     } else {
                         Log.w(TAG, "Failed to resolve invite company, clearing pending invite")
@@ -560,7 +571,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (status == 200 && !token.isNullOrEmpty()) {
-            // Save token and navigate to home
+            // RP-BUG-278: route OAuth through shared gate check instead of hard-coding nav_home
             lifecycleScope.launch {
                 try {
                     authRepository.saveAuthToken(token)
@@ -575,19 +586,15 @@ class MainActivity : AppCompatActivity() {
                             "Sign in failed: unable to load account. Please try again.",
                             Toast.LENGTH_LONG
                         ).show()
+                        isProcessingOAuth = false
                         return@launch
                     }
                     syncQueueManager.clear()
-                    syncQueueManager.ensureInitialSync()
                     (application as RocketPlanApplication).imageProcessorQueueManager.abandonStaleServerAssemblies()
-                    checkCrmAccess()
 
-                    // Navigate to projects screen and clear auth stack
+                    // Route through shared gate check (SMS/company gates)
                     val navController = findNavController(R.id.nav_host_fragment_content_main)
-                    val navOptions = NavOptions.Builder()
-                        .setPopUpTo(R.id.emailCheckFragment, true)
-                        .build()
-                    navController.navigate(R.id.nav_projects, null, navOptions)
+                    checkAuthenticationStatus(navController)
 
                     Toast.makeText(
                         this@MainActivity,

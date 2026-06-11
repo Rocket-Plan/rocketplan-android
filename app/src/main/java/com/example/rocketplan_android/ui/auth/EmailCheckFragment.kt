@@ -17,6 +17,7 @@ import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.example.rocketplan_android.BuildConfig
 import com.example.rocketplan_android.R
@@ -175,14 +176,34 @@ class EmailCheckFragment : Fragment() {
             }
         }
 
+        // RP-BUG-278: route Google Sign-In success through shared gate check instead of
+        // hard-coding nav_home, so unverified/company-less users are routed correctly
         googleSignInViewModel.signInSuccess.observe(viewLifecycleOwner) { success ->
             if (success == true) {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    syncQueueManager.ensureInitialSync()
-                }
-                val action = EmailCheckFragmentDirections.actionEmailCheckFragmentToNavHome()
-                findNavController().navigate(action)
                 googleSignInViewModel.onSignInSuccessHandled()
+                lifecycleScope.launch {
+                    val isSmsVerified = authRepository.getCachedSmsVerified()
+                    val companyId = authRepository.getStoredCompanyId()
+                    val needsOnboarding = companyId == null
+                    val navController = findNavController()
+                    val navOptions = androidx.navigation.NavOptions.Builder()
+                        .setPopUpTo(R.id.emailCheckFragment, true)
+                        .build()
+                    when {
+                        !isSmsVerified -> {
+                            navController.navigate(R.id.phoneVerificationFragment, null, navOptions)
+                        }
+                        needsOnboarding -> {
+                            navController.navigate(R.id.accountTypeFragment, null, navOptions)
+                        }
+                        else -> {
+                            (requireActivity().application as RocketPlanApplication)
+                                .imageProcessorQueueManager
+                                .abandonStaleServerAssemblies()
+                            navController.navigate(R.id.nav_projects, null, navOptions)
+                        }
+                    }
+                }
             }
         }
 

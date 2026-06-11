@@ -6,9 +6,16 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
+import com.example.rocketplan_android.R
+import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.repository.AuthRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.databinding.FragmentAccountTypeBinding
+import kotlinx.coroutines.launch
 
 class AccountTypeFragment : Fragment() {
 
@@ -17,6 +24,7 @@ class AccountTypeFragment : Fragment() {
 
     private val args: AccountTypeFragmentArgs by navArgs()
     private val viewModel: AccountTypeViewModel by viewModels()
+    private val authRepository by lazy { AuthRepository(SecureStorage.getInstance(requireContext())) }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -56,6 +64,44 @@ class AccountTypeFragment : Fragment() {
                 )
             findNavController().navigate(action)
         }
+
+        binding.logoutButton.setOnClickListener {
+            lifecycleScope.launch {
+                authRepository.logout()
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(R.id.emailCheckFragment, true)
+                    .build()
+                findNavController().navigate(R.id.emailCheckFragment, null, navOptions)
+            }
+        }
+
+        viewModel.isLoading.observe(viewLifecycleOwner) { isLoading ->
+            binding.loadingIndicator.visibility = if (isLoading) View.VISIBLE else View.GONE
+            binding.createCompanyCard.isEnabled = !isLoading
+            binding.joinCompanyCard.isEnabled = !isLoading
+        }
+
+        viewModel.errorMessage.observe(viewLifecycleOwner) { error ->
+            binding.errorText.text = error
+            binding.errorText.visibility = if (error.isNullOrBlank()) View.GONE else View.VISIBLE
+        }
+
+        viewModel.inviteResolved.observe(viewLifecycleOwner) { resolved ->
+            if (resolved == true) {
+                viewModel.onInviteResolvedHandled()
+                lifecycleScope.launch {
+                    (requireActivity().application as RocketPlanApplication)
+                        .syncQueueManager
+                        .ensureInitialSync()
+                }
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(R.id.emailCheckFragment, true)
+                    .build()
+                findNavController().navigate(R.id.nav_projects, null, navOptions)
+            }
+        }
+
+        viewModel.checkForInvitation()
     }
 
     override fun onDestroyView() {

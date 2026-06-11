@@ -25,7 +25,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
-import kotlinx.coroutines.launch
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import com.example.rocketplan_android.R
@@ -35,6 +34,7 @@ import com.example.rocketplan_android.databinding.FragmentSmsCodeVerifyBinding
 import com.google.android.gms.auth.api.phone.SmsRetriever
 import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.android.gms.common.api.Status
+import kotlinx.coroutines.launch
 
 class SmsCodeVerifyFragment : Fragment() {
 
@@ -240,6 +240,16 @@ class SmsCodeVerifyFragment : Fragment() {
         binding.resendButton.setOnClickListener {
             resend()
         }
+
+        binding.logoutButton.setOnClickListener {
+            lifecycleScope.launch {
+                authRepository.logout()
+                val navOptions = NavOptions.Builder()
+                    .setPopUpTo(R.id.emailCheckFragment, true)
+                    .build()
+                findNavController().navigate(R.id.emailCheckFragment, null, navOptions)
+            }
+        }
     }
 
     private fun setupObservers() {
@@ -266,8 +276,12 @@ class SmsCodeVerifyFragment : Fragment() {
             if (verified == true) {
                 viewModel.onVerifiedHandled()
                 if (findNavController().currentDestination?.id != R.id.smsCodeVerifyFragment) return@observe
-                // RP-BUG-269: if user already has a company, go directly to app after verification
+                // RP-BUG-271: re-run refreshUserContext to pick up the freshly-verified user's
+                // companyId/companies before branching on getStoredCompanyId. Without this,
+                // the "skip Create/Join chooser" branch is dead because 269 gating never caches
+                // companyId for an unverified user.
                 viewLifecycleOwner.lifecycleScope.launch {
+                    authRepository.refreshUserContext()
                     val hasCompany = authRepository.getStoredCompanyId() != null
                     if (hasCompany) {
                         val navOptions = NavOptions.Builder()
