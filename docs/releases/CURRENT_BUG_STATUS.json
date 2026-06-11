@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T22:52:01-07:00",
+  "generated_at": "2026-06-10T22:52:48-07:00",
   "source_tracker": "docs/BUG_TRACKER.md",
   "current_shipping_release": {
     "version": "1.30",
@@ -36,7 +36,7 @@
         "priority": "P1",
         "state": "fixed",
         "release_state": "unreleased",
-        "fixed_in": "06f5eb9",
+        "fixed_in": "90078ec",
         "found_in": "1.30 (35)",
         "title": "Company activation (refreshUserContext \u2192 setActiveCompany, POST /api/active-company) is not gated behind SMS verification \u2014 client has no sms_verified_at awareness, so an unverified user with a company fires the call on every login/startup, backend 403s \"sms code is not verified\", and unauthorizedInterceptor force-signs-out the user (iOS RP-BUG-330 counterpart)"
       },
@@ -45,7 +45,7 @@
         "priority": "P2",
         "state": "fixed",
         "release_state": "unreleased",
-        "fixed_in": "06f5eb9 (in-app join; email-link auto-open gated on assetlinks.json)",
+        "fixed_in": "90078ec (in-app join; email-link auto-open gated on assetlinks.json)",
         "found_in": "1.30 (35)",
         "title": "Invite-based company joining is not implemented on Android \u2014 no invite-redirect deep-link handler (manifest only registers oauth2), onNewIntent handles only OAuth, JoinCompanyViewModel is an empty stub, \"Join Company\" offers only \"Create instead\"; an invited user cannot join the company (iOS RP-BUG-327/328 area \u2014 feature gap, not the iOS parser defect)"
       }
@@ -534,7 +534,7 @@
       "priority": "P1",
       "state": "fixed",
       "release_state": "unreleased",
-      "fixed_in": "06f5eb9",
+      "fixed_in": "90078ec",
       "found_in": "1.30 (35)",
       "title": "Company activation (refreshUserContext \u2192 setActiveCompany, POST /api/active-company) is not gated behind SMS verification \u2014 client has no sms_verified_at awareness, so an unverified user with a company fires the call on every login/startup, backend 403s \"sms code is not verified\", and unauthorizedInterceptor force-signs-out the user (iOS RP-BUG-330 counterpart)"
     },
@@ -543,7 +543,7 @@
       "priority": "P2",
       "state": "fixed",
       "release_state": "unreleased",
-      "fixed_in": "06f5eb9 (in-app join; email-link auto-open gated on assetlinks.json)",
+      "fixed_in": "90078ec (in-app join; email-link auto-open gated on assetlinks.json)",
       "found_in": "1.30 (35)",
       "title": "Invite-based company joining is not implemented on Android \u2014 no invite-redirect deep-link handler (manifest only registers oauth2), onNewIntent handles only OAuth, JoinCompanyViewModel is an empty stub, \"Join Company\" offers only \"Create instead\"; an invited user cannot join the company (iOS RP-BUG-327/328 area \u2014 feature gap, not the iOS parser defect)"
     }

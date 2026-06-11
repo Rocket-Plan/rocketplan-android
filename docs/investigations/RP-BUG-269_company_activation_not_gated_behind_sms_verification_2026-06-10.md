@@ -7,7 +7,7 @@ classification: pre_existing_latent
 source: code-trace
 found_in: "1.30 (35) (master, code-traced 2026-06-10)"
 found_at: "2026-06-10 21:58:40 PDT"
-fixed_in: 06f5eb9
+fixed_in: 90078ec
 released_in: null
 state: fixed
 release_state: unreleased
@@ -128,7 +128,7 @@ counterpart of the iOS RP-BUG-331 routing concern. The fix below adds the missin
 
 ## Fix (implemented 2026-06-10, reviewed 3 rounds — see related_review)
 
-> Status: implemented + build-passing; committed to `master` as `06f5eb9`.
+> Status: implemented + build-passing; committed to `master` as `90078ec`.
 > Cross-checked against the mongoose backend.
 
 1. **Client SMS-verification awareness** — `AuthModels.kt`: added

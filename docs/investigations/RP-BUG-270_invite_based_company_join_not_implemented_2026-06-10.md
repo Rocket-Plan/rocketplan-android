@@ -7,7 +7,7 @@ classification: feature_gap
 source: code-trace
 found_in: "1.30 (35) (master, code-traced 2026-06-10)"
 found_at: "2026-06-10 21:58:40 PDT"
-fixed_in: 06f5eb9   # in-app join; emailed-link auto-open still gated on assetlinks.json (see Remaining)
+fixed_in: 90078ec   # in-app join; emailed-link auto-open still gated on assetlinks.json (see Remaining)
 released_in: null
 state: fixed   # in-app join path; emailed-link AUTO-OPEN still gated on assetlinks.json deployment (backend/ops) — see "Remaining"
 release_state: unreleased
@@ -83,7 +83,7 @@ invite-join capability is missing.
 
 ## Fix (implemented 2026-06-10, reviewed 3 rounds — see related_review)
 
-> Status: in-app join implemented + build-passing; committed to `master` as `06f5eb9`.
+> Status: in-app join implemented + build-passing; committed to `master` as `90078ec`.
 > **The emailed-link AUTO-OPEN is not yet functional** — it depends on hosting
 > `assetlinks.json` (see Remaining). Cross-checked against the mongoose backend + iOS reference.
 
