@@ -9,11 +9,11 @@ found_in: "1.30 (35)"
 found_at: "2026-06-10 23:04:27 PDT"
 fixed_in: null
 released_in: null
-state: open
+state: planned
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
+related_plan: docs/plans/plan_rp_bug_276_company_approval_gate_2026-06-11.md
 related_review: docs/reviews/code_review_rp_bug_269_270_2026-06-10.md
 related_test: null
 last_updated: 2026-06-10

@@ -13,10 +13,10 @@ state: investigating
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
-related_plan: null
-related_review: docs/reviews/code_review_rp_bug_046_047_2026-06-07.md
+related_plan: docs/plans/plan_rp_bug_046_moisture_422_re_enqueue_2026-06-11.md
+related_review: docs/reviews/code_review_rp_bug_046_2026-06-08.md
 related_test: null
-last_updated: 2026-06-07
+last_updated: 2026-06-08
 ---
 
 # RP-BUG-046: moisture logs dropped on 422 with no diagnosable detail
@@ -88,6 +88,12 @@ Terminal DROP path, so draining the error body is safe. The validation `details`
 `handle409Conflict()` (it previously dropped without the body — a diagnosability gap). Both drop sites now
 log `detail=…`. Tests added in `MoistureLogPushHandlerTest`: `handleUpsert logs 422 response body detail
 when dropping` and `handle409Conflict logs 422 response body detail when dropping after retry`.
+
+**Review follow-up (2026-06-08):** RP-BUG-048 removed the duplicate-material trigger for fresh failures,
+but RP-BUG-046 is still open because every upsert 422 still returns `OperationOutcome.DROP`. The queue
+processor deletes the sync op on `DROP`, while the moisture-log row itself stays `PENDING`/dirty and there
+is no repair sweep that re-enqueues orphaned pending logs. So the historical "silent strand" data-loss mode
+still exists until 422s become recoverable/surfaced and existing queue-less rows are repaired.
 
 ## Fix — part 2 (PENDING): the actual rejection
 
