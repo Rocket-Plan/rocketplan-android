@@ -9,14 +9,14 @@ found_in: "1.0.00"
 found_at: "2026-06-07 21:33:57 PDT"
 fixed_in: null
 released_in: null
-state: investigating
+state: investigating  # part 1 (diagnostic) + part 2 recoverability RELEASED; part 2 actual rejection still investigating
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_046_moisture_422_re_enqueue_2026-06-11.md
 related_review: docs/reviews/code_review_rp_bug_046_2026-06-08.md
-related_test: null
-last_updated: 2026-06-08
+related_test: app/src/test/java/com/example/rocketplan_android/data/repository/sync/handlers/MoistureLogPushHandlerTest.kt, app/src/test/java/com/example/rocketplan_android/data/local/dao/GetOrphanedMoistureLogsTest.kt
+last_updated: 2026-06-11
 ---
 
 # RP-BUG-046: moisture logs dropped on 422 with no diagnosable detail
@@ -97,36 +97,67 @@ still exists until 422s become recoverable/surfaced and existing queue-less rows
 
 ## Fix — part 2 (PENDING): the actual rejection
 
-Deliberately **not** fixed blind. Once the captured `detail` identifies the field:
-- If `damage_type` not drying-eligible → either the client shouldn't allow a moisture reading on a
-  non-drying material, or the material/damage-type mapping is wrong client-side.
-- If `room_id`/`damage_material_room` missing → the offline-create ordering (material/room link must sync
-  before its logs) is the real bug — a push-time SKIP-until-parent-ready guard, like other child handlers.
-- Also reconsider whether a hard `DROP` is right at all: a 422 that's actually a *transient ordering*
-  problem should SKIP/RETRY, not silently discard the reading (data loss).
+ Deliberately **not** fixed blind. Once the captured `detail` identifies the field:
+ - If `damage_type` not drying-eligible → either the client shouldn't allow a moisture reading on a
+   non-drying material, or the material/damage-type mapping is wrong client-side.
+ - If `room_id`/`damage_material_room` missing → the offline-create ordering (material/room link must sync
+   before its logs) is the real bug — a push-time SKIP-until-parent-ready guard, like other child handlers.
+ - Also reconsider whether a hard `DROP` is right at all: a 422 that's actually a *transient ordering*
+   problem should SKIP/RETRY, not silently discard the reading (data loss).
 
 ## Update 2026-06-07 — DROP strands the reading (confirmed data loss)
 
-After installing the diagnostic build and re-syncing, the device state shows the **drop is worse than
-"the reading didn't sync"**:
-- The **sync queue is empty** (`offline_sync_queue` has no rows), yet the 4 room-6804 readings are still
-  `offline_moisture_logs.syncStatus = PENDING`.
-- Every reading that *pulled down* (RP-BUG-047 fix) is `SYNCED` with a **positive** server `materialId`;
-  the 4 stuck ones carry **negative** local `materialId`s (`-1780893355626`, …) though their material
-  resolves to server id `512922`.
+ After installing the diagnostic build and re-syncing, the device state shows the **drop is worse than
+ "the reading didn't sync"**:
+ - The **sync queue is empty** (`offline_sync_queue` has no rows), yet the 4 room-6804 readings are still
+   `offline_moisture_logs.syncStatus = PENDING`.
+ - Every reading that *pulled down* (RP-BUG-047 fix) is `SYNCED` with a **positive** server `materialId`;
+   the 4 stuck ones carry **negative** local `materialId`s (`-1780893355626`, …) though their material
+   resolves to server id `512922`.
 
-So the earlier `OperationOutcome.DROP` on 422 **removed the queue op but left the row PENDING** → the
-reading is **orphaned and un-retryable**: it will never push again and shows as forever-pending. This is
-silent **data loss**, independent of *which* validation rule fired.
+ So the earlier `OperationOutcome.DROP` on 422 **removed the queue op but left the row PENDING** → the
+ reading is **orphaned and un-retryable**: it will never push again and shows as forever-pending. This is
+ silent **data loss**, independent of *which* validation rule fired.
 
-**Implication for the fix:** the DROP-vs-keep decision is now the primary bug, not just a detail. A 422
-that is actually a *recoverable* condition (missing `damage_material_room` link / ordering) must not be
-silently discarded. Options: keep the op retryable (bounded), mark the row with an error/conflict state
-the UI can surface, or re-enqueue — but do **not** strand it in PENDING with no op.
+ **Implication for the fix:** the DROP-vs-keep decision is now the primary bug, not just a detail. A 422
+ that is actually a *recoverable* condition (missing `damage_material_room` link / ordering) must not be
+ silently discarded. Options: keep the op retryable (bounded), mark the row with an error/conflict state
+ the UI can surface, or re-enqueue — but do **not** strand it in PENDING with no op.
 
-**Capturing the exact rule:** the 4 stranded logs can no longer be replayed (no queue op), so the precise
-422 `details` must be captured from a **fresh reading authored on the same affected material/room**
-(room 6804 / material 512922 "Concrete") with the diagnostic build installed.
+ **Capturing the exact rule:** the 4 stranded logs can no longer be replayed (no queue op), so the precise
+ 422 `details` must be captured from a **fresh reading authored on the same affected material/room**
+ (room 6804 / material 512922 "Concrete") with the diagnostic build installed.
+
+## Fix — part 2 (implemented 2026-06-11): recoverability + repair sweep
+
+ The fix ships in two parts while the exact backend rule remains unconfirmed:
+
+ **1. SKIP instead of DROP on 422** (`MoistureLogPushHandler.kt:42-80, 174-206`)
+ - On 422, the handler now returns `SKIP` (bounded) instead of `DROP` for all PENDING moisture logs.
+   This converts silent data loss into bounded retry + surfaced `FAILED` state (via
+   `SyncQueueProcessor` maxSkips backoff).
+ - **Important caveat (2026-06-11 review):** `log.materialId <= 0` is the offline-originated marker
+   (local ids are negative timestamps; serverId lives in a separate column). It is **not** a
+   reconciliation signal — the stranded logs' material was fully reconciled (serverId 512922) yet
+   materialId was still negative. So `materialId <= 0` fires for essentially every offline-authored
+   reading regardless of reconciliation state. The SKIP is therefore a **fail-safe defer**, not a true
+   recoverable/unrecoverable split. The wording in remote logs reflects this: *"deferred SKIP (cause
+   unconfirmed; RP-BUG-046 part 2)"*.
+ - The `room.serverId == null` clause is effectively dead at 422 time — `pushPendingMoistureLogUpsert`
+   returns `null` → `SKIP` before any API call when room/project/material server-ids are missing.
+ - Once the exact rule is confirmed from the 422 body (part 2 of this bug), the classification can
+   be refined to SKIP only for ordering conditions and DROP for genuinely invalid input.
+
+ **2. Repair sweep** (`LocalDataService.repairOrphanedMoistureLogs()`, `OfflineDao.getOrphanedMoistureLogs()`,
+    `RocketPlanApplication` startup task)
+ - A startup sweep finds all `PENDING` moisture logs with no corresponding sync queue op and re-enqueues
+   them. This recovers the historical orphans (room 6804, material 512922, 4 stranded readings) and
+   any future ones left by the pre-fix `DROP` path.
+ - The sweep is intentionally wide: any `PENDING` moisture log without a queue op is re-enqueued,
+   regardless of materialId sign. This handles both the `materialId <= 0` 422 path and the rarer
+   positive-materialId DROP case (server-originated material with genuinely invalid data).
+
+## Observability
 
 ## Observability
 

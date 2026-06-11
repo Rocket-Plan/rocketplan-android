@@ -3,7 +3,7 @@
 **Bug ID(s):** RP-BUG-046
 **Author:** Claude
 **Date:** 2026-06-11
-**State:** draft
+**State:** in_review (part 1 implemented in 280c444; part 2 pending device repro)
 
 ---
 
