@@ -389,6 +389,12 @@ class MainActivity : AppCompatActivity() {
                 // RP-BUG-269: route unverified users to phone verification regardless of company status
                 if (!isSmsVerified) {
                     Log.d(TAG, "User authenticated but not SMS-verified, redirecting to phone verification")
+                    remoteLogger.log(
+                        LogLevel.INFO,
+                        "auth_sms",
+                        "Routing gate: SMS not verified",
+                        mapOf("userId" to userId.toString())
+                    )
                     val bundle = Bundle().apply {
                         putLong("userId", userId)
                         putString("email", cachedEmail)
@@ -405,6 +411,12 @@ class MainActivity : AppCompatActivity() {
                 // invite on full success, retain+retry on failure, don't navigate as if joined
                 val pendingInviteUuid = authRepository.getPendingInviteCompanyUuid()
                 if (pendingInviteUuid != null) {
+                    remoteLogger.log(
+                        LogLevel.INFO,
+                        "auth_invite_join",
+                        "Routing gate: processing pending invite",
+                        mapOf("userId" to userId.toString(), "companyUuid" to pendingInviteUuid)
+                    )
                     Log.d(TAG, "Processing pending invite for company UUID: $pendingInviteUuid")
                     val joinResult = authRepository.resolveCompanyByUuid(pendingInviteUuid)
                     if (joinResult.isSuccess) {
@@ -412,12 +424,24 @@ class MainActivity : AppCompatActivity() {
                         if (company != null) {
                             val addUserResult = authRepository.addCompanyUser(company.id, userId)
                             if (addUserResult.isFailure) {
+                                remoteLogger.log(
+                                    LogLevel.WARN,
+                                    "auth_invite_join",
+                                    "Routing gate: invite join failed - addCompanyUser",
+                                    mapOf("userId" to userId.toString(), "companyId" to company.id.toString(), "error" to (addUserResult.exceptionOrNull()?.message ?: "unknown"))
+                                )
                                 Log.w(TAG, "Failed to add user to company: ${addUserResult.exceptionOrNull()?.message}")
                                 // Retain pending invite for retry, don't navigate to projects
                             } else {
                                 val setCompanyResult = authRepository.setActiveCompany(company.id)
                                 if (setCompanyResult.isSuccess) {
                                     authRepository.clearPendingInviteCompanyUuid()
+                                    remoteLogger.log(
+                                        LogLevel.INFO,
+                                        "auth_invite_join",
+                                        "Routing gate: invite join success",
+                                        mapOf("userId" to userId.toString(), "companyId" to company.id.toString())
+                                    )
                                     Log.d(TAG, "Successfully joined company via invite: ${company.id}")
                                     val navOptions = NavOptions.Builder()
                                         .setPopUpTo(R.id.emailCheckFragment, true)
@@ -426,18 +450,36 @@ class MainActivity : AppCompatActivity() {
                                     lifecycleScope.launch { syncQueueManager.ensureInitialSync() }
                                     return@withContext
                                 } else {
+                                    remoteLogger.log(
+                                        LogLevel.WARN,
+                                        "auth_invite_join",
+                                        "Routing gate: invite join failed - setActiveCompany",
+                                        mapOf("userId" to userId.toString(), "companyId" to company.id.toString(), "error" to (setCompanyResult.exceptionOrNull()?.message ?: "unknown"))
+                                    )
                                     Log.w(TAG, "Failed to set active company: ${setCompanyResult.exceptionOrNull()?.message}")
                                     // Retain pending invite for retry, don't navigate to projects
                                 }
                             }
                         }
                     } else {
+                        remoteLogger.log(
+                            LogLevel.WARN,
+                            "auth_invite_join",
+                            "Routing gate: invite join failed - resolveCompanyByUuid",
+                            mapOf("userId" to userId.toString(), "companyUuid" to pendingInviteUuid, "error" to (joinResult.exceptionOrNull()?.message ?: "unknown"))
+                        )
                         Log.w(TAG, "Failed to resolve invite company, clearing pending invite")
                         authRepository.clearPendingInviteCompanyUuid()
                     }
                 }
 
                 if (needsOnboarding) {
+                    remoteLogger.log(
+                        LogLevel.INFO,
+                        "auth_company",
+                        "Routing gate: needs onboarding",
+                        mapOf("userId" to userId.toString())
+                    )
                     Log.d(TAG, "User authenticated but no company, redirecting to onboarding")
                     val bundle = Bundle().apply {
                         putLong("userId", userId)
@@ -450,6 +492,12 @@ class MainActivity : AppCompatActivity() {
                     return@withContext
                 }
 
+                remoteLogger.log(
+                    LogLevel.INFO,
+                    "auth_sms",
+                    "Routing gate: fully authenticated, navigating to projects",
+                    mapOf("userId" to userId.toString(), "companyId" to (companyId?.toString() ?: "null"))
+                )
                 if (BuildConfig.ENABLE_LOGGING) {
                     Log.d(TAG, "User authenticated, navigating to projects")
                 }
