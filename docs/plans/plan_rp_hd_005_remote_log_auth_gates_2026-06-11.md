@@ -3,7 +3,7 @@
 **Bug ID(s):** RP-HD-005
 **Author:** Claude
 **Date:** 2026-06-11
-**State:** draft (partially landed)
+**State:** approved (implemented in ddea51d)
 
 ---
 
@@ -12,10 +12,13 @@
 - **2026-06-11 (`3dff3e0`):** the build/env gating building block landed — `RemoteLogGate`
   interface + `RemoteLogGateAlwaysOn` default + `RemoteLogger.updateGate()` and an early-return in
   `log()`. This is **only the volume-control mechanism** (Step "build/env gating" below).
-- **Still outstanding (the actual ticket):** the `auth_sms` / `auth_company` / `auth_invite_join`
-  remote logs at each decision point in `MainActivity.checkAuthenticationStatus` (+ the OAuth path).
-  Until those are emitted, there is no remote traceability of signup routing, so RP-HD-005 stays
-  `planned`.
+- **2026-06-11 (`ddea51d`) — done:** the `auth_sms` / `auth_company` / `auth_invite_join` remote
+  logs now fire at each decision point in `MainActivity.checkAuthenticationStatus` (unverified
+  redirect, fully-authenticated→projects, pending-invite start/success/3×failure, needs-onboarding).
+  Payloads key on `userId` (+ `companyId`/`companyUuid`); **email was dropped** to honor the
+  no-raw-user-text guidance. Success criterion met. RP-HD-005 → `fixed`.
+- **Not covered (out of scope here):** the OAuth entry path (`EmailCheckFragment` Google sign-in)
+  does its own routing and is not yet remote-logged; tracked under RP-BUG-278's surface if needed.
 
 ---
 

@@ -7,9 +7,9 @@ classification: pre_existing_latent
 source: review
 found_in: "1.30 (35)"
 found_at: "2026-06-10 23:04:27 PDT"
-fixed_in: null
+fixed_in: ddea51d
 released_in: null
-state: planned
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
@@ -64,3 +64,13 @@ the proposal. It does **not** emit the auth gate-decision logs, so the ticket is
 `auth_sms` / `auth_company` / `auth_invite_join` logs in `MainActivity.checkAuthenticationStatus`
 (+ the OAuth path) are still outstanding. State stays `planned`; see
 `docs/plans/plan_rp_hd_005_remote_log_auth_gates_2026-06-11.md`.
+
+## Update 2026-06-11 — fixed (ddea51d)
+
+All gate decisions in `MainActivity.checkAuthenticationStatus` now emit one-shot remote logs:
+`auth_sms` (unverified redirect; fully-authenticated→projects), `auth_invite_join` (start, success,
+and WARN on each of resolve/addUser/setActive failure), `auth_company` (needs-onboarding). Payloads
+key on `userId` (+ `companyId`/`companyUuid`); **email was dropped** from the log payloads to honor
+the no-raw-user-text guidance (it remains a nav arg only). Volume-gated via the `RemoteLogGate`
+from `3dff3e0`. Success criterion met: a single `log_entries` query over these categories
+reconstructs the signup routing path.
