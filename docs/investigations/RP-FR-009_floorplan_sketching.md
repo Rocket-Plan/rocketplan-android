@@ -22,6 +22,44 @@ last_updated: 2026-06-14
 
 > **Feature spec** (not a defect). Backend is built, deployed to QA, and gated behind the `floorplan_enabled` feature flag. This doc tracks the **Android client** work. Sibling: iOS `RP-FR-016`. Backend reference: `docs/floorplan-feature.md` in `Rocket-Plan/mongoose.rocketplantech.com`. Originally drafted as GitHub issue #5 (now closed in favor of this tracker entry).
 
+## Implementing-agent kickoff
+
+Hand this prompt to a coding agent opened in this repo:
+
+```
+Implement RP-FR-009 — "Floorplan sketching" — from this repo's tracker.
+
+1. Read this spec in full: docs/investigations/RP-FR-009_floorplan_sketching.md
+   (and its row in docs/BUG_TRACKER.md). It is the spec: API contract, geometry
+   schema (schemaVersion 1, Option B shared-wall topology), straighten +
+   length-edit algorithms, sample payloads, acceptance criteria, non-goals, DoD.
+2. Also read docs/floorplan-feature.md in Rocket-Plan/mongoose.rocketplantech.com
+   — authoritative backend behavior (revisioning, server-authoritative dimensions,
+   units-are-a-label, tenancy). Backend is live in QA.
+3. Task 0 first: locate and MIRROR this repo's existing Retrofit/OkHttp API client
+   + auth-token injection, the photo presigned-S3 upload path (reuse it for the
+   render image), the Compose navigation pattern, and Moshi/Gson model
+   conventions. Reuse infra; don't reinvent.
+4. Gate the ENTIRE feature behind the floorplan_enabled flag from
+   GET /api/user/feature-flags (default OFF -> no entry point, no network calls;
+   handle the 403 the gated routes return when off).
+5. Build, in order: networking for all 9 endpoints -> canvas editor (Compose
+   Canvas: freehand draw -> straighten to lines -> resize rooms by editing wall
+   lengths, with SHARED walls so resizing a shared wall moves both adjacent rooms)
+   -> scale + imperial/metric -> save (PATCH) with updated_at optimistic lock
+   (handle 409) -> idempotent create -> room binding + tap-through -> revision
+   history + restore -> render upload.
+6. Keep the geometry schema IDENTICAL to iOS (RP-FR-016) + web.
+7. Do NOT build the non-goals (PDF reporting, server unit conversion, topology
+   validation, multiple plans per floor).
+8. Satisfy every acceptance criterion with unit + instrumentation tests.
+9. Verify against QA (flag enabled there).
+
+Feature branch -> PR into master. Update RP-FR-009 state in docs/BUG_TRACKER.md as you progress.
+```
+
+---
+
 ## Floorplan sketching (Android)
 
 Add a floor-plan sketching feature: users draw a floor plan on a canvas, save it, re-open/edit it, track revision history, and link drawn room shapes to real rooms. The **backend is built and live** (Mongoose API) — this issue is the Android client work to consume it.
