@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
-"""Fail (or warn) if investigation frontmatter changed but the BUG_TRACKER.md
-row for that bug differs from the frontmatter.
+"""Fail (or warn) if investigation frontmatter changed but the proposed
+canonical-bugs table differs from what's currently in BUG_TRACKER.md.
 
 Runs from pre-commit. Gated on at least one `docs/investigations/*.md` being
-staged. Compares each staged investigation's frontmatter-derived fields against
+staged. Compares each staged investigation's frontmatter-derived row against
 the current tracker row.
 
-Default is --warn-only: emits drift to stderr but exits 0. Pass --strict (wired
-in the pre-commit hook once the tracker is reliably in sync) to fail the commit.
+Default is --warn-only: emits drift to stderr but exits 0. Pass --strict
+(wired in the pre-commit hook once the tracker is reliably in sync) to fail
+the commit.
 
-Android tracker Canonical Bugs schema (12 columns):
-  | ID | Priority | Aliases | Title | Type | Class. | Found | Fixed | State | Rel | Reg. Of | Investigation |
+RESILIENCE: the tracker row is parsed **header-driven** — column→field mapping
+is derived from the table's own header row, not hard-coded offsets. This is the
+same logic across every repo that vendors this framework (welltracker / iOS /
+android / shopify), each of which has a *different* column set/order. It
+survives columns being added, removed, or reordered, and honours `\\|`-escaped
+pipes in prose cells. The previous hard-coded `parts[-8:]` slice mis-mapped
+every field when the 12-column Android schema had a 6-column Title cell that
+contained `|` — this cannot recur.
 """
 from __future__ import annotations
 
@@ -25,18 +32,55 @@ ROOT = Path(__file__).resolve().parents[1]
 TRACKER = ROOT / "docs" / "BUG_TRACKER.md"
 INV_DIR = ROOT / "docs" / "investigations"
 
-# Frontmatter field -> tracker column index (after splitting a row on `|` and
-# stripping the outer empties). Title is handled separately (it may contain `|`).
-COL = {
-    "type": 4,
-    "classification": 5,
-    "found_in": 6,
-    "fixed_in": 7,
-    "state": 8,
-    "release_state": 9,
-    "regression_of": 10,
+
+def split_cells(line: str) -> list[str]:
+    """Split a markdown table row into cells on UNESCAPED pipes only.
+
+    Prose cells frequently contain an escaped pipe (`\\|`); a naive
+    `split("|")` shatters those rows and mis-aligns every column. Split on
+    `|` not preceded by a backslash, drop the empty leading/trailing boundary
+    cells, then unescape `\\|` -> `|` per cell."""
+    raw = re.split(r"(?<!\\)\|", line.strip())
+    if raw and raw[0].strip() == "":
+        raw = raw[1:]
+    if raw and raw[-1].strip() == "":
+        raw = raw[:-1]
+    return [c.strip().replace("\\|", "|") for c in raw]
+
+
+def _normalize_header(name: str) -> str:
+    """Canonicalize a header label: lower-case, strip punctuation, collapse
+    whitespace. So `Reg. Of`, `Reg Of`, `Reg.Of` all normalize to `reg of`."""
+    n = re.sub(r"[^\w\s]", " ", name.lower())
+    return re.sub(r"\s+", " ", n).strip()
+
+
+HEADER_TO_FIELD = {
+    "type": "type",
+    "class": "classification",
+    "class.": "classification",
+    "classification": "classification",
+    "found": "found_in",
+    "found in": "found_in",
+    "fixed": "fixed_in",
+    "fixed in": "fixed_in",
+    "state": "state",
+    "rel": "release_state",
+    "release": "release_state",
+    "release state": "release_state",
+    "reg of": "regression_of",
+    "regression of": "regression_of",
+    "regof": "regression_of",
 }
-TRAILING_FIELDS = ["type", "classification", "found_in", "fixed_in", "state", "release_state", "regression_of"]
+
+COMPARE_FIELDS = [
+    "type",
+    "classification",
+    "fixed_in",
+    "state",
+    "release_state",
+    "regression_of",
+]
 
 
 def staged_investigations() -> list[Path]:
@@ -59,8 +103,9 @@ def parse_frontmatter(text: str) -> dict | None:
     m = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
     if not m:
         return None
+    fm = m.group(1)
     out: dict = {}
-    for line in m.group(1).splitlines():
+    for line in fm.splitlines():
         km = re.match(r"^([a-zA-Z_]+):\s*(.*)$", line)
         if km:
             val = km.group(2).strip()
@@ -70,24 +115,40 @@ def parse_frontmatter(text: str) -> dict | None:
     return out
 
 
+def _tracker_columns() -> list[str] | None:
+    """Return, for each column of the canonical-bugs table, the frontmatter
+    field it maps to (or '' to ignore) — derived from the header row."""
+    lines = TRACKER.read_text().splitlines()
+    has_canon = any(l.strip().lower().startswith("### canonical") for l in lines)
+    in_canon = not has_canon
+    for line in lines:
+        if line.strip().lower().startswith("### canonical"):
+            in_canon = True
+            continue
+        if not in_canon or not line.lstrip().startswith("|"):
+            continue
+        cells = split_cells(line)
+        if cells and _normalize_header(cells[0]) == "id":
+            return [HEADER_TO_FIELD.get(_normalize_header(c), "") for c in cells]
+    return None
+
+
 def tracker_row_for(bug_id: str) -> dict | None:
+    """Pull the current tracker row for the given bug_id, mapping each cell to
+    its frontmatter field via the header-derived column list."""
+    columns = _tracker_columns()
+    if not columns:
+        return None
     needle = f"| `{bug_id}` |"
     for line in TRACKER.read_text().splitlines():
         if line.startswith(needle):
-            parts = [p.strip() for p in line.strip().strip("|").split("|")]
-            if len(parts) < 12:
+            parts = split_cells(line)
+            if len(parts) < len(columns):
                 return None
-            # title may contain `|`; the trailing 8 cells are stable
-            trailing = parts[-8:]  # type, class, found, fixed, state, rel, regof, investigation
-            return {
-                "type": trailing[0],
-                "classification": trailing[1],
-                "found_in": trailing[2],
-                "fixed_in": trailing[3],
-                "state": trailing[4],
-                "release_state": trailing[5],
-                "regression_of": trailing[6],
-            }
+            if len(parts) > len(columns):
+                keep = len(columns) - 1
+                parts = parts[:keep] + [" | ".join(parts[keep:])]
+            return {field: cell for field, cell in zip(columns, parts) if field}
     return None
 
 
@@ -121,7 +182,7 @@ def main() -> int:
         if "alias_of" in fm:
             continue
         if "bug_ids" in fm and "bug_id" not in fm:
-            continue  # cluster doc
+            continue
         bug_id = fm.get("bug_id")
         if not bug_id or "XXXX" in bug_id:
             continue
@@ -129,7 +190,7 @@ def main() -> int:
         if tracker is None:
             drifts.append((bug_id, "<row>", "(present)", "(missing)"))
             continue
-        for field in TRAILING_FIELDS:
+        for field in COMPARE_FIELDS:
             fm_val = norm(fm.get(field, ""))
             tr_val = norm(tracker.get(field, ""))
             if fm_val != tr_val:

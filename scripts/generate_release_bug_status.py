@@ -2,8 +2,8 @@
 """Generate docs/releases/CURRENT_BUG_STATUS.json — an authoritative summary of
 BUG_TRACKER.md for fast queries (see bugs.py).
 
-Android Canonical Bugs schema (12 columns):
-  | ID | Priority | Aliases | Title | Type | Class. | Found | Fixed | State | Rel | Reg. Of | Investigation |
+Header-driven parser: reads the table's own header row to build a column index,
+then maps cells by normalized header name. Works regardless of column count or order.
 """
 
 import json
@@ -18,7 +18,50 @@ TRACKER = ROOT / "docs" / "BUG_TRACKER.md"
 OUTPUT_DIR = ROOT / "docs" / "releases"
 OUTPUT_FILE = OUTPUT_DIR / "CURRENT_BUG_STATUS.json"
 
-CANONICAL_PREFIXES = ("RP-BUG-", "RP-FR-", "RP-HD-", "ROCKET-PLAN-ANDROID-")
+ID_PATTERN = re.compile(r"^((?:RP-BUG-|RP-FR-|RP-HD-|ROCKET-PLAN-ANDROID-)\d+)")
+
+
+def _split_cells(line: str) -> list[str]:
+    """Split on pipe, strip whitespace, drop leading/trailing empty cells."""
+    raw = [c.strip() for c in line.strip().strip("|").split("|")]
+    while raw and raw[0] == "":
+        raw = raw[1:]
+    while raw and raw[-1] == "":
+        raw = raw[:-1]
+    return raw
+
+
+def _normalize(name: str) -> str:
+    n = name.lower().strip()
+    return {
+        "class.": "classification",
+        "class": "classification",
+        "reg. of": "regression_of",
+        "regof": "regression_of",
+        "regressionof": "regression_of",
+        "rel": "release_state",
+        "release state": "release_state",
+        "type": "type",
+        "found": "found_in",
+        "found in": "found_in",
+        "fixed": "fixed_in",
+        "fixed in": "fixed_in",
+        "state": "state",
+        "id": "id",
+        "title": "title",
+        "summary": "title",
+        "priority": "priority",
+        "aliases": "aliases",
+        "investigation": "investigation",
+        "inv": "investigation",
+    }.get(n, n)
+
+
+# Internal field names we emit (stable across all repos).
+CANONICAL_KEYS = [
+    "id", "priority", "aliases", "title", "type", "classification",
+    "found_in", "fixed_in", "state", "release_state", "regression_of", "investigation",
+]
 
 
 def extract_shipping_rows(text: str):
@@ -31,7 +74,7 @@ def extract_shipping_rows(text: str):
         if in_shipping and line.startswith("## ") and line.strip() != "## Shipping Status":
             break
         if in_shipping and line.startswith("|"):
-            parts = [p.strip() for p in line.strip().strip("|").split("|")]
+            parts = _split_cells(line)
             if len(parts) == 3 and parts[0] != "Version" and not set(parts[0]).issubset({"-"}):
                 rows.append(
                     {
@@ -46,45 +89,77 @@ def extract_shipping_rows(text: str):
 def extract_bug_rows(text: str):
     rows = []
     in_registry = False
+    colindex: dict[str, int] = {}
+    id_col: int | None = None
+    title_col: int | None = None
+    trailing_start: int | None = None
+
     for line in text.splitlines():
         if line.strip() == "### Canonical Bugs":
             in_registry = True
             continue
         if not in_registry:
             continue
-        if not line.startswith("| `"):
+
+        if line.startswith("| ") and "---" not in line and colindex == {}:
+            header_cells = _split_cells(line)
+            colindex = {(_normalize(c)): i for i, c in enumerate(header_cells)}
+            id_col = colindex.get("id")
+            title_col = colindex.get("title")
+            trailing_start = len(header_cells) - 8 if len(header_cells) >= 8 else None
             continue
 
-        parts = [p.strip() for p in line.strip().strip("|").split("|")]
-        if len(parts) < 12:
+        if not line.startswith("| `") or id_col is None or trailing_start is None:
             continue
 
-        candidate_id = parts[0].replace("`", "").strip()
-        if not candidate_id.startswith(CANONICAL_PREFIXES):
+        parts = _split_cells(line)
+        if len(parts) < 3:
             continue
 
-        # Stable trailing 8 cells; title may contain `|`.
-        bug_id, priority, aliases = parts[0], parts[1], parts[2]
-        trailing = parts[-8:]
-        title = " | ".join(parts[3:-8])
-        bug_type, classification, found_in, fixed_in, state, release_state, regression_of, investigation = trailing
+        bug_id_cell = parts[id_col]
+        m = ID_PATTERN.match(bug_id_cell.replace("`", "").strip())
+        if not m:
+            continue
+        bug_id = m.group(1)
 
-        rows.append(
-            {
-                "id": bug_id.replace("`", "").strip(),
-                "priority": priority,
-                "aliases": aliases,
-                "title": title,
-                "type": bug_type,
-                "classification": classification,
-                "found_in": found_in,
-                "fixed_in": fixed_in,
-                "state": state,
-                "release_state": release_state,
-                "regression_of": regression_of,
-                "investigation": investigation,
-            }
-        )
+        priority = colindex.get("priority")
+        aliases = colindex.get("aliases")
+        type_col = colindex.get("type")
+        class_col = colindex.get("classification")
+        found_col = colindex.get("found_in")
+        fixed_col = colindex.get("fixed_in")
+        state_col = colindex.get("state")
+        rel_col = colindex.get("release_state")
+        regof_col = colindex.get("regression_of")
+        inv_col = colindex.get("investigation")
+
+        title = " | ".join(parts[title_col:trailing_start]) if title_col is not None else ""
+        trailing_vals = parts[trailing_start:]
+
+        row = {"id": bug_id}
+        if priority is not None and priority < len(parts):
+            row["priority"] = parts[priority]
+        if aliases is not None and aliases < len(parts):
+            row["aliases"] = parts[aliases]
+        row["title"] = title
+        if type_col is not None and type_col < len(parts):
+            row["type"] = parts[type_col]
+        if class_col is not None and class_col < len(parts):
+            row["classification"] = parts[class_col]
+        if found_col is not None and found_col < len(parts):
+            row["found_in"] = parts[found_col]
+        if fixed_col is not None and fixed_col < len(parts):
+            row["fixed_in"] = parts[fixed_col]
+        if state_col is not None and state_col < len(parts):
+            row["state"] = parts[state_col]
+        if rel_col is not None and rel_col < len(parts):
+            row["release_state"] = parts[rel_col]
+        if regof_col is not None and regof_col < len(parts):
+            row["regression_of"] = parts[regof_col]
+        if inv_col is not None and inv_col < len(parts):
+            row["investigation"] = parts[inv_col]
+
+        rows.append(row)
     return rows
 
 

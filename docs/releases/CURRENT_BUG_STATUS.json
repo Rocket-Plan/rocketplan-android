@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-10T22:52:48-07:00",
+  "generated_at": "2026-07-01T19:54:05-06:00",
   "source_tracker": "docs/BUG_TRACKER.md",
   "current_shipping_release": {
     "version": "1.30",
@@ -7,25 +7,26 @@
     "status": "\u2705 **Released to Production** (100%, 2026-06-08 5:07 PM). Bundles **RP-BUG-043, 044, 045, 047, 048**. Replaced 34 (Play-rejected for unused READ_MEDIA_IMAGES/VIDEO \u2014 removed, RP-CD-023; app-wide flag cleared by superseding old 1.29 builds on all tracks)."
   },
   "counts": {
-    "all_canonical_bugs": 61,
+    "all_canonical_bugs": 74,
     "global_state_counts": {
-      "fixed": 56,
+      "fixed": 65,
       "closed": 4,
-      "investigating": 1
+      "investigating": 1,
+      "planned": 4
     },
     "global_release_state_counts": {
       "n/a": 6,
-      "unreleased": 55
+      "unreleased": 68
     },
     "global_active_priority_counts": {
       "P0": 4,
-      "P1": 7,
-      "P2": 32,
-      "P3": 12
+      "P1": 8,
+      "P2": 35,
+      "P3": 21
     },
     "current_release_line_fixed_count": 0,
-    "current_release_line_active_count": 2,
-    "global_active_count": 55
+    "current_release_line_active_count": 13,
+    "global_active_count": 68
   },
   "current_release_line": {
     "version": "1.30",
@@ -48,6 +49,105 @@
         "fixed_in": "90078ec (in-app join; email-link auto-open gated on assetlinks.json)",
         "found_in": "1.30 (35)",
         "title": "Invite-based company joining is not implemented on Android \u2014 no invite-redirect deep-link handler (manifest only registers oauth2), onNewIntent handles only OAuth, JoinCompanyViewModel is an empty stub, \"Join Company\" offers only \"Create instead\"; an invited user cannot join the company (iOS RP-BUG-327/328 area \u2014 feature gap, not the iOS parser defect)"
+      },
+      {
+        "id": "RP-BUG-271",
+        "priority": "P1",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "6634854",
+        "found_in": "1.30 (35)",
+        "title": "Post-verify routing keys on uncached companyId \u2014 RP-BUG-269 gating never caches companyId for an unverified user and verify() never re-runs refreshUserContext, so the \"skip Create/Join chooser\" branch is dead and an existing-company user is dumped into the chooser after SMS verify (iOS RP-BUG-331/333)"
+      },
+      {
+        "id": "RP-BUG-272",
+        "priority": "P2",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "6634854",
+        "found_in": "1.30 (35)",
+        "title": "AccountType screen does not resolve a pending invite (no checkForInvitiation equivalent); invite auto-join lives only in MainActivity at launch, so an invited user going through fresh signup sees Create/Join instead of auto-joining (iOS RP-BUG-328)"
+      },
+      {
+        "id": "RP-BUG-273",
+        "priority": "P2",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "6634854",
+        "found_in": "1.30 (35)",
+        "title": "No logout/exit on authenticated signup screens (phoneVerification/smsCodeVerify/accountType/joinCompany/finalDetails); checkAuthenticationStatus pops emailCheck inclusive so a force-routed user has no back stack and is stranded, can't sign in as someone else (iOS RP-BUG-329)"
+      },
+      {
+        "id": "RP-BUG-274",
+        "priority": "P3",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "6634854",
+        "found_in": "1.30 (35)",
+        "title": "No SMS-403 retry / in-session verified flag \u2014 RetrofitClient only exempts the stale post-verify 403 from sign-out (no retry), so a just-verified user's setActiveCompany 403s inside runCatching and lands company-less until a later refresh (iOS RP-BUG-333; backend MONGOOSE-BUG-028)"
+      },
+      {
+        "id": "RP-BUG-275",
+        "priority": "P3",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "6634854",
+        "found_in": "1.30 (35)",
+        "title": "Launch-time invite auto-join ignores addCompanyUser/setActiveCompany Results and clears the pending invite on resolve-success regardless, so a failed join is silently dropped (no retry) and the user is navigated to projects without membership"
+      },
+      {
+        "id": "RP-BUG-276",
+        "priority": "P3",
+        "state": "planned",
+        "release_state": "unreleased",
+        "fixed_in": "\u2014",
+        "found_in": "1.30 (35)",
+        "title": "No company-approval gate \u2014 Android Company has no isApproved and MainActivity routes to projects whenever companyId is set, so a member of an unapproved company enters the app instead of a pending-approval screen (iOS .companyApproval / WelcomeBack)"
+      },
+      {
+        "id": "RP-BUG-277",
+        "priority": "P3",
+        "state": "planned",
+        "release_state": "unreleased",
+        "fixed_in": "\u2014",
+        "found_in": "1.30 (35)",
+        "title": "Emailed https invite link does not auto-open the app \u2014 manifest filters are autoVerify=false and no /.well-known/assetlinks.json is published, so only in-app paste + custom-scheme links reach InviteLink.parse (RP-BUG-270 follow-up; needs backend/ops)"
+      },
+      {
+        "id": "RP-BUG-278",
+        "priority": "P3",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "6634854",
+        "found_in": "1.30 (35)",
+        "title": "Google OAuth sign-in navigates straight to nav_home, bypassing the SMS and company gates for that session (gates only run in MainActivity at cold start), so an unverified/company-less OAuth user briefly enters the app until relaunch"
+      },
+      {
+        "id": "RP-HD-005",
+        "priority": "P3",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "ddea51d",
+        "found_in": "1.30 (35)",
+        "title": "Auth/signup gate decisions in MainActivity are local-logcat only (Log.d), not remote log_entries, so a user's signup routing can't be traced in the wild (iOS logs auth_sms/auth_company/auth_recheck remotely) \u2014 observability hardening"
+      },
+      {
+        "id": "RP-HD-006",
+        "priority": "P3",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "6634854",
+        "found_in": "1.30 (35)",
+        "title": "CurrentUserResponse does not model email_verified_at (iOS carries User.emailVerifiedAt); not a gate today \u2014 preventive parity so a future email-verification gate isn't silently blind"
+      },
+      {
+        "id": "RP-HD-007",
+        "priority": "P3",
+        "state": "fixed",
+        "release_state": "unreleased",
+        "fixed_in": "3dff3e0",
+        "found_in": "1.30 (35)",
+        "title": "No unit tests for InviteLink.parse and JoinCompanyViewModel (RP-BUG-270 follow-up); the parser is the exact surface iOS regressed on (RP-BUG-327) \u2014 test debt"
       }
     ]
   },
@@ -503,6 +603,24 @@
       "title": "Support message attachments duplicate on refresh \u2014 attachment pull does no serverId reconciliation, so re-pull inserts a new row per server attachment id (latent \u2014 attachment rendering not wired)"
     },
     {
+      "id": "RP-FR-009",
+      "priority": "P2",
+      "state": "planned",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "spec 2026-06-14",
+      "title": "Floorplan sketching \u2014 canvas editor (freehand draw \u2192 straighten to lines \u2192 resize rooms by editing wall lengths), append-only revisions + restore, room binding to real Rooms; consumes backend Floorplan API; gated behind `floorplan_enabled`"
+    },
+    {
+      "id": "RP-FR-017",
+      "priority": "P3",
+      "state": "planned",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "spec 2026-07-01",
+      "title": "**Capture user GPS location at login (debugging).** Attach the device's current/last-known coordinates to the remote-log batch payload so `log_entries` records where a user was when they logged on \u2014 parity with iOS `RP-FR-022`; supports the auth/login debugging cluster. **Consent posture (required):** capture **only when `ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION` is already granted**; **never** request location permission from the login flow (intrusive + Play-Store scrutiny). When not granted, send no coordinates (backend stores NULL). Reuse existing location infra (FusedLocationProvider / last-known). Batch-level fields on the `/api/logs/ios` payload: `latitude`, `longitude`, `location_accuracy` (meters), `location_captured_at` (ISO8601). Backend done \u2014 pairs with `mongoose:MONGOOSE-FR-012`, iOS `RP-FR-022`."
+    },
+    {
       "id": "RP-HD-002",
       "priority": "P2",
       "state": "fixed",
@@ -546,6 +664,105 @@
       "fixed_in": "90078ec (in-app join; email-link auto-open gated on assetlinks.json)",
       "found_in": "1.30 (35)",
       "title": "Invite-based company joining is not implemented on Android \u2014 no invite-redirect deep-link handler (manifest only registers oauth2), onNewIntent handles only OAuth, JoinCompanyViewModel is an empty stub, \"Join Company\" offers only \"Create instead\"; an invited user cannot join the company (iOS RP-BUG-327/328 area \u2014 feature gap, not the iOS parser defect)"
+    },
+    {
+      "id": "RP-BUG-271",
+      "priority": "P1",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "6634854",
+      "found_in": "1.30 (35)",
+      "title": "Post-verify routing keys on uncached companyId \u2014 RP-BUG-269 gating never caches companyId for an unverified user and verify() never re-runs refreshUserContext, so the \"skip Create/Join chooser\" branch is dead and an existing-company user is dumped into the chooser after SMS verify (iOS RP-BUG-331/333)"
+    },
+    {
+      "id": "RP-BUG-272",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "6634854",
+      "found_in": "1.30 (35)",
+      "title": "AccountType screen does not resolve a pending invite (no checkForInvitiation equivalent); invite auto-join lives only in MainActivity at launch, so an invited user going through fresh signup sees Create/Join instead of auto-joining (iOS RP-BUG-328)"
+    },
+    {
+      "id": "RP-BUG-273",
+      "priority": "P2",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "6634854",
+      "found_in": "1.30 (35)",
+      "title": "No logout/exit on authenticated signup screens (phoneVerification/smsCodeVerify/accountType/joinCompany/finalDetails); checkAuthenticationStatus pops emailCheck inclusive so a force-routed user has no back stack and is stranded, can't sign in as someone else (iOS RP-BUG-329)"
+    },
+    {
+      "id": "RP-BUG-274",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "6634854",
+      "found_in": "1.30 (35)",
+      "title": "No SMS-403 retry / in-session verified flag \u2014 RetrofitClient only exempts the stale post-verify 403 from sign-out (no retry), so a just-verified user's setActiveCompany 403s inside runCatching and lands company-less until a later refresh (iOS RP-BUG-333; backend MONGOOSE-BUG-028)"
+    },
+    {
+      "id": "RP-BUG-275",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "6634854",
+      "found_in": "1.30 (35)",
+      "title": "Launch-time invite auto-join ignores addCompanyUser/setActiveCompany Results and clears the pending invite on resolve-success regardless, so a failed join is silently dropped (no retry) and the user is navigated to projects without membership"
+    },
+    {
+      "id": "RP-BUG-276",
+      "priority": "P3",
+      "state": "planned",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.30 (35)",
+      "title": "No company-approval gate \u2014 Android Company has no isApproved and MainActivity routes to projects whenever companyId is set, so a member of an unapproved company enters the app instead of a pending-approval screen (iOS .companyApproval / WelcomeBack)"
+    },
+    {
+      "id": "RP-BUG-277",
+      "priority": "P3",
+      "state": "planned",
+      "release_state": "unreleased",
+      "fixed_in": "\u2014",
+      "found_in": "1.30 (35)",
+      "title": "Emailed https invite link does not auto-open the app \u2014 manifest filters are autoVerify=false and no /.well-known/assetlinks.json is published, so only in-app paste + custom-scheme links reach InviteLink.parse (RP-BUG-270 follow-up; needs backend/ops)"
+    },
+    {
+      "id": "RP-BUG-278",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "6634854",
+      "found_in": "1.30 (35)",
+      "title": "Google OAuth sign-in navigates straight to nav_home, bypassing the SMS and company gates for that session (gates only run in MainActivity at cold start), so an unverified/company-less OAuth user briefly enters the app until relaunch"
+    },
+    {
+      "id": "RP-HD-005",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "ddea51d",
+      "found_in": "1.30 (35)",
+      "title": "Auth/signup gate decisions in MainActivity are local-logcat only (Log.d), not remote log_entries, so a user's signup routing can't be traced in the wild (iOS logs auth_sms/auth_company/auth_recheck remotely) \u2014 observability hardening"
+    },
+    {
+      "id": "RP-HD-006",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "6634854",
+      "found_in": "1.30 (35)",
+      "title": "CurrentUserResponse does not model email_verified_at (iOS carries User.emailVerifiedAt); not a gate today \u2014 preventive parity so a future email-verification gate isn't silently blind"
+    },
+    {
+      "id": "RP-HD-007",
+      "priority": "P3",
+      "state": "fixed",
+      "release_state": "unreleased",
+      "fixed_in": "3dff3e0",
+      "found_in": "1.30 (35)",
+      "title": "No unit tests for InviteLink.parse and JoinCompanyViewModel (RP-BUG-270 follow-up); the parser is the exact surface iOS regressed on (RP-BUG-327) \u2014 test debt"
     }
   ]
 }
