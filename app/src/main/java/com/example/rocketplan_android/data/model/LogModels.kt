@@ -30,6 +30,14 @@ data class RemoteLogBatch(
     val buildNumber: String?,
     @SerializedName("platform")
     val platform: String = PLATFORM_ANDROID,
+    @SerializedName("latitude")
+    val latitude: Double? = null,
+    @SerializedName("longitude")
+    val longitude: Double? = null,
+    @SerializedName("location_accuracy")
+    val locationAccuracy: Float? = null,
+    @SerializedName("location_captured_at")
+    val locationCapturedAt: String? = null,
     val logs: List<RemoteLogEntry>
 ) {
     companion object {

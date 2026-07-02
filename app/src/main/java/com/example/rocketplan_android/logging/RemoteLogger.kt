@@ -1,29 +1,36 @@
 package com.example.rocketplan_android.logging
 
+import android.Manifest
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.example.rocketplan_android.config.AppConfig
 import com.example.rocketplan_android.data.api.LoggingService
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.model.RemoteLogBatch
 import com.example.rocketplan_android.data.model.RemoteLogEntry
 import com.example.rocketplan_android.data.storage.SecureStorage
+import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import com.example.rocketplan_android.util.UuidUtils
 import java.time.Instant
 import java.time.format.DateTimeFormatter
+import kotlin.coroutines.resume
 
 enum class LogLevel(val wireValue: String) {
     DEBUG("DEBUG"),
@@ -44,7 +51,7 @@ object RemoteLogGateAlwaysOn : RemoteLogGate {
 
 class RemoteLogger(
     private val loggingService: LoggingService,
-    context: Context,
+    private val context: Context,
     private val secureStorage: SecureStorage,
     private val store: PendingRemoteLogStore = PendingRemoteLogStore(context.applicationContext),
     private val retryStore: RemoteLogRetryStore = RemoteLogRetryStore(context.applicationContext),
@@ -257,6 +264,37 @@ class RemoteLogger(
             ?.takeIf { it > 0L }
             ?.toString()
 
+        // RP-FR-017: attach last-known location ONLY if permission is already granted.
+        // Never request permission here; never block batch send on a fix.
+        // withTimeoutOrNull(500) ensures the batch send is never stalled by a slow location fix.
+        // CancellationException from withTimeoutOrNull is not caught here — propagates correctly.
+        var lastLoc: android.location.Location? = null
+        val ctx = context
+        val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) {
+            val loc: android.location.Location? = withTimeoutOrNull(500) {
+                suspendCancellableCoroutine { cont ->
+                    LocationServices.getFusedLocationProviderClient(ctx)
+                        .lastLocation
+                        .addOnSuccessListener { l: android.location.Location? ->
+                            cont.resume(l)
+                        }
+                        .addOnFailureListener {
+                            cont.resume(null)
+                        }
+                }
+            }
+            lastLoc = loc
+        }
+
+        val lat = lastLoc?.latitude
+        val lng = lastLoc?.longitude
+        val acc = lastLoc?.accuracy
+        val locTime = lastLoc?.time
+
         val batch = RemoteLogBatch(
             batchId = batchId,
             deviceId = deviceId,
@@ -266,6 +304,10 @@ class RemoteLogger(
             appVersion = AppConfig.versionName,
             buildNumber = AppConfig.versionCode.toString(),
             platform = RemoteLogBatch.PLATFORM_ANDROID,
+            latitude = lat,
+            longitude = lng,
+            locationAccuracy = acc,
+            locationCapturedAt = locTime?.let { Instant.ofEpochMilli(it).toString() },
             logs = entries
         )
 
