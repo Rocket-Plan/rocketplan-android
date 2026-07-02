@@ -267,7 +267,10 @@ class RemoteLogger(
         // RP-FR-017: attach last-known location ONLY if permission is already granted.
         // Never request permission here; never block batch send on a fix.
         // withTimeoutOrNull(500) ensures the batch send is never stalled by a slow location fix.
-        // CancellationException from withTimeoutOrNull is not caught here — propagates correctly.
+        // Location is strictly best-effort: any failure (incl. no Google Play Services, where
+        // getFusedLocationProviderClient can throw synchronously) must NOT abort the log batch —
+        // we swallow it and send with null coordinates. CancellationException is rethrown so the
+        // enclosing coroutine's structured-concurrency cancellation still propagates.
         var lastLoc: android.location.Location? = null
         val ctx = context
         val granted = ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) ==
@@ -275,19 +278,24 @@ class RemoteLogger(
             ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_COARSE_LOCATION) ==
             PackageManager.PERMISSION_GRANTED
         if (granted) {
-            val loc: android.location.Location? = withTimeoutOrNull(500) {
-                suspendCancellableCoroutine { cont ->
-                    LocationServices.getFusedLocationProviderClient(ctx)
-                        .lastLocation
-                        .addOnSuccessListener { l: android.location.Location? ->
-                            cont.resume(l)
-                        }
-                        .addOnFailureListener {
-                            cont.resume(null)
-                        }
+            try {
+                lastLoc = withTimeoutOrNull(500) {
+                    suspendCancellableCoroutine { cont ->
+                        LocationServices.getFusedLocationProviderClient(ctx)
+                            .lastLocation
+                            .addOnSuccessListener { l: android.location.Location? ->
+                                cont.resume(l)
+                            }
+                            .addOnFailureListener {
+                                cont.resume(null)
+                            }
+                    }
                 }
+            } catch (ce: kotlinx.coroutines.CancellationException) {
+                throw ce // preserve structured-concurrency cancellation
+            } catch (e: Exception) {
+                lastLoc = null // best-effort: never let a location error drop the log batch
             }
-            lastLoc = loc
         }
 
         val lat = lastLoc?.latitude
