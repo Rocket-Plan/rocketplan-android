@@ -183,7 +183,11 @@ class ProjectMetadataSyncService(
                         .onSuccess { response ->
                             val localRoomId = localDataService.getRoomByServerId(roomId)?.roomId
                             if (localRoomId != null) {
-                                val pulledPivots = response.data
+                                // Gson bypasses constructors, so a body missing the `data` key leaves
+                                // this null at runtime despite the non-null type — guard so a malformed
+                                // response can't NPE the whole room-equipment sync segment (RP-BUG-279 #4).
+                                @Suppress("USELESS_ELVIS")
+                                val pulledPivots = response.data ?: emptyList()
                                 val pulledCatalogIds = pulledPivots.mapNotNull { it.equipmentId }
                                 val existingByCatalogAndRoom = if (pulledCatalogIds.isNotEmpty()) {
                                     localDataService.getEquipmentByCatalogServerIds(pulledCatalogIds)

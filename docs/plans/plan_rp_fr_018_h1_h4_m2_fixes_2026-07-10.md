@@ -410,9 +410,40 @@ real transfer (`resolveToRoomServerId` falls back to the server `toRoomId` for c
 destination rooms that don't exist locally). RP-CD rules touched: **RP-CD-017** (unsynced ids never
 reach server path construction — defer, don't build a doomed call).
 
-### Test coverage (follow-up)
+### Test coverage
 
-Not yet added — track alongside the H1–H4 unit tests:
-- [ ] R1: full move → saved source row has `roomId` = **local** destination PK; create → saved row keeps the local `roomId`.
-- [ ] R2: full transfer with `sourcePivot == null` in the response → source row tombstoned (`isDeleted=true`).
-- [ ] R3: `enqueueEquipmentTransfer` with `equipment.serverId == null` → row marked dirty, `TRANSFER` op enqueued with `pivotServerId=null`, row **not** relocated.
+- [x] R1: full/partial move + transfer → saved rows use the **local** destination PK (`getRoomByServerId(...).roomId`); create → attached row keeps the local `roomId` (asserted in `EquipmentPushHandlerTest` — move/transfer partial cases + `handleUpsert attaches equipment...` now asserts `roomId == 400L`).
+- [x] R2: full transfer with `sourcePivot == null` in the response → source row tombstoned (`isDeleted=true`), dest saved in local room (`handleTransfer full transfer tombstones source when server returns only dest pivot`).
+- [ ] R3: `enqueueEquipmentTransfer` with `equipment.serverId == null` → row marked dirty, `TRANSFER` op enqueued with `pivotServerId=null`, row **not** relocated. **Gap:** no `SyncQueueProcessor` unit-test harness exists yet (heavy constructor); covered by manual reasoning + code review. Add when an enqueuer harness lands.
+
+---
+
+## API contract verification (RP-BUG-279 finding #5) — checked against backend `docs/openapi.yaml` 2026-07-10
+
+Verified every adopted equipment route against `mongoose.rocketplantech.com/docs/openapi.yaml`:
+
+| Client call (`OfflineSyncApi`) | In backend spec? |
+|--------------------------------|------------------|
+| `GET/POST /api/projects/{project_id}/equipment` | ✅ present |
+| `GET/POST /api/rooms/{room_id}/equipment` (list / attach) | ✅ present |
+| `PUT /api/equipment-rooms/{id}` (update, 204) | ✅ present |
+| `DELETE /api/equipment-rooms/{id}` (delete) | ✅ present |
+| `POST /api/equipment-rooms/{id}/move` | ❌ **NOT in spec** |
+| `POST /api/equipment-rooms/{id}/transfer` | ❌ **NOT in spec** |
+| `GET /api/equipment-rooms/{id}/movements` | ❌ **NOT in spec** |
+| `GET /api/projects/{project}/equipment-movements` | ❌ **NOT in spec** |
+
+**The RP-BUG-279 core realignment (attach/list/update/delete) is verified correct.** The RP-FR-018
+move/transfer/history endpoints are the backend **MONGOOSE-FR-014** feature and are **not yet in the
+deployed spec** — calling them today reproduces the RP-BUG-279 failure class (404/405 swallowed, or
+response won't deserialize). This is why M2 (`equipmentMoveTransfer` feature flag) must default **off**:
+it dark-launches the move/transfer/history UI until MONGOOSE-FR-014 ships and the spec is regenerated.
+Re-run this check (and add golden-fixture parse tests for the move/transfer/movement response shapes)
+once the backend endpoints land before enabling the flag in any environment.
+
+**Finding #4 (null-landmine):** `SingleDataResponse<T>.data` is a non-null Kotlin type, but Gson bypasses
+constructors so a body missing the `data` key leaves it null at runtime. The shared type is used across
+~15 CRM/equipment call sites, so it was left as-is (the spec's 200 examples always include the `data`
+wrapper); the one high-blast-radius consumer — the room-equipment pull in `ProjectMetadataSyncService` —
+is now guarded with `response.data ?: emptyList()` so a malformed body can't NPE the whole sync segment.
+If the type is ever made nullable wholesale, drop the local guard.
