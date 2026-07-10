@@ -78,6 +78,8 @@ class EquipmentPushHandlerTest {
         coVerify { api.attachRoomEquipment(4000L, any()) }
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 &&
+                // R1: the attached row must keep the LOCAL room PK (400), not the server room id (4000).
+                list[0].roomId == 400L &&
                 list[0].syncStatus == SyncStatus.SYNCED &&
                 !list[0].isDirty &&
                 !list[0].isDeleted
@@ -425,6 +427,9 @@ class EquipmentPushHandlerTest {
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getRoomByUuid(any()) } returns null
+        // F3: server room id 4001 maps to local room PK 401; the moved row must store the LOCAL id.
+        coEvery { localDataService.getRoomByServerId(4001L) } returns
+            PushHandlerTestFixtures.createRoom(roomId = 401L, serverId = 4001L)
         coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
         coEvery { localDataService.saveEquipment(any()) } just runs
 
@@ -434,7 +439,7 @@ class EquipmentPushHandlerTest {
         coVerify { api.moveEquipmentRoom(6000L, any()) }
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 &&
-                list[0].roomId == 4001L &&
+                list[0].roomId == 401L &&
                 list[0].syncStatus == SyncStatus.SYNCED &&
                 !list[0].isDirty
         }) }
@@ -466,18 +471,21 @@ class EquipmentPushHandlerTest {
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getRoomByUuid(any()) } returns null
+        // F3: server room id 4001 maps to local room PK 401; the dest placement stores the LOCAL id.
+        coEvery { localDataService.getRoomByServerId(4001L) } returns
+            PushHandlerTestFixtures.createRoom(roomId = 401L, serverId = 4001L)
         coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleMove(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        // Partial move saves source (updated qty) and returns dest entity for second save
+        // Partial move saves source (updated qty, unchanged local room) and dest entity in the local dest room
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3
         }) }
         coVerify { localDataService.saveEquipment(match { list ->
-            list.size == 1 && list[0].roomId == 4001L && list[0].quantity == 2
+            list.size == 1 && list[0].roomId == 401L && list[0].quantity == 2
         }) }
     }
 
@@ -613,18 +621,63 @@ class EquipmentPushHandlerTest {
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getRoomByUuid(any()) } returns null
+        // F3: server room id 5001 maps to local room PK 501; the dest placement stores the LOCAL id.
+        coEvery { localDataService.getRoomByServerId(5001L) } returns
+            PushHandlerTestFixtures.createRoom(roomId = 501L, serverId = 5001L)
         coEvery { api.transferEquipmentRoom(6000L, any()) } returns transferResponse
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleTransfer(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        // Transfer saves source (updated qty) and returns dest entity for second save
+        // Partial transfer saves source (updated qty, unchanged local room) and dest entity in the local dest room
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3
         }) }
         coVerify { localDataService.saveEquipment(match { list ->
-            list.size == 1 && list[0].roomId == 5001L && list[0].quantity == 2
+            list.size == 1 && list[0].roomId == 501L && list[0].quantity == 2
+        }) }
+    }
+
+    @Test
+    fun `handleTransfer full transfer tombstones source when server returns only dest pivot`() = runTest {
+        // R2: a full transfer removes the source pivot server-side, so the response contains ONLY the
+        // dest pivot (sourcePivot == null). The local source row must still be tombstoned, or it lingers
+        // as a ghost in the source room.
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 2)
+        val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 5001L,
+            quantity = 2
+        )
+
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
+            every { roomId } returns 5001L
+            every { quantity } returns 2
+        }
+        // Full transfer: server returns the dest pivot only — no source pivot.
+        val transferResponse = SingleDataResponse(listOf(destPivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { localDataService.getRoomByServerId(5001L) } returns
+            PushHandlerTestFixtures.createRoom(roomId = 501L, serverId = 5001L)
+        coEvery { api.transferEquipmentRoom(6000L, any()) } returns transferResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleTransfer(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        // Source row tombstoned...
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].uuid == "equipment-uuid" && list[0].isDeleted
+        }) }
+        // ...and the dest placement is saved in the LOCAL dest room (501), not the server room id (5001).
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].uuid == "dest-pivot-uuid" && list[0].roomId == 501L && !list[0].isDeleted
         }) }
     }
 

@@ -173,6 +173,7 @@ class EquipmentRoomViewModel(
                 toRoomUuid = toRoomUuid,
                 toProjectId = toProjectId,
                 quantity = quantity,
+                note = note,
                 idempotencyKey = idempotencyKey,
                 lockUpdatedAt = equipment.serverUpdatedAt?.toApiTimestamp()
             )

@@ -244,6 +244,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             toRoomId = toRoomServerId,
             quantity = payload.quantity,
             movedAt = payload.movedAt,
+            note = payload.note,
             idempotencyKey = payload.idempotencyKey,
             updatedAt = updatedAt
         )
@@ -411,11 +412,15 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             Log.w(SYNC_TAG, "⚠️ reconcileTransfer: dest pivot not in response; SKIP for equipment ${equipment.uuid}")
             return null
         }
+        // A full transfer moves the entire quantity: the backend soft-deletes the source pivot and
+        // returns ONLY the destination (sourcePivot == null). Treat requestedQty >= equipment.quantity
+        // as full too, so a stale/echoed source pivot can't be misread as a partial and leave a ghost.
+        val isFullTransfer = sourcePivot == null || requestedQty >= equipment.quantity
         val updatedQty = sourcePivot?.quantity ?: (equipment.quantity - requestedQty)
-        if (sourcePivot != null && updatedQty > 0) {
+        if (!isFullTransfer && updatedQty > 0) {
             // Partial transfer: source pivot survives with a reduced quantity.
             ctx.localDataService.saveEquipment(listOf(equipment.copy(
-                serverId = sourcePivot.id ?: equipment.serverId,
+                serverId = sourcePivot?.id ?: equipment.serverId,
                 quantity = updatedQty,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
@@ -423,8 +428,8 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             )))
             Log.d(SYNC_TAG, "✅ reconcileTransfer: partial transfer — source quantity reduced to $updatedQty")
         } else {
-            // Full transfer: the server removed the source pivot (sourcePivot == null) or its
-            // quantity hit zero. Tombstone the local source row so it stops showing in the source room.
+            // Full transfer: the source no longer exists server-side (sourcePivot == null) or the
+            // whole quantity moved. Tombstone the local source row so it stops showing in the source room.
             ctx.localDataService.saveEquipment(listOf(equipment.copy(
                 serverId = sourcePivot?.id ?: equipment.serverId,
                 isDeleted = true,

@@ -1012,6 +1012,7 @@ class SyncQueueProcessor(
         toRoomUuid: String?,
         toProjectId: Long,
         quantity: Int,
+        note: String?,
         idempotencyKey: String,
         lockUpdatedAt: String?
     ) {
@@ -1043,6 +1044,7 @@ class SyncQueueProcessor(
             toProjectId = toProjectId,
             quantity = quantity,
             movedAt = DateUtils.formatApiDate(java.util.Date()),
+            note = note,
             idempotencyKey = idempotencyKey,
             lockUpdatedAt = resolvedLockUpdatedAt
         )

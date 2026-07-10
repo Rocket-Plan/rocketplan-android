@@ -177,6 +177,7 @@ interface SyncQueueEnqueuer {
         toRoomUuid: String?,
         toProjectId: Long,
         quantity: Int,
+        note: String?,
         idempotencyKey: String,
         lockUpdatedAt: String?
     )

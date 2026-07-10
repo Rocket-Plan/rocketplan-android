@@ -740,6 +740,7 @@ data class EquipmentTransferRequest(
     val quantity: Int,
     @SerializedName("moved_at")
     val movedAt: String,
+    val note: String? = null,
     @SerializedName("idempotency_key")
     val idempotencyKey: String? = null,
     @SerializedName("updated_at")

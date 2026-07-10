@@ -109,6 +109,7 @@ internal data class PendingEquipmentTransferPayload(
     val toProjectId: Long,
     val quantity: Int,
     val movedAt: String,
+    val note: String? = null,
     val idempotencyKey: String,
     val lockUpdatedAt: String?
 )

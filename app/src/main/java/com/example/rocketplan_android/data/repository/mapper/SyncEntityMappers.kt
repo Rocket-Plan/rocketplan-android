@@ -348,7 +348,9 @@ internal fun LocationDto.toEntity(
     return OfflineLocationEntity(
         locationId = id,
         serverId = id,
-        uuid = uuid ?: UuidUtils.generateUuidV7(),
+        // Preserve the existing local uuid when the server payload omits one, mirroring
+        // RoomDto.toEntity — otherwise every pull with a null uuid mints a fresh uuid.
+        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         propertyServerId = propertyServerId ?: existing?.propertyServerId,
         title = resolvedTitle,
