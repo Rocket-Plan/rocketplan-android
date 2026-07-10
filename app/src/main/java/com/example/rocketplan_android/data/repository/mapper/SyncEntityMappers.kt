@@ -348,7 +348,7 @@ internal fun LocationDto.toEntity(
     return OfflineLocationEntity(
         locationId = id,
         serverId = id,
-        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
+        uuid = uuid ?: UuidUtils.generateUuidV7(),
         projectId = resolvedProjectId,
         propertyServerId = propertyServerId ?: existing?.propertyServerId,
         title = resolvedTitle,
@@ -691,10 +691,19 @@ internal fun EquipmentDto.toEntity(
     existing: OfflineEquipmentEntity? = null
 ): OfflineEquipmentEntity {
     val timestamp = now()
+    // pivotId maps from "pivot_id" key which server may not return; use "id" (the pivot id) as fallback.
+    // Similarly uuid maps directly from server's "uuid" key (the pivot uuid); pivotUuid is from "pivot_uuid".
+    val resolvedServerId = pivotId ?: id ?: existing?.serverId
+    val resolvedCatalogServerId = equipmentId ?: id
     return OfflineEquipmentEntity(
         equipmentId = existing?.equipmentId ?: id,
-        serverId = id,
-        uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
+        serverId = resolvedServerId,
+        catalogServerId = existing?.catalogServerId ?: resolvedCatalogServerId,
+        catalogUuid = existing?.catalogUuid ?: catalogUuid,
+        // A room response's pivot UUID identifies the placement. The catalog UUID
+        // must not be reused because one catalog item may have multiple placements.
+        // Use uuid (server's pivot uuid) first; pivotUuid is from "pivot_uuid" which server may not return.
+        uuid = uuid ?: pivotUuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
         projectId = projectId,
         roomId = roomId,
         type = type ?: "equipment",
@@ -703,8 +712,8 @@ internal fun EquipmentDto.toEntity(
         serialNumber = serialNumber,
         quantity = quantity ?: 1,
         status = status ?: "active",
-        startDate = DateUtils.parseApiDate(startDate),
-        endDate = DateUtils.parseApiDate(endDate),
+        startDate = DateUtils.parseApiDate(startDate) ?: DateUtils.parseApiDate(dateIn),
+        endDate = DateUtils.parseApiDate(endDate) ?: DateUtils.parseApiDate(dateOut),
         createdAt = DateUtils.parseApiDate(createdAt) ?: existing?.createdAt ?: timestamp,
         updatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,
         serverUpdatedAt = DateUtils.parseApiDate(updatedAt) ?: timestamp,

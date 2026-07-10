@@ -817,6 +817,9 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_equipment WHERE serverId IN (:serverIds)")
     suspend fun getEquipmentByServerIds(serverIds: List<Long>): List<OfflineEquipmentEntity>
 
+    @Query("SELECT * FROM offline_equipment WHERE catalogServerId IN (:catalogServerIds)")
+    suspend fun getEquipmentByCatalogServerIds(catalogServerIds: List<Long>): List<OfflineEquipmentEntity>
+
     @Query(
         """
         SELECT * FROM offline_equipment
@@ -1234,6 +1237,9 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_sync_queue WHERE entityType = :entityType AND entityId = :entityId")
     suspend fun deleteSyncOperationsForEntity(entityType: String, entityId: Long)
+
+    @Query("DELETE FROM offline_sync_queue WHERE entityType = :entityType AND entityId = :entityId AND operationType = :operationType")
+    suspend fun deleteSyncOperationsOfType(entityType: String, entityId: Long, operationType: String)
 
     // Typed sync queue deletion methods - must filter by BOTH entityType AND entityId
     // to avoid collisions across tables (e.g., projectId=5 vs photoId=5 are different entities)

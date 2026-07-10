@@ -85,4 +85,52 @@ class OfflineDatabaseMigrationTest {
             assertThat(c.isNull(c.getColumnIndex("propertyServerId"))).isTrue()
         }
     }
+
+    @Test
+    fun `migration 30 to 31 adds catalogServerId and catalogUuid columns and index, preserving rows`() {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS offline_equipment (" +
+                "equipmentId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "serverId INTEGER, uuid TEXT NOT NULL, projectId INTEGER NOT NULL, " +
+                "roomId INTEGER, type TEXT NOT NULL, brand TEXT, model TEXT, serialNumber TEXT, " +
+                "quantity INTEGER NOT NULL DEFAULT 1, status TEXT NOT NULL, " +
+                "startDate TEXT, endDate TEXT, " +
+                "createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, serverUpdatedAt INTEGER, lastSyncedAt INTEGER, " +
+                "syncStatus INTEGER NOT NULL DEFAULT 0, syncVersion INTEGER NOT NULL DEFAULT 0, " +
+                "isDirty INTEGER NOT NULL DEFAULT 0, isDeleted INTEGER NOT NULL DEFAULT 0)"
+        )
+        db.execSQL(
+            "INSERT INTO offline_equipment (serverId, uuid, projectId, roomId, type, quantity, status, createdAt, updatedAt, syncStatus, isDirty) " +
+                "VALUES (7000, 'cat-uuid', 100, 400, 'Dehumidifier', 1, 'active', 1000, 1000, 0, 1)"
+        )
+
+        OfflineDatabase.MIGRATION_30_31.migrate(db)
+
+        // columns present
+        val columns = mutableListOf<String>()
+        db.query("PRAGMA table_info(offline_equipment)").use { c ->
+            val nameIdx = c.getColumnIndex("name")
+            while (c.moveToNext()) columns.add(c.getString(nameIdx))
+        }
+        assertThat(columns).contains("catalogServerId")
+        assertThat(columns).contains("catalogUuid")
+
+        // index present
+        val indexes = mutableListOf<String>()
+        db.query("PRAGMA index_list(offline_equipment)").use { c ->
+            val nameIdx = c.getColumnIndex("name")
+            while (c.moveToNext()) indexes.add(c.getString(nameIdx))
+        }
+        assertThat(indexes).contains("index_offline_equipment_catalogServerId")
+
+        // existing row preserved with correct backfill
+        db.query("SELECT serverId, catalogServerId, catalogUuid, uuid FROM offline_equipment").use { c ->
+            assertThat(c.count).isEqualTo(1)
+            c.moveToFirst()
+            assertThat(c.isNull(c.getColumnIndex("serverId"))).isTrue()
+            assertThat(c.getLong(c.getColumnIndex("catalogServerId"))).isEqualTo(7000L)
+            assertThat(c.isNull(c.getColumnIndex("catalogUuid"))).isTrue()
+            assertThat(c.getString(c.getColumnIndex("uuid"))).isEqualTo("cat-uuid")
+        }
+    }
 }

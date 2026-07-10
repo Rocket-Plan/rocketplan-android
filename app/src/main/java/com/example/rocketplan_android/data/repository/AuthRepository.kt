@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository
 
 import android.util.Log
 import com.example.rocketplan_android.data.api.AuthService
+import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.model.ApiError
 import com.example.rocketplan_android.data.model.ApiErrorException

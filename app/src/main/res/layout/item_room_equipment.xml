@@ -59,9 +59,42 @@ android:src="@drawable/image_equipment" />
             </LinearLayout>
 
             <ImageButton
+                android:id="@+id/moveEquipmentButton"
+                android:layout_width="@dimen/icon_size_list"
+                android:layout_height="@dimen/icon_size_list"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/equipment_room_move"
+                android:padding="4dp"
+                android:src="@drawable/icon_arrow_right"
+                app:tint="@color/light_text_rp" />
+
+            <ImageButton
+                android:id="@+id/transferEquipmentButton"
+                android:layout_width="@dimen/icon_size_list"
+                android:layout_height="@dimen/icon_size_list"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/equipment_room_transfer_action"
+                android:padding="4dp"
+                android:src="@drawable/icon_arrow_up_right"
+                app:tint="@color/light_text_rp" />
+
+            <ImageButton
+                android:id="@+id/historyEquipmentButton"
+                android:layout_width="@dimen/icon_size_list"
+                android:layout_height="@dimen/icon_size_list"
+                android:layout_marginStart="4dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/equipment_room_history_title"
+                android:padding="4dp"
+                android:src="@drawable/icon_clock"
+                app:tint="@color/light_text_rp" />
+
+            <ImageButton
                 android:id="@+id/deleteEquipmentButton"
                 android:layout_width="@dimen/icon_size_list"
                 android:layout_height="@dimen/icon_size_list"
+                android:layout_marginStart="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/equipment_room_delete"
                 android:padding="4dp"

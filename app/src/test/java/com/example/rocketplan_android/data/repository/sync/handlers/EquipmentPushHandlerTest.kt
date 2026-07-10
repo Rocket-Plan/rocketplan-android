@@ -4,7 +4,7 @@ import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
-import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.model.SingleDataResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
@@ -39,11 +39,12 @@ class EquipmentPushHandlerTest {
     )
     private val handler = EquipmentPushHandler(ctx)
 
-    private val equipmentDto = mockk<EquipmentDto>(relaxed = true) {
+    private val equipmentDto = mockk<com.example.rocketplan_android.data.model.offline.EquipmentDto>(relaxed = true) {
         every { id } returns 6000L
         every { uuid } returns "equipment-uuid"
         every { roomId } returns 400L
         every { updatedAt } returns "2026-01-30T12:00:00.000000Z"
+        every { equipmentId } returns 7000L
     }
 
     private fun createOperation(
@@ -59,8 +60,8 @@ class EquipmentPushHandlerTest {
     // ===== Upsert Create Tests =====
 
     @Test
-    fun `handleUpsert creates equipment when serverId is null`() = runTest {
-        val equipment = PushHandlerTestFixtures.createEquipment(serverId = null)
+    fun `handleUpsert attaches equipment when serverId is null with catalog found by name`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = null, catalogServerId = 7000L)
         val project = PushHandlerTestFixtures.createProject()
         val room = PushHandlerTestFixtures.createRoom()
         val operation = createOperation()
@@ -68,19 +69,41 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.createProjectEquipment(1000L, any()) } returns equipmentDto
+        coEvery { api.attachRoomEquipment(4000L, any()) } returns SingleDataResponse(listOf(equipmentDto))
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleUpsert(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        coVerify { api.createProjectEquipment(1000L, any()) }
+        coVerify { api.attachRoomEquipment(4000L, any()) }
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 &&
                 list[0].syncStatus == SyncStatus.SYNCED &&
                 !list[0].isDirty &&
                 !list[0].isDeleted
         }) }
+    }
+
+    @Test
+    fun `handleUpsert creates catalog then attaches when catalogServerId is null and name not found`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = null, catalogServerId = null)
+        val project = PushHandlerTestFixtures.createProject()
+        val room = PushHandlerTestFixtures.createRoom()
+        val operation = createOperation()
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { localDataService.getRoom(400L) } returns room
+        coEvery { api.getProjectEquipment(1000L) } returns com.example.rocketplan_android.data.model.offline.PaginatedResponse(data = emptyList())
+        coEvery { api.createProjectEquipment(1000L, any()) } returns SingleDataResponse(equipmentDto)
+        coEvery { api.attachRoomEquipment(4000L, any()) } returns SingleDataResponse(listOf(equipmentDto))
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { api.createProjectEquipment(1000L, any()) }
+        coVerify { api.attachRoomEquipment(4000L, any()) }
     }
 
     @Test
@@ -95,7 +118,7 @@ class EquipmentPushHandlerTest {
         val result = handler.handleUpsert(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SKIP)
-        coVerify(exactly = 0) { api.createProjectEquipment(any(), any()) }
+        coVerify(exactly = 0) { api.attachRoomEquipment(any(), any()) }
     }
 
     @Test
@@ -112,12 +135,12 @@ class EquipmentPushHandlerTest {
         val result = handler.handleUpsert(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SKIP)
-        coVerify(exactly = 0) { api.createProjectEquipment(any(), any()) }
+        coVerify(exactly = 0) { api.attachRoomEquipment(any(), any()) }
     }
 
     @Test
-    fun `handleUpsert returns DROP on 422 validation error during create`() = runTest {
-        val equipment = PushHandlerTestFixtures.createEquipment(serverId = null)
+    fun `handleUpsert returns DROP on 422 validation error during catalog create`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = null, catalogServerId = null)
         val project = PushHandlerTestFixtures.createProject()
         val room = PushHandlerTestFixtures.createRoom()
         val operation = createOperation()
@@ -125,6 +148,7 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
+        coEvery { api.getProjectEquipment(1000L) } returns com.example.rocketplan_android.data.model.offline.PaginatedResponse(data = emptyList())
         coEvery { api.createProjectEquipment(1000L, any()) } throws PushHandlerTestFixtures.create422Response()
 
         val result = handler.handleUpsert(operation)
@@ -135,7 +159,7 @@ class EquipmentPushHandlerTest {
     // ===== Upsert Update Tests =====
 
     @Test
-    fun `handleUpsert updates equipment when serverId exists`() = runTest {
+    fun `handleUpsert updates equipment pivot when serverId exists`() = runTest {
         val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
         val project = PushHandlerTestFixtures.createProject()
         val room = PushHandlerTestFixtures.createRoom()
@@ -144,13 +168,13 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipment(6000L, any()) } returns equipmentDto
+        coEvery { api.updateEquipmentRoom(6000L, any()) } returns retrofit2.Response.success(Unit)
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleUpsert(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        coVerify { api.updateEquipment(6000L, any()) }
+        coVerify { api.updateEquipmentRoom(6000L, any()) }
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 &&
                 list[0].syncStatus == SyncStatus.SYNCED &&
@@ -159,7 +183,7 @@ class EquipmentPushHandlerTest {
     }
 
     @Test
-    fun `handleUpsert re-creates equipment when update returns 404`() = runTest {
+    fun `handleUpsert does NOT recreate when pivot update returns 404`() = runTest {
         val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
         val project = PushHandlerTestFixtures.createProject()
         val room = PushHandlerTestFixtures.createRoom()
@@ -168,21 +192,14 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipment(6000L, any()) } throws PushHandlerTestFixtures.create404Response()
-        coEvery { api.createProjectEquipment(1000L, any()) } returns equipmentDto
+        coEvery { api.updateEquipmentRoom(6000L, any()) } throws PushHandlerTestFixtures.create404Response()
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleUpsert(operation)
 
-        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        coVerify { api.updateEquipment(6000L, any()) }
-        coVerify { api.createProjectEquipment(1000L, any()) }
+        assertThat(result).isEqualTo(OperationOutcome.DROP)
+        coVerify(exactly = 0) { api.attachRoomEquipment(any(), any()) }
     }
-
-    // NOTE: EquipmentPushHandler has a bug where pushPendingEquipmentUpsert's .onFailure block
-    // consumes the error body (errorBody()?.string()) before handle409Conflict can call
-    // extractUpdatedAt(). This means 409 conflicts always result in SKIP (will retry later)
-    // rather than the intended retry-with-fresh-timestamp behavior. See EquipmentPushHandler:219.
 
     @Test
     fun `handleUpsert records conflict on double-409`() = runTest {
@@ -194,19 +211,17 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipment(6000L, any()) } answers {
+        coEvery { api.updateEquipmentRoom(6000L, any()) } answers {
             throw PushHandlerTestFixtures.create409WithUpdatedAt("2026-01-30T12:00:00.000000Z")
         }
 
         val result = handler.handleUpsert(operation)
 
-        // RP-FR-002: the 409 error body is no longer consumed before handle409Conflict reads
-        // updated_at, so the retry path runs; a second 409 records a pending conflict.
         assertThat(result).isEqualTo(OperationOutcome.CONFLICT_PENDING)
     }
 
     @Test
-    fun `handleUpsert returns DROP on 422 validation error during update`() = runTest {
+    fun `handleUpsert returns DROP on 422 validation error during pivot update`() = runTest {
         val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
         val project = PushHandlerTestFixtures.createProject()
         val room = PushHandlerTestFixtures.createRoom()
@@ -215,7 +230,7 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipment(6000L, any()) } throws PushHandlerTestFixtures.create422Response()
+        coEvery { api.updateEquipmentRoom(6000L, any()) } throws PushHandlerTestFixtures.create422Response()
 
         val result = handler.handleUpsert(operation)
 
@@ -248,18 +263,18 @@ class EquipmentPushHandlerTest {
     // ===== Delete Tests =====
 
     @Test
-    fun `handleDelete deletes equipment from server successfully`() = runTest {
+    fun `handleDelete deletes equipment pivot from server successfully`() = runTest {
         val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L)
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } returns Response.success(Unit)
+        coEvery { api.deleteEquipmentRoom(6000L, any()) } returns Response.success(Unit)
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleDelete(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        coVerify { api.deleteEquipment(6000L, any()) }
+        coVerify { api.deleteEquipmentRoom(6000L, any()) }
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 &&
                 list[0].isDeleted &&
@@ -279,7 +294,7 @@ class EquipmentPushHandlerTest {
         val result = handler.handleDelete(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        coVerify(exactly = 0) { api.deleteEquipment(any(), any()) }
+        coVerify(exactly = 0) { api.deleteEquipmentRoom(any(), any()) }
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 &&
                 list[0].isDeleted &&
@@ -294,7 +309,7 @@ class EquipmentPushHandlerTest {
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(404)
+        coEvery { api.deleteEquipmentRoom(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(404)
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleDelete(operation)
@@ -311,7 +326,7 @@ class EquipmentPushHandlerTest {
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(410)
+        coEvery { api.deleteEquipmentRoom(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(410)
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleDelete(operation)
@@ -328,7 +343,7 @@ class EquipmentPushHandlerTest {
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(422)
+        coEvery { api.deleteEquipmentRoom(6000L, any()) } returns PushHandlerTestFixtures.errorResponse(422)
 
         val result = handler.handleDelete(operation)
 
@@ -347,7 +362,7 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipment(6000L, any()) } throws RuntimeException("boom")
+        coEvery { api.updateEquipmentRoom(6000L, any()) } throws RuntimeException("boom")
 
         val result = handler.handleUpsert(operation)
 
@@ -360,7 +375,7 @@ class EquipmentPushHandlerTest {
         val operation = createOperation(operationType = SyncOperationType.DELETE)
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
-        coEvery { api.deleteEquipment(6000L, any()) } throws RuntimeException("boom")
+        coEvery { api.deleteEquipmentRoom(6000L, any()) } throws RuntimeException("boom")
 
         val result = handler.handleDelete(operation)
 
@@ -377,7 +392,7 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipment(6000L, any()) } throws kotlinx.coroutines.CancellationException("cancel")
+        coEvery { api.updateEquipmentRoom(6000L, any()) } throws kotlinx.coroutines.CancellationException("cancel")
 
         var caught: Throwable? = null
         try {
@@ -387,5 +402,322 @@ class EquipmentPushHandlerTest {
         }
 
         assertThat(caught).isInstanceOf(kotlinx.coroutines.CancellationException::class.java)
+    }
+
+    // ===== Move Tests =====
+
+    @Test
+    fun `handleMove succeeds for full move with single returned pivot`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 4001L
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 4001L
+            every { quantity } returns 1
+        }
+        val moveResponse = SingleDataResponse(listOf(sourcePivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { api.moveEquipmentRoom(6000L, any()) }
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 &&
+                list[0].roomId == 4001L &&
+                list[0].syncStatus == SyncStatus.SYNCED &&
+                !list[0].isDirty
+        }) }
+    }
+
+    @Test
+    fun `handleMove succeeds for partial move with source and dest pivots returned`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 5)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 4001L,
+            quantity = 2
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { quantity } returns 3
+        }
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
+            every { roomId } returns 4001L
+            every { quantity } returns 2
+        }
+        val moveResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        // Partial move saves source (updated qty) and returns dest entity for second save
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3
+        }) }
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].roomId == 4001L && list[0].quantity == 2
+        }) }
+    }
+
+    @Test
+    fun `handleMove returns SKIP when pivot has no serverId`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = null)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = null
+        )
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.moveEquipmentRoom(any(), any()) }
+    }
+
+    @Test
+    fun `handleMove returns SKIP when dest room has negative serverId`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomUuid = "dest-room-uuid"
+        )
+        val destRoom = PushHandlerTestFixtures.createRoom(serverId = -1L)
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid("dest-room-uuid") } returns destRoom
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+    }
+
+    @Test
+    fun `handleMove returns SKIP when pivot is missing on server`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 4001L
+        )
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.moveEquipmentRoom(6000L, any()) } throws PushHandlerTestFixtures.create404Response()
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+    }
+
+    @Test
+    fun `handleMove records conflict on double-409`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 4001L,
+            idempotencyKey = "move-idem-key"
+        )
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.moveEquipmentRoom(6000L, any()) } answers {
+            throw PushHandlerTestFixtures.create409WithUpdatedAt("2026-01-30T12:00:00.000000Z")
+        }
+        coEvery { ctx.recordConflict(any()) } just runs
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.CONFLICT_PENDING)
+        coVerify(exactly = 2) { api.moveEquipmentRoom(6000L, any()) }
+    }
+
+    @Test
+    fun `handleMove preserves idempotency key on retry`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 4001L,
+            idempotencyKey = "move-idem-key"
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 4001L
+            every { quantity } returns 1
+        }
+        val moveResponse = SingleDataResponse(listOf(sourcePivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { api.moveEquipmentRoom(6000L, match { it.idempotencyKey == "move-idem-key" }) }
+    }
+
+    // ===== Transfer Tests =====
+
+    @Test
+    fun `handleTransfer succeeds for transfer with source and dest pivots returned`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 5)
+        val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 5001L,
+            quantity = 2
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { quantity } returns 3
+        }
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
+            every { roomId } returns 5001L
+            every { quantity } returns 2
+        }
+        val transferResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.transferEquipmentRoom(6000L, any()) } returns transferResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleTransfer(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        // Transfer saves source (updated qty) and returns dest entity for second save
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3
+        }) }
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].roomId == 5001L && list[0].quantity == 2
+        }) }
+    }
+
+    @Test
+    fun `handleTransfer returns SKIP when pivot has no serverId`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = null)
+        val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = null
+        )
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+
+        val result = handler.handleTransfer(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.transferEquipmentRoom(any(), any()) }
+    }
+
+    @Test
+    fun `handleTransfer returns SKIP when pivot is missing on server`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 5001L
+        )
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.transferEquipmentRoom(6000L, any()) } throws PushHandlerTestFixtures.create404Response()
+
+        val result = handler.handleTransfer(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SKIP)
+    }
+
+    @Test
+    fun `handleTransfer records conflict on double-409`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 5001L,
+            idempotencyKey = "transfer-idem-key"
+        )
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.transferEquipmentRoom(6000L, any()) } answers {
+            throw PushHandlerTestFixtures.create409WithUpdatedAt("2026-01-30T12:00:00.000000Z")
+        }
+        coEvery { ctx.recordConflict(any()) } just runs
+
+        val result = handler.handleTransfer(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.CONFLICT_PENDING)
+        coVerify(exactly = 2) { api.transferEquipmentRoom(6000L, any()) }
+    }
+
+    @Test
+    fun `handleTransfer preserves idempotency key on retry`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 5)
+        val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 5001L,
+            quantity = 2,
+            idempotencyKey = "transfer-idem-key"
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { quantity } returns 3
+        }
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
+            every { roomId } returns 5001L
+            every { quantity } returns 2
+        }
+        val transferResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { api.transferEquipmentRoom(6000L, any()) } returns transferResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleTransfer(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { api.transferEquipmentRoom(6000L, match { it.idempotencyKey == "transfer-idem-key" }) }
     }
 }

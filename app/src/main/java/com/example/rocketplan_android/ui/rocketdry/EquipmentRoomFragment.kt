@@ -19,6 +19,8 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
+import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.MaterialAutoCompleteTextView
 import com.google.android.material.textfield.TextInputLayout
@@ -89,6 +91,9 @@ class EquipmentRoomFragment : Fragment() {
             onStartDateClick = { item -> openDatePicker(item.startDate) { viewModel.updateStartDate(item, it) } },
             onEndDateClick = { item -> openDatePicker(item.endDate ?: item.startDate) { viewModel.updateEndDate(item, it) } },
             onDelete = { item -> confirmDelete(item) },
+            onMove = { item -> confirmMove(item) },
+            onTransfer = { item -> confirmTransfer(item) },
+            onHistory = { item -> showMovementHistory(item) },
             dateFormatter = { item -> formatDates(item) }
         )
         equipmentRecyclerView.layoutManager = LinearLayoutManager(context)
@@ -125,6 +130,7 @@ class EquipmentRoomFragment : Fragment() {
                 roomTitle.text = state.roomName
                 roomIcon.setImageResource(state.roomIconRes)
                 roomIcon.contentDescription = state.roomName
+                adapter.moveTransferEnabled = state.moveTransferEnabled
                 adapter.submitList(state.equipment)
                 emptyState.isVisible = state.equipment.isEmpty()
                 addCardSubtitle.isVisible = state.equipment.isEmpty()
@@ -232,6 +238,223 @@ class EquipmentRoomFragment : Fragment() {
                 ).show()
             }
             .show()
+    }
+
+    private fun confirmMove(item: RoomEquipmentItem) {
+        val otherRooms = latestState?.otherRooms ?: emptyList()
+        if (otherRooms.isEmpty()) {
+            Toast.makeText(requireContext(), "No other rooms available", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_move_equipment, null)
+        val roomLayout = dialogView.findViewById<TextInputLayout>(R.id.moveRoomInputLayout)
+        val roomInput = dialogView.findViewById<MaterialAutoCompleteTextView>(R.id.moveRoomInput)
+        val minusButton = dialogView.findViewById<View>(R.id.moveQuantityMinus)
+        val plusButton = dialogView.findViewById<View>(R.id.moveQuantityPlus)
+        val quantityLabel = dialogView.findViewById<TextView>(R.id.moveQuantityLabel)
+        val quantityHint = dialogView.findViewById<TextView>(R.id.moveQuantityHint)
+        val noteInput = dialogView.findViewById<TextInputLayout>(R.id.moveNoteInputLayout)
+        val cancelButton = dialogView.findViewById<MaterialButton>(R.id.moveCancel)
+        val saveButton = dialogView.findViewById<MaterialButton>(R.id.moveSave)
+
+        val roomNames = otherRooms.map { it.name }
+        val roomAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, roomNames)
+        roomInput.setAdapter(roomAdapter)
+
+        var selectedRoom: RoomMeta? = null
+        var selectedQuantity = item.quantity
+
+        roomInput.setOnItemClickListener { _, _, position, _ ->
+            selectedRoom = otherRooms.getOrNull(position)
+        }
+
+        quantityLabel.text = selectedQuantity.toString()
+        quantityHint.text = getString(R.string.equipment_room_move_all, item.quantity)
+        quantityHint.visibility = android.view.View.VISIBLE
+
+        minusButton.setOnClickListener {
+            selectedQuantity = (selectedQuantity - 1).coerceAtLeast(1)
+            quantityLabel.text = selectedQuantity.toString()
+        }
+        plusButton.setOnClickListener {
+            selectedQuantity = (selectedQuantity + 1).coerceAtMost(item.quantity)
+            quantityLabel.text = selectedQuantity.toString()
+        }
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.equipment_room_move_confirm, item.typeLabel))
+            .setView(dialogView)
+            .create()
+
+        cancelButton.setOnClickListener { dialog.dismiss() }
+        saveButton.setOnClickListener {
+            val room = selectedRoom
+            if (room == null) {
+                roomLayout.error = getString(R.string.equipment_room_no_room_error)
+                return@setOnClickListener
+            }
+            val quantity = if (selectedQuantity == item.quantity) null else selectedQuantity
+            val note = noteInput.editText?.text?.toString()?.takeIf { it.isNotBlank() }
+            viewModel.moveEquipment(
+                item = item,
+                toRoomId = room.roomId,
+                toRoomUuid = room.uuid,
+                quantity = quantity,
+                note = note
+            )
+            Toast.makeText(requireContext(), "Equipment move queued", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun confirmTransfer(item: RoomEquipmentItem) {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_transfer_equipment, null)
+        val projectLayout = dialogView.findViewById<TextInputLayout>(R.id.transferProjectInputLayout)
+        val projectInput = dialogView.findViewById<MaterialAutoCompleteTextView>(R.id.transferProjectInput)
+        val roomLayout = dialogView.findViewById<TextInputLayout>(R.id.transferRoomInputLayout)
+        val roomInput = dialogView.findViewById<MaterialAutoCompleteTextView>(R.id.transferRoomInput)
+        val loadingIndicator = dialogView.findViewById<View>(R.id.transferLoading)
+        val minusButton = dialogView.findViewById<View>(R.id.transferQuantityMinus)
+        val plusButton = dialogView.findViewById<View>(R.id.transferQuantityPlus)
+        val quantityLabel = dialogView.findViewById<TextView>(R.id.transferQuantityLabel)
+        val quantityHint = dialogView.findViewById<TextView>(R.id.transferQuantityHint)
+        val noteInput = dialogView.findViewById<TextInputLayout>(R.id.transferNoteInputLayout)
+        val cancelButton = dialogView.findViewById<MaterialButton>(R.id.transferCancel)
+        val saveButton = dialogView.findViewById<MaterialButton>(R.id.transferSave)
+
+        var selectedProject: OfflineProjectEntity? = null
+        var selectedRoom: OfflineRoomEntity? = null
+        var selectedQuantity = item.quantity
+        var availableRooms = emptyList<OfflineRoomEntity>()
+
+        quantityLabel.text = selectedQuantity.toString()
+        quantityHint.text = getString(R.string.equipment_room_transfer_all, item.quantity)
+        quantityHint.visibility = View.VISIBLE
+        roomLayout.isEnabled = false
+        saveButton.isEnabled = false
+
+        minusButton.setOnClickListener {
+            selectedQuantity = (selectedQuantity - 1).coerceAtLeast(1)
+            quantityLabel.text = selectedQuantity.toString()
+        }
+        plusButton.setOnClickListener {
+            selectedQuantity = (selectedQuantity + 1).coerceAtMost(item.quantity)
+            quantityLabel.text = selectedQuantity.toString()
+        }
+
+        lifecycleScope.launch {
+            val projects = viewModel.getAllProjectsForTransfer()
+            val projectNames = projects.map { it.title }
+            val projectAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, projectNames)
+            projectInput.setAdapter(projectAdapter)
+
+            projectInput.setOnItemClickListener { _, _, position, _ ->
+                selectedProject = projects.getOrNull(position)
+                selectedRoom = null
+                roomInput.setText("", false)
+                roomLayout.isEnabled = true
+                saveButton.isEnabled = false
+                loadingIndicator.visibility = View.VISIBLE
+
+                lifecycleScope.launch {
+                    val project = selectedProject
+                    if (project?.serverId != null) {
+                        availableRooms = viewModel.getRoomsForProject(project.serverId)
+                    } else {
+                        availableRooms = emptyList()
+                    }
+                    loadingIndicator.visibility = View.GONE
+                    val roomNames = availableRooms.map { it.title }
+                    val roomAdapter = android.widget.ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, roomNames)
+                    roomInput.setAdapter(roomAdapter)
+                }
+            }
+        }
+
+        roomInput.setOnItemClickListener { _, _, position, _ ->
+            selectedRoom = availableRooms.getOrNull(position)
+            saveButton.isEnabled = selectedRoom != null && selectedProject != null
+        }
+
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.equipment_room_transfer_confirm, item.typeLabel))
+            .setView(dialogView)
+            .create()
+
+        cancelButton.setOnClickListener { dialog.dismiss() }
+        saveButton.setOnClickListener {
+            val project = selectedProject
+            val room = selectedRoom
+            if (project == null) {
+                projectLayout.error = getString(R.string.equipment_room_no_project_error)
+                return@setOnClickListener
+            }
+            if (room == null) {
+                roomLayout.error = getString(R.string.equipment_room_no_room_error)
+                return@setOnClickListener
+            }
+            val quantity = if (selectedQuantity == item.quantity) item.quantity else selectedQuantity
+            val note = noteInput.editText?.text?.toString()?.takeIf { it.isNotBlank() }
+            viewModel.transferEquipment(
+                item = item,
+                toRoomId = room.serverId ?: return@setOnClickListener,
+                toRoomUuid = room.uuid,
+                toProjectId = project.serverId ?: return@setOnClickListener,
+                quantity = quantity,
+                note = note
+            )
+            Toast.makeText(requireContext(), "Equipment transfer queued", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun showMovementHistory(item: RoomEquipmentItem) {
+        lifecycleScope.launch {
+            val dialogView = layoutInflater.inflate(R.layout.dialog_equipment_history, null)
+            val loadingView = dialogView.findViewById<View>(R.id.historyLoading)
+            val emptyView = dialogView.findViewById<TextView>(R.id.historyEmpty)
+            val errorView = dialogView.findViewById<TextView>(R.id.historyError)
+            val recyclerView = dialogView.findViewById<RecyclerView>(R.id.historyRecycler)
+
+            val dialog = MaterialAlertDialogBuilder(requireContext())
+                .setTitle(getString(R.string.equipment_room_history_title))
+                .setView(dialogView)
+                .setPositiveButton(R.string.equipment_room_dialog_cancel, null)
+                .create()
+
+            loadingView.visibility = View.VISIBLE
+            recyclerView.layoutManager = LinearLayoutManager(context)
+            val historyAdapter = MovementHistoryAdapter()
+            recyclerView.adapter = historyAdapter
+
+            dialog.show()
+
+            val equipment = viewModel.getEquipmentForUuid(item.uuid)
+            if (equipment == null || equipment.serverId == null) {
+                loadingView.visibility = View.GONE
+                emptyView.visibility = View.VISIBLE
+                emptyView.setText(R.string.equipment_room_history_error)
+                return@launch
+            }
+
+            val result = viewModel.loadMovementHistory(equipment.serverId)
+            loadingView.visibility = View.GONE
+
+            result.onSuccess { movements ->
+                if (movements.isEmpty()) {
+                    emptyView.visibility = View.VISIBLE
+                } else {
+                    historyAdapter.submitList(movements)
+                    recyclerView.visibility = View.VISIBLE
+                }
+            }.onFailure {
+                errorView.visibility = View.VISIBLE
+            }
+        }
     }
 
     private fun openDatePicker(initialDate: Date?, onSelected: (Date) -> Unit) {

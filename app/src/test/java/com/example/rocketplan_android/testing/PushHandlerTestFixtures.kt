@@ -173,21 +173,27 @@ object PushHandlerTestFixtures {
     fun createEquipment(
         equipmentId: Long = 600L,
         serverId: Long? = 6000L,
+        catalogServerId: Long? = null,
+        catalogUuid: String? = null,
         uuid: String = "equipment-uuid",
         projectId: Long = 100L,
         roomId: Long? = 400L,
         type: String = "Dehumidifier",
         status: String = "active",
+        quantity: Int = 1,
         isDeleted: Boolean = false,
         syncStatus: SyncStatus = SyncStatus.SYNCED
     ) = OfflineEquipmentEntity(
         equipmentId = equipmentId,
         serverId = serverId,
+        catalogServerId = catalogServerId,
+        catalogUuid = catalogUuid,
         uuid = uuid,
         projectId = projectId,
         roomId = roomId,
         type = type,
         status = status,
+        quantity = quantity,
         isDeleted = isDeleted,
         syncStatus = syncStatus,
         isDirty = true,
@@ -387,6 +393,69 @@ object PushHandlerTestFixtures {
         entityUuid = entityUuid,
         operationType = operationType,
         payload = payload,
+        priority = SyncPriority.MEDIUM,
+        createdAt = Date()
+    )
+
+    fun createEquipmentMoveOperation(
+        entityUuid: String = "equipment-uuid",
+        pivotServerId: Long? = 6000L,
+        pivotLocalId: Long = 600L,
+        toRoomId: Long? = 4001L,
+        toRoomUuid: String? = null,
+        quantity: Int? = null,
+        idempotencyKey: String = "move-key"
+    ) = OfflineSyncQueueEntity(
+        operationId = "op-move-${System.nanoTime()}",
+        entityType = "equipment",
+        entityId = pivotLocalId,
+        entityUuid = entityUuid,
+        operationType = SyncOperationType.MOVE,
+        payload = gson.toJson(
+            com.example.rocketplan_android.data.repository.mapper.PendingEquipmentMovePayload(
+                pivotServerId = pivotServerId,
+                pivotLocalId = pivotLocalId,
+                toRoomId = toRoomId,
+                toRoomUuid = toRoomUuid,
+                quantity = quantity,
+                movedAt = "2026-01-30T12:00:00.000000Z",
+                note = null,
+                idempotencyKey = idempotencyKey,
+                lockUpdatedAt = null
+            )
+        ).toByteArray(Charsets.UTF_8),
+        priority = SyncPriority.MEDIUM,
+        createdAt = Date()
+    )
+
+    fun createEquipmentTransferOperation(
+        entityUuid: String = "equipment-uuid",
+        pivotServerId: Long? = 6000L,
+        pivotLocalId: Long = 600L,
+        toRoomId: Long? = 5001L,
+        toRoomUuid: String? = null,
+        toProjectId: Long = 101L,
+        quantity: Int = 1,
+        idempotencyKey: String = "transfer-key"
+    ) = OfflineSyncQueueEntity(
+        operationId = "op-transfer-${System.nanoTime()}",
+        entityType = "equipment",
+        entityId = pivotLocalId,
+        entityUuid = entityUuid,
+        operationType = SyncOperationType.TRANSFER,
+        payload = gson.toJson(
+            com.example.rocketplan_android.data.repository.mapper.PendingEquipmentTransferPayload(
+                pivotServerId = pivotServerId,
+                pivotLocalId = pivotLocalId,
+                toRoomId = toRoomId,
+                toRoomUuid = toRoomUuid,
+                toProjectId = toProjectId,
+                quantity = quantity,
+                movedAt = "2026-01-30T12:00:00.000000Z",
+                idempotencyKey = idempotencyKey,
+                lockUpdatedAt = null
+            )
+        ).toByteArray(Charsets.UTF_8),
         priority = SyncPriority.MEDIUM,
         createdAt = Date()
     )

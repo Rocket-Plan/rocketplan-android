@@ -90,15 +90,6 @@ class ProjectMetadataSyncService(
             }.isSuccess
         }
 
-        // Equipment (single request, independent)
-        queue.addItem("equipment") {
-            runCatching { api.getProjectEquipment(serverProjectId) }
-                .onSuccess { response ->
-                    localDataService.saveEquipment(response.data.map { it.toEntity() }, preserveDirty = true)
-                    itemCount.addAndGet(response.data.size)
-                }.isSuccess
-        }
-
         // Atmospheric logs (independent)
         queue.addItem("atmospheric_logs") {
             val atmosCheckpointKey = projectAtmosLogsKey(projectId)
@@ -184,6 +175,41 @@ class ProjectMetadataSyncService(
 
             // Queue per-room syncs (all run in parallel - no dependencies between rooms)
             for (roomId in roomIds) {
+                // Equipment is a room placement resource, not the project catalog.
+                // Pulling /projects/{id}/equipment here loses the pivot identity needed
+                // for update, move, transfer, and delete operations.
+                queue2.addItem("room_equipment_$roomId") {
+                    runCatching { api.getRoomEquipment(roomId) }
+                        .onSuccess { response ->
+                            val localRoomId = localDataService.getRoomByServerId(roomId)?.roomId
+                            if (localRoomId != null) {
+                                val pulledPivots = response.data
+                                val pulledCatalogIds = pulledPivots.mapNotNull { it.equipmentId }
+                                val existingByCatalogAndRoom = if (pulledCatalogIds.isNotEmpty()) {
+                                    localDataService.getEquipmentByCatalogServerIds(pulledCatalogIds)
+                                        .groupBy { "${it.catalogServerId}_${it.roomId}" }
+                                } else emptyMap()
+                                val placements = pulledPivots.map { dto ->
+                                    val catalogId = dto.equipmentId
+                                    val existing = catalogId?.let { catId ->
+                                        existingByCatalogAndRoom["${catId}_${localRoomId}"]?.firstOrNull()
+                                    }
+                                    if (existing == null) {
+                                        Log.d(TAG, "[room_equipment] First placement in room for catalog ${catalogId}")
+                                    } else {
+                                        Log.d(TAG, "[room_equipment] Existing placement found for catalog ${catalogId} in room $localRoomId")
+                                    }
+                                    dto.toEntity(existing).copy(
+                                        projectId = projectId,
+                                        roomId = localRoomId
+                                    )
+                                }
+                                localDataService.saveEquipment(placements, preserveDirty = true)
+                                itemCount.addAndGet(placements.size)
+                            }
+                        }.isSuccess
+                }
+
                 // Per-room damages (only if project-level didn't work)
                 if (needsPerRoomDamages) {
                     queue2.addItem("room_damages_$roomId") {
