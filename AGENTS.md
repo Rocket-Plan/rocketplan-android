@@ -26,6 +26,14 @@
 - Instrumented tests live in `app/src/androidTest/` with `*AndroidTest.kt` naming.
 - Run targeted tests with `./gradlew testDevStandardDebugUnitTest`.
 
+## API Contract Discipline
+- This app is a **client** of the Mongoose backend API. The contract is owned by the backend repo (`mongoose.rocketplantech.com`): machine-readable spec `docs/openapi.yaml`, response shapes enforced by `tests/Schemas/*.json`. Rationale + tiers: backend `docs/plans/PROPOSAL-cross-repo-api-contract-management-2026-07-09.md`.
+- Before adding/changing any Retrofit call or DTO, verify the endpoint path AND response shape against the backend spec/API Resources. **Never call a route that isn't in the spec.** Not hypothetical — RP-BUG-279 is exactly this: `OfflineSyncApi.updateEquipment`/`deleteEquipment` target `PUT`/`DELETE /api/equipment/{id}`, which do not exist on the backend, so equipment writes silently fail. Cross-check every path.
+- **Tolerant deserialization (Gson):** keep DTO fields nullable EXCEPT keys the server always sends (`id`, `project_id`). Do not make a Kotlin field non-null unless guaranteed present (Gson bypasses constructors → a missing non-null field becomes a null landmine). Never stop sending `id`/`project_id`. Additive response keys must be safe to ignore.
+- **Match wrapper types:** `{ "data": [...] }` (use the data-wrapper type, e.g. `SingleDataResponse<List<T>>`) vs paginated (`PaginatedResponse<T>`). A bare `List<T>` will not deserialize a wrapped `{ "data": [...] }` body (see `getRoomEquipment` in `OfflineSyncApi.kt`).
+- **Golden-fixture deserialize tests:** each consumed resource should have an example-response fixture under the test tree and a test asserting the DTO parses it. Android currently has almost none — add them as you touch resources. Fixtures should come from the backend spec/schema, not be hand-invented.
+- These are prose guardrails; the durable enforcement is the fixture parse tests — add them.
+
 ## Commit & Pull Request Guidelines
 - Commit messages are short, imperative, and descriptive (e.g., "Fix upload retry edge cases").
 - Include build/version bumps explicitly when relevant.

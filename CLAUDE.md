@@ -240,6 +240,20 @@ Capture ─► LocalDB (pending) ─► Upload ─► Server Processing ─► P
 | Image Upload | `ImageProcessorQueueManager.kt`, `ImageProcessorRealtimeManager.kt` |
 | Pusher | `PusherService.kt`, `PusherConfig.kt` |
 
+## API Contract Discipline
+
+This app is a **client** of the Mongoose backend API. The contract is owned by the backend repo (`mongoose.rocketplantech.com`): the machine-readable spec lives at `docs/openapi.yaml`, and response shapes are enforced by `tests/Schemas/*.json`. For the rationale and the tiered enforcement plan, see the backend's `docs/plans/PROPOSAL-cross-repo-api-contract-management-2026-07-09.md`.
+
+**Before adding or changing any Retrofit call or DTO**, verify the endpoint path AND response shape against the backend spec / API Resources. **Never call a route that isn't in the spec.** This is not hypothetical — RP-BUG-279 is exactly this failure: `OfflineSyncApi.updateEquipment`/`deleteEquipment` target `PUT`/`DELETE /api/equipment/{id}`, which do not exist on the backend, so equipment writes silently fail. Cross-check every path.
+
+**Tolerant deserialization (Gson):** keep DTO fields nullable EXCEPT keys the server always sends (`id`, `project_id`). Do not make a Kotlin field non-null unless it is guaranteed present — Gson bypasses constructors, so a missing non-null field becomes a null landmine at runtime. Never stop sending `id`/`project_id`. Additive response keys must be safe to ignore.
+
+**Match wrapper types:** distinguish a data-wrapped body `{ "data": [...] }` (use the data-wrapper type, e.g. `SingleDataResponse<List<T>>`) from a paginated body (`PaginatedResponse<T>`). A bare `List<T>` will not deserialize a wrapped `{ "data": [...] }` body — see `getRoomEquipment` in `OfflineSyncApi.kt`.
+
+**Golden-fixture deserialize tests:** each consumed resource should have an example-response fixture under the test tree plus a test asserting the DTO parses it. Android currently has almost none — add them as you touch resources. Fixtures should come from the backend spec/schema, not be hand-invented.
+
+> Note: the above are prose guardrails; the durable enforcement is the fixture parse tests — add them.
+
 ## Documentation
 
 All project docs live under `docs/`. See `docs/README.md` for the folder structure — use it to decide where to place a new doc or where to look for an existing one. If `docs/README.md` does not exist yet, follow the structure below:
