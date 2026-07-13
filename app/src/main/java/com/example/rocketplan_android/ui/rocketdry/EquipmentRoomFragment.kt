@@ -293,7 +293,9 @@ class EquipmentRoomFragment : Fragment() {
                 roomLayout.error = getString(R.string.equipment_room_no_room_error)
                 return@setOnClickListener
             }
-            val quantity = if (selectedQuantity == item.quantity) null else selectedQuantity
+            // Keep full moves explicit. A queued null means "whatever remains" on the
+            // server and can move more than the user selected after an offline retry.
+            val quantity = selectedQuantity
             val note = noteInput.editText?.text?.toString()?.takeIf { it.isNotBlank() }
             viewModel.moveEquipment(
                 item = item,

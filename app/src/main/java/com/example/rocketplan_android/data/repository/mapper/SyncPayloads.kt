@@ -106,6 +106,8 @@ internal data class PendingEquipmentTransferPayload(
     val pivotLocalId: Long,
     val toRoomId: Long?,
     val toRoomUuid: String?,
+    // Server project ID. The UI stores project.serverId here; retain the JSON field name
+    // for already-queued operations, but do not resolve it as a local project primary key.
     val toProjectId: Long,
     val quantity: Int,
     val movedAt: String,

@@ -409,25 +409,33 @@ class EquipmentPushHandlerTest {
     // ===== Move Tests =====
 
     @Test
-    fun `handleMove succeeds for full move with single returned pivot`() = runTest {
+    fun `handleMove succeeds for full move with ended source and active dest pivots`() = runTest {
         val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
         val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
             entityUuid = "equipment-uuid",
             pivotServerId = 6000L,
-            toRoomId = 4001L
+            toRoomId = 4001L,
+            quantity = 1
         )
 
         val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
             every { id } returns 6000L
             every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { quantity } returns 1
+            every { dateOut } returns "2026-01-30T12:00:00.000000Z"
+        }
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
             every { roomId } returns 4001L
             every { quantity } returns 1
+            every { dateOut } returns null
         }
-        val moveResponse = SingleDataResponse(listOf(sourcePivotDto))
+        val moveResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getRoomByUuid(any()) } returns null
-        // F3: server room id 4001 maps to local room PK 401; the moved row must store the LOCAL id.
         coEvery { localDataService.getRoomByServerId(4001L) } returns
             PushHandlerTestFixtures.createRoom(roomId = 401L, serverId = 4001L)
         coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
@@ -436,12 +444,18 @@ class EquipmentPushHandlerTest {
         val result = handler.handleMove(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        coVerify { api.moveEquipmentRoom(6000L, any()) }
+        coVerify { api.moveEquipmentRoom(6000L, match { it.quantity == 1 }) }
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].isDeleted && list[0].uuid == "equipment-uuid"
+        }) }
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 &&
+                list[0].serverId == 6001L &&
+                list[0].uuid == "dest-pivot-uuid" &&
                 list[0].roomId == 401L &&
                 list[0].syncStatus == SyncStatus.SYNCED &&
-                !list[0].isDirty
+                !list[0].isDirty &&
+                !list[0].isDeleted
         }) }
     }
 
@@ -460,12 +474,14 @@ class EquipmentPushHandlerTest {
             every { uuid } returns "equipment-uuid"
             every { roomId } returns 400L
             every { quantity } returns 3
+            every { dateOut } returns null
         }
         val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
             every { id } returns 6001L
             every { uuid } returns "dest-pivot-uuid"
             every { roomId } returns 4001L
             every { quantity } returns 2
+            every { dateOut } returns null
         }
         val moveResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
 
@@ -482,10 +498,10 @@ class EquipmentPushHandlerTest {
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
         // Partial move saves source (updated qty, unchanged local room) and dest entity in the local dest room
         coVerify { localDataService.saveEquipment(match { list ->
-            list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3
+            list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3 && !list[0].isDeleted
         }) }
         coVerify { localDataService.saveEquipment(match { list ->
-            list.size == 1 && list[0].roomId == 401L && list[0].quantity == 2
+            list.size == 1 && list[0].roomId == 401L && list[0].quantity == 2 && !list[0].isDeleted
         }) }
     }
 
@@ -597,7 +613,7 @@ class EquipmentPushHandlerTest {
 
     @Test
     fun `handleTransfer succeeds for transfer with source and dest pivots returned`() = runTest {
-        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 5)
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 5, projectId = 100L)
         val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
             entityUuid = "equipment-uuid",
             pivotServerId = 6000L,
@@ -610,12 +626,16 @@ class EquipmentPushHandlerTest {
             every { uuid } returns "equipment-uuid"
             every { roomId } returns 400L
             every { quantity } returns 3
+            every { projectId } returns 100L
+            every { dateOut } returns null
         }
         val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
             every { id } returns 6001L
             every { uuid } returns "dest-pivot-uuid"
             every { roomId } returns 5001L
             every { quantity } returns 2
+            every { projectId } returns 100L
+            every { dateOut } returns null
         }
         val transferResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
 
@@ -632,18 +652,15 @@ class EquipmentPushHandlerTest {
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
         // Partial transfer saves source (updated qty, unchanged local room) and dest entity in the local dest room
         coVerify { localDataService.saveEquipment(match { list ->
-            list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3
+            list.size == 1 && list[0].roomId == 400L && list[0].quantity == 3 && !list[0].isDeleted
         }) }
         coVerify { localDataService.saveEquipment(match { list ->
-            list.size == 1 && list[0].roomId == 501L && list[0].quantity == 2
+            list.size == 1 && list[0].roomId == 501L && list[0].quantity == 2 && list[0].projectId == 101L && !list[0].isDeleted
         }) }
     }
 
     @Test
-    fun `handleTransfer full transfer tombstones source when server returns only dest pivot`() = runTest {
-        // R2: a full transfer removes the source pivot server-side, so the response contains ONLY the
-        // dest pivot (sourcePivot == null). The local source row must still be tombstoned, or it lingers
-        // as a ghost in the source room.
+    fun `handleTransfer full transfer tombstones source when server returns ended source and active dest`() = runTest {
         val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 2)
         val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
             entityUuid = "equipment-uuid",
@@ -652,14 +669,21 @@ class EquipmentPushHandlerTest {
             quantity = 2
         )
 
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { quantity } returns 2
+            every { dateOut } returns "2026-01-30T12:00:00.000000Z"
+        }
         val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
             every { id } returns 6001L
             every { uuid } returns "dest-pivot-uuid"
             every { roomId } returns 5001L
             every { quantity } returns 2
+            every { dateOut } returns null
         }
-        // Full transfer: server returns the dest pivot only — no source pivot.
-        val transferResponse = SingleDataResponse(listOf(destPivotDto))
+        val transferResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
 
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getRoomByUuid(any()) } returns null
@@ -671,7 +695,6 @@ class EquipmentPushHandlerTest {
         val result = handler.handleTransfer(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
-        // Source row tombstoned...
         coVerify { localDataService.saveEquipment(match { list ->
             list.size == 1 && list[0].uuid == "equipment-uuid" && list[0].isDeleted
         }) }
@@ -772,5 +795,134 @@ class EquipmentPushHandlerTest {
 
         assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
         coVerify { api.transferEquipmentRoom(6000L, match { it.idempotencyKey == "transfer-idem-key" }) }
+    }
+
+    @Test
+    fun `handleMove full move dest entity uses destPivot serverId not sourcePivot id`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 4001L
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { dateOut } returns "2026-01-30T12:00:00.000000Z"
+        }
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
+            every { roomId } returns 4001L
+            every { quantity } returns 1
+            every { dateOut } returns null
+        }
+        val moveResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { localDataService.getRoomByServerId(4001L) } returns
+            PushHandlerTestFixtures.createRoom(roomId = 401L, serverId = 4001L)
+        coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 &&
+                list[0].serverId == 6001L &&
+                list[0].uuid == "dest-pivot-uuid"
+        }) }
+    }
+
+    @Test
+    fun `handleTransfer full transfer uses destination project server ID from payload`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, projectId = 100L)
+        val operation = PushHandlerTestFixtures.createEquipmentTransferOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 5001L,
+            quantity = 2
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { quantity } returns 2
+            every { dateOut } returns "2026-01-30T12:00:00.000000Z"
+        }
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
+            every { roomId } returns 5001L
+            every { quantity } returns 2
+            every { dateOut } returns null
+        }
+        val transferResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { localDataService.getRoomByServerId(5001L) } returns
+            PushHandlerTestFixtures.createRoom(roomId = 501L, serverId = 5001L)
+        coEvery { api.transferEquipmentRoom(6000L, any()) } returns transferResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleTransfer(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 &&
+                list[0].serverId == 6001L &&
+                list[0].uuid == "dest-pivot-uuid" &&
+                list[0].projectId == 101L
+        }) }
+    }
+
+    @Test
+    fun `handleMove partial move retains reduced source and adds new dest`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 6000L, roomId = 400L, quantity = 5)
+        val operation = PushHandlerTestFixtures.createEquipmentMoveOperation(
+            entityUuid = "equipment-uuid",
+            pivotServerId = 6000L,
+            toRoomId = 4001L,
+            quantity = 2
+        )
+
+        val sourcePivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6000L
+            every { uuid } returns "equipment-uuid"
+            every { roomId } returns 400L
+            every { quantity } returns 3
+            every { dateOut } returns null
+        }
+        val destPivotDto = mockk<EquipmentDto>(relaxed = true) {
+            every { id } returns 6001L
+            every { uuid } returns "dest-pivot-uuid"
+            every { roomId } returns 4001L
+            every { quantity } returns 2
+            every { dateOut } returns null
+        }
+        val moveResponse = SingleDataResponse(listOf(sourcePivotDto, destPivotDto))
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getRoomByUuid(any()) } returns null
+        coEvery { localDataService.getRoomByServerId(4001L) } returns
+            PushHandlerTestFixtures.createRoom(roomId = 401L, serverId = 4001L)
+        coEvery { api.moveEquipmentRoom(6000L, any()) } returns moveResponse
+        coEvery { localDataService.saveEquipment(any()) } just runs
+
+        val result = handler.handleMove(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].quantity == 3 && list[0].roomId == 400L && !list[0].isDeleted
+        }) }
+        coVerify { localDataService.saveEquipment(match { list ->
+            list.size == 1 && list[0].quantity == 2 && list[0].roomId == 401L && list[0].serverId == 6001L && !list[0].isDeleted
+        }) }
     }
 }

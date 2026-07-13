@@ -252,7 +252,9 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         return try {
             val response = ctx.api.transferEquipmentRoom(pivotServerId, transferRequest)
             val returnedPivots = response.data
-            val saved = reconcileTransferResult(equipment, payload.quantity, returnedPivots)
+            // PendingEquipmentTransferPayload.toProjectId is the destination SERVER id
+            // (EquipmentRoomFragment queues project.serverId), not a local project PK.
+            val saved = reconcileTransferResult(equipment, payload.quantity, payload.toProjectId, returnedPivots)
             saved?.let { ctx.localDataService.saveEquipment(listOf(it)) }
             Log.d(SYNC_TAG, "✅ handleTransfer succeeded for pivot $pivotServerId")
             OperationOutcome.SUCCESS
@@ -335,31 +337,43 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         requestedQty: Int?,
         returnedPivots: List<EquipmentDto>
     ): OfflineEquipmentEntity? {
-        val isFullMove = requestedQty == null || requestedQty >= equipment.quantity
+        if (returnedPivots.isEmpty()) {
+            Log.w(SYNC_TAG, "⚠️ reconcileMove: no pivots returned; SKIP for equipment ${equipment.uuid}")
+            return null
+        }
         val sourcePivot = returnedPivots.find {
             it.uuid == equipment.uuid || it.id == equipment.serverId
         }
-        val destPivot = if (isFullMove) {
-            null
-        } else {
-            returnedPivots.find {
-                it.uuid != equipment.uuid && it.id != equipment.serverId
-            }
+        val destPivot = returnedPivots.find {
+            it.uuid != equipment.uuid && it.id != equipment.serverId
         }
-        if (sourcePivot == null && returnedPivots.isNotEmpty()) {
-            Log.w(SYNC_TAG, "⚠️ reconcileMove: source pivot not in response; SKIP reconciliation for equipment ${equipment.uuid}")
+        if (destPivot == null) {
+            Log.w(SYNC_TAG, "⚠️ reconcileMove: dest pivot not in response; SKIP for equipment ${equipment.uuid}")
             return null
         }
         val toRoomLocalId = localRoomIdForServer(toRoomServerId) ?: equipment.roomId
+        val isFullMove = sourcePivot?.dateOut != null
         if (isFullMove) {
-            return equipment.copy(
-                serverId = sourcePivot?.id ?: equipment.serverId,
+            ctx.localDataService.saveEquipment(listOf(equipment.copy(
+                isDeleted = true,
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = ctx.now()
+            )))
+            Log.d(SYNC_TAG, "✅ reconcileMove: full move — source tombstoned, dest persisted")
+            val destEntity = destPivot.toEntity().copy(
+                equipmentId = 0,
+                serverId = destPivot.id,
+                catalogServerId = equipment.catalogServerId,
+                catalogUuid = equipment.catalogUuid,
+                uuid = destPivot.uuid ?: UuidUtils.generateUuidV7(),
+                projectId = equipment.projectId,
                 roomId = toRoomLocalId,
-                quantity = sourcePivot?.quantity ?: equipment.quantity,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
                 lastSyncedAt = ctx.now()
             )
+            return destEntity
         } else {
             if (sourcePivot == null) {
                 Log.w(SYNC_TAG, "⚠️ reconcileMove: partial move but source pivot missing; SKIP for equipment ${equipment.uuid}")
@@ -375,28 +389,26 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
                 lastSyncedAt = ctx.now()
             )
             ctx.localDataService.saveEquipment(listOf(sourceUpdated))
-            if (destPivot != null) {
-                val destEntity = destPivot.toEntity().copy(
-                    equipmentId = 0,
-                    serverId = destPivot.id,
-                    catalogServerId = equipment.catalogServerId,
-                    catalogUuid = equipment.catalogUuid,
-                    uuid = destPivot.uuid ?: UuidUtils.generateUuidV7(),
-                    projectId = equipment.projectId,
-                    roomId = toRoomLocalId,
-                    isDirty = false,
-                    syncStatus = SyncStatus.SYNCED,
-                    lastSyncedAt = ctx.now()
-                )
-                return destEntity
-            }
-            return null
+            val destEntity = destPivot.toEntity().copy(
+                equipmentId = 0,
+                serverId = destPivot.id,
+                catalogServerId = equipment.catalogServerId,
+                catalogUuid = equipment.catalogUuid,
+                uuid = destPivot.uuid ?: UuidUtils.generateUuidV7(),
+                projectId = equipment.projectId,
+                roomId = toRoomLocalId,
+                isDirty = false,
+                syncStatus = SyncStatus.SYNCED,
+                lastSyncedAt = ctx.now()
+            )
+            return destEntity
         }
     }
 
     private suspend fun reconcileTransferResult(
         equipment: OfflineEquipmentEntity,
         requestedQty: Int,
+        toProjectServerId: Long,
         returnedPivots: List<EquipmentDto>
     ): OfflineEquipmentEntity? {
         val sourcePivot = returnedPivots.find {
@@ -405,20 +417,16 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         val destPivot = returnedPivots.find {
             it.uuid != equipment.uuid && it.id != equipment.serverId
         }
-        if (sourcePivot == null) {
-            Log.w(SYNC_TAG, "⚠️ reconcileTransfer: source pivot not in response (expected for full transfer); proceeding with dest only for equipment ${equipment.uuid}")
-        }
         if (destPivot == null) {
             Log.w(SYNC_TAG, "⚠️ reconcileTransfer: dest pivot not in response; SKIP for equipment ${equipment.uuid}")
             return null
         }
-        // A full transfer moves the entire quantity: the backend soft-deletes the source pivot and
-        // returns ONLY the destination (sourcePivot == null). Treat requestedQty >= equipment.quantity
-        // as full too, so a stale/echoed source pivot can't be misread as a partial and leave a ghost.
-        val isFullTransfer = sourcePivot == null || requestedQty >= equipment.quantity
+        if (sourcePivot == null) {
+            Log.w(SYNC_TAG, "⚠️ reconcileTransfer: source pivot not in response; treating as full transfer for equipment ${equipment.uuid}")
+        }
+        val isFullTransfer = sourcePivot?.dateOut != null
         val updatedQty = sourcePivot?.quantity ?: (equipment.quantity - requestedQty)
         if (!isFullTransfer && updatedQty > 0) {
-            // Partial transfer: source pivot survives with a reduced quantity.
             ctx.localDataService.saveEquipment(listOf(equipment.copy(
                 serverId = sourcePivot?.id ?: equipment.serverId,
                 quantity = updatedQty,
@@ -428,10 +436,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             )))
             Log.d(SYNC_TAG, "✅ reconcileTransfer: partial transfer — source quantity reduced to $updatedQty")
         } else {
-            // Full transfer: the source no longer exists server-side (sourcePivot == null) or the
-            // whole quantity moved. Tombstone the local source row so it stops showing in the source room.
             ctx.localDataService.saveEquipment(listOf(equipment.copy(
-                serverId = sourcePivot?.id ?: equipment.serverId,
                 isDeleted = true,
                 isDirty = false,
                 syncStatus = SyncStatus.SYNCED,
@@ -445,7 +450,7 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             catalogServerId = equipment.catalogServerId,
             catalogUuid = equipment.catalogUuid,
             uuid = destPivot.uuid ?: UuidUtils.generateUuidV7(),
-            projectId = equipment.projectId,
+            projectId = toProjectServerId,
             roomId = (destPivot.roomId?.let { localRoomIdForServer(it) }) ?: equipment.roomId,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
@@ -528,7 +533,9 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             throw retryError
         }
         val returnedPivots = retryResult.getOrThrow().data
-        val saved = reconcileTransferResult(equipment, transferRequest.quantity, returnedPivots)
+        val payload = parseTransferPayload(operation)
+        // Preserve the same server-id contract on the conflict-retry path.
+        val saved = reconcileTransferResult(equipment, transferRequest.quantity, payload.toProjectId, returnedPivots)
         saved?.let { ctx.localDataService.saveEquipment(listOf(it)) }
         return OperationOutcome.SUCCESS
     }
