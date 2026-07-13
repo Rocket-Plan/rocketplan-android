@@ -19,6 +19,7 @@ import com.example.rocketplan_android.data.model.CreateAddressRequest
 import com.example.rocketplan_android.data.model.CreateCompanyProjectRequest
 import com.example.rocketplan_android.data.model.ProjectStatus
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentMovementDto
 import com.example.rocketplan_android.data.model.offline.PaginatedResponse
 import com.example.rocketplan_android.data.model.offline.ProjectAddressDto
 import com.example.rocketplan_android.data.repository.RoomTypeRepository
@@ -1650,6 +1651,12 @@ class OfflineSyncRepository(
         )
         localDataService.saveProjects(listOf(entity))
         return entity
+    }
+
+    suspend fun getEquipmentRoomMovements(pivotId: Long): Result<List<EquipmentMovementDto>> = withContext(ioDispatcher) {
+        runCatching {
+            api.getEquipmentRoomMovements(pivotId).data
+        }
     }
 
 }

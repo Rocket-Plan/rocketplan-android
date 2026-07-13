@@ -56,6 +56,7 @@ class SecureStorage internal constructor(
         private val USER_NAME_KEY = stringPreferencesKey("user_name")
         private val COMPANY_NAME_KEY = stringPreferencesKey("company_name")
         private val SMS_VERIFIED_KEY = booleanPreferencesKey("sms_verified")
+        private val EQUIPMENT_MOVE_TRANSFER_KEY = booleanPreferencesKey("equipment_move_transfer")
         private const val OAUTH_STATE_KEY = "oauth_state"
         private const val AUTH_TOKEN_PREF_KEY = "auth_token"
         private const val PENDING_INVITE_COMPANY_UUID_KEY = "pending_invite_company_uuid"
@@ -371,6 +372,18 @@ class SecureStorage internal constructor(
         return context.dataStore.data.map { it[COMPANY_NAME_KEY] }.first()
     }
 
+    // ==================== Feature Flags ====================
+
+    suspend fun saveEquipmentMoveTransferEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[EQUIPMENT_MOVE_TRANSFER_KEY] = enabled
+        }
+    }
+
+    suspend fun getEquipmentMoveTransferEnabledSync(): Boolean {
+        return context.dataStore.data.map { it[EQUIPMENT_MOVE_TRANSFER_KEY] ?: false }.first()
+    }
+
     // ==================== Clear All Data ====================
 
     /**
@@ -390,6 +403,7 @@ class SecureStorage internal constructor(
             preferences.remove(COMPANY_ID_KEY)
             preferences.remove(USER_NAME_KEY)
             preferences.remove(COMPANY_NAME_KEY)
+            preferences.remove(EQUIPMENT_MOVE_TRANSFER_KEY)
         }
 
         encryptedPrefs.edit().clear().apply()

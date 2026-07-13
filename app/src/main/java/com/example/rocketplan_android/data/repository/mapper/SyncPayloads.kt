@@ -89,6 +89,33 @@ internal data class PendingRoomUpdatePayload(
     val lockUpdatedAt: String?
 )
 
+internal data class PendingEquipmentMovePayload(
+    val pivotServerId: Long?,
+    val pivotLocalId: Long,
+    val toRoomId: Long?,
+    val toRoomUuid: String?,
+    val quantity: Int?,
+    val movedAt: String,
+    val note: String?,
+    val idempotencyKey: String,
+    val lockUpdatedAt: String?
+)
+
+internal data class PendingEquipmentTransferPayload(
+    val pivotServerId: Long?,
+    val pivotLocalId: Long,
+    val toRoomId: Long?,
+    val toRoomUuid: String?,
+    // Server project ID. The UI stores project.serverId here; retain the JSON field name
+    // for already-queued operations, but do not resolve it as a local project primary key.
+    val toProjectId: Long,
+    val quantity: Int,
+    val movedAt: String,
+    val note: String? = null,
+    val idempotencyKey: String,
+    val lockUpdatedAt: String?
+)
+
 internal data class PendingAtmosphericLogCreationPayload(
     val localLogId: Long,
     val logUuid: String,

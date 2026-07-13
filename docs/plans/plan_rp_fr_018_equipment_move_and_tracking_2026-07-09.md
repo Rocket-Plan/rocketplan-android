@@ -4,10 +4,20 @@
 
 # Feature Plan: [RP-FR-018] Equipment Move & Tracking (Android client)
 
+> **Handoff update (2026-07-12; supersedes the old full-move assumption below).** The backend now
+> retains a full-operation source as an ended placement and returns `[ended source, active destination]`.
+> Android's full-move reconciler must retire the local source and persist the returned destination pivot;
+> it must not update the old source row's `roomId` or retain its server ID. Transfer reconciliation must
+> be verified against the same two-row response. ~~Do not enable the feature until these contract tests pass.~~
+> **[FIXED 2026-07-12]** `reconcileMoveResult` now tombstones the source and creates a new dest entity from
+> `destPivot.id`; `reconcileTransferResult` uses the queued destination project **server ID** and `destPivot.id`.
+> Full moves also persist the selected quantity instead of queueing a null/default-full request. Regression tests
+> cover full/partial move and transfer.
+
 **Bug ID(s):** RP-FR-018
 **Author:** Claude
 **Date:** 2026-07-09 (registered 2026-07-09 15:12:04 PDT)
-**State:** planned
+**State:** in progress — full-move reconciliation fix complete; feature-gate still respects `equipmentMoveTransfer` flag
 **Priority:** P2
 **Type:** feature · **Release:** unreleased
 
@@ -23,7 +33,7 @@ Consume the backend **Equipment Move & Tracking** capability (canonical spec: `m
 
 | Intent | Call |
 |--------|------|
-| Move within project (room→room, partial qty) | `POST /api/equipment-rooms/{id}/move` — body `to_room_id`, `quantity?` (default full), `moved_at`, `note?`, `idempotency_key?`, `updated_at` (optimistic lock on source pivot) |
+| Move within project (room→room, partial qty) | `POST /api/equipment-rooms/{id}/move` — body `to_room_id`, explicit `quantity`, `moved_at`, `note?`, `idempotency_key?`, `updated_at` (optimistic lock on source pivot; nullable quantity remains only for legacy queued operations) |
 | Transfer across projects (project→project) | `POST /api/equipment-rooms/{id}/transfer` — body `to_room_id` (in destination project), `quantity`, `moved_at`, `idempotency_key?`, `updated_at`; server rebinds catalog by `catalog_uuid`/name |
 | History for one placement | `GET /api/equipment-rooms/{id}/movements` |
 | Project-wide movement log | `GET /api/projects/{project}/equipment-movements` (filters: `equipment_id`, `to_room_id`, `moved_at` range) |
@@ -64,7 +74,7 @@ The op payload (stored on `OfflineSyncQueueEntity.payload`) carries: source pivo
 
 Add to `EquipmentPushHandler` (built on the RP-BUG-279 pivot rewrite):
 
-- `handleMove(operation)`: resolve source pivot `serverId` and **destination** server `roomId`; `POST /api/equipment-rooms/{pivotId}/move`. On success, apply the local effect: if full-qty move, update the local row's `roomId`; if partial, decrement source `quantity` and upsert a destination placement (mirror server semantics from MONGOOSE-FR-014 §5.1) using the returned `EquipmentRoomResource`(s). Reuse the existing 409 recovery (`handle409Conflict`, `extractUpdatedAt` — `SyncHandlerUtils.kt:83`) since move honors the same optimistic lock.
+- `handleMove(operation)`: resolve source pivot `serverId` and **destination** server `roomId`; `POST /api/equipment-rooms/{pivotId}/move`. On success, reconcile the returned pivots: a full move retires the local source and upserts the new destination pivot; a partial move decrements/keeps the source and upserts a destination placement. Never repoint the old source row, because it remains server-side as an ended record. Reuse the existing 409 recovery (`handle409Conflict`, `extractUpdatedAt` — `SyncHandlerUtils.kt:83`) since move honors the same optimistic lock.
 - `handleTransfer(operation)`: `POST /api/equipment-rooms/{pivotId}/transfer` with destination `to_room_id`. The destination pivot is bound to the **destination project's** catalog server-side; locally, reconcile the returned pivot the same way RP-BUG-279 Step 5 reconciles pulled pivots (by `uuid`/`equipment_id`).
 - Wire both into the processor dispatch at `SyncQueueProcessor.kt:397`:
 
@@ -112,8 +122,8 @@ Move/transfer send `updated_at` on the source pivot; the backend `assertNotStale
 
 ## Test Plan
 
-- [ ] Unit: `handleMove` full-qty → local `roomId` updated; partial-qty → source decremented + destination placement upserted (matches server semantics).
-- [ ] Unit: `handleTransfer` reconciles the returned destination pivot by `uuid`/`equipment_id` (no duplicate local rows).
+- [x] Unit: `handleMove` full-qty → source retired and returned destination pivot persisted; partial-qty → source decremented + destination placement upserted. *(Fixed: `reconcileMoveResult` uses backend `sourcePivot.dateOut` to detect a full move, tombstones source, and creates the destination from `destPivot`.)*
+- [x] Unit: `handleTransfer` consumes `[ended source, active destination]`, retires the source for a full transfer, and reconciles the destination by UUID/ID with no duplicate local rows. *(Fixed: `reconcileTransferResult` uses the queued destination project server ID and `destPivot.id`.)*
 - [ ] Unit: move/transfer to an **offline-created** destination room `SKIP`s until the room syncs, then sends the remapped server `to_room_id` (Step 4 remap coverage).
 - [ ] Unit: move 409 stale-lock → conflict recovery path (parity with the existing equipment upsert 409 test).
 - [ ] Unit: `SyncQueueProcessor` routes `MOVE`/`TRANSFER` op types (dispatch at `:397`); `SyncOperationType.fromName` still defaults unknown → `UPDATE`.

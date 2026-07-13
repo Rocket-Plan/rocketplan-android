@@ -672,6 +672,113 @@ data class EquipmentDto(
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
+    val updatedAt: String?,
+    @SerializedName("pivot_id")
+    val pivotId: Long? = null,
+    @SerializedName("pivot_uuid")
+    val pivotUuid: String? = null,
+    @SerializedName("equipment_id")
+    val equipmentId: Long? = null,
+    @SerializedName("catalog_uuid")
+    val catalogUuid: String? = null,
+    val number: String? = null,
+    val duration: String? = null,
+    @SerializedName("date_in")
+    val dateIn: String? = null,
+    @SerializedName("date_out")
+    val dateOut: String? = null,
+    @SerializedName("location_id")
+    val locationId: Long? = null,
+    @SerializedName("last_moved_at")
+    val lastMovedAt: String? = null,
+    @SerializedName("current_room_id")
+    val currentRoomId: Long? = null
+)
+
+data class AttachRoomEquipmentRequest(
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String?,
+    val equipment: List<AttachRoomEquipmentItem>
+)
+
+data class AttachRoomEquipmentItem(
+    @SerializedName("equipment_id")
+    val equipmentId: Long,
+    val uuid: String?,
+    @SerializedName("date_in")
+    val dateIn: String? = null,
+    val quantity: Int? = null
+)
+
+data class UpdateEquipmentRoomRequest(
+    val quantity: Int,
+    val duration: Int? = null,
+    @SerializedName("date_in")
+    val dateIn: String? = null,
+    @SerializedName("date_out")
+    val dateOut: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String
+)
+
+data class EquipmentMoveRequest(
+    @SerializedName("to_room_id")
+    val toRoomId: Long,
+    val quantity: Int? = null,
+    @SerializedName("moved_at")
+    val movedAt: String,
+    val note: String? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String
+)
+
+data class EquipmentTransferRequest(
+    @SerializedName("to_room_id")
+    val toRoomId: Long,
+    val quantity: Int,
+    @SerializedName("moved_at")
+    val movedAt: String,
+    val note: String? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String
+)
+
+data class EquipmentMovementDto(
+    val id: Long,
+    val uuid: String?,
+    @SerializedName("equipment_room_id")
+    val equipmentRoomId: Long?,
+    @SerializedName("equipment_id")
+    val equipmentId: Long?,
+    @SerializedName("catalog_uuid")
+    val catalogUuid: String?,
+    @SerializedName("from_room_id")
+    val fromRoomId: Long?,
+    @SerializedName("from_location_id")
+    val fromLocationId: Long?,
+    @SerializedName("to_room_id")
+    val toRoomId: Long?,
+    @SerializedName("to_location_id")
+    val toLocationId: Long?,
+    @SerializedName("from_project_id")
+    val fromProjectId: Long?,
+    @SerializedName("to_project_id")
+    val toProjectId: Long?,
+    val quantity: Int?,
+    @SerializedName("moved_at")
+    val movedAt: String?,
+    val note: String?,
+    @SerializedName("moved_by_user_id")
+    val movedByUserId: Long?,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String?,
+    @SerializedName("created_at")
+    val createdAt: String?,
+    @SerializedName("updated_at")
     val updatedAt: String?
 )
 

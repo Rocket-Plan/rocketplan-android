@@ -37,7 +37,9 @@ enum class SyncPriority(val level: Int) {
 enum class SyncOperationType {
     CREATE,
     UPDATE,
-    DELETE;
+    DELETE,
+    MOVE,
+    TRANSFER;
 
     companion object {
         fun fromName(value: String?): SyncOperationType =

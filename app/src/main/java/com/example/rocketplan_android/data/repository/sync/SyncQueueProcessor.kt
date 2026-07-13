@@ -17,6 +17,7 @@ import com.example.rocketplan_android.data.local.entity.OfflinePhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.util.DateUtils
 import com.example.rocketplan_android.data.local.entity.OfflineSupportConversationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSupportMessageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
@@ -30,6 +31,8 @@ import com.example.rocketplan_android.data.repository.ImageProcessorRepository
 import com.example.rocketplan_android.data.repository.SyncResult
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
+import com.example.rocketplan_android.data.repository.mapper.PendingEquipmentMovePayload
+import com.example.rocketplan_android.data.repository.mapper.PendingEquipmentTransferPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingProjectCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingPropertyCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingPropertyUpdatePayload
@@ -364,6 +367,7 @@ class SyncQueueProcessor(
                         }
                         SyncOperationType.UPDATE -> projectHandler.handleUpdate(operation).toLocal()
                         SyncOperationType.DELETE -> projectHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "property" -> handleOperation(operation, "pending:property") {
@@ -371,6 +375,7 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE -> propertyHandler.handleCreate(operation).toLocal()
                         SyncOperationType.UPDATE -> propertyHandler.handleUpdate(operation).toLocal()
                         SyncOperationType.DELETE -> propertyHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "location" -> handleOperation(operation, "pending:location") {
@@ -378,6 +383,7 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE -> locationHandler.handleCreate(operation).toLocal()
                         SyncOperationType.UPDATE -> locationHandler.handleUpdate(operation).toLocal()
                         SyncOperationType.DELETE -> locationHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "room" -> handleOperation(operation, "pending:room") {
@@ -385,6 +391,7 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE -> roomHandler.handleCreate(operation).toLocal()
                         SyncOperationType.UPDATE -> roomHandler.handleUpdate(operation).toLocal()
                         SyncOperationType.DELETE -> roomHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "note" -> handleOperation(operation, "pending:note") {
@@ -392,6 +399,7 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> noteHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> noteHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "equipment" -> handleOperation(operation, "pending:equipment") {
@@ -399,6 +407,9 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> equipmentHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> equipmentHandler.handleDelete(operation).toLocal()
+                        SyncOperationType.MOVE -> equipmentHandler.handleMove(operation).toLocal()
+                        SyncOperationType.TRANSFER -> equipmentHandler.handleTransfer(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "moisture_log" -> handleOperation(operation, "pending:moisture") {
@@ -406,6 +417,7 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> moistureLogHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> moistureLogHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "photo" -> handleOperation(operation, "pending:photo") {
@@ -419,6 +431,7 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> atmosphericLogHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> atmosphericLogHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "support_conversation" -> handleOperation(operation, "pending:support_conversation") {
@@ -438,13 +451,14 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> timecardHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> timecardHandler.handleDelete(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "project_user" -> handleOperation(operation, "pending:crew") {
                     when (operation.operationType) {
                         SyncOperationType.CREATE -> crewHandler.handleAdd(operation).toLocal()
                         SyncOperationType.DELETE -> crewHandler.handleRemove(operation).toLocal()
-                        SyncOperationType.UPDATE -> OperationOutcome.DROP
+                        else -> OperationOutcome.DROP
                     }
                 }
                 else -> {
@@ -933,6 +947,117 @@ class SyncQueueProcessor(
         )
     }
 
+    override suspend fun enqueueEquipmentMove(
+        equipment: OfflineEquipmentEntity,
+        toRoomId: Long?,
+        toRoomUuid: String?,
+        quantity: Int?,
+        note: String?,
+        idempotencyKey: String,
+        lockUpdatedAt: String?
+    ) {
+        // A local placement must be created before the pivot can be moved. Do not
+        // replace the pending CREATE with a MOVE that can only SKIP forever.
+        if (equipment.serverId == null) {
+            val destination = toRoomUuid?.let { localDataService.getRoomByUuid(it) }
+            if (destination != null) {
+                localDataService.saveEquipment(listOf(equipment.copy(
+                    roomId = destination.roomId,
+                    quantity = quantity ?: equipment.quantity,
+                    updatedAt = java.util.Date(),
+                    isDirty = true,
+                    syncStatus = SyncStatus.PENDING
+                )))
+                return
+            }
+            // Destination room not found locally (may only exist server-side).
+            // Log and set dirty so we retry when the room is synced.
+            Log.w(TAG, "⚠️ enqueueEquipmentMove: destination room not found locally for uuid=$toRoomUuid; setting equipment ${equipment.uuid} dirty to retry")
+            localDataService.saveEquipment(listOf(equipment.copy(
+                updatedAt = java.util.Date(),
+                isDirty = true,
+                syncStatus = SyncStatus.PENDING
+            )))
+            return
+        }
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "equipment",
+            entityId = equipment.equipmentId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingEquipmentMovePayload(
+            pivotServerId = equipment.serverId,
+            pivotLocalId = equipment.equipmentId,
+            toRoomId = toRoomId,
+            toRoomUuid = toRoomUuid,
+            quantity = quantity,
+            movedAt = DateUtils.formatApiDate(java.util.Date()),
+            note = note,
+            idempotencyKey = idempotencyKey,
+            lockUpdatedAt = resolvedLockUpdatedAt
+        )
+        enqueueOperation(
+            entityType = "equipment",
+            entityId = equipment.equipmentId,
+            entityUuid = equipment.uuid,
+            operationType = SyncOperationType.MOVE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
+    override suspend fun enqueueEquipmentTransfer(
+        equipment: OfflineEquipmentEntity,
+        toRoomId: Long?,
+        toRoomUuid: String?,
+        toProjectId: Long,
+        quantity: Int,
+        note: String?,
+        idempotencyKey: String,
+        lockUpdatedAt: String?
+    ) {
+        // A transfer needs a server pivot id. When the placement is not yet synced (serverId == null)
+        // we must NOT relocate it locally into the destination — that is a cross-project move and
+        // silently misfiles the row into the source project (RP-BUG-279 review finding). Instead,
+        // mark it dirty so its pending CREATE syncs, and enqueue the TRANSFER with pivotServerId=null;
+        // handleTransfer re-reads equipment.serverId at process time and SKIPs until the CREATE lands,
+        // then performs the real transfer (resolveToRoomServerId falls back to the server toRoomId for
+        // cross-project destination rooms that don't exist locally).
+        if (equipment.serverId == null) {
+            Log.w(TAG, "⚠️ enqueueEquipmentTransfer: equipment ${equipment.uuid} not yet synced; marking dirty and deferring transfer until pivot is created")
+            localDataService.saveEquipment(listOf(equipment.copy(
+                updatedAt = java.util.Date(),
+                isDirty = true,
+                syncStatus = SyncStatus.PENDING
+            )))
+        }
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "equipment",
+            entityId = equipment.equipmentId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingEquipmentTransferPayload(
+            pivotServerId = equipment.serverId,
+            pivotLocalId = equipment.equipmentId,
+            toRoomId = toRoomId,
+            toRoomUuid = toRoomUuid,
+            toProjectId = toProjectId,
+            quantity = quantity,
+            movedAt = DateUtils.formatApiDate(java.util.Date()),
+            note = note,
+            idempotencyKey = idempotencyKey,
+            lockUpdatedAt = resolvedLockUpdatedAt
+        )
+        enqueueOperation(
+            entityType = "equipment",
+            entityId = equipment.equipmentId,
+            entityUuid = equipment.uuid,
+            operationType = SyncOperationType.TRANSFER,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
     override suspend fun enqueueMoistureLogUpsert(
         log: OfflineMoistureLogEntity,
         lockUpdatedAt: String?
@@ -1161,7 +1286,14 @@ class SyncQueueProcessor(
         payload: ByteArray,
         priority: SyncPriority
     ) {
-        localDataService.removeSyncOperationsForEntity(entityType, entityId)
+        // For equipment, only remove pending operations of the same type to avoid
+        // deleting unrelated MOVE/TRANSFER ops when UPDATE is enqueued (and vice versa).
+        // Other entity types use the blanket removal (all ops for the entity).
+        if (entityType == "equipment") {
+            localDataService.removeSyncOperationsOfType(entityType, entityId, operationType)
+        } else {
+            localDataService.removeSyncOperationsForEntity(entityType, entityId)
+        }
         val operation = OfflineSyncQueueEntity(
             operationId = "$entityType-$entityId-${UuidUtils.generateUuidV7()}",
             entityType = entityType,

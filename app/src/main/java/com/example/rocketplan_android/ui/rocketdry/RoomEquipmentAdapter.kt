@@ -18,8 +18,19 @@ class RoomEquipmentAdapter(
     private val onStartDateClick: (RoomEquipmentItem) -> Unit,
     private val onEndDateClick: (RoomEquipmentItem) -> Unit,
     private val onDelete: (RoomEquipmentItem) -> Unit,
+    private val onMove: (RoomEquipmentItem) -> Unit,
+    private val onTransfer: (RoomEquipmentItem) -> Unit,
+    private val onHistory: (RoomEquipmentItem) -> Unit,
     private val dateFormatter: (RoomEquipmentItem) -> FormattedEquipmentDates
 ) : ListAdapter<RoomEquipmentItem, RoomEquipmentAdapter.ViewHolder>(DiffCallback) {
+
+    var moveTransferEnabled: Boolean = false
+        set(value) {
+            if (field != value) {
+                field = value
+                notifyDataSetChanged()
+            }
+        }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -41,6 +52,9 @@ class RoomEquipmentAdapter(
         private val endDate: MaterialButton = itemView.findViewById(R.id.endDateButton)
         private val dayCount: TextView = itemView.findViewById(R.id.equipmentDayCount)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteEquipmentButton)
+        private val moveButton: ImageButton = itemView.findViewById(R.id.moveEquipmentButton)
+        private val transferButton: ImageButton = itemView.findViewById(R.id.transferEquipmentButton)
+        private val historyButton: ImageButton = itemView.findViewById(R.id.historyEquipmentButton)
 
         fun bind(item: RoomEquipmentItem) {
             val dates = dateFormatter(item)
@@ -56,6 +70,14 @@ class RoomEquipmentAdapter(
             startDate.setOnClickListener { onStartDateClick(item) }
             endDate.setOnClickListener { onEndDateClick(item) }
             deleteButton.setOnClickListener { onDelete(item) }
+            moveButton.setOnClickListener { onMove(item) }
+            transferButton.setOnClickListener { onTransfer(item) }
+            historyButton.setOnClickListener { onHistory(item) }
+
+            val buttonsVisibility = if (moveTransferEnabled) View.VISIBLE else View.GONE
+            moveButton.visibility = buttonsVisibility
+            transferButton.visibility = buttonsVisibility
+            historyButton.visibility = buttonsVisibility
         }
     }
 

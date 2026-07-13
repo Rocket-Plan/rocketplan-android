@@ -9,6 +9,7 @@ import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
+import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypeCatalog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.max
 
 private const val MILLIS_PER_DAY = 24 * 60 * 60 * 1000L
@@ -29,7 +31,9 @@ sealed class EquipmentRoomUiState {
         val roomName: String,
         val roomIconRes: Int,
         val equipment: List<RoomEquipmentItem>,
-        val typeOptions: List<EquipmentTypeMeta>
+        val typeOptions: List<EquipmentTypeMeta>,
+        val otherRooms: List<RoomMeta>,
+        val moveTransferEnabled: Boolean
     ) : EquipmentRoomUiState()
 }
 
@@ -46,6 +50,14 @@ data class RoomEquipmentItem(
     val dayCount: Int
 )
 
+data class RoomMeta(
+    val roomId: Long,
+    val serverId: Long?,
+    val uuid: String,
+    val name: String,
+    val iconRes: Int
+)
+
 class EquipmentRoomViewModel(
     application: Application,
     private val projectId: Long,
@@ -55,9 +67,14 @@ class EquipmentRoomViewModel(
     private val rocketPlanApp = application as RocketPlanApplication
     private val localDataService = rocketPlanApp.localDataService
     private val offlineSyncRepository = rocketPlanApp.offlineSyncRepository
+    private val secureStorage = rocketPlanApp.secureStorage
 
     private val _uiState = MutableStateFlow<EquipmentRoomUiState>(EquipmentRoomUiState.Loading)
     val uiState: StateFlow<EquipmentRoomUiState> = _uiState
+
+    private var currentCompanyId: Long? = null
+    private val _moveTransferEnabled = MutableStateFlow(false)
+    private var moveTransferEnabledInitialized = false
 
     init {
         viewModelScope.launch {
@@ -66,11 +83,19 @@ class EquipmentRoomViewModel(
                 localDataService.observeRooms(projectId),
                 localDataService.observeEquipmentForRoom(roomId)
             ) { projects, rooms, equipment ->
+                Triple(projects, rooms, equipment)
+            }.collect { (projects, rooms, equipment) ->
                 val project = projects.firstOrNull { it.projectId == projectId }
+                currentCompanyId = project?.companyId
                 val room = rooms.firstOrNull { it.roomId == roomId }
-                resolveState(project, room, equipment)
-            }.collect { state ->
-                _uiState.value = state
+                if (!moveTransferEnabledInitialized) {
+                    _moveTransferEnabled.value = withContext(Dispatchers.IO) {
+                        secureStorage.getEquipmentMoveTransferEnabledSync()
+                    }
+                    moveTransferEnabledInitialized = true
+                }
+                val enabled = _moveTransferEnabled.value
+                _uiState.value = resolveState(project, room, equipment, rooms, enabled)
             }
         }
     }
@@ -122,6 +147,53 @@ class EquipmentRoomViewModel(
         }
     }
 
+    fun moveEquipment(item: RoomEquipmentItem, toRoomId: Long, toRoomUuid: String, quantity: Int?, note: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val equipment = localDataService.getEquipmentByUuid(item.uuid) ?: return@launch
+            val idempotencyKey = UUID.randomUUID().toString()
+            offlineSyncRepository.syncQueueEnqueuer.enqueueEquipmentMove(
+                equipment = equipment,
+                toRoomId = toRoomId,
+                toRoomUuid = toRoomUuid,
+                quantity = quantity,
+                note = note,
+                idempotencyKey = idempotencyKey,
+                lockUpdatedAt = equipment.serverUpdatedAt?.toApiTimestamp()
+            )
+        }
+    }
+
+    fun transferEquipment(item: RoomEquipmentItem, toRoomId: Long, toRoomUuid: String, toProjectId: Long, quantity: Int, note: String?) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val equipment = localDataService.getEquipmentByUuid(item.uuid) ?: return@launch
+            val idempotencyKey = UUID.randomUUID().toString()
+            offlineSyncRepository.syncQueueEnqueuer.enqueueEquipmentTransfer(
+                equipment = equipment,
+                toRoomId = toRoomId,
+                toRoomUuid = toRoomUuid,
+                toProjectId = toProjectId,
+                quantity = quantity,
+                note = note,
+                idempotencyKey = idempotencyKey,
+                lockUpdatedAt = equipment.serverUpdatedAt?.toApiTimestamp()
+            )
+        }
+    }
+
+    suspend fun getAllProjectsForTransfer(): List<OfflineProjectEntity> = withContext(Dispatchers.IO) {
+        localDataService.getAllProjects().filter { it.serverId != null && it.serverId > 0 }
+    }
+
+    suspend fun getRoomsForProject(projectServerId: Long): List<OfflineRoomEntity> = withContext(Dispatchers.IO) {
+        val companyId = currentCompanyId ?: return@withContext emptyList()
+        val project = localDataService.getProjectByServerId(projectServerId, companyId) ?: return@withContext emptyList()
+        localDataService.getRoomsByProject(project.projectId).filter { it.serverId != null && it.serverId > 0 }
+    }
+
+    suspend fun getEquipmentForUuid(uuid: String): OfflineEquipmentEntity? = withContext(Dispatchers.IO) {
+        localDataService.getEquipmentByUuid(uuid)
+    }
+
     private suspend fun persistUpdate(
         item: RoomEquipmentItem,
         quantity: Int = item.quantity,
@@ -146,19 +218,27 @@ class EquipmentRoomViewModel(
     private fun resolveState(
         project: OfflineProjectEntity?,
         room: OfflineRoomEntity?,
-        equipment: List<OfflineEquipmentEntity>
+        equipment: List<OfflineEquipmentEntity>,
+        rooms: List<OfflineRoomEntity>,
+        moveTransferEnabled: Boolean
     ): EquipmentRoomUiState {
         if (project == null || room == null) return EquipmentRoomUiState.Loading
         val items = equipment
             .map { it.toUiItem() }
             .sortedBy { it.typeLabel.lowercase(Locale.getDefault()) }
 
+        val otherRooms = rooms
+            .filter { it.roomId != roomId }
+            .map { it.toMeta() }
+
         return EquipmentRoomUiState.Ready(
             projectAddress = buildProjectAddress(project),
             roomName = room.title,
             roomIconRes = resolveRoomIcon(room),
             equipment = items,
-            typeOptions = EquipmentTypeMapper.allOptions()
+            typeOptions = EquipmentTypeMapper.allOptions(),
+            otherRooms = otherRooms,
+            moveTransferEnabled = moveTransferEnabled
         )
     }
 
@@ -207,6 +287,36 @@ class EquipmentRoomViewModel(
         )
     }
 
+    private fun OfflineRoomEntity.toMeta(): RoomMeta {
+        return RoomMeta(
+            roomId = roomId,
+            serverId = serverId,
+            uuid = uuid,
+            name = title,
+            iconRes = resolveRoomIcon(this)
+        )
+    }
+
+    suspend fun loadMovementHistory(pivotId: Long): Result<List<MovementHistoryItem>> = withContext(Dispatchers.IO) {
+        offlineSyncRepository.getEquipmentRoomMovements(pivotId).map { movements ->
+            movements.map { dto ->
+                MovementHistoryItem(
+                    id = dto.id,
+                    uuid = dto.uuid,
+                    fromRoomId = dto.fromRoomId,
+                    toRoomId = dto.toRoomId,
+                    fromLocationId = dto.fromLocationId,
+                    toLocationId = dto.toLocationId,
+                    quantity = dto.quantity,
+                    movedAt = dto.movedAt,
+                    movedByUserId = dto.movedByUserId,
+                    note = dto.note,
+                    idempotencyKey = dto.idempotencyKey
+                )
+            }
+        }
+    }
+
     companion object {
         fun provideFactory(
             application: Application,
@@ -223,3 +333,17 @@ class EquipmentRoomViewModel(
         }
     }
 }
+
+data class MovementHistoryItem(
+    val id: Long,
+    val uuid: String?,
+    val fromRoomId: Long?,
+    val toRoomId: Long?,
+    val fromLocationId: Long?,
+    val toLocationId: Long?,
+    val quantity: Int?,
+    val movedAt: String?,
+    val movedByUserId: Long?,
+    val note: String?,
+    val idempotencyKey: String?
+)

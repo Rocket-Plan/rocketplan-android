@@ -1208,6 +1208,10 @@ class LocalDataService private constructor(
         dao.getEquipmentByUuid(uuid)
     }
 
+    suspend fun getEquipmentByCatalogServerIds(catalogServerIds: List<Long>): List<OfflineEquipmentEntity> = withContext(ioDispatcher) {
+        dao.getEquipmentByCatalogServerIds(catalogServerIds)
+    }
+
     suspend fun getPendingEquipment(projectId: Long): List<OfflineEquipmentEntity> = withContext(ioDispatcher) {
         dao.getPendingEquipment(projectId)
     }
@@ -1832,6 +1836,10 @@ class LocalDataService private constructor(
 
     suspend fun removeSyncOperationsForEntity(entityType: String, entityId: Long) = withContext(ioDispatcher) {
         dao.deleteSyncOperationsForEntity(entityType, entityId)
+    }
+
+    suspend fun removeSyncOperationsOfType(entityType: String, entityId: Long, operationType: SyncOperationType) = withContext(ioDispatcher) {
+        dao.deleteSyncOperationsOfType(entityType, entityId, operationType.name)
     }
 
     /**

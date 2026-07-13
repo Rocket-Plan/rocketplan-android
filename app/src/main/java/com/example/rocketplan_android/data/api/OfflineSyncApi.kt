@@ -12,8 +12,13 @@ import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialRequest
 import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.UpdatedRecordsResponse
+import com.example.rocketplan_android.data.model.offline.AttachRoomEquipmentRequest
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
+import com.example.rocketplan_android.data.model.offline.EquipmentMoveRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentMovementDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentTransferRequest
+import com.example.rocketplan_android.data.model.offline.UpdateEquipmentRoomRequest
 import com.example.rocketplan_android.data.model.CreateLocationRequest
 import com.example.rocketplan_android.data.model.LocationResourceResponse
 import com.example.rocketplan_android.data.model.offline.LocationDto
@@ -35,6 +40,7 @@ import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.DeleteProjectRequest
 import com.example.rocketplan_android.data.model.PropertyResourceResponse
 import com.example.rocketplan_android.data.model.ProjectResourceResponse
+import com.example.rocketplan_android.data.model.SingleDataResponse
 import com.example.rocketplan_android.data.model.SingleResourceResponse
 import com.example.rocketplan_android.data.model.PropertyMutationRequest
 import com.example.rocketplan_android.data.model.UpdateProjectRequest
@@ -479,25 +485,56 @@ interface OfflineSyncApi {
     @GET("/api/rooms/{roomId}/equipment")
     suspend fun getRoomEquipment(
         @Path("roomId") roomId: Long
-    ): List<EquipmentDto>
+    ): SingleDataResponse<List<EquipmentDto>>
 
     @POST("/api/projects/{projectId}/equipment")
     suspend fun createProjectEquipment(
         @Path("projectId") projectId: Long,
         @Body body: EquipmentRequest
-    ): EquipmentDto
+    ): SingleDataResponse<EquipmentDto>
 
-    @PUT("/api/equipment/{equipmentId}")
-    suspend fun updateEquipment(
-        @Path("equipmentId") equipmentId: Long,
-        @Body body: EquipmentRequest
-    ): EquipmentDto
+    @POST("/api/rooms/{roomId}/equipment")
+    suspend fun attachRoomEquipment(
+        @Path("roomId") roomId: Long,
+        @Body body: AttachRoomEquipmentRequest
+    ): SingleDataResponse<List<EquipmentDto>>
 
-    @HTTP(method = "DELETE", path = "/api/equipment/{equipmentId}", hasBody = true)
-    suspend fun deleteEquipment(
-        @Path("equipmentId") equipmentId: Long,
+    @PUT("/api/equipment-rooms/{id}")
+    suspend fun updateEquipmentRoom(
+        @Path("id") pivotId: Long,
+        @Body body: UpdateEquipmentRoomRequest
+    ): retrofit2.Response<Unit>
+
+    @HTTP(method = "DELETE", path = "/api/equipment-rooms/{id}", hasBody = true)
+    suspend fun deleteEquipmentRoom(
+        @Path("id") pivotId: Long,
         @Body body: DeleteWithTimestampRequest
     ): Response<Unit>
+
+    @POST("/api/equipment-rooms/{id}/move")
+    suspend fun moveEquipmentRoom(
+        @Path("id") pivotId: Long,
+        @Body body: EquipmentMoveRequest
+    ): SingleDataResponse<List<EquipmentDto>>
+
+    @POST("/api/equipment-rooms/{id}/transfer")
+    suspend fun transferEquipmentRoom(
+        @Path("id") pivotId: Long,
+        @Body body: EquipmentTransferRequest
+    ): SingleDataResponse<List<EquipmentDto>>
+
+    @GET("/api/equipment-rooms/{id}/movements")
+    suspend fun getEquipmentRoomMovements(
+        @Path("id") pivotId: Long
+    ): SingleDataResponse<List<EquipmentMovementDto>>
+
+    @GET("/api/projects/{project}/equipment-movements")
+    suspend fun getProjectEquipmentMovements(
+        @Path("project") projectId: Long,
+        @Query("equipment_id") equipmentId: Long? = null,
+        @Query("to_room_id") toRoomId: Long? = null,
+        @Query("moved_at") movedAt: String? = null
+    ): SingleDataResponse<List<EquipmentMovementDto>>
 
     // Claims
     @GET("/api/projects/{projectId}/claims")
