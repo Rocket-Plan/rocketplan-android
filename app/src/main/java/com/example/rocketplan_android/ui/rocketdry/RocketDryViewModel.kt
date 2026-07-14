@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -48,6 +49,27 @@ class RocketDryViewModel(
 
     private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
     val uiState: StateFlow<RocketDryUiState> = _uiState
+
+    /**
+     * RP-FR-019 legacy-wide gate: the legacy count-based equipment tab is shown only when the
+     * PROJECT owner-company is serialized-mode OFF. ON/UNKNOWN → hidden (the serialized system
+     * owns equipment). Observed so a mid-session flip hides the tab immediately.
+     */
+    val legacyEquipmentAllowed: StateFlow<Boolean> =
+        kotlinx.coroutines.flow.flow {
+            val companyId = localDataService.getProject(projectId)?.companyId
+            if (companyId == null) {
+                emit(false)
+                return@flow
+            }
+            com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(rocketPlanApp.secureStorage)
+                .observeMode(companyId)
+                .collect { emit(it == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) }
+        }.stateIn(
+            viewModelScope,
+            kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
+            true // default to shown for the common OFF case; the observer corrects near-instantly
+        )
 
     private val _currentTab = MutableStateFlow<RocketDryTab?>(null)
     val currentTab: StateFlow<RocketDryTab?> = _currentTab

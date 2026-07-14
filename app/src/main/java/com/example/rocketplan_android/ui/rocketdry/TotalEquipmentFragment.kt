@@ -105,8 +105,44 @@ class TotalEquipmentFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state -> render(state) }
+                launch { viewModel.uiState.collect { state -> render(state) } }
+                // RP-FR-019 legacy-wide gate #4: surface rejected legacy writes.
+                launch {
+                    viewModel.events.collect { msg ->
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    }
+                }
+                // RP-FR-019 legacy-wide gate: this is a LEGACY count screen — leave it if the
+                // project owner-company is not serialized-mode OFF (there is no serialized totals
+                // screen yet; returning to RocketDry is the correct "hide legacy" behavior).
+                launch { gateOnOwnerMode() }
             }
+        }
+    }
+
+    private suspend fun gateOnOwnerMode() {
+        val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+        val companyId = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            app.localDataService.getProject(args.projectId)?.companyId
+        }
+        if (companyId == null) {
+            leaveLegacyTotals()
+            return
+        }
+        com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
+            .observeMode(companyId)
+            .collect { mode ->
+                if (mode != com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
+                    leaveLegacyTotals()
+                }
+            }
+    }
+
+    private fun leaveLegacyTotals() {
+        val nav = findNavController()
+        if (nav.currentDestination?.id == R.id.totalEquipmentFragment) {
+            Toast.makeText(requireContext(), R.string.equipment_mode_changed, Toast.LENGTH_LONG).show()
+            nav.popBackStack()
         }
     }
 
