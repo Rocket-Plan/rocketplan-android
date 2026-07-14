@@ -26,11 +26,16 @@ class EquipmentAssetSyncService(
 ) {
     private fun now() = Date()
 
-    /** Register a new unit into the company pool (status = available). */
+    /**
+     * Register a new unit into the company pool (status = available).
+     *
+     * Review #6: [catalogUuid] is required — it must reference a real catalog item.
+     * There is no UUID fallback (that created catalog-orphaned assets server-side).
+     */
     suspend fun registerAsset(
         companyId: Long,
         name: String,
-        catalogUuid: String? = null,
+        catalogUuid: String,
         manufacturer: String? = null,
         model: String? = null,
         serialNumber: String? = null,
@@ -44,7 +49,7 @@ class EquipmentAssetSyncService(
             serverId = null,
             uuid = uuid,
             companyId = companyId,
-            catalogUuid = catalogUuid ?: uuid,
+            catalogUuid = catalogUuid,
             name = name,
             manufacturer = manufacturer,
             model = model,
@@ -77,7 +82,16 @@ class EquipmentAssetSyncService(
             updated
         }
 
-    /** Deploy (check-in) an available asset into a room. */
+    /**
+     * Deploy (check-in) an available asset into a room.
+     *
+     * Review #7: enforces local invariants before creating a placement — the asset
+     * must be available, not retired, have no existing open placement, and the room
+     * must belong to the asset's company. Returns null (rejected, nothing persisted)
+     * on any violation so contradictory state can't be created offline. The asset is
+     * flipped to `deployed` atomically with the placement regardless of dirty state,
+     * so a still-dirty offline-created asset can't appear available while deployed.
+     */
     suspend fun deployAsset(
         assetLocalId: Long,
         roomLocalId: Long,
@@ -86,6 +100,26 @@ class EquipmentAssetSyncService(
         note: String? = null
     ): OfflineEquipmentPlacementEntity? = withContext(ioDispatcher) {
         val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@withContext null
+        if (asset.isDeleted || asset.status != "available") {
+            logInvalidDeploy(asset.uuid, "asset not available (status=${asset.status}, deleted=${asset.isDeleted})")
+            return@withContext null
+        }
+        if (localDataService.getOpenPlacementForAsset(asset.assetId) != null) {
+            logInvalidDeploy(asset.uuid, "asset already has an open placement")
+            return@withContext null
+        }
+        val room = localDataService.getRoom(roomLocalId)
+        if (room == null) {
+            logInvalidDeploy(asset.uuid, "room $roomLocalId not found")
+            return@withContext null
+        }
+        // Room must belong to the asset's company (guard cross-company deploys).
+        val roomCompanyId = localDataService.getProject(room.projectId)?.companyId
+        if (roomCompanyId != null && roomCompanyId != asset.companyId) {
+            logInvalidDeploy(asset.uuid, "room company $roomCompanyId != asset company ${asset.companyId}")
+            return@withContext null
+        }
+
         val timestamp = now()
         val uuid = UuidUtils.generateUuidV7()
         val placement = OfflineEquipmentPlacementEntity(
@@ -94,7 +128,7 @@ class EquipmentAssetSyncService(
             uuid = uuid,
             assetId = asset.assetId,
             roomId = roomLocalId,
-            projectId = projectLocalId,
+            projectId = projectLocalId ?: room.projectId,
             dateIn = dateIn ?: timestamp,
             dateOut = null,
             note = note,
@@ -105,13 +139,16 @@ class EquipmentAssetSyncService(
             isDirty = true
         )
         localDataService.saveEquipmentPlacements(listOf(placement))
-        // Optimistically reflect on the local asset so the pool view updates immediately.
-        if (!asset.isDirty) {
-            localDataService.saveEquipmentAssets(listOf(asset.copy(status = "deployed")))
-        }
+        // Atomically flip the asset to deployed (even if dirty) so it can't appear in the
+        // available pool while it has an open placement.
+        localDataService.saveEquipmentAssets(listOf(asset.copy(status = "deployed", updatedAt = timestamp)))
         val saved = localDataService.getEquipmentPlacementByUuid(uuid) ?: placement
         syncQueueEnqueuer().enqueuePlacementDeploy(saved)
         saved
+    }
+
+    private fun logInvalidDeploy(assetUuid: String, reason: String) {
+        android.util.Log.w("EquipmentAssetSyncService", "Rejecting deploy of $assetUuid: $reason")
     }
 
     /** Retire an asset (soft-delete + status retired). */

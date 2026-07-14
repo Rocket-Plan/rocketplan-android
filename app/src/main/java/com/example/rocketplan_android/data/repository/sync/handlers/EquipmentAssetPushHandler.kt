@@ -43,26 +43,50 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
             when {
                 e.isConflict() && asset.serverId != null ->
                     handle409Conflict(e as HttpException, asset, operation)
-                e.isValidationError() -> {
-                    Log.w(SYNC_TAG, "Dropping equipment asset ${asset.uuid}: 422 validation error")
-                    ctx.remoteLogger?.log(
-                        LogLevel.WARN, SYNC_TAG, "Equipment asset dropped - 422 validation error",
-                        mapOf("assetUuid" to asset.uuid, "serverId" to (asset.serverId?.toString() ?: "null"))
-                    )
-                    OperationOutcome.DROP
-                }
-                asset.serverId != null && e.isMissingOnServer() -> {
-                    // Row vanished server-side — re-register.
-                    val recreated = ctx.api.registerEquipmentAsset(asset.companyId, asset.toRegisterRequest()).data
-                    ctx.localDataService.saveEquipmentAssets(listOf(recreated.toEntity(asset)))
-                    OperationOutcome.SUCCESS
-                }
+                e.isValidationError() -> resolve422(asset, e)
+                asset.serverId != null && e.isMissingOnServer() -> reconcileMissing(asset)
                 else -> {
                     Log.w(SYNC_TAG, "EquipmentAssetPushHandler unknown error; retrying", e)
                     OperationOutcome.RETRY
                 }
             }
         }
+    }
+
+    /**
+     * RP-CD-019: on a terminal 422, drain the error body for diagnosis and resolve
+     * the local row (→ FAILED, clean) so it is not stranded PENDING with no queue op.
+     */
+    private suspend fun resolve422(asset: OfflineEquipmentAssetEntity, error: Throwable): OperationOutcome {
+        val body = (error as? HttpException)?.response()?.errorBody()?.string()
+        Log.w(SYNC_TAG, "Dropping equipment asset ${asset.uuid}: 422 - $body")
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, SYNC_TAG, "Equipment asset dropped - 422 validation error",
+            mapOf(
+                "assetUuid" to asset.uuid,
+                "serverId" to (asset.serverId?.toString() ?: "null"),
+                "body" to (body ?: "")
+            )
+        )
+        ctx.localDataService.saveEquipmentAssets(
+            listOf(asset.copy(isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = ctx.now()))
+        )
+        return OperationOutcome.DROP
+    }
+
+    /**
+     * Review #4: a 404/410 on an existing serverId means the asset was retired/removed
+     * by another client — reconcile it as deleted locally. Do NOT re-register (that
+     * would resurrect a retired unit as a duplicate).
+     */
+    private suspend fun reconcileMissing(asset: OfflineEquipmentAssetEntity): OperationOutcome {
+        Log.w(SYNC_TAG, "Equipment asset ${asset.uuid} missing on server (404/410); reconciling as deleted")
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, SYNC_TAG, "Equipment asset reconciled as deleted (missing on server)",
+            mapOf("assetUuid" to asset.uuid, "serverId" to (asset.serverId?.toString() ?: "null"))
+        )
+        ctx.localDataService.saveEquipmentAssets(listOf(deletedCopy(asset)))
+        return OperationOutcome.SUCCESS
     }
 
     /** Retire — DELETE /equipment-assets/{id} (no lock; returns 204). */
@@ -90,7 +114,16 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
             }
             // 422 = already retired or an open placement exists; not retryable as-is.
             response.code() == 422 -> {
-                Log.w(SYNC_TAG, "Dropping equipment asset retire ${asset.uuid}: 422 (already retired / open placement)")
+                val body = response.errorBody()?.string()
+                Log.w(SYNC_TAG, "Dropping equipment asset retire ${asset.uuid}: 422 - $body")
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Equipment asset retire dropped - 422",
+                    mapOf("assetUuid" to asset.uuid, "serverId" to serverId.toString(), "body" to (body ?: ""))
+                )
+                // RP-CD-019: resolve the row (→ FAILED, clean) so it isn't stranded PENDING.
+                ctx.localDataService.saveEquipmentAssets(
+                    listOf(asset.copy(isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = ctx.now()))
+                )
                 OperationOutcome.DROP
             }
             else -> OperationOutcome.RETRY
@@ -104,54 +137,54 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
         lastSyncedAt = ctx.now()
     )
 
+    /**
+     * Review #5: on a 409 the server holds a NEWER version. Do NOT blind-resubmit
+     * the stale local data (that would clobber the other client's change — the exact
+     * thing optimistic locking prevents). Record the conflict for user resolution
+     * immediately and resolve the row out of PENDING so it doesn't re-enqueue.
+     */
     private suspend fun handle409Conflict(
         error: HttpException,
         asset: OfflineEquipmentAssetEntity,
         operation: OfflineSyncQueueEntity
     ): OperationOutcome {
-        ctx.remoteLogger?.log(
-            LogLevel.WARN, SYNC_TAG, "Equipment asset update 409 conflict",
-            mapOf("assetServerId" to (asset.serverId?.toString() ?: "null"), "assetUuid" to asset.uuid)
-        )
-        // RP-CD-005: do NOT drain the 409 body before extractUpdatedAt consumes it.
+        // RP-CD-005: read the 409 body exactly once, here, for the remote version.
         val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
-            ?: return OperationOutcome.SKIP
-
-        val retryResult = runCatching {
-            ctx.api.updateEquipmentAsset(asset.serverId!!, asset.toUpdateRequest(freshUpdatedAt)).data
-        }.onFailure { if (it is CancellationException) throw it }
-
-        retryResult.onFailure { retryError ->
-            if (retryError.isConflict()) {
-                val conflict = OfflineConflictResolutionEntity(
-                    conflictId = UuidUtils.generateUuidV7(),
-                    entityType = "equipment_asset",
-                    entityId = asset.assetId,
-                    entityUuid = asset.uuid,
-                    localVersion = ctx.gson.toJson(
-                        mapOf<String, Any?>(
-                            "name" to asset.name,
-                            "manufacturer" to asset.manufacturer,
-                            "model" to asset.model,
-                            "serialNumber" to asset.serialNumber,
-                            "assetTag" to asset.assetTag,
-                            "status" to asset.status
-                        )
-                    ).toByteArray(Charsets.UTF_8),
-                    remoteVersion = ctx.gson.toJson(mapOf<String, Any?>("updatedAt" to freshUpdatedAt))
-                        .toByteArray(Charsets.UTF_8),
-                    conflictType = "UPDATE_CONFLICT",
-                    detectedAt = ctx.now(),
-                    originalOperationId = operation.operationId
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, SYNC_TAG, "Equipment asset update 409 conflict → CONFLICT_PENDING",
+            mapOf(
+                "assetServerId" to (asset.serverId?.toString() ?: "null"),
+                "assetUuid" to asset.uuid,
+                "remoteUpdatedAt" to (freshUpdatedAt ?: "unknown")
+            )
+        )
+        val conflict = OfflineConflictResolutionEntity(
+            conflictId = UuidUtils.generateUuidV7(),
+            entityType = "equipment_asset",
+            entityId = asset.assetId,
+            entityUuid = asset.uuid,
+            localVersion = ctx.gson.toJson(
+                mapOf<String, Any?>(
+                    "name" to asset.name,
+                    "manufacturer" to asset.manufacturer,
+                    "model" to asset.model,
+                    "serialNumber" to asset.serialNumber,
+                    "assetTag" to asset.assetTag,
+                    "status" to asset.status
                 )
-                ctx.recordConflict(conflict)
-                return OperationOutcome.CONFLICT_PENDING
-            }
-            if (retryError.isValidationError()) return OperationOutcome.DROP
-            throw retryError
-        }
-
-        ctx.localDataService.saveEquipmentAssets(listOf(retryResult.getOrThrow().toEntity(asset)))
-        return OperationOutcome.SUCCESS
+            ).toByteArray(Charsets.UTF_8),
+            remoteVersion = ctx.gson.toJson(mapOf<String, Any?>("updatedAt" to freshUpdatedAt))
+                .toByteArray(Charsets.UTF_8),
+            conflictType = "UPDATE_CONFLICT",
+            detectedAt = ctx.now(),
+            originalOperationId = operation.operationId
+        )
+        ctx.recordConflict(conflict)
+        // Resolve the row out of PENDING (→ CONFLICT) so it isn't re-enqueued in a loop;
+        // the conflict record retains the local version for resolution.
+        ctx.localDataService.saveEquipmentAssets(
+            listOf(asset.copy(isDirty = false, syncStatus = SyncStatus.CONFLICT))
+        )
+        return OperationOutcome.CONFLICT_PENDING
     }
 }

@@ -1,10 +1,13 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.local.SyncStatus
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.repository.mapper.toDeployRequest
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.logging.LogLevel
+import retrofit2.HttpException
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -58,27 +61,48 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
                 projectLocalId = placement.projectId
             )
             ctx.localDataService.saveEquipmentPlacements(listOf(synced))
-            // Reflect the deploy on the (clean) asset so the pool view updates offline.
+            // Review #8: refresh the asset so its optimistic-lock token (serverUpdatedAt),
+            // status and current_placement_id reflect the check-in — otherwise the next
+            // move/check-out begins with a stale lock. Skip when the asset has unsynced
+            // local edits (its own op carries them; a blind refresh would clobber them).
             if (!asset.isDirty) {
-                ctx.localDataService.saveEquipmentAssets(
-                    listOf(asset.copy(status = "deployed", currentPlacementServerId = dto.id))
-                )
+                runCatching {
+                    val assetDto = ctx.api.getEquipmentAsset(assetServerId).data
+                    ctx.localDataService.saveEquipmentAssets(listOf(assetDto.toEntity(asset)))
+                }.onFailure { err ->
+                    if (err is CancellationException) throw err
+                    Log.w(SYNC_TAG, "Deploy succeeded but asset refresh failed for ${asset.uuid}", err)
+                }
             }
             OperationOutcome.SUCCESS
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            if (e.isValidationError()) {
-                // 422 = room not on project / already deployed / date overlap.
-                Log.w(SYNC_TAG, "Dropping placement deploy ${placement.uuid}: 422 validation error")
-                ctx.remoteLogger?.log(
-                    LogLevel.WARN, SYNC_TAG, "Placement deploy dropped - 422",
-                    mapOf("placementUuid" to placement.uuid, "assetServerId" to assetServerId.toString())
-                )
-                OperationOutcome.DROP
-            } else {
+            if (e.isValidationError()) resolve422(placement, e)
+            else {
                 Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler deploy error; retrying", e)
                 OperationOutcome.RETRY
             }
         }
+    }
+
+    /**
+     * RP-CD-019: on a terminal 422 (room not on project / already deployed / overlap),
+     * drain the body for diagnosis and resolve the local row (→ FAILED, clean) so it
+     * is not stranded PENDING with no queue op.
+     */
+    private suspend fun resolve422(
+        placement: OfflineEquipmentPlacementEntity,
+        error: Throwable
+    ): OperationOutcome {
+        val body = (error as? HttpException)?.response()?.errorBody()?.string()
+        Log.w(SYNC_TAG, "Dropping placement deploy ${placement.uuid}: 422 - $body")
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, SYNC_TAG, "Placement deploy dropped - 422",
+            mapOf("placementUuid" to placement.uuid, "body" to (body ?: ""))
+        )
+        ctx.localDataService.saveEquipmentPlacements(
+            listOf(placement.copy(isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = ctx.now()))
+        )
+        return OperationOutcome.DROP
     }
 }

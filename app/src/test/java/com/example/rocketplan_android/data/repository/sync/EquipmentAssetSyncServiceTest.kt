@@ -36,7 +36,7 @@ class EquipmentAssetSyncServiceTest {
         val enq = slot<OfflineEquipmentAssetEntity>()
         coEvery { enqueuer.enqueueEquipmentAssetUpsert(capture(enq), any()) } just Runs
 
-        service.registerAsset(companyId = 7L, name = "Air Mover")
+        service.registerAsset(companyId = 7L, name = "Air Mover", catalogUuid = "cat-uuid")
 
         val entity = saved.captured.first()
         assertThat(entity.companyId).isEqualTo(7L)
@@ -44,8 +44,8 @@ class EquipmentAssetSyncServiceTest {
         assertThat(entity.status).isEqualTo("available")
         assertThat(entity.serverId).isNull()
         assertThat(entity.isDirty).isTrue()
-        // catalogUuid defaults to the asset uuid when not supplied.
-        assertThat(entity.catalogUuid).isEqualTo(entity.uuid)
+        // Review #6: the supplied catalog id is used verbatim (no uuid fallback).
+        assertThat(entity.catalogUuid).isEqualTo("cat-uuid")
         coVerify(exactly = 1) { enqueuer.enqueueEquipmentAssetUpsert(any(), any()) }
     }
 
@@ -56,6 +56,10 @@ class EquipmentAssetSyncServiceTest {
             status = "available", createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getEquipmentAsset(50L) } returns asset
+        // Deploy invariants (review #7): no open placement, room exists + same company.
+        coEvery { local.getOpenPlacementForAsset(50L) } returns null
+        coEvery { local.getRoom(400L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createRoom(roomId = 400L, projectId = 100L)
+        coEvery { local.getProject(100L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createProject(projectId = 100L, companyId = 7L)
         val savedP = slot<List<OfflineEquipmentPlacementEntity>>()
         coEvery { local.saveEquipmentPlacements(capture(savedP)) } just Runs
         coEvery { local.getEquipmentPlacementByUuid(any()) } answers { savedP.captured.first() }
@@ -77,6 +81,38 @@ class EquipmentAssetSyncServiceTest {
     fun `deployAsset with unknown asset returns null and does not enqueue`() = runTest {
         coEvery { local.getEquipmentAsset(50L) } returns null
         val result = service.deployAsset(assetLocalId = 50L, roomLocalId = 400L)
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementDeploy(any()) }
+    }
+
+    @Test
+    fun `deployAsset rejected when asset already has an open placement`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "available", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 1L, uuid = "open", assetId = 50L, roomId = 400L, isOpen = true,
+            createdAt = Date(), updatedAt = Date()
+        )
+
+        val result = service.deployAsset(assetLocalId = 50L, roomLocalId = 400L)
+
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementDeploy(any()) }
+    }
+
+    @Test
+    fun `deployAsset rejected when asset is not available`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+
+        val result = service.deployAsset(assetLocalId = 50L, roomLocalId = 400L)
+
         assertThat(result).isNull()
         coVerify(exactly = 0) { enqueuer.enqueuePlacementDeploy(any()) }
     }

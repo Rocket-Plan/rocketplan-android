@@ -123,12 +123,13 @@ class SerializedRoomEquipmentViewModel(
         }.collect { _uiState.value = it }
     }
 
-    fun registerAndDeploy(name: String, serialNumber: String?) {
+    fun registerAndDeploy(name: String, catalogUuid: String, serialNumber: String?) {
         viewModelScope.launch(Dispatchers.IO) {
             val companyId = app.secureStorage.getCompanyIdSync() ?: return@launch
             val asset = offlineSyncRepository.registerEquipmentAssetOffline(
                 companyId = companyId,
                 name = name,
+                catalogUuid = catalogUuid,
                 serialNumber = serialNumber
             )
             offlineSyncRepository.deployEquipmentAssetOffline(

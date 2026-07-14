@@ -94,7 +94,11 @@ internal fun EquipmentAssetPlacementDto.toEntity(
 // ---------------------------------------------------------------------------
 internal fun OfflineEquipmentAssetEntity.toRegisterRequest(): RegisterEquipmentAssetRequest =
     RegisterEquipmentAssetRequest(
-        catalogUuid = catalogUuid ?: uuid,
+        // Review #6: no UUID fallback — a real catalog id must be supplied. Substituting
+        // the asset uuid produced syntactically-valid but catalog-orphaned assets.
+        catalogUuid = requireNotNull(catalogUuid) {
+            "catalogUuid is required to register a serialized asset"
+        },
         name = name ?: "Equipment",
         manufacturer = manufacturer,
         model = model,

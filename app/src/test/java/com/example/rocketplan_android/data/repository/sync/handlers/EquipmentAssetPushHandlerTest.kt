@@ -101,41 +101,48 @@ class EquipmentAssetPushHandlerTest {
     }
 
     @Test
-    fun `409 then success retries with fresh timestamp`() = runTest {
+    fun `409 records conflict immediately without resubmitting stale data`() = runTest {
         coEvery { localDataService.getEquipmentAssetByUuid("asset-uuid") } returns asset(serverId = 900L)
-        val lockSlot = slot<com.example.rocketplan_android.data.model.offline.UpdateEquipmentAssetRequest>()
-        var calls = 0
-        coEvery { api.updateEquipmentAsset(900L, capture(lockSlot)) } coAnswers {
-            calls++
-            if (calls == 1) throw PushHandlerTestFixtures.create409WithUpdatedAt("2026-07-09T00:00:00.000000Z")
-            EquipmentAssetResponse(dto(), idempotent = null)
-        }
-
-        val outcome = handler.handleUpsert(op(SyncOperationType.UPDATE))
-
-        assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
-        // Retry used the fresh timestamp extracted from the 409 body.
-        assertThat(lockSlot.captured.updatedAt).isEqualTo("2026-07-09T00:00:00.000000Z")
-    }
-
-    @Test
-    fun `double 409 records conflict and returns CONFLICT_PENDING`() = runTest {
-        coEvery { localDataService.getEquipmentAssetByUuid("asset-uuid") } returns asset(serverId = 900L)
-        // First call 409s (body carries updated_at → retried); retry 409s again → conflict.
-        coEvery { api.updateEquipmentAsset(900L, any()) } throws PushHandlerTestFixtures.create409WithUpdatedAt()
+        coEvery { api.updateEquipmentAsset(900L, any()) } throws
+            PushHandlerTestFixtures.create409WithUpdatedAt("2026-07-09T00:00:00.000000Z")
         coEvery { localDataService.upsertConflict(any()) } just Runs
 
         val outcome = handler.handleUpsert(op(SyncOperationType.UPDATE))
 
         assertThat(outcome).isEqualTo(OperationOutcome.CONFLICT_PENDING)
+        // Review #5: exactly ONE update call — no blind resubmit of stale local data.
+        coVerify(exactly = 1) { api.updateEquipmentAsset(900L, any()) }
         coVerify(exactly = 1) { localDataService.upsertConflict(any()) }
     }
 
     @Test
-    fun `422 drops`() = runTest {
+    fun `404 on existing asset reconciles as deleted without re-registering`() = runTest {
+        coEvery { localDataService.getEquipmentAssetByUuid("asset-uuid") } returns asset(serverId = 900L)
+        coEvery { api.updateEquipmentAsset(900L, any()) } throws PushHandlerTestFixtures.create404Response()
+        val saved = slot<List<OfflineEquipmentAssetEntity>>()
+        coEvery { localDataService.saveEquipmentAssets(capture(saved)) } just Runs
+
+        val outcome = handler.handleUpsert(op(SyncOperationType.UPDATE))
+
+        assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
+        // Review #4: must NOT resurrect a remotely-retired asset via re-register.
+        coVerify(exactly = 0) { api.registerEquipmentAsset(any(), any()) }
+        assertThat(saved.captured.last().isDeleted).isTrue()
+    }
+
+    @Test
+    fun `422 drops and resolves the row out of PENDING`() = runTest {
         coEvery { localDataService.getEquipmentAssetByUuid("asset-uuid") } returns asset(serverId = 900L)
         coEvery { api.updateEquipmentAsset(900L, any()) } throws PushHandlerTestFixtures.create422Response()
-        assertThat(handler.handleUpsert(op(SyncOperationType.UPDATE))).isEqualTo(OperationOutcome.DROP)
+        val saved = slot<List<OfflineEquipmentAssetEntity>>()
+        coEvery { localDataService.saveEquipmentAssets(capture(saved)) } just Runs
+
+        val outcome = handler.handleUpsert(op(SyncOperationType.UPDATE))
+
+        assertThat(outcome).isEqualTo(OperationOutcome.DROP)
+        // RP-CD-019: row resolved (FAILED, clean) — not stranded PENDING.
+        assertThat(saved.captured.last().syncStatus).isEqualTo(SyncStatus.FAILED)
+        assertThat(saved.captured.last().isDirty).isFalse()
     }
 
     @Test

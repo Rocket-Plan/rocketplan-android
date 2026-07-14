@@ -1188,7 +1188,7 @@ class OfflineSyncRepository(
     suspend fun registerEquipmentAssetOffline(
         companyId: Long,
         name: String,
-        catalogUuid: String? = null,
+        catalogUuid: String,
         manufacturer: String? = null,
         model: String? = null,
         serialNumber: String? = null,

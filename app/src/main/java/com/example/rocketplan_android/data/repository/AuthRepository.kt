@@ -460,9 +460,15 @@ class AuthRepository(
                         secureStorage.saveCompanyId(selectedCompanyId)
                         localDataService.setCurrentCompanyId(selectedCompanyId)
                         RetrofitClient.setCompanyId(selectedCompanyId)
-                        // RP-FR-019: cache the per-company serialized-equipment flag.
-                        // Best-effort — on failure the mode stays UNKNOWN (retryable), never OFF.
-                        cacheSerializedEquipmentFlag(selectedCompanyId)
+                        // RP-FR-019 (review #1): only cache the serialized-equipment mode once the
+                        // server has actually activated this company — otherwise the backend may still
+                        // be scoped to the previous company and return the wrong company's mode. If
+                        // activation didn't succeed, force the mode to UNKNOWN (retryable), never stale.
+                        if (setActiveCompanySuccess) {
+                            cacheSerializedEquipmentFlag(selectedCompanyId)
+                        } else {
+                            secureStorage.clearSerializedEquipmentEnabled(selectedCompanyId)
+                        }
                         remoteLogger?.log(
                             LogLevel.INFO,
                             TAG,
@@ -535,15 +541,26 @@ class AuthRepository(
      * UNKNOWN (retryable) rather than falling back to legacy (OFF).
      */
     private suspend fun cacheSerializedEquipmentFlag(companyId: Long) {
+        // Review #1: start from UNKNOWN so a stale value never survives a failed/invalid
+        // refresh, and only cache after a valid response for THIS company.
+        secureStorage.clearSerializedEquipmentEnabled(companyId)
         try {
             val response = authService.getFeatureFlags()
-            val enabled = response.body()?.data?.values?.serializedEquipment
-            if (response.isSuccessful && enabled != null) {
+            val data = response.body()?.data
+            val enabled = data?.values?.serializedEquipment
+            if (response.isSuccessful && data?.valid == true && enabled != null) {
                 secureStorage.saveSerializedEquipmentEnabled(companyId, enabled)
+            } else {
+                Log.w(
+                    "AuthRepository",
+                    "Feature flags not cached for companyId=$companyId " +
+                        "(success=${response.isSuccessful}, valid=${data?.valid}, enabled=$enabled) → UNKNOWN"
+                )
             }
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
         } catch (e: Exception) {
+            // Leaves the mode UNKNOWN (cleared above) rather than stranding a stale value.
             Log.w("AuthRepository", "Failed to fetch serialized equipment flag for companyId=$companyId", e)
         }
     }
@@ -570,6 +587,9 @@ class AuthRepository(
                 secureStorage.saveCompanyId(companyId)
                 localDataService.setCurrentCompanyId(companyId)
                 RetrofitClient.setCompanyId(companyId)
+                // RP-FR-019 (review #1): the server is now scoped to this company, so it's
+                // safe to (re)fetch the serialized-equipment mode for it.
+                cacheSerializedEquipmentFlag(companyId)
                 remoteLogger?.log(
                     LogLevel.INFO,
                     TAG,
@@ -584,6 +604,8 @@ class AuthRepository(
                 secureStorage.saveCompanyId(companyId)
                 localDataService.setCurrentCompanyId(companyId)
                 RetrofitClient.setCompanyId(companyId)
+                // Server context is uncertain → force serialized mode to UNKNOWN (never stale).
+                secureStorage.clearSerializedEquipmentEnabled(companyId)
                 remoteLogger?.log(
                     LogLevel.WARN,
                     TAG,
@@ -598,6 +620,8 @@ class AuthRepository(
             secureStorage.saveCompanyId(companyId)
             localDataService.setCurrentCompanyId(companyId)
             RetrofitClient.setCompanyId(companyId)
+            // Server context is uncertain → force serialized mode to UNKNOWN (never stale).
+            secureStorage.clearSerializedEquipmentEnabled(companyId)
             remoteLogger?.log(
                 LogLevel.WARN,
                 TAG,
