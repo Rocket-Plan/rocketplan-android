@@ -123,10 +123,18 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
                     LogLevel.WARN, SYNC_TAG, "Equipment asset retire dropped - 422",
                     mapOf("assetUuid" to asset.uuid, "serverId" to serverId.toString(), "body" to (body ?: ""))
                 )
-                // RP-CD-019: resolve the row (→ FAILED, clean) so it isn't stranded PENDING.
-                ctx.localDataService.saveEquipmentAssets(
-                    listOf(asset.copy(isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = ctx.now()))
-                )
+                // Review #5: the asset is still active server-side (e.g. still deployed) — restore
+                // it from the server rather than leaving it stranded locally-deleted. RP-CD-019:
+                // resolve the row so it isn't stranded PENDING.
+                runCatching {
+                    val fresh = ctx.api.getEquipmentAsset(serverId).data
+                    ctx.localDataService.saveEquipmentAssets(listOf(fresh.toEntity(asset).copy(isDeleted = false)))
+                }.onFailure { e ->
+                    if (e is CancellationException) throw e
+                    ctx.localDataService.saveEquipmentAssets(
+                        listOf(asset.copy(isDeleted = false, isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = ctx.now()))
+                    )
+                }
                 OperationOutcome.DROP
             }
             else -> OperationOutcome.RETRY

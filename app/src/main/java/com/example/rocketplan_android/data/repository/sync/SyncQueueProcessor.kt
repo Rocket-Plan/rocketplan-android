@@ -1015,8 +1015,9 @@ class SyncQueueProcessor(
         operationType: SyncOperationType
     ) {
         // Move/check-out lock on the ASSET's updated_at (resolved in the handler), so no
-        // payload lock is needed here.
-        val payload = PendingLockPayload(lockUpdatedAt = null)
+        // payload lock is needed here. Review #1: a FRESH operation-scoped idempotency key
+        // (persisted so retries reuse it) — never the placement uuid across operations.
+        val payload = PendingLockPayload(lockUpdatedAt = null, idempotencyKey = UuidUtils.generateUuidV7())
         enqueueOperation(
             entityType = "equipment_asset_placement",
             entityId = placement.placementId,

@@ -133,33 +133,40 @@ internal fun OfflineEquipmentAssetEntity.toUpdateRequest(
         updatedAt = lockUpdatedAt
     )
 
+// Review round-4 #1: the idempotency key is OPERATION-scoped (one fresh key per
+// logical deploy/move/check-out, persisted in the queue payload and preserved
+// across retries) — NOT the placement uuid, which the backend's operation ledger
+// would see reused across different operations and reject with 409.
 internal fun OfflineEquipmentPlacementEntity.toDeployRequest(
-    roomServerId: Long
+    roomServerId: Long,
+    idempotencyKey: String
 ): DeployPlacementRequest =
     DeployPlacementRequest(
         roomId = roomServerId,
         dateIn = dateIn.toApiTimestamp(),
         note = note,
-        idempotencyKey = uuid
+        idempotencyKey = idempotencyKey
     )
 
 internal fun OfflineEquipmentPlacementEntity.toMoveRequest(
     toRoomServerId: Long,
-    lockUpdatedAt: String
+    lockUpdatedAt: String,
+    idempotencyKey: String
 ): MoveEquipmentAssetRequest =
     MoveEquipmentAssetRequest(
         toRoomId = toRoomServerId,
         movedAt = dateIn.toApiTimestamp(),
         note = note,
-        idempotencyKey = uuid,
+        idempotencyKey = idempotencyKey,
         updatedAt = lockUpdatedAt
     )
 
 internal fun OfflineEquipmentPlacementEntity.toCheckOutRequest(
-    lockUpdatedAt: String
+    lockUpdatedAt: String,
+    idempotencyKey: String
 ): CheckOutEquipmentAssetRequest =
     CheckOutEquipmentAssetRequest(
         dateOut = dateOut.toApiTimestamp(),
-        idempotencyKey = uuid,
+        idempotencyKey = idempotencyKey,
         updatedAt = lockUpdatedAt
     )

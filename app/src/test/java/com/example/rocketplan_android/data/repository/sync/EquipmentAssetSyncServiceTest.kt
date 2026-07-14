@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync
 
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.testing.MainDispatcherRule
@@ -167,6 +168,56 @@ class EquipmentAssetSyncServiceTest {
     }
 
     @Test
+    fun `move before deploy syncs keeps the CREATE and enqueues no move`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        // Deploy not synced yet: open placement has no serverId and a PENDING CREATE.
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
+            isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getRoom(500L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createRoom(roomId = 500L, projectId = 100L)
+        coEvery { local.getProject(100L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createProject(projectId = 100L, companyId = 7L)
+        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, any()) } returns
+            com.example.rocketplan_android.testing.PushHandlerTestFixtures.createSyncOperation(
+                entityType = "equipment_asset_placement", entityId = 60L, entityUuid = "p",
+                operationType = SyncOperationType.CREATE
+            )
+
+        service.moveAsset(assetLocalId = 50L, toRoomLocalId = 500L)
+
+        // The pending deploy CREATE is retargeted, not replaced by a MOVE.
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementMove(any()) }
+    }
+
+    @Test
+    fun `checkout before deploy syncs collapses the deploy op`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
+            isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, any()) } returns
+            com.example.rocketplan_android.testing.PushHandlerTestFixtures.createSyncOperation(
+                entityType = "equipment_asset_placement", entityId = 60L, entityUuid = "p",
+                operationType = SyncOperationType.CREATE
+            )
+        coEvery { local.removeSyncOperationsForEntity(any(), any()) } just Runs
+
+        service.checkOutAsset(50L)
+
+        coVerify(exactly = 1) { local.removeSyncOperationsForEntity("equipment_asset_placement", 60L) }
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementCheckout(any()) }
+    }
+
+    @Test
     fun `checkOutAsset closes the open placement and enqueues checkout`() = runTest {
         val asset = OfflineEquipmentAssetEntity(
             assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
@@ -193,10 +244,29 @@ class EquipmentAssetSyncServiceTest {
             status = "available", createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns null // #5 guard: not deployed
 
         service.retireAsset(50L)
 
         coVerify(exactly = 1) { enqueuer.enqueueEquipmentAssetRetire(match { it.isDeleted && it.status == "retired" }, any()) }
+    }
+
+    @Test
+    fun `retireAsset rejects a server-known asset that is still deployed`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 1L, serverId = 12L, uuid = "open", assetId = 50L, roomId = 400L,
+            isOpen = true, createdAt = Date(), updatedAt = Date()
+        )
+
+        val result = service.retireAsset(50L)
+
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueueEquipmentAssetRetire(any(), any()) }
     }
 
     @Test

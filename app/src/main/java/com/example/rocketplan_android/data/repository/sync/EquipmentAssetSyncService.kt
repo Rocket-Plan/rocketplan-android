@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync
 
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
@@ -136,7 +137,13 @@ class EquipmentAssetSyncService(
         saved
     }
 
-    /** Move a deployed asset to another room (Phase 1c). Reads + checks inside the txn (#3). */
+    /**
+     * Move a deployed asset to another room (Phase 1c). Reads + checks inside the txn (#3).
+     *
+     * Review #2 compaction: if the deploy hasn't synced yet (open placement still has a
+     * PENDING CREATE), we just retarget the pending CREATE's room and keep it — enqueuing a
+     * separate MOVE would remove the CREATE and the server would never receive the check-in.
+     */
     suspend fun moveAsset(assetLocalId: Long, toRoomLocalId: Long): OfflineEquipmentPlacementEntity? =
         localDataService.runInTransaction {
             val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@runInTransaction null
@@ -146,6 +153,7 @@ class EquipmentAssetSyncService(
             val roomCompanyId = localDataService.getProject(room.projectId)?.companyId
             if (roomCompanyId != null && roomCompanyId != asset.companyId) return@runInTransaction null
 
+            val deployPending = open.serverId == null && pendingOpType(open.placementId) == SyncOperationType.CREATE
             val updated = open.copy(
                 roomId = toRoomLocalId,
                 projectId = room.projectId,
@@ -154,16 +162,43 @@ class EquipmentAssetSyncService(
                 isDirty = true
             )
             localDataService.saveEquipmentPlacements(listOf(updated))
-            syncQueueEnqueuer().enqueuePlacementMove(updated)
+            if (!deployPending) {
+                syncQueueEnqueuer().enqueuePlacementMove(updated)
+            } // else: the pending deploy CREATE now deploys to the new room — keep it, no MOVE op.
             updated
         }
 
-    /** Check a deployed asset back out to the pool (Phase 1c). Reads + write inside the txn (#3). */
+    /**
+     * Check a deployed asset back out to the pool (Phase 1c). Reads + write inside the txn (#3).
+     *
+     * Review #2 compaction: if the deploy hasn't synced yet (PENDING CREATE), collapse both
+     * ops — drop the CREATE, soft-delete the never-synced placement, and free the asset. The
+     * server never saw the deploy, so nothing is sent.
+     */
     suspend fun checkOutAsset(assetLocalId: Long): OfflineEquipmentPlacementEntity? =
         localDataService.runInTransaction {
             val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@runInTransaction null
             val open = localDataService.getOpenPlacementForAsset(asset.assetId) ?: return@runInTransaction null
             val timestamp = now()
+
+            if (open.serverId == null && pendingOpType(open.placementId) == SyncOperationType.CREATE) {
+                localDataService.removeSyncOperationsForEntity("equipment_asset_placement", open.placementId)
+                val closed = open.copy(
+                    isDeleted = true, isOpen = false, dateOut = timestamp,
+                    isDirty = false, syncStatus = SyncStatus.SYNCED, lastSyncedAt = timestamp
+                )
+                localDataService.saveEquipmentPlacements(listOf(closed))
+                // Free the asset. If it's server-known, the deploy never reached the server so it's
+                // still available there → clean it; if it's itself unsynced, keep it dirty for register.
+                val freed = if (asset.serverId == null) {
+                    asset.copy(status = "available", updatedAt = timestamp)
+                } else {
+                    asset.copy(status = "available", isDirty = false, syncStatus = SyncStatus.SYNCED, updatedAt = timestamp, lastSyncedAt = timestamp)
+                }
+                localDataService.saveEquipmentAssets(listOf(freed))
+                return@runInTransaction closed
+            }
+
             val updated = open.copy(
                 dateOut = timestamp,
                 updatedAt = timestamp,
@@ -179,6 +214,9 @@ class EquipmentAssetSyncService(
             updated
         }
 
+    private suspend fun pendingOpType(placementLocalId: Long): SyncOperationType? =
+        localDataService.getSyncOperationForEntity("equipment_asset_placement", placementLocalId)?.operationType
+
     /**
      * Retire an asset. Review #7: if it never reached the server, collapse the WHOLE
      * unsynced graph atomically — drop its asset AND placement queue ops and soft-delete
@@ -189,6 +227,12 @@ class EquipmentAssetSyncService(
         localDataService.runInTransaction {
             val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@runInTransaction null
             val timestamp = now()
+            // Review #5: a server-known asset with an open placement must be checked out first —
+            // retiring it would 422 on the backend and strand the asset locally-deleted. (An
+            // unsynced asset's open placement is collapsed below.)
+            if (asset.serverId != null && localDataService.getOpenPlacementForAsset(asset.assetId) != null) {
+                return@runInTransaction reject("retire", asset.uuid, "asset still has an open placement")
+            }
             if (asset.serverId == null) {
                 val placements = localDataService.getAllPlacementsForAsset(asset.assetId)
                 placements.forEach {

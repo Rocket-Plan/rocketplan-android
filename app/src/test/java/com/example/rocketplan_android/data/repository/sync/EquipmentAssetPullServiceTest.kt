@@ -96,6 +96,24 @@ class EquipmentAssetPullServiceTest {
     }
 
     @Test
+    fun `pagination failure aborts without deleting anything`() = runTest {
+        // Page 1 says there are 2 pages; page 2 throws → the whole pull fails and we must
+        // NOT treat a partial snapshot as authoritative (no stale deletion).
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
+            EquipmentAssetPageResponse(listOf(assetDto(900)), PaginationMeta(1, 2, 100, 2))
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 2) } throws RuntimeException("network")
+        val assetSaves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(assetSaves), any()) } just Runs
+
+        val result = service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        assertThat(result.isFailure).isTrue()
+        // Only the page-1 upsert happened; no reconciliation-deletion was performed.
+        assertThat(assetSaves.flatten().none { it.isDeleted }).isTrue()
+        io.mockk.coVerify(exactly = 0) { local.getSyncedEquipmentAssetsForCompany(any()) }
+    }
+
+    @Test
     fun `open placement whose asset left the room is closed`() = runTest {
         coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns page()
         coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()
