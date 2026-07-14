@@ -78,29 +78,49 @@ class EquipmentAssetPullService(
     }
 
     /**
-     * Review round-5 #3/#4: save pulled assets but PRESERVE the optimistic lifecycle fields
-     * (status / current_placement) of any asset that still has a pending local placement op —
-     * otherwise a pull landing before the deploy/check-out syncs would revert the status the
-     * server hasn't processed yet. `isDirty` (metadata) is handled by preserveDirty=true.
+     * Review round-6 #3/#4: an equipment-specific field merge (not whole-row preserveDirty).
+     *
+     *  - Clean asset with no live placement op → adopt the server row fully (authoritative).
+     *  - Otherwise (a pending metadata/retire edit, or a live placement op) → keep the local
+     *    edited fields and optimistic lifecycle, BUT adopt the server's authoritative identity
+     *    and — crucially — its fresh `serverUpdatedAt` (optimistic-lock token) so a subsequent
+     *    pending update doesn't conflict on a stale timestamp after a lifecycle op changed the
+     *    server asset.
+     *
+     * "Live placement op" is narrowed to PENDING/SYNCING (#4) — a FAILED op must not protect
+     * optimistic state indefinitely.
      */
     private suspend fun saveAssetsProtectingLifecycle(dtos: List<EquipmentAssetDto>) {
         if (dtos.isEmpty()) return
-        val entities = dtos.map { it.toEntity() }
+        val servers = dtos.map { it.toEntity() }
         val existingByServer = localDataService
-            .getEquipmentAssetsByServerIds(entities.mapNotNull { it.serverId })
+            .getEquipmentAssetsByServerIds(servers.mapNotNull { it.serverId })
             .associateBy { it.serverId }
-        val assetIdsWithPendingPlacement = localDataService.getPendingEquipmentPlacements()
+        val livePlacementAssetIds = localDataService.getPendingEquipmentPlacements()
+            .filter { it.syncStatus == SyncStatus.PENDING || it.syncStatus == SyncStatus.SYNCING }
             .map { it.assetId }
             .toSet()
-        val adjusted = entities.map { server ->
-            val local = existingByServer[server.serverId]
-            if (local != null && local.assetId in assetIdsWithPendingPlacement) {
-                server.copy(status = local.status, currentPlacementServerId = local.currentPlacementServerId)
+
+        val merged = servers.map { server ->
+            val local = existingByServer[server.serverId] ?: return@map server
+            val hasLivePlacement = local.assetId in livePlacementAssetIds
+            if (!local.isDirty && !hasLivePlacement) {
+                // Authoritative: adopt the server row, keeping only local identity.
+                server.copy(assetId = local.assetId, uuid = local.uuid)
             } else {
-                server
+                // Keep local edits + optimistic lifecycle; adopt server identity + FRESH lock token
+                // + non-conflicting authoritative fields.
+                local.copy(
+                    serverId = server.serverId,
+                    companyId = server.companyId,
+                    catalogUuid = server.catalogUuid ?: local.catalogUuid,
+                    isStandard = server.isStandard,
+                    serverUpdatedAt = server.serverUpdatedAt,
+                    lastSyncedAt = server.lastSyncedAt
+                )
             }
         }
-        localDataService.saveEquipmentAssets(adjusted, preserveDirty = true)
+        localDataService.saveEquipmentAssets(merged) // blind upsert — the merge is already applied
     }
 
     private suspend fun markMissingAssetsDeleted(companyId: Long, seen: Set<Long>) {

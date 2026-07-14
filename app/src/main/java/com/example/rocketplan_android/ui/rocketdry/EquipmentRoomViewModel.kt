@@ -77,6 +77,7 @@ class EquipmentRoomViewModel(
 
     fun addEquipment(typeKey: String, quantity: Int, startDate: Date?, endDate: Date?) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             val meta = EquipmentTypeMapper.metaFor(typeKey)
             val (start, end) = ensureDateOrder(startDate, endDate)
             offlineSyncRepository.upsertEquipmentOffline(
@@ -95,12 +96,14 @@ class EquipmentRoomViewModel(
         val newQuantity = (item.quantity + delta).coerceAtLeast(1)
         if (newQuantity == item.quantity) return
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             persistUpdate(item, quantity = newQuantity)
         }
     }
 
     fun updateStartDate(item: RoomEquipmentItem, newStartDate: Date) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             val (_, end) = ensureDateOrder(newStartDate, item.endDate)
             persistUpdate(item, startDate = newStartDate, endDate = end)
         }
@@ -108,6 +111,7 @@ class EquipmentRoomViewModel(
 
     fun updateEndDate(item: RoomEquipmentItem, newEndDate: Date) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             val (start, end) = ensureDateOrder(item.startDate, newEndDate)
             persistUpdate(item, startDate = start, endDate = end)
         }
@@ -115,11 +119,30 @@ class EquipmentRoomViewModel(
 
     fun deleteEquipment(item: RoomEquipmentItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             offlineSyncRepository.deleteEquipmentOffline(
                 equipmentId = item.equipmentId,
                 uuid = item.uuid
             )
         }
+    }
+
+    /**
+     * RP-FR-019 (review round-6 #1): a hard write boundary for the legacy count system.
+     * Legacy mutations are allowed only while the PROJECT owner-company is serialized-mode OFF;
+     * ON or UNKNOWN (or unknown owner) rejects the write. Navigation away is not sufficient —
+     * a tap during the OFF→ON transition could otherwise still submit a legacy write.
+     */
+    private suspend fun legacyWritable(): Boolean {
+        val companyId = localDataService.getProject(projectId)?.companyId ?: return false
+        val mode = com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(
+            rocketPlanApp.secureStorage
+        ).modeFor(companyId)
+        if (mode != com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
+            android.util.Log.w("EquipmentRoomViewModel", "Rejecting legacy equipment write — mode=$mode")
+            return false
+        }
+        return true
     }
 
     private suspend fun persistUpdate(

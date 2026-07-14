@@ -68,7 +68,6 @@ class EquipmentRoomFragment : Fragment() {
     }
 
     private var legacyMounted = false
-    private var navigatedToSerialized = false
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -113,12 +112,15 @@ class EquipmentRoomFragment : Fragment() {
     }
 
     private fun navigateToSerializedOnce() {
-        if (navigatedToSerialized) return
-        navigatedToSerialized = true
-        findNavController().navigate(
-            EquipmentRoomFragmentDirections
-                .actionEquipmentRoomFragmentToSerializedRoomEquipmentFragment(args.projectId, args.roomId)
-        )
+        // Review round-6 #2: gate on the CURRENT destination, not a one-shot boolean — so an
+        // ON→OFF→ON cycle (which returns to this host) navigates again instead of getting stuck.
+        val nav = findNavController()
+        if (nav.currentDestination?.id == R.id.equipmentRoomFragment) {
+            nav.navigate(
+                EquipmentRoomFragmentDirections
+                    .actionEquipmentRoomFragmentToSerializedRoomEquipmentFragment(args.projectId, args.roomId)
+            )
+        }
     }
 
     private fun setupLegacy() {

@@ -96,6 +96,65 @@ class EquipmentAssetPullServiceTest {
     }
 
     @Test
+    fun `dirty metadata with a live placement keeps local edits and adopts fresh lock`() = runTest {
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
+            page(assetDto(900).copy(name = "Server Name", status = "available"))
+        val existing = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "loc", companyId = 7L,
+            name = "Local Edit", status = "deployed", isDirty = true,
+            serverUpdatedAt = java.util.Date(0L), createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAssetsByServerIds(listOf(900L)) } returns listOf(existing)
+        // A live (PENDING) placement op for this asset.
+        coEvery { local.getPendingEquipmentPlacements() } returns listOf(
+            OfflineEquipmentPlacementEntity(
+                placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
+                isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
+            )
+        )
+        coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()
+        coEvery { local.getRoom(400L) } returns null // skip room reconcile
+        val saves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(saves), any()) } just Runs
+
+        service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        val merged = saves.flatten().first { it.serverId == 900L }
+        assertThat(merged.name).isEqualTo("Local Edit")            // metadata preserved
+        assertThat(merged.status).isEqualTo("deployed")            // optimistic lifecycle preserved
+        assertThat(merged.serverUpdatedAt).isNotEqualTo(java.util.Date(0L)) // fresh lock adopted
+    }
+
+    @Test
+    fun `a FAILED placement does not protect optimistic lifecycle`() = runTest {
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
+            page(assetDto(900).copy(status = "available"))
+        val existing = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "loc", companyId = 7L,
+            name = "Air Mover", status = "deployed", isDirty = false,
+            createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAssetsByServerIds(listOf(900L)) } returns listOf(existing)
+        coEvery { local.getPendingEquipmentPlacements() } returns listOf(
+            OfflineEquipmentPlacementEntity(
+                placementId = 60L, serverId = 12L, uuid = "p", assetId = 50L, roomId = 400L,
+                isOpen = true, isDirty = false, syncStatus = com.example.rocketplan_android.data.local.SyncStatus.FAILED,
+                createdAt = Date(), updatedAt = Date()
+            )
+        )
+        coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()
+        coEvery { local.getRoom(400L) } returns null
+        val saves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(saves), any()) } just Runs
+
+        service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        // FAILED op must NOT keep the stale "deployed" — the server's "available" wins.
+        val merged = saves.flatten().first { it.serverId == 900L }
+        assertThat(merged.status).isEqualTo("available")
+    }
+
+    @Test
     fun `pagination failure aborts without deleting anything`() = runTest {
         // Page 1 says there are 2 pages; page 2 throws → the whole pull fails and we must
         // NOT treat a partial snapshot as authoritative (no stale deletion).
