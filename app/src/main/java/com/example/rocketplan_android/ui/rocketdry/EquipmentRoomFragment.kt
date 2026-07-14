@@ -15,8 +15,11 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -67,6 +70,28 @@ class EquipmentRoomFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
+        // RP-FR-019 flag gate: the legacy count-based UI is mounted only when the
+        // company's serialized-equipment mode is OFF. ON or UNKNOWN routes to the
+        // serialized screen (which shows content or a retry state) — we never default
+        // to legacy while the mode is unknown.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+            val mode = withContext(Dispatchers.IO) {
+                com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
+                    .activeMode()
+            }
+            if (mode == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
+                setupLegacy()
+            } else {
+                findNavController().navigate(
+                    EquipmentRoomFragmentDirections
+                        .actionEquipmentRoomFragmentToSerializedRoomEquipmentFragment(args.projectId, args.roomId)
+                )
+            }
+        }
+    }
+
+    private fun setupLegacy() {
         setupRecycler()
         bindListeners()
         observeViewModel()
