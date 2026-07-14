@@ -161,6 +161,14 @@ class OfflineSyncRepository(
         )
     }
 
+    private val equipmentAssetSyncService by lazy {
+        com.example.rocketplan_android.data.repository.sync.EquipmentAssetSyncService(
+            localDataService = localDataService,
+            syncQueueEnqueuer = { syncQueueProcessor },
+            ioDispatcher = ioDispatcher
+        )
+    }
+
     private val moistureLogSyncService by lazy {
         MoistureLogSyncService(
             localDataService = localDataService,
@@ -1175,6 +1183,31 @@ class OfflineSyncRepository(
         uuid: String? = null
     ): OfflineEquipmentEntity? =
         equipmentSyncService.deleteEquipmentOffline(equipmentId, uuid)
+
+    // RP-FR-019 — serialized equipment writes
+    suspend fun registerEquipmentAssetOffline(
+        companyId: Long,
+        name: String,
+        catalogUuid: String? = null,
+        manufacturer: String? = null,
+        model: String? = null,
+        serialNumber: String? = null,
+        assetTag: String? = null,
+        isStandard: Boolean = true
+    ) = equipmentAssetSyncService.registerAsset(
+        companyId, name, catalogUuid, manufacturer, model, serialNumber, assetTag, isStandard
+    )
+
+    suspend fun deployEquipmentAssetOffline(
+        assetLocalId: Long,
+        roomLocalId: Long,
+        projectLocalId: Long? = null,
+        dateIn: Date? = null,
+        note: String? = null
+    ) = equipmentAssetSyncService.deployAsset(assetLocalId, roomLocalId, projectLocalId, dateIn, note)
+
+    suspend fun retireEquipmentAssetOffline(assetLocalId: Long) =
+        equipmentAssetSyncService.retireAsset(assetLocalId)
 
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =
         workScopeSyncService.fetchWorkScopeCatalog(companyId)

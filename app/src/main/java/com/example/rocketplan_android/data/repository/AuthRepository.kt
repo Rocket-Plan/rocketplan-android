@@ -549,6 +549,15 @@ class AuthRepository(
     }
 
     /**
+     * RP-FR-019: re-fetch + cache feature flags for the active company. Used by
+     * the serialized-equipment UI to recover from an UNKNOWN mode (retry).
+     */
+    suspend fun refreshFeatureFlags() {
+        val companyId = secureStorage.getCompanyIdSync() ?: return
+        cacheSerializedEquipmentFlag(companyId)
+    }
+
+    /**
      * Set the active company for API requests.
      * This notifies the backend which company context to use.
      */
