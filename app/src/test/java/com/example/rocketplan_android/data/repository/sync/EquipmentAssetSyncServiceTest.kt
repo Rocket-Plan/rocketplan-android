@@ -206,6 +206,7 @@ class EquipmentAssetSyncServiceTest {
             status = "available", createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getAllPlacementsForAsset(50L) } returns emptyList()
         coEvery { local.removeSyncOperationsForEntity(any(), any()) } just Runs
 
         val result = service.retireAsset(50L)
@@ -213,5 +214,31 @@ class EquipmentAssetSyncServiceTest {
         assertThat(result?.isDeleted).isTrue()
         coVerify(exactly = 0) { enqueuer.enqueueEquipmentAssetRetire(any(), any()) }
         coVerify(exactly = 1) { local.removeSyncOperationsForEntity("equipment_asset", 50L) }
+    }
+
+    @Test
+    fun `retiring a never-synced asset collapses its placement op graph`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = null, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getAllPlacementsForAsset(50L) } returns listOf(
+            OfflineEquipmentPlacementEntity(
+                placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
+                isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
+            )
+        )
+        coEvery { local.removeSyncOperationsForEntity(any(), any()) } just Runs
+        val placementSaves = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { local.saveEquipmentPlacements(capture(placementSaves)) } just Runs
+
+        service.retireAsset(50L)
+
+        // Review #7: the orphaned placement op is dropped and the placement soft-deleted.
+        coVerify(exactly = 1) { local.removeSyncOperationsForEntity("equipment_asset_placement", 60L) }
+        coVerify(exactly = 1) { local.removeSyncOperationsForEntity("equipment_asset", 50L) }
+        coVerify(exactly = 0) { enqueuer.enqueueEquipmentAssetRetire(any(), any()) }
+        assertThat(placementSaves.captured.single().isDeleted).isTrue()
     }
 }

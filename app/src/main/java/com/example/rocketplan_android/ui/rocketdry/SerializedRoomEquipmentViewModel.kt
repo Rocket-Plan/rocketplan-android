@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -79,10 +80,19 @@ class SerializedRoomEquipmentViewModel(
                 SerializedEquipmentMode.OFF -> _uiState.value = SerializedRoomUiState.LegacyMode
                 SerializedEquipmentMode.UNKNOWN -> _uiState.value = SerializedRoomUiState.Unavailable
                 SerializedEquipmentMode.ON -> {
-                    // Review #1: pull server-authoritative pool + room assets so the screen
-                    // isn't limited to locally-created rows. Best-effort; observing continues
-                    // regardless so cached data still renders offline.
-                    launch(Dispatchers.IO) { offlineSyncRepository.refreshSerializedRoom(roomId, companyId) }
+                    // Review round-2 #1/#5: await the initial authoritative pull. On failure,
+                    // show a retry state if there's nothing cached, or render the cache with a
+                    // non-destructive "stale" notice if there is.
+                    val pull = offlineSyncRepository.refreshSerializedRoom(roomId, companyId)
+                    if (pull.isFailure) {
+                        val hasCache = localDataService.observeEquipmentAssetsForCompany(companyId)
+                            .first().isNotEmpty()
+                        if (!hasCache) {
+                            _uiState.value = SerializedRoomUiState.Unavailable
+                            return@launch
+                        }
+                        _events.emit("Showing saved data — couldn't refresh from the server.")
+                    }
                     observeContent(companyId)
                 }
             }
@@ -92,7 +102,14 @@ class SerializedRoomEquipmentViewModel(
     fun retry() {
         viewModelScope.launch {
             _uiState.value = SerializedRoomUiState.Loading
-            runCatching { authRepository.refreshFeatureFlags() }
+            // Review #4: the flags endpoint is scoped to the ACTIVE company. Only refresh when
+            // this project's owner IS the active company; otherwise tell the user to switch.
+            val owner = withContext(Dispatchers.IO) { localDataService.getProject(projectId)?.companyId }
+            val active = withContext(Dispatchers.IO) { app.secureStorage.getCompanyIdSync() }
+            when {
+                owner != null && owner == active -> runCatching { authRepository.refreshFeatureFlags() }
+                owner != null -> _events.emit("Switch to this project's company to load its equipment.")
+            }
             resolve()
         }
     }
@@ -125,29 +142,38 @@ class SerializedRoomEquipmentViewModel(
         }
     }
 
-    fun deployFromPool(assetId: Long) = runAction("Couldn't deploy — unit isn't available.") {
+    fun deployFromPool(assetId: Long) = runAction(assetId, "Couldn't deploy — unit isn't available.") {
         offlineSyncRepository.deployEquipmentAssetOffline(assetId, roomId, projectId) != null
     }
 
-    fun retire(assetId: Long) = runAction("Couldn't retire this unit.") {
+    fun retire(assetId: Long) = runAction(assetId, "Couldn't retire this unit.") {
         offlineSyncRepository.retireEquipmentAssetOffline(assetId) != null
     }
 
-    fun move(assetId: Long, toRoomLocalId: Long) = runAction("Couldn't move this unit.") {
+    fun move(assetId: Long, toRoomLocalId: Long) = runAction(assetId, "Couldn't move this unit.") {
         offlineSyncRepository.moveEquipmentAssetOffline(assetId, toRoomLocalId) != null
     }
 
-    fun checkOut(assetId: Long) = runAction("Nothing to check out.") {
+    fun checkOut(assetId: Long) = runAction(assetId, "Nothing to check out.") {
         offlineSyncRepository.checkOutEquipmentAssetOffline(assetId) != null
     }
 
-    private fun runAction(failureMessage: String, block: suspend () -> Boolean) {
+    /** Review #3: ignore duplicate taps for an asset while its action is staging. */
+    private val inFlight = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
+
+    private fun runAction(assetId: Long, failureMessage: String, block: suspend () -> Boolean) {
+        if (!inFlight.add(assetId)) return
         viewModelScope.launch(Dispatchers.IO) {
-            val ok = runCatching { block() }.getOrElse {
-                _events.emit("Action failed. It'll retry when you're back online.")
-                return@launch
+            try {
+                val ok = runCatching { block() }.getOrElse {
+                    // Review #6: the transaction rolled back — nothing was queued, so it won't auto-retry.
+                    _events.emit("Action failed — please retry.")
+                    return@launch
+                }
+                if (!ok) _events.emit(failureMessage)
+            } finally {
+                inFlight.remove(assetId)
             }
-            if (!ok) _events.emit(failureMessage)
         }
     }
 

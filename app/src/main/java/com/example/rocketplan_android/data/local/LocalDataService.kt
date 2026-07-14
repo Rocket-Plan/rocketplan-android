@@ -1261,6 +1261,9 @@ class LocalDataService private constructor(
         dao.markEquipmentAssetsDeleted(serverIds)
     }
 
+    suspend fun getSyncedEquipmentAssetsForCompany(companyId: Long): List<OfflineEquipmentAssetEntity> =
+        withContext(ioDispatcher) { dao.getSyncedEquipmentAssetsForCompany(companyId) }
+
     fun observeEquipmentAssetsForCompany(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>> =
         dao.observeEquipmentAssetsForCompany(companyId)
 
@@ -1309,6 +1312,15 @@ class LocalDataService private constructor(
 
     suspend fun getEquipmentPlacementsByServerIds(serverIds: List<Long>): List<OfflineEquipmentPlacementEntity> =
         withContext(ioDispatcher) { dao.getEquipmentPlacementsByServerIds(serverIds) }
+
+    suspend fun getSyncedPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity> =
+        withContext(ioDispatcher) { dao.getSyncedPlacementsForAsset(assetId) }
+
+    suspend fun getCleanOpenPlacementsForRoom(roomId: Long): List<OfflineEquipmentPlacementEntity> =
+        withContext(ioDispatcher) { dao.getCleanOpenPlacementsForRoom(roomId) }
+
+    suspend fun getAllPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity> =
+        withContext(ioDispatcher) { dao.getAllPlacementsForAsset(assetId) }
 
     suspend fun getPendingEquipmentPlacements(): List<OfflineEquipmentPlacementEntity> = withContext(ioDispatcher) {
         dao.getPendingEquipmentPlacements()

@@ -871,6 +871,10 @@ interface OfflineDao {
 
     @Query("UPDATE offline_equipment_assets SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
     suspend fun markEquipmentAssetsDeleted(serverIds: List<Long>)
+
+    /** Clean, server-known, non-deleted assets — the set a pull snapshot reconciles against. */
+    @Query("SELECT * FROM offline_equipment_assets WHERE companyId = :companyId AND isDirty = 0 AND serverId IS NOT NULL AND isDeleted = 0")
+    suspend fun getSyncedEquipmentAssetsForCompany(companyId: Long): List<OfflineEquipmentAssetEntity>
     // endregion
 
     // region Serialized Equipment Placements (RP-FR-019)
@@ -906,6 +910,18 @@ interface OfflineDao {
     suspend fun getPendingEquipmentPlacements(
         synced: SyncStatus = SyncStatus.SYNCED
     ): List<OfflineEquipmentPlacementEntity>
+
+    /** Clean, server-known, non-deleted placements for an asset — pull reconciliation set. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId AND isDirty = 0 AND serverId IS NOT NULL AND isDeleted = 0")
+    suspend fun getSyncedPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity>
+
+    /** Clean open placements currently in a room — authoritative room-set reconciliation. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE roomId = :roomId AND isOpen = 1 AND isDirty = 0 AND isDeleted = 0")
+    suspend fun getCleanOpenPlacementsForRoom(roomId: Long): List<OfflineEquipmentPlacementEntity>
+
+    /** All placements for an asset (any state) — used to collapse an unsynced asset graph. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId")
+    suspend fun getAllPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity>
     // endregion
 
     // region Moisture Logs
