@@ -172,6 +172,14 @@ class OfflineSyncRepository(
         )
     }
 
+    private val equipmentAssetPullService by lazy {
+        com.example.rocketplan_android.data.repository.sync.EquipmentAssetPullService(
+            api = api,
+            localDataService = localDataService,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
     private val moistureLogSyncService by lazy {
         MoistureLogSyncService(
             localDataService = localDataService,
@@ -1223,6 +1231,10 @@ class OfflineSyncRepository(
 
     suspend fun checkOutEquipmentAssetOffline(assetLocalId: Long) =
         equipmentAssetSyncService.checkOutAsset(assetLocalId)
+
+    /** RP-FR-019 (review #1): inbound pull of the company pool + a room's deployed assets. */
+    suspend fun refreshSerializedRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
+        equipmentAssetPullService.refreshRoom(roomLocalId, companyId)
 
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =
         workScopeSyncService.fetchWorkScopeCatalog(companyId)

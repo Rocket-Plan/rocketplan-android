@@ -9,28 +9,23 @@ import com.example.rocketplan_android.RocketPlanApplication
 import com.example.rocketplan_android.data.feature.SerializedEquipmentMode
 import com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
-import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-/**
- * RP-FR-019 — serialized room-equipment screen state, gated by the per-company
- * [SerializedEquipmentMode]:
- *  - OFF     → host shows the legacy count UI ([LegacyMode]).
- *  - UNKNOWN → host shows a retryable placeholder ([Unavailable]) — never legacy.
- *  - ON      → serialized [Ready] content.
- */
 sealed class SerializedRoomUiState {
     object Loading : SerializedRoomUiState()
 
     /** Flag OFF — the host should mount the legacy count-based equipment UI. */
     object LegacyMode : SerializedRoomUiState()
 
-    /** Flag UNKNOWN (never fetched / fetch failed) — mount neither, offer retry. */
+    /** Flag UNKNOWN (never fetched / fetch failed / owner unknown) — mount neither, offer retry. */
     object Unavailable : SerializedRoomUiState()
 
     data class Ready(
@@ -40,18 +35,8 @@ sealed class SerializedRoomUiState {
     ) : SerializedRoomUiState()
 }
 
-data class RoomAssetItem(
-    val assetId: Long,
-    val name: String,
-    val detail: String,
-    val status: String
-)
-
-data class PoolAssetItem(
-    val assetId: Long,
-    val name: String,
-    val detail: String
-)
+data class RoomAssetItem(val assetId: Long, val name: String, val detail: String, val status: String)
+data class PoolAssetItem(val assetId: Long, val name: String, val detail: String)
 
 class SerializedRoomEquipmentViewModel(
     application: Application,
@@ -68,30 +53,42 @@ class SerializedRoomEquipmentViewModel(
     private val _uiState = MutableStateFlow<SerializedRoomUiState>(SerializedRoomUiState.Loading)
     val uiState: StateFlow<SerializedRoomUiState> = _uiState
 
+    /** One-shot user feedback (review #5): rejected/failed actions. */
+    private val _events = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val events: SharedFlow<String> = _events
+
+    /** The company that OWNS this project — mode + all writes resolve against it (review #2). */
+    private var ownerCompanyId: Long? = null
     private var contentJob: Job? = null
 
     init {
         resolve()
     }
 
-    /** Re-resolve the mode and (when ON) start observing content. */
     fun resolve() {
         contentJob?.cancel()
         contentJob = viewModelScope.launch {
-            val companyId = app.secureStorage.getCompanyIdSync()
+            // Review #2: derive the company from the project owner, NOT the active company.
+            val companyId = withContext(Dispatchers.IO) { localDataService.getProject(projectId)?.companyId }
             if (companyId == null) {
                 _uiState.value = SerializedRoomUiState.Unavailable
                 return@launch
             }
+            ownerCompanyId = companyId
             when (modeProvider.modeFor(companyId)) {
                 SerializedEquipmentMode.OFF -> _uiState.value = SerializedRoomUiState.LegacyMode
                 SerializedEquipmentMode.UNKNOWN -> _uiState.value = SerializedRoomUiState.Unavailable
-                SerializedEquipmentMode.ON -> observeContent(companyId)
+                SerializedEquipmentMode.ON -> {
+                    // Review #1: pull server-authoritative pool + room assets so the screen
+                    // isn't limited to locally-created rows. Best-effort; observing continues
+                    // regardless so cached data still renders offline.
+                    launch(Dispatchers.IO) { offlineSyncRepository.refreshSerializedRoom(roomId, companyId) }
+                    observeContent(companyId)
+                }
             }
         }
     }
 
-    /** UNKNOWN-state recovery: re-fetch the flag, then re-resolve. */
     fun retry() {
         viewModelScope.launch {
             _uiState.value = SerializedRoomUiState.Loading
@@ -108,80 +105,57 @@ class SerializedRoomEquipmentViewModel(
         ) { rooms, placements, assets ->
             val room = rooms.firstOrNull { it.roomId == roomId }
             val assetsById = assets.associateBy { it.assetId }
-            val deployed = placements.mapNotNull { placement ->
-                assetsById[placement.assetId]?.let { asset -> asset.toRoomItem(placement) }
-            }.sortedBy { it.name.lowercase() }
-            val pool = assets
-                .filter { it.status == "available" && !it.isDeleted }
+            val deployed = placements.mapNotNull { p -> assetsById[p.assetId]?.toRoomItem() }
+                .sortedBy { it.name.lowercase() }
+            val pool = assets.filter { it.status == "available" && !it.isDeleted }
                 .map { it.toPoolItem() }
                 .sortedBy { it.name.lowercase() }
-            SerializedRoomUiState.Ready(
-                roomName = room?.title ?: "Room",
-                deployed = deployed,
-                pool = pool
-            )
+            SerializedRoomUiState.Ready(room?.title ?: "Room", deployed, pool)
         }.collect { _uiState.value = it }
     }
 
     fun registerAndDeploy(name: String, catalogUuid: String, serialNumber: String?) {
+        val companyId = ownerCompanyId ?: return
         viewModelScope.launch(Dispatchers.IO) {
-            val companyId = app.secureStorage.getCompanyIdSync() ?: return@launch
             val asset = offlineSyncRepository.registerEquipmentAssetOffline(
-                companyId = companyId,
-                name = name,
-                catalogUuid = catalogUuid,
-                serialNumber = serialNumber
+                companyId = companyId, name = name, catalogUuid = catalogUuid, serialNumber = serialNumber
             )
-            offlineSyncRepository.deployEquipmentAssetOffline(
-                assetLocalId = asset.assetId,
-                roomLocalId = roomId,
-                projectLocalId = projectId
-            )
+            val deployed = offlineSyncRepository.deployEquipmentAssetOffline(asset.assetId, roomId, projectId)
+            if (deployed == null) _events.emit("Registered, but couldn't deploy to this room.")
         }
     }
 
-    fun deployFromPool(assetId: Long) {
+    fun deployFromPool(assetId: Long) = runAction("Couldn't deploy — unit isn't available.") {
+        offlineSyncRepository.deployEquipmentAssetOffline(assetId, roomId, projectId) != null
+    }
+
+    fun retire(assetId: Long) = runAction("Couldn't retire this unit.") {
+        offlineSyncRepository.retireEquipmentAssetOffline(assetId) != null
+    }
+
+    fun move(assetId: Long, toRoomLocalId: Long) = runAction("Couldn't move this unit.") {
+        offlineSyncRepository.moveEquipmentAssetOffline(assetId, toRoomLocalId) != null
+    }
+
+    fun checkOut(assetId: Long) = runAction("Nothing to check out.") {
+        offlineSyncRepository.checkOutEquipmentAssetOffline(assetId) != null
+    }
+
+    private fun runAction(failureMessage: String, block: suspend () -> Boolean) {
         viewModelScope.launch(Dispatchers.IO) {
-            offlineSyncRepository.deployEquipmentAssetOffline(
-                assetLocalId = assetId,
-                roomLocalId = roomId,
-                projectLocalId = projectId
-            )
+            val ok = runCatching { block() }.getOrElse {
+                _events.emit("Action failed. It'll retry when you're back online.")
+                return@launch
+            }
+            if (!ok) _events.emit(failureMessage)
         }
     }
 
-    fun retire(assetId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            offlineSyncRepository.retireEquipmentAssetOffline(assetId)
-        }
-    }
-
-    fun move(assetId: Long, toRoomLocalId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            offlineSyncRepository.moveEquipmentAssetOffline(assetId, toRoomLocalId)
-        }
-    }
-
-    fun checkOut(assetId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            offlineSyncRepository.checkOutEquipmentAssetOffline(assetId)
-        }
-    }
-
-    private fun OfflineEquipmentAssetEntity.toRoomItem(placement: OfflineEquipmentPlacementEntity) =
-        RoomAssetItem(
-            assetId = assetId,
-            name = name ?: "Equipment",
-            detail = detailLine(),
-            status = status
-        )
+    private fun OfflineEquipmentAssetEntity.toRoomItem() =
+        RoomAssetItem(assetId, name ?: "Equipment", detailLine(), status)
 
     private fun OfflineEquipmentAssetEntity.toPoolItem() =
-        PoolAssetItem(
-            assetId = assetId,
-            name = name ?: "Equipment",
-            detail = detailLine()
-        )
+        PoolAssetItem(assetId, name ?: "Equipment", detailLine())
 
     private fun OfflineEquipmentAssetEntity.detailLine(): String =
         listOfNotNull(

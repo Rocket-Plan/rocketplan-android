@@ -54,8 +54,10 @@ class SerializedRoomEquipmentFragment : Fragment() {
     )
     private val poolAdapter = SerializedEquipmentAdapter(
         onPrimary = { assetId -> viewModel.deployFromPool(assetId) },
-        onSecondary = { assetId -> viewModel.retire(assetId) }
+        onSecondary = { assetId -> confirmRetire(assetId) }
     )
+
+    private var latestPool: List<PoolAssetItem> = emptyList()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_serialized_room_equipment, container, false)
@@ -90,9 +92,28 @@ class SerializedRoomEquipmentFragment : Fragment() {
     private fun observe() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { render(it) }
+                launch { viewModel.uiState.collect { render(it) } }
+                // Review #5: surface rejected/failed actions.
+                launch {
+                    viewModel.events.collect { msg ->
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
+    }
+
+    /** Review #6: retiring is destructive — confirm and identify the unit first. */
+    private fun confirmRetire(assetId: Long) {
+        val item = latestPool.firstOrNull { it.assetId == assetId }
+        val identity = item?.let { listOfNotNull(it.name, it.detail.takeIf(String::isNotBlank)).joinToString(" — ") }
+            ?: getString(R.string.serialized_equipment_title)
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.serialized_equipment_retire)
+            .setMessage(getString(R.string.serialized_equipment_retire_confirm, identity))
+            .setNegativeButton(R.string.cancel, null)
+            .setPositiveButton(R.string.serialized_equipment_retire) { _, _ -> viewModel.retire(assetId) }
+            .show()
     }
 
     private fun render(state: SerializedRoomUiState) {
@@ -102,6 +123,7 @@ class SerializedRoomEquipmentFragment : Fragment() {
         when (state) {
             is SerializedRoomUiState.Ready -> {
                 roomTitle.text = state.roomName
+                latestPool = state.pool
                 val deployed = state.deployed.map {
                     SerializedRowUi(it.assetId, it.name, it.detail, getString(R.string.serialized_equipment_check_out))
                 }

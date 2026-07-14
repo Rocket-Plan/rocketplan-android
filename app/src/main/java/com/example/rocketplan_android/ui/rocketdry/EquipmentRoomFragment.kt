@@ -76,9 +76,16 @@ class EquipmentRoomFragment : Fragment() {
         // to legacy while the mode is unknown.
         viewLifecycleOwner.lifecycleScope.launch {
             val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+            // Review #2: resolve mode against the company that OWNS this project, not the
+            // active company — a cached project may belong to a different company.
             val mode = withContext(Dispatchers.IO) {
-                com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
-                    .activeMode()
+                val companyId = app.localDataService.getProject(args.projectId)?.companyId
+                if (companyId == null) {
+                    com.example.rocketplan_android.data.feature.SerializedEquipmentMode.UNKNOWN
+                } else {
+                    com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
+                        .modeFor(companyId)
+                }
             }
             if (mode == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
                 setupLegacy()

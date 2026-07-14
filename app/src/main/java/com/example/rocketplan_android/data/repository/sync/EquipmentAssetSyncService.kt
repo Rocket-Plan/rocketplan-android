@@ -16,8 +16,10 @@ import java.util.Date
  * local entities and enqueues the matching sync operation. Mirrors
  * [EquipmentSyncService]; negative temp PKs for offline-created rows.
  *
- * Phase 2 covers register / deploy / retire (the actions whose sync landed in
- * Phase 1b). Move / check-out arrive with Phase 1c.
+ * Review #4: every method persists its entity change(s) AND the queue insertion
+ * inside a single Room transaction ([LocalDataService.runInTransaction]) so a
+ * crash can't leave a mutated local row without its queued op (or vice-versa).
+ * Read-only validation stays outside the transaction.
  */
 class EquipmentAssetSyncService(
     private val localDataService: LocalDataService,
@@ -62,24 +64,24 @@ class EquipmentAssetSyncService(
             syncStatus = SyncStatus.PENDING,
             isDirty = true
         )
-        localDataService.saveEquipmentAssets(listOf(entity))
-        val saved = localDataService.getEquipmentAssetByUuid(uuid) ?: entity
-        syncQueueEnqueuer().enqueueEquipmentAssetUpsert(saved)
-        saved
+        localDataService.runInTransaction {
+            localDataService.saveEquipmentAssets(listOf(entity))
+            val saved = localDataService.getEquipmentAssetByUuid(uuid) ?: entity
+            syncQueueEnqueuer().enqueueEquipmentAssetUpsert(saved)
+            saved
+        }
     }
 
     /** Edit an existing asset's metadata (also flips available/maintenance status). */
     suspend fun updateAsset(asset: OfflineEquipmentAssetEntity): OfflineEquipmentAssetEntity =
         withContext(ioDispatcher) {
             val lockUpdatedAt = asset.serverId?.let { (asset.serverUpdatedAt ?: asset.updatedAt).toApiTimestamp() }
-            val updated = asset.copy(
-                updatedAt = now(),
-                syncStatus = SyncStatus.PENDING,
-                isDirty = true
-            )
-            localDataService.saveEquipmentAssets(listOf(updated))
-            syncQueueEnqueuer().enqueueEquipmentAssetUpsert(updated, lockUpdatedAt)
-            updated
+            val updated = asset.copy(updatedAt = now(), syncStatus = SyncStatus.PENDING, isDirty = true)
+            localDataService.runInTransaction {
+                localDataService.saveEquipmentAssets(listOf(updated))
+                syncQueueEnqueuer().enqueueEquipmentAssetUpsert(updated, lockUpdatedAt)
+                updated
+            }
         }
 
     /**
@@ -88,9 +90,8 @@ class EquipmentAssetSyncService(
      * Review #7: enforces local invariants before creating a placement — the asset
      * must be available, not retired, have no existing open placement, and the room
      * must belong to the asset's company. Returns null (rejected, nothing persisted)
-     * on any violation so contradictory state can't be created offline. The asset is
-     * flipped to `deployed` atomically with the placement regardless of dirty state,
-     * so a still-dirty offline-created asset can't appear available while deployed.
+     * on any violation. The placement, the asset's `deployed` flip, and the queue op
+     * are all committed in one transaction (#4).
      */
     suspend fun deployAsset(
         assetLocalId: Long,
@@ -101,22 +102,21 @@ class EquipmentAssetSyncService(
     ): OfflineEquipmentPlacementEntity? = withContext(ioDispatcher) {
         val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@withContext null
         if (asset.isDeleted || asset.status != "available") {
-            logInvalidDeploy(asset.uuid, "asset not available (status=${asset.status}, deleted=${asset.isDeleted})")
+            logInvalid("deploy", asset.uuid, "asset not available (status=${asset.status}, deleted=${asset.isDeleted})")
             return@withContext null
         }
         if (localDataService.getOpenPlacementForAsset(asset.assetId) != null) {
-            logInvalidDeploy(asset.uuid, "asset already has an open placement")
+            logInvalid("deploy", asset.uuid, "asset already has an open placement")
             return@withContext null
         }
         val room = localDataService.getRoom(roomLocalId)
         if (room == null) {
-            logInvalidDeploy(asset.uuid, "room $roomLocalId not found")
+            logInvalid("deploy", asset.uuid, "room $roomLocalId not found")
             return@withContext null
         }
-        // Room must belong to the asset's company (guard cross-company deploys).
         val roomCompanyId = localDataService.getProject(room.projectId)?.companyId
         if (roomCompanyId != null && roomCompanyId != asset.companyId) {
-            logInvalidDeploy(asset.uuid, "room company $roomCompanyId != asset company ${asset.companyId}")
+            logInvalid("deploy", asset.uuid, "room company $roomCompanyId != asset company ${asset.companyId}")
             return@withContext null
         }
 
@@ -138,24 +138,21 @@ class EquipmentAssetSyncService(
             syncStatus = SyncStatus.PENDING,
             isDirty = true
         )
-        localDataService.saveEquipmentPlacements(listOf(placement))
-        // Atomically flip the asset to deployed (even if dirty) so it can't appear in the
-        // available pool while it has an open placement.
-        localDataService.saveEquipmentAssets(listOf(asset.copy(status = "deployed", updatedAt = timestamp)))
-        val saved = localDataService.getEquipmentPlacementByUuid(uuid) ?: placement
-        syncQueueEnqueuer().enqueuePlacementDeploy(saved)
-        saved
-    }
-
-    private fun logInvalidDeploy(assetUuid: String, reason: String) {
-        android.util.Log.w("EquipmentAssetSyncService", "Rejecting deploy of $assetUuid: $reason")
+        localDataService.runInTransaction {
+            localDataService.saveEquipmentPlacements(listOf(placement))
+            // Flip the asset to deployed (even if dirty) so it can't appear available while deployed.
+            localDataService.saveEquipmentAssets(listOf(asset.copy(status = "deployed", updatedAt = timestamp)))
+            val saved = localDataService.getEquipmentPlacementByUuid(uuid) ?: placement
+            syncQueueEnqueuer().enqueuePlacementDeploy(saved)
+            saved
+        }
     }
 
     /**
      * Move a deployed asset to another room (Phase 1c). Updates the open placement's
      * room and enqueues a MOVE; the handler drives the server move + reconciles the
-     * resulting placements. Returns null (nothing changed) if there's no open
-     * placement, the target is the same room, or it's cross-company.
+     * resulting placements. Returns null if there's no open placement, the target is
+     * the same room, or it's cross-company.
      */
     suspend fun moveAsset(assetLocalId: Long, toRoomLocalId: Long): OfflineEquipmentPlacementEntity? =
         withContext(ioDispatcher) {
@@ -173,9 +170,11 @@ class EquipmentAssetSyncService(
                 syncStatus = SyncStatus.PENDING,
                 isDirty = true
             )
-            localDataService.saveEquipmentPlacements(listOf(updated))
-            syncQueueEnqueuer().enqueuePlacementMove(updated)
-            updated
+            localDataService.runInTransaction {
+                localDataService.saveEquipmentPlacements(listOf(updated))
+                syncQueueEnqueuer().enqueuePlacementMove(updated)
+                updated
+            }
         }
 
     /** Check a deployed asset back out to the pool (Phase 1c). */
@@ -190,11 +189,13 @@ class EquipmentAssetSyncService(
                 syncStatus = SyncStatus.PENDING,
                 isDirty = true
             )
-            localDataService.saveEquipmentPlacements(listOf(updated))
-            // Optimistically free the asset so the pool view updates immediately.
-            localDataService.saveEquipmentAssets(listOf(asset.copy(status = "available", updatedAt = timestamp)))
-            syncQueueEnqueuer().enqueuePlacementCheckout(updated)
-            updated
+            localDataService.runInTransaction {
+                localDataService.saveEquipmentPlacements(listOf(updated))
+                // Optimistically free the asset so the pool view updates immediately.
+                localDataService.saveEquipmentAssets(listOf(asset.copy(status = "available", updatedAt = timestamp)))
+                syncQueueEnqueuer().enqueuePlacementCheckout(updated)
+                updated
+            }
         }
 
     /** Retire an asset (soft-delete + status retired). */
@@ -208,14 +209,22 @@ class EquipmentAssetSyncService(
             syncStatus = SyncStatus.PENDING,
             updatedAt = now()
         )
-        localDataService.saveEquipmentAssets(listOf(updated))
-        if (asset.serverId == null) {
-            localDataService.removeSyncOperationsForEntity("equipment_asset", asset.assetId)
-            val cleaned = updated.copy(isDirty = false, syncStatus = SyncStatus.SYNCED, lastSyncedAt = now())
-            localDataService.saveEquipmentAssets(listOf(cleaned))
-            return@withContext cleaned
+        localDataService.runInTransaction {
+            if (asset.serverId == null) {
+                // Never reached the server — resolve locally, no queue op needed.
+                localDataService.removeSyncOperationsForEntity("equipment_asset", asset.assetId)
+                val cleaned = updated.copy(isDirty = false, syncStatus = SyncStatus.SYNCED, lastSyncedAt = now())
+                localDataService.saveEquipmentAssets(listOf(cleaned))
+                cleaned
+            } else {
+                localDataService.saveEquipmentAssets(listOf(updated))
+                syncQueueEnqueuer().enqueueEquipmentAssetRetire(updated, lockUpdatedAt)
+                updated
+            }
         }
-        syncQueueEnqueuer().enqueueEquipmentAssetRetire(updated, lockUpdatedAt)
-        updated
+    }
+
+    private fun logInvalid(op: String, assetUuid: String, reason: String) {
+        android.util.Log.w("EquipmentAssetSyncService", "Rejecting $op of $assetUuid: $reason")
     }
 }

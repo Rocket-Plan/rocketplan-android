@@ -28,6 +28,14 @@ class EquipmentAssetSyncServiceTest {
     private val enqueuer: SyncQueueEnqueuer = mockk(relaxed = true)
     private val service = EquipmentAssetSyncService(local, { enqueuer }, Dispatchers.Unconfined)
 
+    @org.junit.Before
+    fun stubTransaction() {
+        // runInTransaction just executes its block in tests (review #4 wraps writes in it).
+        coEvery { local.runInTransaction<Any?>(any()) } coAnswers {
+            firstArg<suspend () -> Any?>().invoke()
+        }
+    }
+
     @Test
     fun `registerAsset saves an available dirty asset and enqueues upsert`() = runTest {
         val saved = slot<List<OfflineEquipmentAssetEntity>>()
