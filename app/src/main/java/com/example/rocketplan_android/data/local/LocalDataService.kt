@@ -18,6 +18,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCatalogPropertyTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCatalogRoomTypeEntity
@@ -1211,6 +1213,110 @@ class LocalDataService private constructor(
     suspend fun getPendingEquipment(projectId: Long): List<OfflineEquipmentEntity> = withContext(ioDispatcher) {
         dao.getPendingEquipment(projectId)
     }
+
+    // region Serialized equipment assets (RP-FR-019)
+    suspend fun saveEquipmentAssets(
+        items: List<OfflineEquipmentAssetEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (items.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertEquipmentAssets(items)
+            return@withContext
+        }
+        val serverIds = items.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertEquipmentAssets(items)
+            return@withContext
+        }
+        val existing = dao.getEquipmentAssetsByServerIds(serverIds).associateBy { it.serverId }
+        val merged = mergePulledRowsByServerId(
+            incoming = items,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=equipment_asset serverId=$it") },
+            adoptLocalIdentity = { server, local -> server.copy(assetId = local.assetId, uuid = local.uuid) },
+        )
+        dao.upsertEquipmentAssets(merged)
+    }
+
+    suspend fun getEquipmentAsset(assetId: Long): OfflineEquipmentAssetEntity? = withContext(ioDispatcher) {
+        dao.getEquipmentAsset(assetId)
+    }
+
+    suspend fun getEquipmentAssetByUuid(uuid: String): OfflineEquipmentAssetEntity? = withContext(ioDispatcher) {
+        dao.getEquipmentAssetByUuid(uuid)
+    }
+
+    suspend fun getEquipmentAssetByServerId(serverId: Long): OfflineEquipmentAssetEntity? = withContext(ioDispatcher) {
+        dao.getEquipmentAssetByServerId(serverId)
+    }
+
+    suspend fun getPendingEquipmentAssets(companyId: Long): List<OfflineEquipmentAssetEntity> = withContext(ioDispatcher) {
+        dao.getPendingEquipmentAssets(companyId)
+    }
+
+    suspend fun markEquipmentAssetsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
+        dao.markEquipmentAssetsDeleted(serverIds)
+    }
+
+    fun observeEquipmentAssetsForCompany(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>> =
+        dao.observeEquipmentAssetsForCompany(companyId)
+
+    fun observeAvailableEquipmentAssets(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>> =
+        dao.observeAvailableEquipmentAssets(companyId)
+    // endregion
+
+    // region Serialized equipment placements (RP-FR-019)
+    suspend fun saveEquipmentPlacements(
+        items: List<OfflineEquipmentPlacementEntity>,
+        preserveDirty: Boolean = false,
+    ) = withContext(ioDispatcher) {
+        if (items.isEmpty()) return@withContext
+        if (!preserveDirty) {
+            dao.upsertEquipmentPlacements(items)
+            return@withContext
+        }
+        val serverIds = items.mapNotNull { it.serverId }
+        if (serverIds.isEmpty()) {
+            dao.upsertEquipmentPlacements(items)
+            return@withContext
+        }
+        val existing = dao.getEquipmentPlacementsByServerIds(serverIds).associateBy { it.serverId }
+        val merged = mergePulledRowsByServerId(
+            incoming = items,
+            existingByServerId = existing,
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=equipment_placement serverId=$it") },
+            adoptLocalIdentity = { server, local -> server.copy(placementId = local.placementId, uuid = local.uuid) },
+        )
+        dao.upsertEquipmentPlacements(merged)
+    }
+
+    suspend fun getEquipmentPlacement(placementId: Long): OfflineEquipmentPlacementEntity? = withContext(ioDispatcher) {
+        dao.getEquipmentPlacement(placementId)
+    }
+
+    suspend fun getEquipmentPlacementByUuid(uuid: String): OfflineEquipmentPlacementEntity? = withContext(ioDispatcher) {
+        dao.getEquipmentPlacementByUuid(uuid)
+    }
+
+    suspend fun getOpenPlacementForAsset(assetId: Long): OfflineEquipmentPlacementEntity? = withContext(ioDispatcher) {
+        dao.getOpenPlacementForAsset(assetId)
+    }
+
+    suspend fun getPendingEquipmentPlacements(): List<OfflineEquipmentPlacementEntity> = withContext(ioDispatcher) {
+        dao.getPendingEquipmentPlacements()
+    }
+
+    fun observePlacementsForAsset(assetId: Long): Flow<List<OfflineEquipmentPlacementEntity>> =
+        dao.observePlacementsForAsset(assetId)
+
+    fun observeOpenPlacementsForRoom(roomId: Long): Flow<List<OfflineEquipmentPlacementEntity>> =
+        dao.observeOpenPlacementsForRoom(roomId)
+    // endregion
 
     suspend fun saveMoistureLogs(
         logs: List<OfflineMoistureLogEntity>,
