@@ -3,8 +3,6 @@ package com.example.rocketplan_android.data.repository.sync
 import android.util.Log
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
-import com.example.rocketplan_android.data.repository.mapper.PendingEquipmentMovePayload
-import com.example.rocketplan_android.data.repository.mapper.PendingEquipmentTransferPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingLocationCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingPropertyCreationPayload
 import com.example.rocketplan_android.data.repository.mapper.PendingRoomCreationPayload
@@ -188,8 +186,6 @@ class IdRemapService(
 
         // Equipment
         totalUpdated += localDataService.migrateEquipmentRoomIds(localRoomId, serverId)
-        // Equipment move/transfer payload to_room_id remap
-        totalUpdated += remapEquipmentMovePayloads(localRoomId, serverId, uuid)
 
         // Moisture logs
         totalUpdated += localDataService.migrateMoistureLogRoomIds(localRoomId, serverId)
@@ -299,64 +295,6 @@ class IdRemapService(
 
             if (payload.projectId == localProjectId) {
                 val updatedPayload = payload.copy(projectId = serverId)
-                val updatedOp = op.copy(
-                    payload = gson.toJson(updatedPayload).toByteArray(Charsets.UTF_8)
-                )
-                localDataService.enqueueSyncOperation(updatedOp)
-                updated++
-            }
-        }
-
-        return updated
-    }
-
-    private suspend fun remapEquipmentMovePayloads(
-        localRoomId: Long,
-        serverId: Long,
-        roomUuid: String
-    ): Int {
-        var updated = 0
-        val pendingOps = localDataService.getPendingOperationsForEntityType("equipment")
-
-        for (op in pendingOps) {
-            if (op.operationType != com.example.rocketplan_android.data.local.SyncOperationType.MOVE &&
-                op.operationType != com.example.rocketplan_android.data.local.SyncOperationType.TRANSFER
-            ) {
-                continue
-            }
-
-            val movePayload = runCatching {
-                gson.fromJson(
-                    String(op.payload, Charsets.UTF_8),
-                    PendingEquipmentMovePayload::class.java
-                )
-            }.getOrNull()
-
-            if (movePayload != null && (movePayload.toRoomId == localRoomId || movePayload.toRoomUuid == roomUuid)) {
-                val updatedPayload = movePayload.copy(
-                    toRoomId = serverId,
-                    toRoomUuid = if (movePayload.toRoomId == localRoomId) null else movePayload.toRoomUuid
-                )
-                val updatedOp = op.copy(
-                    payload = gson.toJson(updatedPayload).toByteArray(Charsets.UTF_8)
-                )
-                localDataService.enqueueSyncOperation(updatedOp)
-                updated++
-                continue
-            }
-
-            val transferPayload = runCatching {
-                gson.fromJson(
-                    String(op.payload, Charsets.UTF_8),
-                    PendingEquipmentTransferPayload::class.java
-                )
-            }.getOrNull()
-
-            if (transferPayload != null && (transferPayload.toRoomId == localRoomId || transferPayload.toRoomUuid == roomUuid)) {
-                val updatedPayload = transferPayload.copy(
-                    toRoomId = serverId,
-                    toRoomUuid = if (transferPayload.toRoomId == localRoomId) null else transferPayload.toRoomUuid
-                )
                 val updatedOp = op.copy(
                     payload = gson.toJson(updatedPayload).toByteArray(Charsets.UTF_8)
                 )

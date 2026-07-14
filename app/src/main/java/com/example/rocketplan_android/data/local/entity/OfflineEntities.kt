@@ -530,7 +530,6 @@ data class OfflinePhotoEntity(
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
         Index(value = ["serverId"]),
-        Index(value = ["catalogServerId"]),
         Index(value = ["syncStatus"]),
         Index(value = ["projectId", "isDeleted"]),
         Index(value = ["roomId", "isDeleted"])
@@ -540,8 +539,6 @@ data class OfflineEquipmentEntity(
     @PrimaryKey(autoGenerate = true)
     val equipmentId: Long = 0,
     val serverId: Long? = null,
-    val catalogServerId: Long? = null,
-    val catalogUuid: String? = null,
     val uuid: String,
     val projectId: Long,
     val roomId: Long? = null,

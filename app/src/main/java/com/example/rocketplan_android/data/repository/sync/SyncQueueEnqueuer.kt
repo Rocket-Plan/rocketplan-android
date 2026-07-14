@@ -161,27 +161,6 @@ interface SyncQueueEnqueuer {
         lockUpdatedAt: String? = null
     )
 
-    suspend fun enqueueEquipmentMove(
-        equipment: OfflineEquipmentEntity,
-        toRoomId: Long?,
-        toRoomUuid: String?,
-        quantity: Int?,
-        note: String?,
-        idempotencyKey: String,
-        lockUpdatedAt: String?
-    )
-
-    suspend fun enqueueEquipmentTransfer(
-        equipment: OfflineEquipmentEntity,
-        toRoomId: Long?,
-        toRoomUuid: String?,
-        toProjectId: Long,
-        quantity: Int,
-        note: String?,
-        idempotencyKey: String,
-        lockUpdatedAt: String?
-    )
-
     // ============================================================================
     // Moisture Log Operations
     // ============================================================================

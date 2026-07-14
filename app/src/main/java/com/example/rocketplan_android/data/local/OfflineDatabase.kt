@@ -91,7 +91,7 @@ import io.sentry.Sentry
         OfflineClaimEntity::class,
         OfflineProjectUserEntity::class
     ],
-    version = 31,
+    version = 30,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -506,21 +506,6 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
-        @androidx.annotation.VisibleForTesting
-        internal val MIGRATION_30_31 = object : Migration(30, 31) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // RP-BUG-279: pivot/catalog split in OfflineEquipmentEntity.
-                // Old serverId was a catalog id under the broken contract; it cannot be trusted as a pivot id.
-                // Backfill catalogServerId = old serverId (catalog id), then null serverId so rows
-                // re-reconcile by uuid on next pull (MONGOOSE-BUG-036 makes uuid available post-attach).
-                database.execSQL("ALTER TABLE offline_equipment ADD COLUMN catalogServerId INTEGER")
-                database.execSQL("ALTER TABLE offline_equipment ADD COLUMN catalogUuid TEXT")
-                database.execSQL("UPDATE offline_equipment SET catalogServerId = serverId WHERE catalogServerId IS NULL")
-                database.execSQL("UPDATE offline_equipment SET serverId = NULL WHERE serverId IS NOT NULL")
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_catalogServerId ON offline_equipment(catalogServerId)")
-            }
-        }
-
         private val MIGRATION_21_22 = object : Migration(21, 22) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Add property info fields to offline_properties
@@ -592,7 +577,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30)
                 .apply {
                     if (BuildConfig.ALLOW_DESTRUCTIVE_MIGRATION) {
                         fallbackToDestructiveMigration()

@@ -574,10 +574,6 @@ class SyncQueueManager(
                 }
                 // Subscribe to Pusher for photo upload notifications (only if online)
                 if (isNetworkAvailable()) {
-                    // Refresh server-driven feature flags on every launch/login + foreground refresh
-                    // so a server-side toggle (e.g. equipmentMoveTransfer) propagates. Runs on the
-                    // sync scope (Dispatchers.IO) and swallows its own failures to keep prior values.
-                    authRepository.refreshFeatureFlags()
                     userId?.let { id ->
                         Log.d(TAG, "📷 Setting up Pusher subscription for user $id")
                         photoSyncRealtimeManager?.subscribeForUser(id.toInt())
