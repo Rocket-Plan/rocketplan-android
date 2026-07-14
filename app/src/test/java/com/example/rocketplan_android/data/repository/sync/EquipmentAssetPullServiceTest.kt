@@ -154,6 +154,29 @@ class EquipmentAssetPullServiceTest {
     }
 
     @Test
+    fun `pending maintenance edit survives a pull while server is still available`() = runTest {
+        // Local pending available→maintenance edit, no placement op; server still "available".
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
+            page(assetDto(900).copy(status = "available"))
+        val existing = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "loc", companyId = 7L,
+            name = "Air Mover", status = "maintenance", isDirty = true,
+            createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAssetsByServerIds(listOf(900L)) } returns listOf(existing)
+        coEvery { local.getPendingEquipmentPlacements() } returns emptyList()
+        coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()
+        coEvery { local.getRoom(400L) } returns null
+        val saves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(saves), any()) } just Runs
+
+        service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        // The pending maintenance edit is preserved (server still in the editable range).
+        assertThat(saves.flatten().first { it.serverId == 900L }.status).isEqualTo("maintenance")
+    }
+
+    @Test
     fun `a FAILED placement does not protect optimistic lifecycle`() = runTest {
         coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
             page(assetDto(900).copy(status = "available"))

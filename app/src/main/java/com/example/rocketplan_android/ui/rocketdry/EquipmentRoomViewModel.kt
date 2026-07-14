@@ -144,8 +144,9 @@ class EquipmentRoomViewModel(
         ).modeFor(companyId)
         if (mode != com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
             android.util.Log.w("EquipmentRoomViewModel", "Rejecting legacy equipment write — mode=$mode")
-            // Review round-7 #4: don't fail silently — tell the user why the tap did nothing.
-            _events.tryEmit("Equipment mode changed — refreshing this screen.")
+            // Review round-7 #4 / round-8 minor: don't fail silently; message doesn't over-promise a
+            // refresh (the host fragment's mode observer drives the actual switch). String resource.
+            _events.tryEmit(rocketPlanApp.getString(com.example.rocketplan_android.R.string.equipment_mode_changed))
             return false
         }
         return true

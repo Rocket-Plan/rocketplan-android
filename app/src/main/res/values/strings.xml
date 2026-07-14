@@ -616,6 +616,7 @@
     <string name="serialized_equipment_check_out">Check out</string>
     <string name="serialized_equipment_retire">Retire</string>
     <string name="serialized_equipment_retire_confirm">Retire %1$s? This removes it from the pool and can\'t be undone.</string>
+    <string name="equipment_mode_changed">Equipment mode changed. Please wait while this screen updates.</string>
     <string name="serialized_equipment_unavailable">Equipment mode is still loading for this company.</string>
     <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>

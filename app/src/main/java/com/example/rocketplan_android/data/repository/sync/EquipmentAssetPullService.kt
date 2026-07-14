@@ -28,6 +28,11 @@ class EquipmentAssetPullService(
     private val localDataService: LocalDataService,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
+    private companion object {
+        /** Statuses a client may set via updateAsset (metadata edit), vs lifecycle "deployed"/"retired". */
+        val EDITABLE_STATUSES = setOf("available", "maintenance")
+    }
+
     suspend fun refreshRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
         withContext(ioDispatcher) {
             runCatching {
@@ -126,10 +131,18 @@ class EquipmentAssetPullService(
                 purchasePrice = if (metadataDirty) local.purchasePrice else server.purchasePrice,
                 warrantyExpiresAt = if (metadataDirty) local.warrantyExpiresAt else server.warrantyExpiresAt,
                 rentalDayRate = if (metadataDirty) local.rentalDayRate else server.rentalDayRate,
-                // Lifecycle axis (status + current placement): local only while a live placement op
-                // exists (optimistic deploy/check-out); otherwise adopt the server's authoritative
-                // state so a cross-client move/check-out isn't left stale.
-                status = if (hasLivePlacement) local.status else server.status,
+                // Status is dual-axis (review round-8): metadata-editable to available/maintenance
+                // (updateAsset) AND lifecycle-driven to deployed (placement).
+                //  - live placement op   → keep the optimistic lifecycle status,
+                //  - pending metadata edit + server still in the editable range (available/maintenance)
+                //                          → keep the local edit,
+                //  - otherwise (incl. server moved to `deployed` cross-client) → server wins
+                //                          (the pending update will then conflict server-side).
+                status = when {
+                    hasLivePlacement -> local.status
+                    metadataDirty && server.status in EDITABLE_STATUSES -> local.status
+                    else -> server.status
+                },
                 currentPlacementServerId = if (hasLivePlacement) local.currentPlacementServerId else server.currentPlacementServerId,
                 // Lock token (review round-7 blocker #2): PRESERVE the edit-base token while a
                 // metadata edit is pending — do NOT rebase onto the server's newer timestamp, or a

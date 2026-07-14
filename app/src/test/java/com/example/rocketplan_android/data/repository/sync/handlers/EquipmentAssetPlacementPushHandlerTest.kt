@@ -11,9 +11,12 @@ import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.example.rocketplan_android.testing.PushHandlerTestFixtures
 import com.google.common.truth.Truth.assertThat
+import io.mockk.Runs
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.just
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Rule
@@ -74,6 +77,32 @@ class EquipmentAssetPlacementPushHandlerTest {
 
         assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
         coVerify(exactly = 1) { api.deployEquipmentAsset(900L, any()) }
+    }
+
+    @Test
+    fun `deploy re-stamps a metadata-dirty asset while preserving its metadata`() = runTest {
+        val dirtyAsset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            name = "Local Name", status = "available", isDirty = true,
+            serverUpdatedAt = java.util.Date(0L), createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns dirtyAsset
+        coEvery { localDataService.getRoom(400L) } returns PushHandlerTestFixtures.createRoom(serverId = 4000L)
+        coEvery { api.deployEquipmentAsset(900L, any()) } returns EquipmentAssetPlacementResponse(placementDto())
+        coEvery { api.getEquipmentAsset(900L) } returns com.example.rocketplan_android.data.model.offline.EquipmentAssetResponse(
+            assetDto().copy(name = "Server Name", updatedAt = "2026-09-09T00:00:00.000000Z")
+        )
+        val savedAssets = slot<List<OfflineEquipmentAssetEntity>>()
+        coEvery { localDataService.saveEquipmentAssets(capture(savedAssets)) } just io.mockk.Runs
+
+        val outcome = handler.handleDeploy(op)
+
+        assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
+        val merged = savedAssets.captured.single()
+        assertThat(merged.name).isEqualTo("Local Name")                  // dirty metadata preserved
+        assertThat(merged.isDirty).isTrue()
+        assertThat(merged.serverUpdatedAt).isNotEqualTo(java.util.Date(0L)) // re-stamped to fresh lock
     }
 
     @Test

@@ -85,7 +85,7 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
             // pending placement op in the pull) and reconciles on the next successful refresh.
             runCatching {
                 val assetDto = ctx.api.getEquipmentAsset(assetServerId).data
-                ctx.localDataService.saveEquipmentAssets(listOf(assetDto.toEntity(asset)), preserveDirty = true)
+                ctx.localDataService.saveEquipmentAssets(listOf(mergeAfterLifecycleSuccess(asset, assetDto)))
             }.onFailure { err ->
                 if (err is CancellationException) throw err
                 Log.w(SYNC_TAG, "Deploy succeeded but asset refresh failed for ${asset.uuid}", err)
@@ -172,10 +172,40 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
 
     /** Save the returned asset + reconcile its placements (server-authoritative). */
     private suspend fun applyAssetResponse(existingAsset: OfflineEquipmentAssetEntity, assetDto: EquipmentAssetDto) {
-        // Review #4: preserveDirty=true so a pending metadata edit isn't clobbered by the
-        // move/check-out response's lifecycle-only truth.
-        ctx.localDataService.saveEquipmentAssets(listOf(assetDto.toEntity(existingAsset)), preserveDirty = true)
+        ctx.localDataService.saveEquipmentAssets(listOf(mergeAfterLifecycleSuccess(existingAsset, assetDto)))
         assetDto.placements?.let { reconcilePlacements(existingAsset.assetId, it) }
+    }
+
+    /**
+     * Review round-8 blocker: after a KNOWN-SUCCESSFUL local lifecycle op (deploy/move/check-out)
+     * the server timestamp advanced because of OUR change — so we DO re-stamp (adopt the server's
+     * fresh serverUpdatedAt + authoritative lifecycle), while still preserving any pending METADATA
+     * edit's fields. This differs from the pull (which preserves the edit-base lock): here the new
+     * timestamp is the correct base for the pending metadata update, so it won't false-conflict on
+     * our own preceding lifecycle op.
+     */
+    private fun mergeAfterLifecycleSuccess(
+        local: OfflineEquipmentAssetEntity,
+        assetDto: EquipmentAssetDto
+    ): OfflineEquipmentAssetEntity {
+        val server = assetDto.toEntity(local) // adopts local identity; server fields incl. fresh serverUpdatedAt
+        if (!local.isDirty) return server
+        // Preserve dirty metadata fields; keep server lifecycle + fresh lock token.
+        return server.copy(
+            name = local.name,
+            manufacturer = local.manufacturer,
+            model = local.model,
+            serialNumber = local.serialNumber,
+            assetTag = local.assetTag,
+            vendor = local.vendor,
+            note = local.note,
+            purchaseDate = local.purchaseDate,
+            purchasePrice = local.purchasePrice,
+            warrantyExpiresAt = local.warrantyExpiresAt,
+            rentalDayRate = local.rentalDayRate,
+            isDirty = true,
+            syncStatus = local.syncStatus
+        )
     }
 
     /**
