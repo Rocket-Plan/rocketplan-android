@@ -67,35 +67,58 @@ class EquipmentRoomFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_equipment_room, container, false)
     }
 
+    private var legacyMounted = false
+    private var navigatedToSerialized = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
-        // RP-FR-019 flag gate: the legacy count-based UI is mounted only when the
-        // company's serialized-equipment mode is OFF. ON or UNKNOWN routes to the
-        // serialized screen (which shows content or a retry state) — we never default
-        // to legacy while the mode is unknown.
+        // RP-FR-019 flag gate (review round-5 #1): OBSERVE the owner-company mode and mount
+        // exactly one system — OFF → legacy, ON/UNKNOWN → serialized screen. Observing (not
+        // sampling once) means an OFF→ON/UNKNOWN flip while this legacy screen is open routes
+        // away instead of leaving legacy writes active.
         viewLifecycleOwner.lifecycleScope.launch {
-            val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
-            // Review #2: resolve mode against the company that OWNS this project, not the
-            // active company — a cached project may belong to a different company.
-            val mode = withContext(Dispatchers.IO) {
-                val companyId = app.localDataService.getProject(args.projectId)?.companyId
-                if (companyId == null) {
-                    com.example.rocketplan_android.data.feature.SerializedEquipmentMode.UNKNOWN
-                } else {
-                    com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
-                        .modeFor(companyId)
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+                // Review #2: resolve mode against the PROJECT owner, not the active company.
+                val companyId = withContext(Dispatchers.IO) {
+                    app.localDataService.getProject(args.projectId)?.companyId
                 }
-            }
-            if (mode == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
-                setupLegacy()
-            } else {
-                findNavController().navigate(
-                    EquipmentRoomFragmentDirections
-                        .actionEquipmentRoomFragmentToSerializedRoomEquipmentFragment(args.projectId, args.roomId)
-                )
+                if (companyId == null) {
+                    navigateToSerializedOnce()
+                    return@repeatOnLifecycle
+                }
+                // Review #2: refresh backend authority on (re)entry/foreground when we can
+                // (the flags endpoint is active-company scoped). This updates the cached mode
+                // that observeMode() emits, so a backend flip is picked up on resume.
+                withContext(Dispatchers.IO) {
+                    if (app.secureStorage.getCompanyIdSync() == companyId) {
+                        runCatching { app.authRepository.refreshFeatureFlags() }
+                    }
+                }
+                com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
+                    .observeMode(companyId)
+                    .collect { mode ->
+                        if (mode == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
+                            if (!legacyMounted) {
+                                legacyMounted = true
+                                setupLegacy()
+                            }
+                        } else {
+                            navigateToSerializedOnce()
+                        }
+                    }
             }
         }
+    }
+
+    private fun navigateToSerializedOnce() {
+        if (navigatedToSerialized) return
+        navigatedToSerialized = true
+        findNavController().navigate(
+            EquipmentRoomFragmentDirections
+                .actionEquipmentRoomFragmentToSerializedRoomEquipmentFragment(args.projectId, args.roomId)
+        )
     }
 
     private fun setupLegacy() {

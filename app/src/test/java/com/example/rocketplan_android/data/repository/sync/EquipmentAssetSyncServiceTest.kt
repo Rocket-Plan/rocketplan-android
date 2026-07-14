@@ -2,6 +2,7 @@ package com.example.rocketplan_android.data.repository.sync
 
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
+import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.testing.MainDispatcherRule
@@ -35,6 +36,9 @@ class EquipmentAssetSyncServiceTest {
         coEvery { local.runInTransaction<Any?>(any()) } coAnswers {
             firstArg<suspend () -> Any?>().invoke()
         }
+        // Default: no queued op for any entity (relaxed would otherwise return a non-null mock,
+        // tripping the #5 in-flight guard). Specific tests override for PENDING.
+        coEvery { local.getSyncOperationForEntity(any(), any(), any()) } returns null
     }
 
     @Test
@@ -181,7 +185,7 @@ class EquipmentAssetSyncServiceTest {
         )
         coEvery { local.getRoom(500L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createRoom(roomId = 500L, projectId = 100L)
         coEvery { local.getProject(100L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createProject(projectId = 100L, companyId = 7L)
-        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, any()) } returns
+        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, SyncStatus.PENDING) } returns
             com.example.rocketplan_android.testing.PushHandlerTestFixtures.createSyncOperation(
                 entityType = "equipment_asset_placement", entityId = 60L, entityUuid = "p",
                 operationType = SyncOperationType.CREATE
@@ -204,7 +208,7 @@ class EquipmentAssetSyncServiceTest {
             placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
             isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
         )
-        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, any()) } returns
+        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, SyncStatus.PENDING) } returns
             com.example.rocketplan_android.testing.PushHandlerTestFixtures.createSyncOperation(
                 entityType = "equipment_asset_placement", entityId = 60L, entityUuid = "p",
                 operationType = SyncOperationType.CREATE

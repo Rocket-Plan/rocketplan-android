@@ -62,6 +62,12 @@ class SerializedRoomEquipmentFragment : Fragment() {
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_serialized_room_equipment, container, false)
 
+    override fun onResume() {
+        super.onResume()
+        // Review #2: pick up a backend flag flip when the screen returns to the foreground.
+        viewModel.refreshMode()
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         content = view.findViewById(R.id.serializedContent)

@@ -128,10 +128,11 @@ class EquipmentAssetSyncService(
             isDirty = true
         )
         localDataService.saveEquipmentPlacements(listOf(placement))
-        // #2: flip to deployed AND mark dirty so a pull can't revert it before the deploy syncs.
-        localDataService.saveEquipmentAssets(
-            listOf(asset.copy(status = "deployed", updatedAt = timestamp, isDirty = true, syncStatus = SyncStatus.PENDING))
-        )
+        // Review #3/#4: flip the optimistic STATUS only — do NOT touch isDirty (which is
+        // metadata-dirtiness). The pull protects this status via the pending placement op
+        // (see EquipmentAssetPullService), and the deploy handler refreshes with
+        // preserveDirty=true so a genuine metadata edit is never clobbered.
+        localDataService.saveEquipmentAssets(listOf(asset.copy(status = "deployed", updatedAt = timestamp)))
         val saved = localDataService.getEquipmentPlacementByUuid(uuid) ?: placement
         syncQueueEnqueuer().enqueuePlacementDeploy(saved)
         saved
@@ -149,6 +150,10 @@ class EquipmentAssetSyncService(
             val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@runInTransaction null
             val open = localDataService.getOpenPlacementForAsset(asset.assetId) ?: return@runInTransaction null
             if (open.roomId == toRoomLocalId) return@runInTransaction null
+            // Review #5: never compact around an in-flight op — it may already be on the wire.
+            if (hasInFlightPlacementOp(open.placementId)) {
+                return@runInTransaction reject("move", asset.uuid, "a placement op is in flight — retry after it settles")
+            }
             val room = localDataService.getRoom(toRoomLocalId) ?: return@runInTransaction null
             val roomCompanyId = localDataService.getProject(room.projectId)?.companyId
             if (roomCompanyId != null && roomCompanyId != asset.companyId) return@runInTransaction null
@@ -179,6 +184,10 @@ class EquipmentAssetSyncService(
         localDataService.runInTransaction {
             val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@runInTransaction null
             val open = localDataService.getOpenPlacementForAsset(asset.assetId) ?: return@runInTransaction null
+            // Review #5: never compact around an in-flight op — it may already be on the wire.
+            if (hasInFlightPlacementOp(open.placementId)) {
+                return@runInTransaction reject("check-out", asset.uuid, "a placement op is in flight — retry after it settles")
+            }
             val timestamp = now()
 
             if (open.serverId == null && pendingOpType(open.placementId) == SyncOperationType.CREATE) {
@@ -206,16 +215,21 @@ class EquipmentAssetSyncService(
                 isDirty = true
             )
             localDataService.saveEquipmentPlacements(listOf(updated))
-            // #2: free the asset AND mark dirty so a pull can't re-deploy it before checkout syncs.
-            localDataService.saveEquipmentAssets(
-                listOf(asset.copy(status = "available", updatedAt = timestamp, isDirty = true, syncStatus = SyncStatus.PENDING))
-            )
+            // Review #3/#4: optimistic STATUS only (see deployAsset). The pending checkout op
+            // protects it from the pull; isDirty stays reserved for metadata edits.
+            localDataService.saveEquipmentAssets(listOf(asset.copy(status = "available", updatedAt = timestamp)))
             syncQueueEnqueuer().enqueuePlacementCheckout(updated)
             updated
         }
 
     private suspend fun pendingOpType(placementLocalId: Long): SyncOperationType? =
         localDataService.getSyncOperationForEntity("equipment_asset_placement", placementLocalId)?.operationType
+
+    /** True if a placement op for this row is currently being synced (SYNCING) — don't touch it. */
+    private suspend fun hasInFlightPlacementOp(placementLocalId: Long): Boolean =
+        localDataService.getSyncOperationForEntity(
+            "equipment_asset_placement", placementLocalId, SyncStatus.SYNCING
+        ) != null
 
     /**
      * Retire an asset. Review #7: if it never reached the server, collapse the WHOLE

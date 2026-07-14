@@ -1264,6 +1264,9 @@ class LocalDataService private constructor(
     suspend fun getSyncedEquipmentAssetsForCompany(companyId: Long): List<OfflineEquipmentAssetEntity> =
         withContext(ioDispatcher) { dao.getSyncedEquipmentAssetsForCompany(companyId) }
 
+    suspend fun getEquipmentAssetsByServerIds(serverIds: List<Long>): List<OfflineEquipmentAssetEntity> =
+        withContext(ioDispatcher) { dao.getEquipmentAssetsByServerIds(serverIds) }
+
     fun observeEquipmentAssetsForCompany(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>> =
         dao.observeEquipmentAssetsForCompany(companyId)
 

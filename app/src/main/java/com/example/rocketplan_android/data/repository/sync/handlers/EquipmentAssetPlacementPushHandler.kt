@@ -77,14 +77,15 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
                 projectLocalId = placement.projectId
             )
             ctx.localDataService.saveEquipmentPlacements(listOf(synced))
-            // Review #3/#8: deploy always marks the asset dirty (round-2 #2), so refresh it
-            // UNCONDITIONALLY from the server to clear that dirty flag and pick up the fresh
-            // optimistic-lock token / status / current_placement_id. If the refresh itself
-            // fails the deploy still succeeded (the asset stays dirty and is protected by the
-            // next pull); it reconciles on a later successful refresh.
+            // Review #3/#4/#8: refresh the asset from the server to pick up authoritative status /
+            // current_placement / updated_at. preserveDirty=true so a genuine pending METADATA
+            // edit (rename/serial) is merged-preserved rather than clobbered by older server
+            // values; a clean asset adopts the server lifecycle fields. If the refresh fails the
+            // deploy still succeeded — the asset is clean (status is optimistic + protected by the
+            // pending placement op in the pull) and reconciles on the next successful refresh.
             runCatching {
                 val assetDto = ctx.api.getEquipmentAsset(assetServerId).data
-                ctx.localDataService.saveEquipmentAssets(listOf(assetDto.toEntity(asset)))
+                ctx.localDataService.saveEquipmentAssets(listOf(assetDto.toEntity(asset)), preserveDirty = true)
             }.onFailure { err ->
                 if (err is CancellationException) throw err
                 Log.w(SYNC_TAG, "Deploy succeeded but asset refresh failed for ${asset.uuid}", err)
@@ -171,7 +172,9 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
 
     /** Save the returned asset + reconcile its placements (server-authoritative). */
     private suspend fun applyAssetResponse(existingAsset: OfflineEquipmentAssetEntity, assetDto: EquipmentAssetDto) {
-        ctx.localDataService.saveEquipmentAssets(listOf(assetDto.toEntity(existingAsset)))
+        // Review #4: preserveDirty=true so a pending metadata edit isn't clobbered by the
+        // move/check-out response's lifecycle-only truth.
+        ctx.localDataService.saveEquipmentAssets(listOf(assetDto.toEntity(existingAsset)), preserveDirty = true)
         assetDto.placements?.let { reconcilePlacements(existingAsset.assetId, it) }
     }
 

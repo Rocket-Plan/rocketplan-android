@@ -101,8 +101,9 @@ class SerializedRoomEquipmentViewModel(
                 .flatMapLatest { mode ->
                     currentMode = mode
                     when (mode) {
-                        SerializedEquipmentMode.OFF -> flowOf(SerializedRoomUiState.LegacyMode)
-                        SerializedEquipmentMode.UNKNOWN -> flowOf(SerializedRoomUiState.Unavailable)
+                        // Review #6: reset so a later ON re-entry performs a fresh authoritative pull.
+                        SerializedEquipmentMode.OFF -> { pulled = false; flowOf(SerializedRoomUiState.LegacyMode) }
+                        SerializedEquipmentMode.UNKNOWN -> { pulled = false; flowOf(SerializedRoomUiState.Unavailable) }
                         SerializedEquipmentMode.ON -> {
                             // Review #1/#5: await the initial authoritative pull once per ON.
                             if (!pulled) {
@@ -135,6 +136,19 @@ class SerializedRoomEquipmentViewModel(
                 owner != null -> _events.emit("Switch to this project's company to load its equipment.")
             }
             resolve()
+        }
+    }
+
+    /**
+     * Review #2: re-fetch backend authority on resume/foreground so a server-side flag flip
+     * is picked up (the flags endpoint is active-company scoped, so only when owner == active).
+     * The refresh updates the cached flag, which observeMode() then emits.
+     */
+    fun refreshMode() {
+        viewModelScope.launch {
+            val owner = withContext(Dispatchers.IO) { localDataService.getProject(projectId)?.companyId } ?: return@launch
+            val active = withContext(Dispatchers.IO) { app.secureStorage.getCompanyIdSync() }
+            if (owner == active) runCatching { authRepository.refreshFeatureFlags() }
         }
     }
 

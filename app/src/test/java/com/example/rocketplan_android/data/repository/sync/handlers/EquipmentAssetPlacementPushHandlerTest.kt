@@ -152,7 +152,7 @@ class EquipmentAssetPlacementPushHandlerTest {
 
         assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
         coVerify(exactly = 1) { api.moveEquipmentAsset(900L, any()) }
-        coVerify { localDataService.saveEquipmentAssets(any()) }
+        coVerify { localDataService.saveEquipmentAssets(any(), any()) }
     }
 
     @Test

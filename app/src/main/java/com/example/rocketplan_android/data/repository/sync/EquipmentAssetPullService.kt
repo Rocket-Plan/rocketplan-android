@@ -5,6 +5,7 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
+import com.example.rocketplan_android.data.model.offline.EquipmentAssetDto
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetPlacementDto
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import kotlinx.coroutines.CoroutineDispatcher
@@ -38,7 +39,7 @@ class EquipmentAssetPullService(
                 val roomServerId = localDataService.getRoom(roomLocalId)?.serverId
                     ?: return@runCatching // can't reconcile the room without its server id
                 val roomAssets = api.getRoomEquipmentAssets(roomServerId).data
-                localDataService.saveEquipmentAssets(roomAssets.map { it.toEntity() }, preserveDirty = true)
+                saveAssetsProtectingLifecycle(roomAssets)
                 val roomAssetServerIds = roomAssets.map { it.id }.toSet()
 
                 // 3. Per-asset placement history — authoritative per asset (incl. empty history).
@@ -66,7 +67,7 @@ class EquipmentAssetPullService(
         while (true) {
             val resp = api.getCompanyEquipmentAssets(companyId = companyId, perPage = 100, page = page)
             if (resp.data.isEmpty()) break
-            localDataService.saveEquipmentAssets(resp.data.map { it.toEntity() }, preserveDirty = true)
+            saveAssetsProtectingLifecycle(resp.data)
             seen += resp.data.map { it.id }
             val current = resp.meta?.currentPage ?: page
             val last = resp.meta?.lastPage ?: current
@@ -74,6 +75,32 @@ class EquipmentAssetPullService(
             page = current + 1
         }
         return seen
+    }
+
+    /**
+     * Review round-5 #3/#4: save pulled assets but PRESERVE the optimistic lifecycle fields
+     * (status / current_placement) of any asset that still has a pending local placement op —
+     * otherwise a pull landing before the deploy/check-out syncs would revert the status the
+     * server hasn't processed yet. `isDirty` (metadata) is handled by preserveDirty=true.
+     */
+    private suspend fun saveAssetsProtectingLifecycle(dtos: List<EquipmentAssetDto>) {
+        if (dtos.isEmpty()) return
+        val entities = dtos.map { it.toEntity() }
+        val existingByServer = localDataService
+            .getEquipmentAssetsByServerIds(entities.mapNotNull { it.serverId })
+            .associateBy { it.serverId }
+        val assetIdsWithPendingPlacement = localDataService.getPendingEquipmentPlacements()
+            .map { it.assetId }
+            .toSet()
+        val adjusted = entities.map { server ->
+            val local = existingByServer[server.serverId]
+            if (local != null && local.assetId in assetIdsWithPendingPlacement) {
+                server.copy(status = local.status, currentPlacementServerId = local.currentPlacementServerId)
+            } else {
+                server
+            }
+        }
+        localDataService.saveEquipmentAssets(adjusted, preserveDirty = true)
     }
 
     private suspend fun markMissingAssetsDeleted(companyId: Long, seen: Set<Long>) {
