@@ -73,6 +73,14 @@ interface AuthService {
     suspend fun getCurrentUser(): Response<CurrentUserEnvelope>
 
     /**
+     * Fetch the current user's feature flags for the active company.
+     * Response is `data`-wrapped (FeatureFlagResource). RP-FR-019 reads
+     * `data.values.serializedEquipment`.
+     */
+    @GET("api/auth/user/feature-flags")
+    suspend fun getFeatureFlags(): Response<com.example.rocketplan_android.data.model.FeatureFlagResponse>
+
+    /**
      * Set the active company for the current session.
      * This tells the backend which company context to use for API requests.
      */

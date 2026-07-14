@@ -460,6 +460,9 @@ class AuthRepository(
                         secureStorage.saveCompanyId(selectedCompanyId)
                         localDataService.setCurrentCompanyId(selectedCompanyId)
                         RetrofitClient.setCompanyId(selectedCompanyId)
+                        // RP-FR-019: cache the per-company serialized-equipment flag.
+                        // Best-effort — on failure the mode stays UNKNOWN (retryable), never OFF.
+                        cacheSerializedEquipmentFlag(selectedCompanyId)
                         remoteLogger?.log(
                             LogLevel.INFO,
                             TAG,
@@ -525,6 +528,25 @@ class AuthRepository(
     suspend fun getCachedSmsVerified(): Boolean = secureStorage.getSmsVerifiedSync()
 
     fun observeCompanyId(): Flow<Long?> = secureStorage.getCompanyId()
+
+    /**
+     * RP-FR-019: fetch and cache the per-company serialized-equipment flag.
+     * Best-effort: on any failure the cache is left untouched, so the mode stays
+     * UNKNOWN (retryable) rather than falling back to legacy (OFF).
+     */
+    private suspend fun cacheSerializedEquipmentFlag(companyId: Long) {
+        try {
+            val response = authService.getFeatureFlags()
+            val enabled = response.body()?.data?.values?.serializedEquipment
+            if (response.isSuccessful && enabled != null) {
+                secureStorage.saveSerializedEquipmentEnabled(companyId, enabled)
+            }
+        } catch (e: kotlin.coroutines.cancellation.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w("AuthRepository", "Failed to fetch serialized equipment flag for companyId=$companyId", e)
+        }
+    }
 
     /**
      * Set the active company for API requests.

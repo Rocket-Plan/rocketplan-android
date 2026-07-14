@@ -309,6 +309,30 @@ class SecureStorage internal constructor(
         }
     }
 
+    // ==================== Serialized Equipment mode (RP-FR-019) ====================
+    // Cached PER COMPANY (multi-company users can differ). Absence of the key =
+    // UNKNOWN (never fetched / fetch failed) — callers must NOT treat that as OFF.
+
+    private fun serializedEquipmentKey(companyId: Long) =
+        booleanPreferencesKey("serialized_equipment_$companyId")
+
+    suspend fun saveSerializedEquipmentEnabled(companyId: Long, enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[serializedEquipmentKey(companyId)] = enabled
+        }
+    }
+
+    /** @return true/false when cached, or null when never fetched (UNKNOWN). */
+    suspend fun getSerializedEquipmentEnabledSync(companyId: Long): Boolean? {
+        return context.dataStore.data.map { it[serializedEquipmentKey(companyId)] }.first()
+    }
+
+    suspend fun clearSerializedEquipmentEnabled(companyId: Long) {
+        context.dataStore.edit { preferences ->
+            preferences.remove(serializedEquipmentKey(companyId))
+        }
+    }
+
     // ==================== User Context ====================
 
     suspend fun saveUserId(userId: Long) {
