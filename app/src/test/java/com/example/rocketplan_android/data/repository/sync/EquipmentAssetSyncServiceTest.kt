@@ -118,6 +118,67 @@ class EquipmentAssetSyncServiceTest {
     }
 
     @Test
+    fun `moveAsset updates the open placement room and enqueues move`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 1L, serverId = 12L, uuid = "open", assetId = 50L, roomId = 400L,
+            isOpen = true, createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getRoom(500L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createRoom(roomId = 500L, projectId = 100L)
+        coEvery { local.getProject(100L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createProject(projectId = 100L, companyId = 7L)
+        val moved = slot<OfflineEquipmentPlacementEntity>()
+        coEvery { enqueuer.enqueuePlacementMove(capture(moved)) } just Runs
+
+        val result = service.moveAsset(assetLocalId = 50L, toRoomLocalId = 500L)
+
+        assertThat(result).isNotNull()
+        assertThat(moved.captured.roomId).isEqualTo(500L)
+        coVerify(exactly = 1) { enqueuer.enqueuePlacementMove(any()) }
+    }
+
+    @Test
+    fun `moveAsset to the same room is a no-op`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 1L, serverId = 12L, uuid = "open", assetId = 50L, roomId = 400L,
+            isOpen = true, createdAt = Date(), updatedAt = Date()
+        )
+
+        val result = service.moveAsset(assetLocalId = 50L, toRoomLocalId = 400L)
+
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementMove(any()) }
+    }
+
+    @Test
+    fun `checkOutAsset closes the open placement and enqueues checkout`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 1L, serverId = 12L, uuid = "open", assetId = 50L, roomId = 400L,
+            isOpen = true, createdAt = Date(), updatedAt = Date()
+        )
+
+        val result = service.checkOutAsset(50L)
+
+        assertThat(result).isNotNull()
+        coVerify(exactly = 1) { enqueuer.enqueuePlacementCheckout(any()) }
+        // Asset optimistically returned to the available pool.
+        coVerify { local.saveEquipmentAssets(match { it.first().status == "available" }) }
+    }
+
+    @Test
     fun `retireAsset with serverId enqueues retire`() = runTest {
         val asset = OfflineEquipmentAssetEntity(
             assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,

@@ -156,6 +156,18 @@ class SerializedRoomEquipmentViewModel(
         }
     }
 
+    fun move(assetId: Long, toRoomLocalId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            offlineSyncRepository.moveEquipmentAssetOffline(assetId, toRoomLocalId)
+        }
+    }
+
+    fun checkOut(assetId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            offlineSyncRepository.checkOutEquipmentAssetOffline(assetId)
+        }
+    }
+
     private fun OfflineEquipmentAssetEntity.toRoomItem(placement: OfflineEquipmentPlacementEntity) =
         RoomAssetItem(
             assetId = assetId,

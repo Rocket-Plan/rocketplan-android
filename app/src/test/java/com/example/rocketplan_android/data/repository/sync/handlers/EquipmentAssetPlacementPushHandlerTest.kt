@@ -124,4 +124,80 @@ class EquipmentAssetPlacementPushHandlerTest {
 
         assertThat(handler.handleDeploy(op)).isEqualTo(OperationOutcome.DROP)
     }
+
+    // ===== Move (Phase 1c) =====
+
+    private fun assetDto() = com.example.rocketplan_android.data.model.offline.EquipmentAssetDto(
+        id = 900L, uuid = "asset-uuid", companyId = 7L, catalogUuid = "cat", name = "Air Mover",
+        manufacturer = null, model = null, isStandard = true, serialNumber = null, assetTag = null,
+        status = "deployed", currentPlacementId = 13L, purchaseDate = null, purchasePrice = null,
+        vendor = null, warrantyExpiresAt = null, rentalDayRate = null, idempotencyKey = null, note = null,
+        createdAt = "2026-07-01T10:00:00.000000Z", updatedAt = "2026-07-05T10:00:00.000000Z",
+        placements = listOf(placementDto())
+    )
+
+    private val moveOp = PushHandlerTestFixtures.createSyncOperation(
+        "equipment_asset_placement", 60L, "placement-uuid", SyncOperationType.UPDATE
+    )
+
+    @Test
+    fun `move posts to move endpoint and reconciles`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement(serverId = 12L)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { localDataService.getRoom(400L) } returns PushHandlerTestFixtures.createRoom(serverId = 4000L)
+        coEvery { api.moveEquipmentAsset(900L, any()) } returns
+            com.example.rocketplan_android.data.model.offline.EquipmentAssetResponse(assetDto())
+
+        val outcome = handler.handleMove(moveOp)
+
+        assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify(exactly = 1) { api.moveEquipmentAsset(900L, any()) }
+        coVerify { localDataService.saveEquipmentAssets(any()) }
+    }
+
+    @Test
+    fun `move skips until asset registered`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement(serverId = 12L)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = null)
+        assertThat(handler.handleMove(moveOp)).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.moveEquipmentAsset(any(), any()) }
+    }
+
+    @Test
+    fun `move 409 records conflict`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement(serverId = 12L)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { localDataService.getRoom(400L) } returns PushHandlerTestFixtures.createRoom(serverId = 4000L)
+        coEvery { api.moveEquipmentAsset(900L, any()) } throws PushHandlerTestFixtures.create409WithUpdatedAt()
+
+        assertThat(handler.handleMove(moveOp)).isEqualTo(OperationOutcome.CONFLICT_PENDING)
+        coVerify(exactly = 1) { localDataService.upsertConflict(any()) }
+    }
+
+    // ===== Check-out (Phase 1c) =====
+
+    private val checkoutOp = PushHandlerTestFixtures.createSyncOperation(
+        "equipment_asset_placement", 60L, "placement-uuid", SyncOperationType.DELETE
+    )
+
+    @Test
+    fun `check-out posts to check-out endpoint`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement(serverId = 12L)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { api.checkOutEquipmentAsset(900L, any()) } returns
+            com.example.rocketplan_android.data.model.offline.EquipmentAssetResponse(assetDto())
+
+        val outcome = handler.handleCheckOut(checkoutOp)
+
+        assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify(exactly = 1) { api.checkOutEquipmentAsset(900L, any()) }
+    }
+
+    @Test
+    fun `check-out skips until the placement itself has synced`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement(serverId = null)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        assertThat(handler.handleCheckOut(checkoutOp)).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.checkOutEquipmentAsset(any(), any()) }
+    }
 }

@@ -1307,6 +1307,9 @@ class LocalDataService private constructor(
         dao.getOpenPlacementForAsset(assetId)
     }
 
+    suspend fun getEquipmentPlacementsByServerIds(serverIds: List<Long>): List<OfflineEquipmentPlacementEntity> =
+        withContext(ioDispatcher) { dao.getEquipmentPlacementsByServerIds(serverIds) }
+
     suspend fun getPendingEquipmentPlacements(): List<OfflineEquipmentPlacementEntity> = withContext(ioDispatcher) {
         dao.getPendingEquipmentPlacements()
     }

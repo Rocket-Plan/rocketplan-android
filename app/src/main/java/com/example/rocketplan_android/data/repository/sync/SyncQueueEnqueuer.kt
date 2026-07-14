@@ -183,6 +183,16 @@ interface SyncQueueEnqueuer {
         placement: OfflineEquipmentPlacementEntity
     )
 
+    /** Move a deployed asset to another room (Phase 1c). */
+    suspend fun enqueuePlacementMove(
+        placement: OfflineEquipmentPlacementEntity
+    )
+
+    /** Check a deployed asset back out to the pool (Phase 1c). */
+    suspend fun enqueuePlacementCheckout(
+        placement: OfflineEquipmentPlacementEntity
+    )
+
     // ============================================================================
     // Moisture Log Operations
     // ============================================================================

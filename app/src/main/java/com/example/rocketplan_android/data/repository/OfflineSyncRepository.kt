@@ -1218,6 +1218,12 @@ class OfflineSyncRepository(
     suspend fun retireEquipmentAssetOffline(assetLocalId: Long) =
         equipmentAssetSyncService.retireAsset(assetLocalId)
 
+    suspend fun moveEquipmentAssetOffline(assetLocalId: Long, toRoomLocalId: Long) =
+        equipmentAssetSyncService.moveAsset(assetLocalId, toRoomLocalId)
+
+    suspend fun checkOutEquipmentAssetOffline(assetLocalId: Long) =
+        equipmentAssetSyncService.checkOutAsset(assetLocalId)
+
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =
         workScopeSyncService.fetchWorkScopeCatalog(companyId)
 

@@ -151,6 +151,52 @@ class EquipmentAssetSyncService(
         android.util.Log.w("EquipmentAssetSyncService", "Rejecting deploy of $assetUuid: $reason")
     }
 
+    /**
+     * Move a deployed asset to another room (Phase 1c). Updates the open placement's
+     * room and enqueues a MOVE; the handler drives the server move + reconciles the
+     * resulting placements. Returns null (nothing changed) if there's no open
+     * placement, the target is the same room, or it's cross-company.
+     */
+    suspend fun moveAsset(assetLocalId: Long, toRoomLocalId: Long): OfflineEquipmentPlacementEntity? =
+        withContext(ioDispatcher) {
+            val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@withContext null
+            val open = localDataService.getOpenPlacementForAsset(asset.assetId) ?: return@withContext null
+            if (open.roomId == toRoomLocalId) return@withContext null
+            val room = localDataService.getRoom(toRoomLocalId) ?: return@withContext null
+            val roomCompanyId = localDataService.getProject(room.projectId)?.companyId
+            if (roomCompanyId != null && roomCompanyId != asset.companyId) return@withContext null
+
+            val updated = open.copy(
+                roomId = toRoomLocalId,
+                projectId = room.projectId,
+                updatedAt = now(),
+                syncStatus = SyncStatus.PENDING,
+                isDirty = true
+            )
+            localDataService.saveEquipmentPlacements(listOf(updated))
+            syncQueueEnqueuer().enqueuePlacementMove(updated)
+            updated
+        }
+
+    /** Check a deployed asset back out to the pool (Phase 1c). */
+    suspend fun checkOutAsset(assetLocalId: Long): OfflineEquipmentPlacementEntity? =
+        withContext(ioDispatcher) {
+            val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@withContext null
+            val open = localDataService.getOpenPlacementForAsset(asset.assetId) ?: return@withContext null
+            val timestamp = now()
+            val updated = open.copy(
+                dateOut = timestamp,
+                updatedAt = timestamp,
+                syncStatus = SyncStatus.PENDING,
+                isDirty = true
+            )
+            localDataService.saveEquipmentPlacements(listOf(updated))
+            // Optimistically free the asset so the pool view updates immediately.
+            localDataService.saveEquipmentAssets(listOf(asset.copy(status = "available", updatedAt = timestamp)))
+            syncQueueEnqueuer().enqueuePlacementCheckout(updated)
+            updated
+        }
+
     /** Retire an asset (soft-delete + status retired). */
     suspend fun retireAsset(assetLocalId: Long): OfflineEquipmentAssetEntity? = withContext(ioDispatcher) {
         val asset = localDataService.getEquipmentAsset(assetLocalId) ?: return@withContext null

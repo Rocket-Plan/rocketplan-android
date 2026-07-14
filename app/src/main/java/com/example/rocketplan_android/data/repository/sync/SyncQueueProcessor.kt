@@ -423,9 +423,10 @@ class SyncQueueProcessor(
                 }
                 "equipment_asset_placement" -> handleOperation(operation, "pending:equipment_placement") {
                     when (operation.operationType) {
-                        // Phase 1b: CREATE = deploy. MOVE/CHECK-OUT (UPDATE/DELETE) land in Phase 1c.
+                        // CREATE = deploy, UPDATE = move, DELETE = check-out.
                         SyncOperationType.CREATE -> equipmentPlacementHandler.handleDeploy(operation).toLocal()
-                        else -> OperationOutcome.DROP
+                        SyncOperationType.UPDATE -> equipmentPlacementHandler.handleMove(operation).toLocal()
+                        SyncOperationType.DELETE -> equipmentPlacementHandler.handleCheckOut(operation).toLocal()
                     }
                 }
                 "moisture_log" -> handleOperation(operation, "pending:moisture") {
@@ -999,13 +1000,28 @@ class SyncQueueProcessor(
 
     override suspend fun enqueuePlacementDeploy(
         placement: OfflineEquipmentPlacementEntity
+    ) = enqueuePlacementOp(placement, SyncOperationType.CREATE)
+
+    override suspend fun enqueuePlacementMove(
+        placement: OfflineEquipmentPlacementEntity
+    ) = enqueuePlacementOp(placement, SyncOperationType.UPDATE)
+
+    override suspend fun enqueuePlacementCheckout(
+        placement: OfflineEquipmentPlacementEntity
+    ) = enqueuePlacementOp(placement, SyncOperationType.DELETE)
+
+    private suspend fun enqueuePlacementOp(
+        placement: OfflineEquipmentPlacementEntity,
+        operationType: SyncOperationType
     ) {
+        // Move/check-out lock on the ASSET's updated_at (resolved in the handler), so no
+        // payload lock is needed here.
         val payload = PendingLockPayload(lockUpdatedAt = null)
         enqueueOperation(
             entityType = "equipment_asset_placement",
             entityId = placement.placementId,
             entityUuid = placement.uuid,
-            operationType = SyncOperationType.CREATE,
+            operationType = operationType,
             payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
             priority = SyncPriority.MEDIUM
         )
