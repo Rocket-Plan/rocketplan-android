@@ -87,12 +87,18 @@ class EquipmentRoomFragment : Fragment() {
                     navigateToSerializedOnce()
                     return@repeatOnLifecycle
                 }
-                // Review #2: refresh backend authority on (re)entry/foreground when we can
-                // (the flags endpoint is active-company scoped). This updates the cached mode
-                // that observeMode() emits, so a backend flip is picked up on resume.
-                withContext(Dispatchers.IO) {
-                    if (app.secureStorage.getCompanyIdSync() == companyId) {
-                        runCatching { app.authRepository.refreshFeatureFlags() }
+                // Review #2 + continuous invalidation: periodically refresh backend authority while
+                // foregrounded (immediately, then every 60s) so a flip in EITHER direction is picked
+                // up on the legacy screen too (matches the serialized screen's poll). The flags
+                // endpoint is active-company scoped, so only refresh when active == owner.
+                launch {
+                    while (true) {
+                        withContext(Dispatchers.IO) {
+                            if (app.secureStorage.getCompanyIdSync() == companyId) {
+                                runCatching { app.authRepository.refreshFeatureFlags() }
+                            }
+                        }
+                        kotlinx.coroutines.delay(60_000)
                     }
                 }
                 com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
