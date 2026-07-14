@@ -1,0 +1,36 @@
+{
+  "data": [
+    {
+      "project": {
+        "id": 2,
+        "uid": "RP-25-1184",
+        "address": "123 Main St"
+      },
+      "bars": [
+        {
+          "placement_id": 12,
+          "asset": {
+            "id": 3,
+            "uuid": "9d7f2c1a-3b44-4e2a-9c11-000000000003",
+            "name": "Air Mover",
+            "serial_number": "AM-0001",
+            "asset_tag": "TAG-0001"
+          },
+          "room": {
+            "id": 6,
+            "name": "Basement"
+          },
+          "date_in": "2026-07-01T10:00:00.000000Z",
+          "date_out": null,
+          "is_open": true
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 25,
+    "total": 1,
+    "last_page": 1
+  }
+}

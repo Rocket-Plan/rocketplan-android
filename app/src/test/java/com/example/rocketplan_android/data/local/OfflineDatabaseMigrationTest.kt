@@ -85,4 +85,49 @@ class OfflineDatabaseMigrationTest {
             assertThat(c.isNull(c.getColumnIndex("propertyServerId"))).isTrue()
         }
     }
+
+    /** RP-FR-019: MIGRATION_30_31 creates the serialized-equipment tables + indexes. */
+    @Test
+    fun `migration 30 to 31 creates serialized equipment tables and indexes`() {
+        OfflineDatabase.MIGRATION_30_31.migrate(db)
+
+        // Both tables exist and are writable with the expected columns.
+        db.execSQL(
+            "INSERT INTO offline_equipment_assets " +
+                "(serverId, uuid, companyId, catalogUuid, name, isStandard, status, " +
+                " createdAt, updatedAt, syncStatus) " +
+                "VALUES (900, 'asset-uuid', 7, 'cat-uuid', 'Air Mover', 1, 'available', 0, 0, 'SYNCED')"
+        )
+        db.execSQL(
+            "INSERT INTO offline_equipment_placements " +
+                "(serverId, uuid, assetId, roomId, isOpen, createdAt, updatedAt, syncStatus) " +
+                "VALUES (12, 'placement-uuid', 1, 6, 1, 0, 0, 'PENDING')"
+        )
+
+        db.query("SELECT status FROM offline_equipment_assets WHERE serverId = 900").use { c ->
+            assertThat(c.count).isEqualTo(1)
+            c.moveToFirst()
+            assertThat(c.getString(c.getColumnIndex("status"))).isEqualTo("available")
+        }
+        db.query("SELECT isOpen FROM offline_equipment_placements WHERE serverId = 12").use { c ->
+            assertThat(c.count).isEqualTo(1)
+            c.moveToFirst()
+            assertThat(c.getInt(c.getColumnIndex("isOpen"))).isEqualTo(1)
+        }
+
+        val assetIndexes = mutableListOf<String>()
+        db.query("PRAGMA index_list(offline_equipment_assets)").use { c ->
+            val nameIdx = c.getColumnIndex("name")
+            while (c.moveToNext()) assetIndexes.add(c.getString(nameIdx))
+        }
+        assertThat(assetIndexes).contains("index_offline_equipment_assets_uuid")
+        assertThat(assetIndexes).contains("index_offline_equipment_assets_serverId")
+
+        val placementIndexes = mutableListOf<String>()
+        db.query("PRAGMA index_list(offline_equipment_placements)").use { c ->
+            val nameIdx = c.getColumnIndex("name")
+            while (c.moveToNext()) placementIndexes.add(c.getString(nameIdx))
+        }
+        assertThat(placementIndexes).contains("index_offline_equipment_placements_assetId")
+    }
 }

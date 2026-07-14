@@ -1,0 +1,57 @@
+{
+  "data": {
+    "id": 3,
+    "uuid": "9d7f2c1a-3b44-4e2a-9c11-000000000003",
+    "company_id": 7,
+    "catalog_uuid": "c1a11111-1111-4111-8111-111111111111",
+    "name": "Air Mover",
+    "manufacturer": "Phoenix",
+    "model": "AirMax BR",
+    "is_standard": true,
+    "serial_number": "AM-0001",
+    "asset_tag": "TAG-0001",
+    "status": "deployed",
+    "current_placement_id": 12,
+    "purchase_date": "2026-01-15",
+    "purchase_price": "1899.00",
+    "vendor": "Acme Supply",
+    "warranty_expires_at": "2028-01-15",
+    "rental_day_rate": "35.50",
+    "idempotency_key": "9d7f2c1a-3b44-4e2a-9c11-000000000003",
+    "note": "Basement unit",
+    "created_at": "2026-07-01T10:00:00.000000Z",
+    "updated_at": "2026-07-02T14:30:00.000000Z",
+    "current_placement": {
+      "id": 12,
+      "uuid": "aa000000-0000-4000-8000-000000000012",
+      "equipment_asset_id": 3,
+      "room_id": 6,
+      "project_id": 2,
+      "date_in": "2026-07-01T10:00:00.000000Z",
+      "date_out": null,
+      "placed_by_user_id": 4,
+      "note": null,
+      "idempotency_key": "aa000000-0000-4000-8000-000000000012",
+      "created_at": "2026-07-01T10:00:00.000000Z",
+      "updated_at": "2026-07-01T10:00:00.000000Z",
+      "is_open": true
+    },
+    "placements": [
+      {
+        "id": 12,
+        "uuid": "aa000000-0000-4000-8000-000000000012",
+        "equipment_asset_id": 3,
+        "room_id": 6,
+        "project_id": 2,
+        "date_in": "2026-07-01T10:00:00.000000Z",
+        "date_out": null,
+        "placed_by_user_id": 4,
+        "note": null,
+        "idempotency_key": "aa000000-0000-4000-8000-000000000012",
+        "created_at": "2026-07-01T10:00:00.000000Z",
+        "updated_at": "2026-07-01T10:00:00.000000Z",
+        "is_open": true
+      }
+    ]
+  }
+}
