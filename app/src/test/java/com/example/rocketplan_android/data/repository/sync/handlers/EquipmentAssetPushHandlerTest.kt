@@ -89,6 +89,30 @@ class EquipmentAssetPushHandlerTest {
     }
 
     @Test
+    fun `upsert holds (SKIP) when company mode is OFF`() = runTest {
+        val ctxOff = PushHandlerTestFixtures.createContext(api, localDataService, remoteLogger) {
+            com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF
+        }
+        val gated = EquipmentAssetPushHandler(ctxOff)
+        coEvery { localDataService.getEquipmentAssetByUuid("asset-uuid") } returns asset(serverId = null)
+
+        assertThat(gated.handleUpsert(op(SyncOperationType.CREATE))).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.registerEquipmentAsset(any(), any()) }
+    }
+
+    @Test
+    fun `upsert holds (SKIP) when company mode is UNKNOWN`() = runTest {
+        val ctxUnknown = PushHandlerTestFixtures.createContext(api, localDataService, remoteLogger) {
+            com.example.rocketplan_android.data.feature.SerializedEquipmentMode.UNKNOWN
+        }
+        val gated = EquipmentAssetPushHandler(ctxUnknown)
+        coEvery { localDataService.getEquipmentAssetByUuid("asset-uuid") } returns asset(serverId = null)
+
+        assertThat(gated.handleUpsert(op(SyncOperationType.CREATE))).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.registerEquipmentAsset(any(), any()) }
+    }
+
+    @Test
     fun `deleted asset drops`() = runTest {
         coEvery { localDataService.getEquipmentAssetByUuid("asset-uuid") } returns asset(isDeleted = true)
         assertThat(handler.handleUpsert(op())).isEqualTo(OperationOutcome.DROP)

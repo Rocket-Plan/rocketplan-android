@@ -30,7 +30,9 @@ object PushHandlerTestFixtures {
         localDataService: LocalDataService = mockk(relaxed = true),
         remoteLogger: RemoteLogger = mockk(relaxed = true),
         queueManager: ImageProcessorQueueManager = mockk(relaxed = true),
-        imageProcessorRepository: ImageProcessorRepository = mockk(relaxed = true)
+        imageProcessorRepository: ImageProcessorRepository = mockk(relaxed = true),
+        serializedModeFor: suspend (Long) -> com.example.rocketplan_android.data.feature.SerializedEquipmentMode =
+            { com.example.rocketplan_android.data.feature.SerializedEquipmentMode.ON }
     ) = PushHandlerContext(
         api = api,
         localDataService = localDataService,
@@ -39,7 +41,8 @@ object PushHandlerTestFixtures {
         syncProjectEssentials = { mockk() },
         persistProperty = { _, _, _, _, _ -> mockk() },
         imageProcessorQueueManagerProvider = { queueManager },
-        imageProcessorRepositoryProvider = { imageProcessorRepository }
+        imageProcessorRepositoryProvider = { imageProcessorRepository },
+        serializedModeFor = serializedModeFor
     )
 
     // ===== Entity Factories =====

@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.feature.SerializedEquipmentMode
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
@@ -33,6 +34,10 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
 
         val asset = ctx.localDataService.getEquipmentAsset(placement.assetId)
             ?: return OperationOutcome.DROP
+        // Review #2: gate on the asset's company mode; OFF/UNKNOWN → SKIP (hold).
+        if (ctx.serializedModeFor(asset.companyId) != SerializedEquipmentMode.ON) {
+            return OperationOutcome.SKIP
+        }
         val assetServerId = asset.serverId
         if (assetServerId == null) {
             ctx.remoteLogger?.log(

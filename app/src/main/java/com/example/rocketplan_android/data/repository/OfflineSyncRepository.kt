@@ -88,7 +88,10 @@ class OfflineSyncRepository(
     private val photoCacheManager: PhotoCacheManager? = null,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
+    private val isNetworkAvailable: () -> Boolean = { false }, // Default to offline for safety
+    // RP-FR-019 (review #2): enables the serialized write-boundary gate in the sync
+    // processor. Null → gate defaults to ON (no enforcement).
+    private val secureStorage: com.example.rocketplan_android.data.storage.SecureStorage? = null
 ) {
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
     private var imageProcessorRepository: ImageProcessorRepository? = null
@@ -239,7 +242,13 @@ class OfflineSyncRepository(
             imageProcessorRepositoryProvider = { imageProcessorRepository },
             remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher,
-            isNetworkAvailable = isNetworkAvailable
+            isNetworkAvailable = isNetworkAvailable,
+            serializedModeFor = secureStorage?.let { ss ->
+                val provider = com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(ss)
+                val resolver: suspend (Long) -> com.example.rocketplan_android.data.feature.SerializedEquipmentMode =
+                    { companyId -> provider.modeFor(companyId) }
+                resolver
+            }
         )
     }
 

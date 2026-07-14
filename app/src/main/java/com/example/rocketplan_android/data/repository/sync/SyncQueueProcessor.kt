@@ -93,7 +93,10 @@ class SyncQueueProcessor(
     private val imageProcessorRepositoryProvider: () -> ImageProcessorRepository?,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
+    private val isNetworkAvailable: () -> Boolean = { false }, // Default to offline for safety
+    // RP-FR-019 (review #2): resolves serialized-equipment mode per company for the
+    // serialized push handlers' write boundary. Null → gate defaults to ON (no-op).
+    private val serializedModeFor: (suspend (Long) -> com.example.rocketplan_android.data.feature.SerializedEquipmentMode)? = null
 ) : SyncQueueEnqueuer {
     private val gson = Gson()
     private val syncQueueLogger = SyncQueueLogger(remoteLogger)
@@ -115,7 +118,9 @@ class SyncQueueProcessor(
             syncProjectEssentials = syncProjectEssentials,
             persistProperty = persistProperty,
             imageProcessorQueueManagerProvider = imageProcessorQueueManagerProvider,
-            imageProcessorRepositoryProvider = imageProcessorRepositoryProvider
+            imageProcessorRepositoryProvider = imageProcessorRepositoryProvider,
+            serializedModeFor = serializedModeFor
+                ?: { com.example.rocketplan_android.data.feature.SerializedEquipmentMode.ON }
         )
     }
     private val projectHandler by lazy { ProjectPushHandler(handlerContext) }

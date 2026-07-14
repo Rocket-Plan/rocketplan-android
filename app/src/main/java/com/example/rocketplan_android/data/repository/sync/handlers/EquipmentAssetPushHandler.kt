@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import android.util.Log
+import com.example.rocketplan_android.data.feature.SerializedEquipmentMode
 import com.example.rocketplan_android.data.local.DeletionTombstoneCache
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
@@ -28,6 +29,7 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
         val asset = ctx.localDataService.getEquipmentAssetByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
         if (asset.isDeleted) return OperationOutcome.DROP
+        gateOrSkip(asset.companyId)?.let { return it }
 
         val lockUpdatedAt = DateUtils.formatApiDate(asset.serverUpdatedAt ?: asset.updatedAt)
         return try {
@@ -93,6 +95,7 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
     suspend fun handleDelete(operation: OfflineSyncQueueEntity): OperationOutcome {
         val asset = ctx.localDataService.getEquipmentAssetByUuid(operation.entityUuid)
             ?: return OperationOutcome.DROP
+        gateOrSkip(asset.companyId)?.let { return it }
         val serverId = asset.serverId
         if (serverId == null) {
             ctx.localDataService.saveEquipmentAssets(listOf(deletedCopy(asset)))
@@ -129,6 +132,16 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
             else -> OperationOutcome.RETRY
         }
     }
+
+    /**
+     * Review #2: hard write boundary. A serialized op may only reach the server when
+     * ITS company is in serialized mode. Company is derived from the entity, so a
+     * company switch can't push work under the wrong context. OFF/UNKNOWN → SKIP
+     * (hold and retry) — never push, never drop.
+     */
+    private suspend fun gateOrSkip(companyId: Long): OperationOutcome? =
+        if (ctx.serializedModeFor(companyId) == SerializedEquipmentMode.ON) null
+        else OperationOutcome.SKIP
 
     private fun deletedCopy(asset: OfflineEquipmentAssetEntity) = asset.copy(
         isDeleted = true,
