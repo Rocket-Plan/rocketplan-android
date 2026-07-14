@@ -96,16 +96,16 @@ class EquipmentAssetPullServiceTest {
     }
 
     @Test
-    fun `dirty metadata with a live placement keeps local edits and adopts fresh lock`() = runTest {
+    fun `dirty metadata with a live placement keeps local edits and PRESERVES the base lock`() = runTest {
         coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
             page(assetDto(900).copy(name = "Server Name", status = "available"))
+        val editBase = java.util.Date(1000L)
         val existing = OfflineEquipmentAssetEntity(
             assetId = 50L, serverId = 900L, uuid = "loc", companyId = 7L,
             name = "Local Edit", status = "deployed", isDirty = true,
-            serverUpdatedAt = java.util.Date(0L), createdAt = Date(), updatedAt = Date()
+            serverUpdatedAt = editBase, createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getEquipmentAssetsByServerIds(listOf(900L)) } returns listOf(existing)
-        // A live (PENDING) placement op for this asset.
         coEvery { local.getPendingEquipmentPlacements() } returns listOf(
             OfflineEquipmentPlacementEntity(
                 placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
@@ -120,9 +120,37 @@ class EquipmentAssetPullServiceTest {
         service.refreshRoom(roomLocalId = 400L, companyId = 7L)
 
         val merged = saves.flatten().first { it.serverId == 900L }
-        assertThat(merged.name).isEqualTo("Local Edit")            // metadata preserved
-        assertThat(merged.status).isEqualTo("deployed")            // optimistic lifecycle preserved
-        assertThat(merged.serverUpdatedAt).isNotEqualTo(java.util.Date(0L)) // fresh lock adopted
+        assertThat(merged.name).isEqualTo("Local Edit")   // metadata preserved
+        assertThat(merged.status).isEqualTo("deployed")   // optimistic lifecycle preserved
+        assertThat(merged.isDirty).isTrue()
+        // Blocker #2: the edit-base lock is PRESERVED (not rebased onto the server's newer stamp),
+        // so a genuine cross-client change still produces a 409.
+        assertThat(merged.serverUpdatedAt).isEqualTo(editBase)
+    }
+
+    @Test
+    fun `dirty metadata WITHOUT a live placement adopts server lifecycle (two-axis)`() = runTest {
+        // Server moved the asset (deployed) while a local metadata edit is pending; no live op.
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
+            page(assetDto(900).copy(name = "Server Name", status = "deployed", currentPlacementId = 77L))
+        val existing = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "loc", companyId = 7L,
+            name = "Local Edit", status = "available", currentPlacementServerId = null, isDirty = true,
+            createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAssetsByServerIds(listOf(900L)) } returns listOf(existing)
+        coEvery { local.getPendingEquipmentPlacements() } returns emptyList() // no live op
+        coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()
+        coEvery { local.getRoom(400L) } returns null
+        val saves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(saves), any()) } just Runs
+
+        service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        val merged = saves.flatten().first { it.serverId == 900L }
+        assertThat(merged.name).isEqualTo("Local Edit")            // metadata axis: local
+        assertThat(merged.status).isEqualTo("deployed")            // lifecycle axis: server (no live op)
+        assertThat(merged.currentPlacementServerId).isEqualTo(77L) // lifecycle axis: server
     }
 
     @Test

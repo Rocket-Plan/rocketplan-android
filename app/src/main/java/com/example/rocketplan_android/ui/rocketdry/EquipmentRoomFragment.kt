@@ -129,6 +129,14 @@ class EquipmentRoomFragment : Fragment() {
         observeViewModel()
     }
 
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Review round-7: legacyMounted is view-lifecycle state. If it survived to a recreated
+        // view (e.g. OFF→ON→OFF popping back here), setupLegacy() would be skipped and the new
+        // view left without its RecyclerView/listeners/collectors.
+        legacyMounted = false
+    }
+
     private fun bindViews(root: View) {
         projectAddress = root.findViewById(R.id.equipmentProjectAddress)
         roomTitle = root.findViewById(R.id.equipmentRoomTitle)
@@ -162,7 +170,13 @@ class EquipmentRoomFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state -> render(state) }
+                launch { viewModel.uiState.collect { state -> render(state) } }
+                // Review round-7 #4: surface rejected legacy writes (mode changed mid-session).
+                launch {
+                    viewModel.events.collect { msg ->
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }

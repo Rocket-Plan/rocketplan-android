@@ -59,6 +59,10 @@ class EquipmentRoomViewModel(
     private val _uiState = MutableStateFlow<EquipmentRoomUiState>(EquipmentRoomUiState.Loading)
     val uiState: StateFlow<EquipmentRoomUiState> = _uiState
 
+    /** Review round-7: one-shot user feedback (e.g. a legacy write rejected by a mode change). */
+    private val _events = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val events: kotlinx.coroutines.flow.SharedFlow<String> = _events
+
     init {
         viewModelScope.launch {
             combine(
@@ -140,6 +144,8 @@ class EquipmentRoomViewModel(
         ).modeFor(companyId)
         if (mode != com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
             android.util.Log.w("EquipmentRoomViewModel", "Rejecting legacy equipment write — mode=$mode")
+            // Review round-7 #4: don't fail silently — tell the user why the tap did nothing.
+            _events.tryEmit("Equipment mode changed — refreshing this screen.")
             return false
         }
         return true

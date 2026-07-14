@@ -103,22 +103,44 @@ class EquipmentAssetPullService(
 
         val merged = servers.map { server ->
             val local = existingByServer[server.serverId] ?: return@map server
+            val metadataDirty = local.isDirty
             val hasLivePlacement = local.assetId in livePlacementAssetIds
-            if (!local.isDirty && !hasLivePlacement) {
-                // Authoritative: adopt the server row, keeping only local identity.
-                server.copy(assetId = local.assetId, uuid = local.uuid)
-            } else {
-                // Keep local edits + optimistic lifecycle; adopt server identity + FRESH lock token
-                // + non-conflicting authoritative fields.
-                local.copy(
-                    serverId = server.serverId,
-                    companyId = server.companyId,
-                    catalogUuid = server.catalogUuid ?: local.catalogUuid,
-                    isStandard = server.isStandard,
-                    serverUpdatedAt = server.serverUpdatedAt,
-                    lastSyncedAt = server.lastSyncedAt
-                )
+            if (!metadataDirty && !hasLivePlacement) {
+                // Fully authoritative: adopt the server row, keeping only local identity.
+                return@map server.copy(assetId = local.assetId, uuid = local.uuid)
             }
+            // Two-axis merge (review round-7): start from the authoritative server row and overlay
+            // ONLY the axis that is locally pending.
+            server.copy(
+                assetId = local.assetId,
+                uuid = local.uuid,
+                // Metadata axis — local only while a metadata edit is pending.
+                name = if (metadataDirty) local.name else server.name,
+                manufacturer = if (metadataDirty) local.manufacturer else server.manufacturer,
+                model = if (metadataDirty) local.model else server.model,
+                serialNumber = if (metadataDirty) local.serialNumber else server.serialNumber,
+                assetTag = if (metadataDirty) local.assetTag else server.assetTag,
+                vendor = if (metadataDirty) local.vendor else server.vendor,
+                note = if (metadataDirty) local.note else server.note,
+                purchaseDate = if (metadataDirty) local.purchaseDate else server.purchaseDate,
+                purchasePrice = if (metadataDirty) local.purchasePrice else server.purchasePrice,
+                warrantyExpiresAt = if (metadataDirty) local.warrantyExpiresAt else server.warrantyExpiresAt,
+                rentalDayRate = if (metadataDirty) local.rentalDayRate else server.rentalDayRate,
+                // Lifecycle axis (status + current placement): local only while a live placement op
+                // exists (optimistic deploy/check-out); otherwise adopt the server's authoritative
+                // state so a cross-client move/check-out isn't left stale.
+                status = if (hasLivePlacement) local.status else server.status,
+                currentPlacementServerId = if (hasLivePlacement) local.currentPlacementServerId else server.currentPlacementServerId,
+                // Lock token (review round-7 blocker #2): PRESERVE the edit-base token while a
+                // metadata edit is pending — do NOT rebase onto the server's newer timestamp, or a
+                // genuine cross-client change would never produce the intended 409. (Re-stamping
+                // happens only after a known-successful local lifecycle op, in the push handler.)
+                serverUpdatedAt = if (metadataDirty) local.serverUpdatedAt else server.serverUpdatedAt,
+                isDirty = metadataDirty,
+                syncStatus = if (metadataDirty) local.syncStatus else server.syncStatus,
+                isDeleted = if (metadataDirty) local.isDeleted else server.isDeleted,
+                lastSyncedAt = server.lastSyncedAt
+            )
         }
         localDataService.saveEquipmentAssets(merged) // blind upsert — the merge is already applied
     }
