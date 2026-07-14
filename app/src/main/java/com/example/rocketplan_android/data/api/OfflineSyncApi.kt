@@ -26,6 +26,7 @@ import com.example.rocketplan_android.data.model.offline.MoveEquipmentAssetReque
 import com.example.rocketplan_android.data.model.offline.RegisterEquipmentAssetRequest
 import com.example.rocketplan_android.data.model.offline.UpdateEquipmentAssetRequest
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetDto
+import com.example.rocketplan_android.data.model.offline.EquipmentCatalogItemDto
 import com.example.rocketplan_android.data.model.CreateLocationRequest
 import com.example.rocketplan_android.data.model.LocationResourceResponse
 import com.example.rocketplan_android.data.model.offline.LocationDto
@@ -580,6 +581,12 @@ interface OfflineSyncApi {
     suspend fun getRoomEquipmentAssets(
         @Path("roomId") roomId: Long
     ): SingleDataResponse<List<EquipmentAssetDto>>
+
+    /** Company equipment CATALOG — source of catalog_uuid for registering serialized assets. */
+    @GET("/api/companies/{companyId}/equipment")
+    suspend fun getCompanyEquipmentCatalog(
+        @Path("companyId") companyId: Long
+    ): PaginatedResponse<EquipmentCatalogItemDto>
 
     // Claims
     @GET("/api/projects/{projectId}/claims")

@@ -1236,6 +1236,14 @@ class OfflineSyncRepository(
     suspend fun refreshSerializedRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
         equipmentAssetPullService.refreshRoom(roomLocalId, companyId)
 
+    /** RP-FR-019: company equipment catalog (for the register picker). */
+    suspend fun fetchEquipmentCatalog(
+        companyId: Long
+    ): Result<List<com.example.rocketplan_android.data.model.offline.EquipmentCatalogItemDto>> =
+        withContext(ioDispatcher) {
+            runCatching { api.getCompanyEquipmentCatalog(companyId).data }
+        }
+
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =
         workScopeSyncService.fetchWorkScopeCatalog(companyId)
 

@@ -156,6 +156,22 @@ data class TimelineBarRoomDto(
     val name: String?
 )
 
+/**
+ * A row from the company equipment CATALOG (GET /companies/{c}/equipment) — the source
+ * of the `catalog_uuid` required to register a serialized asset. `catalog_uuid` is the
+ * stable logical catalog identity (EquipmentTypes::uuidFor(name) server-side).
+ */
+data class EquipmentCatalogItemDto(
+    val id: Long?,
+    @SerializedName("catalog_uuid")
+    val catalogUuid: String?,
+    val name: String?,
+    @SerializedName("display_name")
+    val displayName: String?,
+    @SerializedName("is_standard")
+    val isStandard: Boolean?
+)
+
 // ---------------------------------------------------------------------------
 // Request bodies
 // ---------------------------------------------------------------------------

@@ -42,6 +42,10 @@ sealed class SerializedRoomUiState {
 data class RoomAssetItem(val assetId: Long, val name: String, val detail: String, val status: String)
 data class PoolAssetItem(val assetId: Long, val name: String, val detail: String)
 
+/** Picker choices (RP-FR-019 register/move UI). */
+data class RoomChoice(val roomId: Long, val name: String)
+data class CatalogChoice(val catalogUuid: String, val name: String)
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class SerializedRoomEquipmentViewModel(
     application: Application,
@@ -167,6 +171,24 @@ class SerializedRoomEquipmentViewModel(
                 .sortedBy { it.name.lowercase() }
             SerializedRoomUiState.Ready(room?.title ?: "Room", deployed, pool)
         }
+
+    /** Rooms in this project the user can move a unit to (the service rejects a same-room move). */
+    suspend fun roomChoices(): List<RoomChoice> = withContext(Dispatchers.IO) {
+        localDataService.observeRooms(projectId).first()
+            .filter { !it.isDeleted }
+            .map { RoomChoice(it.roomId, it.title) }
+            .sortedBy { it.name.lowercase() }
+    }
+
+    /** Company equipment catalog items (each carries the catalog_uuid needed to register). */
+    suspend fun catalogChoices(): List<CatalogChoice> {
+        val companyId = ownerCompanyId ?: return emptyList()
+        return offlineSyncRepository.fetchEquipmentCatalog(companyId).getOrNull()
+            ?.mapNotNull { dto ->
+                dto.catalogUuid?.let { CatalogChoice(it, dto.displayName ?: dto.name ?: "Equipment") }
+            }
+            ?: emptyList()
+    }
 
     fun registerAndDeploy(name: String, catalogUuid: String, serialNumber: String?) {
         if (!requireOn()) return

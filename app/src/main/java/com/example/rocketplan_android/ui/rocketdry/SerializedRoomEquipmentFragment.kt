@@ -50,7 +50,8 @@ class SerializedRoomEquipmentFragment : Fragment() {
     private lateinit var poolEmpty: TextView
 
     private val deployedAdapter = SerializedEquipmentAdapter(
-        onPrimary = { assetId -> viewModel.checkOut(assetId) }
+        onPrimary = { assetId -> viewModel.checkOut(assetId) },
+        onSecondary = { assetId -> showMoveDialog(assetId) }
     )
     private val poolAdapter = SerializedEquipmentAdapter(
         onPrimary = { assetId -> viewModel.deployFromPool(assetId) },
@@ -85,10 +86,7 @@ class SerializedRoomEquipmentFragment : Fragment() {
         poolList.adapter = poolAdapter
 
         view.findViewById<MaterialButton>(R.id.serializedRegisterButton).setOnClickListener {
-            // Registering a new unit requires selecting a company catalog item
-            // (review #6: catalogUuid is mandatory, no fallback). Catalog integration
-            // is a follow-up; the write path (registerEquipmentAssetOffline) is ready.
-            Toast.makeText(requireContext(), R.string.serialized_equipment_register_pending, Toast.LENGTH_LONG).show()
+            showRegisterDialog()
         }
         view.findViewById<MaterialButton>(R.id.serializedRetryButton).setOnClickListener { viewModel.retry() }
 
@@ -105,7 +103,52 @@ class SerializedRoomEquipmentFragment : Fragment() {
                         Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
                     }
                 }
+                // Continuous backend-flip invalidation: while foregrounded, re-fetch the mode
+                // periodically so an emergency rollback (OFF/UNKNOWN) is picked up without user action.
+                launch {
+                    while (true) {
+                        kotlinx.coroutines.delay(60_000)
+                        viewModel.refreshMode()
+                    }
+                }
             }
+        }
+    }
+
+    /** Register a new serialized unit — pick a catalog item (supplies the required catalog_uuid). */
+    private fun showRegisterDialog() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val choices = viewModel.catalogChoices()
+            if (choices.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.serialized_equipment_no_catalog, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val names = choices.map { it.name }.toTypedArray()
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.serialized_equipment_register_cta)
+                .setItems(names) { _, which ->
+                    val choice = choices[which]
+                    viewModel.registerAndDeploy(choice.name, choice.catalogUuid, null)
+                }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
+        }
+    }
+
+    /** Move a deployed unit to another room in this project. */
+    private fun showMoveDialog(assetId: Long) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val rooms = viewModel.roomChoices()
+            if (rooms.isEmpty()) {
+                Toast.makeText(requireContext(), R.string.serialized_equipment_no_rooms, Toast.LENGTH_LONG).show()
+                return@launch
+            }
+            val names = rooms.map { it.name }.toTypedArray()
+            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.serialized_equipment_move)
+                .setItems(names) { _, which -> viewModel.move(assetId, rooms[which].roomId) }
+                .setNegativeButton(R.string.cancel, null)
+                .show()
         }
     }
 
@@ -131,7 +174,11 @@ class SerializedRoomEquipmentFragment : Fragment() {
                 roomTitle.text = state.roomName
                 latestPool = state.pool
                 val deployed = state.deployed.map {
-                    SerializedRowUi(it.assetId, it.name, it.detail, getString(R.string.serialized_equipment_check_out))
+                    SerializedRowUi(
+                        it.assetId, it.name, it.detail,
+                        getString(R.string.serialized_equipment_check_out),
+                        getString(R.string.serialized_equipment_move)
+                    )
                 }
                 val pool = state.pool.map {
                     SerializedRowUi(

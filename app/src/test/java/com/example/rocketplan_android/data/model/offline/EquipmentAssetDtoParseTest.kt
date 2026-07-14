@@ -94,6 +94,17 @@ class EquipmentAssetDtoParseTest {
     }
 
     @Test
+    fun `company catalog parses paginated catalog items with catalog_uuid`() {
+        val type = TypeToken.getParameterized(PaginatedResponse::class.java, EquipmentCatalogItemDto::class.java).type
+        val resp: PaginatedResponse<EquipmentCatalogItemDto> = gson.fromJson(fixture("company_catalog.json"), type)
+        assertThat(resp.data).hasSize(2)
+        assertThat(resp.data[0].catalogUuid).isEqualTo("550e8400-e29b-41d4-a716-446655440000")
+        assertThat(resp.data[0].name).isEqualTo("Air Mover")
+        assertThat(resp.data[1].displayName).isEqualTo("Dehumidifier (LGR)")
+        assertThat(resp.data[1].id).isNull() // greenfield catalog rows have no equipment id yet
+    }
+
+    @Test
     fun `room assets parses hand-wrapped asset array`() {
         val type = TypeToken.getParameterized(
             SingleDataResponse::class.java,
