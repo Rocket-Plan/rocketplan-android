@@ -15,8 +15,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -39,6 +42,7 @@ sealed class SerializedRoomUiState {
 data class RoomAssetItem(val assetId: Long, val name: String, val detail: String, val status: String)
 data class PoolAssetItem(val assetId: Long, val name: String, val detail: String)
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SerializedRoomEquipmentViewModel(
     application: Application,
     private val projectId: Long,
@@ -62,6 +66,18 @@ class SerializedRoomEquipmentViewModel(
     private var ownerCompanyId: Long? = null
     private var contentJob: Job? = null
 
+    /** Latest observed owner-company mode (review #7); gates writes so a flip stops actions. */
+    @Volatile
+    private var currentMode: SerializedEquipmentMode = SerializedEquipmentMode.UNKNOWN
+
+    private fun requireOn(): Boolean {
+        if (currentMode != SerializedEquipmentMode.ON) {
+            _events.tryEmit("Equipment mode changed — please refresh.")
+            return false
+        }
+        return true
+    }
+
     init {
         resolve()
     }
@@ -76,26 +92,34 @@ class SerializedRoomEquipmentViewModel(
                 return@launch
             }
             ownerCompanyId = companyId
-            when (modeProvider.modeFor(companyId)) {
-                SerializedEquipmentMode.OFF -> _uiState.value = SerializedRoomUiState.LegacyMode
-                SerializedEquipmentMode.UNKNOWN -> _uiState.value = SerializedRoomUiState.Unavailable
-                SerializedEquipmentMode.ON -> {
-                    // Review round-2 #1/#5: await the initial authoritative pull. On failure,
-                    // show a retry state if there's nothing cached, or render the cache with a
-                    // non-destructive "stale" notice if there is.
-                    val pull = offlineSyncRepository.refreshSerializedRoom(roomId, companyId)
-                    if (pull.isFailure) {
-                        val hasCache = localDataService.observeEquipmentAssetsForCompany(companyId)
-                            .first().isNotEmpty()
-                        if (!hasCache) {
-                            _uiState.value = SerializedRoomUiState.Unavailable
-                            return@launch
+
+            // Review round-4 #7: OBSERVE the owner-company mode (don't just sample it). A
+            // mid-session flip to OFF/UNKNOWN immediately switches state and disables actions
+            // (one-way cutover / emergency rollback).
+            var pulled = false
+            modeProvider.observeMode(companyId)
+                .flatMapLatest { mode ->
+                    currentMode = mode
+                    when (mode) {
+                        SerializedEquipmentMode.OFF -> flowOf(SerializedRoomUiState.LegacyMode)
+                        SerializedEquipmentMode.UNKNOWN -> flowOf(SerializedRoomUiState.Unavailable)
+                        SerializedEquipmentMode.ON -> {
+                            // Review #1/#5: await the initial authoritative pull once per ON.
+                            if (!pulled) {
+                                pulled = true
+                                val pull = offlineSyncRepository.refreshSerializedRoom(roomId, companyId)
+                                if (pull.isFailure) {
+                                    val hasCache = localDataService.observeEquipmentAssetsForCompany(companyId)
+                                        .first().isNotEmpty()
+                                    if (!hasCache) return@flatMapLatest flowOf(SerializedRoomUiState.Unavailable)
+                                    _events.emit("Showing saved data — couldn't refresh from the server.")
+                                }
+                            }
+                            contentFlow(companyId)
                         }
-                        _events.emit("Showing saved data — couldn't refresh from the server.")
                     }
-                    observeContent(companyId)
                 }
-            }
+                .collect { _uiState.value = it }
         }
     }
 
@@ -114,7 +138,7 @@ class SerializedRoomEquipmentViewModel(
         }
     }
 
-    private suspend fun observeContent(companyId: Long) {
+    private fun contentFlow(companyId: Long): kotlinx.coroutines.flow.Flow<SerializedRoomUiState> =
         combine(
             localDataService.observeRooms(projectId),
             localDataService.observeOpenPlacementsForRoom(roomId),
@@ -128,10 +152,10 @@ class SerializedRoomEquipmentViewModel(
                 .map { it.toPoolItem() }
                 .sortedBy { it.name.lowercase() }
             SerializedRoomUiState.Ready(room?.title ?: "Room", deployed, pool)
-        }.collect { _uiState.value = it }
-    }
+        }
 
     fun registerAndDeploy(name: String, catalogUuid: String, serialNumber: String?) {
+        if (!requireOn()) return
         val companyId = ownerCompanyId ?: return
         viewModelScope.launch(Dispatchers.IO) {
             val asset = offlineSyncRepository.registerEquipmentAssetOffline(
@@ -162,6 +186,7 @@ class SerializedRoomEquipmentViewModel(
     private val inFlight = java.util.Collections.synchronizedSet(mutableSetOf<Long>())
 
     private fun runAction(assetId: Long, failureMessage: String, block: suspend () -> Boolean) {
+        if (!requireOn()) return
         if (!inFlight.add(assetId)) return
         viewModelScope.launch(Dispatchers.IO) {
             try {

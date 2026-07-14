@@ -49,6 +49,19 @@ class SerializedEquipmentModeProviderTest {
     }
 
     @Test
+    fun `observeMode maps flag emissions to modes`() = runTest {
+        io.mockk.every { secureStorage.observeSerializedEquipmentEnabled(7) } returns
+            kotlinx.coroutines.flow.flowOf(true, false, null)
+        val modes = mutableListOf<SerializedEquipmentMode>()
+        provider.observeMode(7).collect { modes.add(it) }
+        assertThat(modes).containsExactly(
+            SerializedEquipmentMode.ON,
+            SerializedEquipmentMode.OFF,
+            SerializedEquipmentMode.UNKNOWN
+        ).inOrder()
+    }
+
+    @Test
     fun `mode is per-company isolated`() = runTest {
         coEvery { secureStorage.getSerializedEquipmentEnabledSync(1) } returns true
         coEvery { secureStorage.getSerializedEquipmentEnabledSync(2) } returns false

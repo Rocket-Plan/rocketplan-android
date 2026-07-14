@@ -327,6 +327,10 @@ class SecureStorage internal constructor(
         return context.dataStore.data.map { it[serializedEquipmentKey(companyId)] }.first()
     }
 
+    /** Observe the per-company flag (review round-4 #7): emits on every change. */
+    fun observeSerializedEquipmentEnabled(companyId: Long): Flow<Boolean?> =
+        context.dataStore.data.map { it[serializedEquipmentKey(companyId)] }
+
     suspend fun clearSerializedEquipmentEnabled(companyId: Long) {
         context.dataStore.edit { preferences ->
             preferences.remove(serializedEquipmentKey(companyId))

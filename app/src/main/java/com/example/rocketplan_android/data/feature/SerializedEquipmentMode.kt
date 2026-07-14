@@ -1,6 +1,8 @@
 package com.example.rocketplan_android.data.feature
 
 import com.example.rocketplan_android.data.storage.SecureStorage
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * RP-FR-019 — the serialized-equipment mode for the active company.
@@ -46,4 +48,18 @@ class SerializedEquipmentModeProvider(
     suspend fun cache(companyId: Long, enabled: Boolean) {
         secureStorage.saveSerializedEquipmentEnabled(companyId, enabled)
     }
+
+    /**
+     * Observe a company's mode (review round-4 #7). Emits on every flag change so the UI
+     * can stop serialized actions the instant a company is flipped OFF/UNKNOWN (one-way
+     * cutover / emergency rollback), not just at screen open.
+     */
+    fun observeMode(companyId: Long): kotlinx.coroutines.flow.Flow<SerializedEquipmentMode> =
+        secureStorage.observeSerializedEquipmentEnabled(companyId).map { enabled ->
+            when (enabled) {
+                true -> SerializedEquipmentMode.ON
+                false -> SerializedEquipmentMode.OFF
+                null -> SerializedEquipmentMode.UNKNOWN
+            }
+        }
 }
