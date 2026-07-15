@@ -19,6 +19,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCatalogLevelEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCatalogPropertyTypeEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCatalogRoomTypeEntity
@@ -68,6 +70,8 @@ import io.sentry.Sentry
         OfflineAlbumPhotoEntity::class,
         OfflinePhotoEntity::class,
         OfflineEquipmentEntity::class,
+        OfflineEquipmentAssetEntity::class,
+        OfflineEquipmentPlacementEntity::class,
         OfflineMaterialEntity::class,
         OfflineMoistureLogEntity::class,
         OfflineNoteEntity::class,
@@ -91,7 +95,7 @@ import io.sentry.Sentry
         OfflineClaimEntity::class,
         OfflineProjectUserEntity::class
     ],
-    version = 30,
+    version = 31,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -506,6 +510,85 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        @androidx.annotation.VisibleForTesting
+        internal val MIGRATION_30_31 = object : Migration(30, 31) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // RP-FR-019: serialized equipment subsystem — asset pool + placement history.
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_equipment_assets (
+                        assetId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        serverId INTEGER,
+                        uuid TEXT NOT NULL,
+                        companyId INTEGER NOT NULL,
+                        catalogUuid TEXT,
+                        name TEXT,
+                        manufacturer TEXT,
+                        model TEXT,
+                        isStandard INTEGER NOT NULL DEFAULT 1,
+                        serialNumber TEXT,
+                        assetTag TEXT,
+                        status TEXT NOT NULL DEFAULT 'available',
+                        currentPlacementServerId INTEGER,
+                        purchaseDate TEXT,
+                        purchasePrice TEXT,
+                        vendor TEXT,
+                        warrantyExpiresAt TEXT,
+                        rentalDayRate TEXT,
+                        note TEXT,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        serverUpdatedAt INTEGER,
+                        lastSyncedAt INTEGER,
+                        syncStatus TEXT NOT NULL,
+                        syncVersion INTEGER NOT NULL DEFAULT 0,
+                        isDirty INTEGER NOT NULL DEFAULT 0,
+                        isDeleted INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_offline_equipment_assets_uuid ON offline_equipment_assets(uuid)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_assets_companyId ON offline_equipment_assets(companyId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_assets_serverId ON offline_equipment_assets(serverId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_assets_catalogUuid ON offline_equipment_assets(catalogUuid)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_assets_syncStatus ON offline_equipment_assets(syncStatus)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_assets_companyId_isDeleted ON offline_equipment_assets(companyId, isDeleted)")
+
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS offline_equipment_placements (
+                        placementId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        serverId INTEGER,
+                        uuid TEXT NOT NULL,
+                        assetId INTEGER NOT NULL,
+                        roomId INTEGER,
+                        projectId INTEGER,
+                        dateIn INTEGER,
+                        dateOut INTEGER,
+                        placedByUserId INTEGER,
+                        note TEXT,
+                        isOpen INTEGER NOT NULL DEFAULT 1,
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        serverUpdatedAt INTEGER,
+                        lastSyncedAt INTEGER,
+                        syncStatus TEXT NOT NULL,
+                        syncVersion INTEGER NOT NULL DEFAULT 0,
+                        isDirty INTEGER NOT NULL DEFAULT 0,
+                        isDeleted INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_offline_equipment_placements_uuid ON offline_equipment_placements(uuid)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_placements_assetId ON offline_equipment_placements(assetId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_placements_roomId ON offline_equipment_placements(roomId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_placements_serverId ON offline_equipment_placements(serverId)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_placements_syncStatus ON offline_equipment_placements(syncStatus)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_placements_assetId_isDeleted ON offline_equipment_placements(assetId, isDeleted)")
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_placements_roomId_isDeleted ON offline_equipment_placements(roomId, isDeleted)")
+            }
+        }
+
         private val MIGRATION_21_22 = object : Migration(21, 22) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Add property info fields to offline_properties
@@ -577,7 +660,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31)
                 .apply {
                     if (BuildConfig.ALLOW_DESTRUCTIVE_MIGRATION) {
                         fallbackToDestructiveMigration()

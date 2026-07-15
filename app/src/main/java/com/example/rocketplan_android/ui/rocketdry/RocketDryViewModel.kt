@@ -22,6 +22,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -48,6 +53,34 @@ class RocketDryViewModel(
 
     private val _uiState = MutableStateFlow<RocketDryUiState>(RocketDryUiState.Loading)
     val uiState: StateFlow<RocketDryUiState> = _uiState
+
+    /**
+     * RP-FR-019 legacy-wide gate: the legacy count-based equipment tab is shown only when the
+     * PROJECT owner-company is serialized-mode OFF. ON/UNKNOWN → hidden (the serialized system
+     * owns equipment). Observed so a mid-session flip hides the tab immediately.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val legacyEquipmentAllowed: StateFlow<Boolean> =
+        localDataService.observeProjects()
+            .map { projects -> projects.firstOrNull { it.projectId == projectId }?.companyId }
+            .distinctUntilChanged()
+            .flatMapLatest { companyId ->
+                // Review round-9 #4: react to the project appearing (a one-shot null read would
+                // strand the tab hidden if the project wasn't loaded yet). Loading → shown (writes
+                // are still hard-gated in the VM); resolved → follow the owner-company mode.
+                if (companyId == null) {
+                    kotlinx.coroutines.flow.flowOf(true)
+                } else {
+                    com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(rocketPlanApp.secureStorage)
+                        .observeMode(companyId)
+                        .map { it == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF }
+                }
+            }
+            .stateIn(
+                viewModelScope,
+                kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
+                true // default to shown for the common OFF case; the observer corrects near-instantly
+            )
 
     private val _currentTab = MutableStateFlow<RocketDryTab?>(null)
     val currentTab: StateFlow<RocketDryTab?> = _currentTab

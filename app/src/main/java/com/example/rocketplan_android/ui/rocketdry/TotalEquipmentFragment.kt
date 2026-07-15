@@ -105,8 +105,63 @@ class TotalEquipmentFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state -> render(state) }
+                launch { viewModel.uiState.collect { state -> render(state) } }
+                // RP-FR-019 legacy-wide gate #4: surface rejected legacy writes.
+                launch {
+                    viewModel.events.collect { msg ->
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    }
+                }
+                // RP-FR-019 legacy-wide gate: this is a LEGACY count screen — leave it if the
+                // project owner-company is not serialized-mode OFF (there is no serialized totals
+                // screen yet; returning to RocketDry is the correct "hide legacy" behavior).
+                launch { gateOnOwnerMode() }
+                // Review round-9 #5: refresh backend authority (immediately + every 60s) so a flip to
+                // ON while sitting here is detected — otherwise legacyWritable() would keep allowing
+                // writes off a stale OFF cache.
+                launch { pollOwnerModeRefresh() }
             }
+        }
+    }
+
+    private suspend fun gateOnOwnerMode() {
+        val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+        val companyId = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            app.localDataService.getProject(args.projectId)?.companyId
+        }
+        if (companyId == null) {
+            leaveLegacyTotals()
+            return
+        }
+        com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
+            .observeMode(companyId)
+            .collect { mode ->
+                if (mode != com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
+                    leaveLegacyTotals()
+                }
+            }
+    }
+
+    private suspend fun pollOwnerModeRefresh() {
+        val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+        val companyId = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            app.localDataService.getProject(args.projectId)?.companyId
+        } ?: return
+        while (true) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (app.secureStorage.getCompanyIdSync() == companyId) {
+                    runCatching { app.authRepository.refreshFeatureFlags() }
+                }
+            }
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
+
+    private fun leaveLegacyTotals() {
+        val nav = findNavController()
+        if (nav.currentDestination?.id == R.id.totalEquipmentFragment) {
+            Toast.makeText(requireContext(), R.string.equipment_mode_changed, Toast.LENGTH_LONG).show()
+            nav.popBackStack()
         }
     }
 

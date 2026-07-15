@@ -88,7 +88,10 @@ class OfflineSyncRepository(
     private val photoCacheManager: PhotoCacheManager? = null,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
+    private val isNetworkAvailable: () -> Boolean = { false }, // Default to offline for safety
+    // RP-FR-019 (review #2): enables the serialized write-boundary gate in the sync
+    // processor. Null → gate defaults to ON (no enforcement).
+    private val secureStorage: com.example.rocketplan_android.data.storage.SecureStorage? = null
 ) {
     private var imageProcessorQueueManager: ImageProcessorQueueManager? = null
     private var imageProcessorRepository: ImageProcessorRepository? = null
@@ -157,6 +160,22 @@ class OfflineSyncRepository(
             localDataService = localDataService,
             syncQueueEnqueuer = { syncQueueProcessor },
             logLocalDeletion = ::logLocalDeletion,
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val equipmentAssetSyncService by lazy {
+        com.example.rocketplan_android.data.repository.sync.EquipmentAssetSyncService(
+            localDataService = localDataService,
+            syncQueueEnqueuer = { syncQueueProcessor },
+            ioDispatcher = ioDispatcher
+        )
+    }
+
+    private val equipmentAssetPullService by lazy {
+        com.example.rocketplan_android.data.repository.sync.EquipmentAssetPullService(
+            api = api,
+            localDataService = localDataService,
             ioDispatcher = ioDispatcher
         )
     }
@@ -231,7 +250,13 @@ class OfflineSyncRepository(
             imageProcessorRepositoryProvider = { imageProcessorRepository },
             remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher,
-            isNetworkAvailable = isNetworkAvailable
+            isNetworkAvailable = isNetworkAvailable,
+            serializedModeFor = secureStorage?.let { ss ->
+                val provider = com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(ss)
+                val resolver: suspend (Long) -> com.example.rocketplan_android.data.feature.SerializedEquipmentMode =
+                    { companyId -> provider.modeFor(companyId) }
+                resolver
+            }
         )
     }
 
@@ -1175,6 +1200,49 @@ class OfflineSyncRepository(
         uuid: String? = null
     ): OfflineEquipmentEntity? =
         equipmentSyncService.deleteEquipmentOffline(equipmentId, uuid)
+
+    // RP-FR-019 — serialized equipment writes
+    suspend fun registerEquipmentAssetOffline(
+        companyId: Long,
+        name: String,
+        catalogUuid: String,
+        manufacturer: String? = null,
+        model: String? = null,
+        serialNumber: String? = null,
+        assetTag: String? = null,
+        isStandard: Boolean = true
+    ) = equipmentAssetSyncService.registerAsset(
+        companyId, name, catalogUuid, manufacturer, model, serialNumber, assetTag, isStandard
+    )
+
+    suspend fun deployEquipmentAssetOffline(
+        assetLocalId: Long,
+        roomLocalId: Long,
+        projectLocalId: Long? = null,
+        dateIn: Date? = null,
+        note: String? = null
+    ) = equipmentAssetSyncService.deployAsset(assetLocalId, roomLocalId, projectLocalId, dateIn, note)
+
+    suspend fun retireEquipmentAssetOffline(assetLocalId: Long) =
+        equipmentAssetSyncService.retireAsset(assetLocalId)
+
+    suspend fun moveEquipmentAssetOffline(assetLocalId: Long, toRoomLocalId: Long) =
+        equipmentAssetSyncService.moveAsset(assetLocalId, toRoomLocalId)
+
+    suspend fun checkOutEquipmentAssetOffline(assetLocalId: Long) =
+        equipmentAssetSyncService.checkOutAsset(assetLocalId)
+
+    /** RP-FR-019 (review #1): inbound pull of the company pool + a room's deployed assets. */
+    suspend fun refreshSerializedRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
+        equipmentAssetPullService.refreshRoom(roomLocalId, companyId)
+
+    /** RP-FR-019: company equipment catalog (for the register picker). */
+    suspend fun fetchEquipmentCatalog(
+        companyId: Long
+    ): Result<List<com.example.rocketplan_android.data.model.offline.EquipmentCatalogItemDto>> =
+        withContext(ioDispatcher) {
+            runCatching { api.getCompanyEquipmentCatalog(companyId).data }
+        }
 
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =
         workScopeSyncService.fetchWorkScopeCatalog(companyId)

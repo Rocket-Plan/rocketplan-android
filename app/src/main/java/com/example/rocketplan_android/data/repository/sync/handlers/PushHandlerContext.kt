@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync.handlers
 
 import com.example.rocketplan_android.data.api.OfflineSyncApi
+import com.example.rocketplan_android.data.feature.SerializedEquipmentMode
 import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflinePropertyEntity
@@ -30,7 +31,16 @@ class PushHandlerContext(
         forcePropertyIdUpdate: Boolean
     ) -> OfflinePropertyEntity,
     val imageProcessorQueueManagerProvider: () -> ImageProcessorQueueManager?,
-    val imageProcessorRepositoryProvider: () -> ImageProcessorRepository?
+    val imageProcessorRepositoryProvider: () -> ImageProcessorRepository?,
+    /**
+     * RP-FR-019 (review #2): resolves the serialized-equipment mode for a given
+     * company id. The serialized push handlers gate on this — deriving the company
+     * from the queued ENTITY (not the currently-selected company) so a company
+     * switch can't evaluate queued work under the wrong context. Defaults to ON so
+     * non-serialized handlers/tests are unaffected; the real resolver is wired from
+     * SyncQueueProcessor.
+     */
+    val serializedModeFor: suspend (companyId: Long) -> SerializedEquipmentMode = { SerializedEquipmentMode.ON }
 ) {
     fun now(): Date = Date()
 

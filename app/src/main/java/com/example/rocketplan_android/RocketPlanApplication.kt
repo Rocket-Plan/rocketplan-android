@@ -215,7 +215,8 @@ class RocketPlanApplication : Application() {
             roomTypeRepository = roomTypeRepository,
             photoCacheManager = photoCacheManager,
             remoteLogger = remoteLogger,
-            isNetworkAvailable = isNetworkAvailable
+            isNetworkAvailable = isNetworkAvailable,
+            secureStorage = secureStorage // RP-FR-019: enables the serialized write-boundary gate
         )
 
         // Note: syncQueueManager is initialized here but photoSyncRealtimeManager

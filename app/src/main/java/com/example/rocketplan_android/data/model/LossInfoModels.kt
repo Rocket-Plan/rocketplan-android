@@ -127,10 +127,19 @@ data class ClaimMutationRequest(
 )
 
 /**
- * Feature flag payload to gate Project/Loss Info rollout.
+ * Feature flag payload from GET /api/auth/user/feature-flags.
+ *
+ * The backend (FeatureFlagResource) wraps in `data`: `{ "data": { "valid": true,
+ * "values": { ... } } }`. All fields nullable (tolerant) — the flag map only
+ * contains keys the server chose to send.
  */
 data class FeatureFlagResponse(
-    val values: FeatureFlagValues
+    val data: FeatureFlagData? = null
+)
+
+data class FeatureFlagData(
+    val valid: Boolean? = null,
+    val values: FeatureFlagValues? = null
 )
 
 data class FeatureFlagValues(
@@ -145,5 +154,8 @@ data class FeatureFlagValues(
     @SerializedName("use_image_processor")
     val useImageProcessor: Boolean? = null,
     @SerializedName("timecards")
-    val timecardsEnabled: Boolean? = null
+    val timecardsEnabled: Boolean? = null,
+    // RP-FR-019 — company-scoped serialized equipment mode (fails closed server-side).
+    @SerializedName("serializedEquipment")
+    val serializedEquipment: Boolean? = null
 )

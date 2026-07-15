@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/light_purple"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <ImageView
+            android:layout_width="@dimen/icon_size_action"
+            android:layout_height="@dimen/icon_size_action"
+            android:background="@drawable/bg_icon_circle_purple"
+            android:contentDescription="@string/serialized_equipment_title"
+            android:padding="8dp"
+            android:src="@drawable/image_equipment" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/serializedAssetTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_card_title"
+                android:textStyle="bold"
+                tools:text="Air Mover" />
+
+            <TextView
+                android:id="@+id/serializedAssetSubtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/light_text_rp"
+                android:textSize="@dimen/text_size_caption"
+                tools:text="SN AM-0001 · Tag TAG-1" />
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/serializedSecondaryButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_height_small"
+            android:paddingHorizontal="12dp"
+            android:textColor="@color/main_purple"
+            android:textSize="@dimen/text_size_caption"
+            android:visibility="gone"
+            app:cornerRadius="16dp"
+            tools:text="Move"
+            tools:visibility="visible" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/serializedPrimaryButton"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="@dimen/button_height_small"
+            android:layout_marginStart="4dp"
+            android:paddingHorizontal="12dp"
+            android:textColor="@color/main_purple"
+            android:textSize="@dimen/text_size_caption"
+            app:backgroundTint="@color/light_purple"
+            app:cornerRadius="16dp"
+            tools:text="Deploy" />
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

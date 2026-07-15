@@ -15,8 +15,11 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -64,12 +67,80 @@ class EquipmentRoomFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_equipment_room, container, false)
     }
 
+    private var legacyMounted = false
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
+        // RP-FR-019 flag gate (review round-5 #1): OBSERVE the owner-company mode and mount
+        // exactly one system — OFF → legacy, ON/UNKNOWN → serialized screen. Observing (not
+        // sampling once) means an OFF→ON/UNKNOWN flip while this legacy screen is open routes
+        // away instead of leaving legacy writes active.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+                // Review #2: resolve mode against the PROJECT owner, not the active company.
+                val companyId = withContext(Dispatchers.IO) {
+                    app.localDataService.getProject(args.projectId)?.companyId
+                }
+                if (companyId == null) {
+                    navigateToSerializedOnce()
+                    return@repeatOnLifecycle
+                }
+                // Review #2 + continuous invalidation: periodically refresh backend authority while
+                // foregrounded (immediately, then every 60s) so a flip in EITHER direction is picked
+                // up on the legacy screen too (matches the serialized screen's poll). The flags
+                // endpoint is active-company scoped, so only refresh when active == owner.
+                launch {
+                    while (true) {
+                        withContext(Dispatchers.IO) {
+                            if (app.secureStorage.getCompanyIdSync() == companyId) {
+                                runCatching { app.authRepository.refreshFeatureFlags() }
+                            }
+                        }
+                        kotlinx.coroutines.delay(60_000)
+                    }
+                }
+                com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
+                    .observeMode(companyId)
+                    .collect { mode ->
+                        if (mode == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
+                            if (!legacyMounted) {
+                                legacyMounted = true
+                                setupLegacy()
+                            }
+                        } else {
+                            navigateToSerializedOnce()
+                        }
+                    }
+            }
+        }
+    }
+
+    private fun navigateToSerializedOnce() {
+        // Review round-6 #2: gate on the CURRENT destination, not a one-shot boolean — so an
+        // ON→OFF→ON cycle (which returns to this host) navigates again instead of getting stuck.
+        val nav = findNavController()
+        if (nav.currentDestination?.id == R.id.equipmentRoomFragment) {
+            nav.navigate(
+                EquipmentRoomFragmentDirections
+                    .actionEquipmentRoomFragmentToSerializedRoomEquipmentFragment(args.projectId, args.roomId)
+            )
+        }
+    }
+
+    private fun setupLegacy() {
         setupRecycler()
         bindListeners()
         observeViewModel()
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        // Review round-7: legacyMounted is view-lifecycle state. If it survived to a recreated
+        // view (e.g. OFF→ON→OFF popping back here), setupLegacy() would be skipped and the new
+        // view left without its RecyclerView/listeners/collectors.
+        legacyMounted = false
     }
 
     private fun bindViews(root: View) {
@@ -105,7 +176,13 @@ class EquipmentRoomFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state -> render(state) }
+                launch { viewModel.uiState.collect { state -> render(state) } }
+                // Review round-7 #4: surface rejected legacy writes (mode changed mid-session).
+                launch {
+                    viewModel.events.collect { msg ->
+                        Toast.makeText(requireContext(), msg, Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         }
     }

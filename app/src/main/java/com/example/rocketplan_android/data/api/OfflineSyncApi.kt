@@ -14,6 +14,19 @@ import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.UpdatedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
+import com.example.rocketplan_android.data.model.SingleDataResponse
+import com.example.rocketplan_android.data.model.offline.CheckOutEquipmentAssetRequest
+import com.example.rocketplan_android.data.model.offline.DeployPlacementRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentAssetPageResponse
+import com.example.rocketplan_android.data.model.offline.EquipmentAssetPlacementDto
+import com.example.rocketplan_android.data.model.offline.EquipmentAssetPlacementResponse
+import com.example.rocketplan_android.data.model.offline.EquipmentAssetResponse
+import com.example.rocketplan_android.data.model.offline.EquipmentAssetTimelineResponse
+import com.example.rocketplan_android.data.model.offline.MoveEquipmentAssetRequest
+import com.example.rocketplan_android.data.model.offline.RegisterEquipmentAssetRequest
+import com.example.rocketplan_android.data.model.offline.UpdateEquipmentAssetRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentAssetDto
+import com.example.rocketplan_android.data.model.offline.EquipmentCatalogItemDto
 import com.example.rocketplan_android.data.model.CreateLocationRequest
 import com.example.rocketplan_android.data.model.LocationResourceResponse
 import com.example.rocketplan_android.data.model.offline.LocationDto
@@ -498,6 +511,82 @@ interface OfflineSyncApi {
         @Path("equipmentId") equipmentId: Long,
         @Body body: DeleteWithTimestampRequest
     ): Response<Unit>
+
+    // Serialized equipment (RP-FR-019). Contract: mongoose equipment-assets endpoints.
+    // Idempotency is carried in the request body (`idempotency_key`); optimistic lock
+    // in the body (`updated_at`) on update/move/check-out.
+    @GET("/api/companies/{companyId}/equipment-assets")
+    suspend fun getCompanyEquipmentAssets(
+        @Path("companyId") companyId: Long,
+        @Query("status") status: String? = null,
+        @Query("catalog_uuid") catalogUuid: String? = null,
+        @Query("search") search: String? = null,
+        @Query("per_page") perPage: Int? = null,
+        @Query("page") page: Int? = null
+    ): EquipmentAssetPageResponse
+
+    @POST("/api/companies/{companyId}/equipment-assets")
+    suspend fun registerEquipmentAsset(
+        @Path("companyId") companyId: Long,
+        @Body body: RegisterEquipmentAssetRequest
+    ): EquipmentAssetResponse
+
+    @GET("/api/companies/{companyId}/equipment-asset-timeline")
+    suspend fun getCompanyEquipmentAssetTimeline(
+        @Path("companyId") companyId: Long,
+        @Query("page") page: Int? = null,
+        @Query("per_page") perPage: Int? = null
+    ): EquipmentAssetTimelineResponse
+
+    @GET("/api/equipment-assets/{assetId}")
+    suspend fun getEquipmentAsset(
+        @Path("assetId") assetId: Long
+    ): EquipmentAssetResponse
+
+    @PUT("/api/equipment-assets/{assetId}")
+    suspend fun updateEquipmentAsset(
+        @Path("assetId") assetId: Long,
+        @Body body: UpdateEquipmentAssetRequest
+    ): EquipmentAssetResponse
+
+    @DELETE("/api/equipment-assets/{assetId}")
+    suspend fun retireEquipmentAsset(
+        @Path("assetId") assetId: Long
+    ): Response<Unit>
+
+    @GET("/api/equipment-assets/{assetId}/placements")
+    suspend fun getEquipmentAssetPlacements(
+        @Path("assetId") assetId: Long
+    ): SingleDataResponse<List<EquipmentAssetPlacementDto>>
+
+    @POST("/api/equipment-assets/{assetId}/placements")
+    suspend fun deployEquipmentAsset(
+        @Path("assetId") assetId: Long,
+        @Body body: DeployPlacementRequest
+    ): EquipmentAssetPlacementResponse
+
+    @POST("/api/equipment-assets/{assetId}/move")
+    suspend fun moveEquipmentAsset(
+        @Path("assetId") assetId: Long,
+        @Body body: MoveEquipmentAssetRequest
+    ): EquipmentAssetResponse
+
+    @POST("/api/equipment-assets/{assetId}/check-out")
+    suspend fun checkOutEquipmentAsset(
+        @Path("assetId") assetId: Long,
+        @Body body: CheckOutEquipmentAssetRequest
+    ): EquipmentAssetResponse
+
+    @GET("/api/rooms/{roomId}/equipment-assets")
+    suspend fun getRoomEquipmentAssets(
+        @Path("roomId") roomId: Long
+    ): SingleDataResponse<List<EquipmentAssetDto>>
+
+    /** Company equipment CATALOG — source of catalog_uuid for registering serialized assets. */
+    @GET("/api/companies/{companyId}/equipment")
+    suspend fun getCompanyEquipmentCatalog(
+        @Path("companyId") companyId: Long
+    ): PaginatedResponse<EquipmentCatalogItemDto>
 
     // Claims
     @GET("/api/projects/{projectId}/claims")

@@ -1,0 +1,62 @@
+{
+  "data": [
+    {
+      "id": 3,
+      "uuid": "9d7f2c1a-3b44-4e2a-9c11-000000000003",
+      "company_id": 7,
+      "catalog_uuid": "c1a11111-1111-4111-8111-111111111111",
+      "name": "Air Mover",
+      "manufacturer": "Phoenix",
+      "model": "AirMax BR",
+      "is_standard": true,
+      "serial_number": "AM-0001",
+      "asset_tag": "TAG-0001",
+      "status": "deployed",
+      "current_placement_id": 12,
+      "purchase_date": "2026-01-15",
+      "purchase_price": "1899.00",
+      "vendor": "Acme Supply",
+      "warranty_expires_at": "2028-01-15",
+      "rental_day_rate": "35.50",
+      "idempotency_key": null,
+      "note": null,
+      "created_at": "2026-07-01T10:00:00.000000Z",
+      "updated_at": "2026-07-02T14:30:00.000000Z"
+    },
+    {
+      "id": 4,
+      "uuid": "9d7f2c1a-3b44-4e2a-9c11-000000000004",
+      "company_id": 7,
+      "catalog_uuid": "c1a11111-1111-4111-8111-111111111111",
+      "name": "Dehumidifier",
+      "manufacturer": null,
+      "model": null,
+      "is_standard": false,
+      "serial_number": null,
+      "asset_tag": null,
+      "status": "available",
+      "current_placement_id": null,
+      "purchase_date": null,
+      "purchase_price": null,
+      "vendor": null,
+      "warranty_expires_at": null,
+      "rental_day_rate": null,
+      "idempotency_key": null,
+      "note": null,
+      "created_at": "2026-07-03T09:00:00.000000Z",
+      "updated_at": "2026-07-03T09:00:00.000000Z"
+    }
+  ],
+  "links": {
+    "first": "https://api/companies/7/equipment-assets?page=1",
+    "last": "https://api/companies/7/equipment-assets?page=1",
+    "prev": null,
+    "next": null
+  },
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 25,
+    "total": 2
+  }
+}

@@ -35,7 +35,14 @@ internal data class PendingPropertyUpdatePayload(
 )
 
 internal data class PendingLockPayload(
-    val lockUpdatedAt: String?
+    val lockUpdatedAt: String?,
+    /**
+     * RP-FR-019 (review round-4 #1): operation-scoped idempotency key for serialized
+     * placement ops (deploy/move/check-out). Generated once at enqueue and preserved
+     * across retries/restarts so the backend's operation ledger sees one stable key
+     * per logical request. Null for ops that don't use it.
+     */
+    val idempotencyKey: String? = null
 )
 
 internal data class PendingLocationCreationPayload(

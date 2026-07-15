@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -306,6 +307,39 @@ class SecureStorage internal constructor(
     suspend fun clearSmsVerified() {
         context.dataStore.edit { preferences ->
             preferences.remove(SMS_VERIFIED_KEY)
+        }
+    }
+
+    // ==================== Serialized Equipment mode (RP-FR-019) ====================
+    // Cached PER COMPANY (multi-company users can differ). Absence of the key =
+    // UNKNOWN (never fetched / fetch failed) — callers must NOT treat that as OFF.
+
+    private fun serializedEquipmentKey(companyId: Long) =
+        booleanPreferencesKey("serialized_equipment_$companyId")
+
+    suspend fun saveSerializedEquipmentEnabled(companyId: Long, enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[serializedEquipmentKey(companyId)] = enabled
+        }
+    }
+
+    /** @return true/false when cached, or null when never fetched (UNKNOWN). */
+    suspend fun getSerializedEquipmentEnabledSync(companyId: Long): Boolean? {
+        return context.dataStore.data.map { it[serializedEquipmentKey(companyId)] }.first()
+    }
+
+    /**
+     * Observe the per-company flag (review round-4 #7). distinctUntilChanged (round-9 #2) so an
+     * unrelated preferences write (company id, name, sms flag…) doesn't re-drive mode collectors.
+     */
+    fun observeSerializedEquipmentEnabled(companyId: Long): Flow<Boolean?> =
+        context.dataStore.data
+            .map { it[serializedEquipmentKey(companyId)] }
+            .distinctUntilChanged()
+
+    suspend fun clearSerializedEquipmentEnabled(companyId: Long) {
+        context.dataStore.edit { preferences ->
+            preferences.remove(serializedEquipmentKey(companyId))
         }
     }
 

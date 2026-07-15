@@ -298,10 +298,23 @@ class RocketDryFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    when (state) {
-                        is RocketDryUiState.Ready -> renderState(state)
-                        RocketDryUiState.Loading -> showLoadingState()
+                launch {
+                    viewModel.uiState.collect { state ->
+                        when (state) {
+                            is RocketDryUiState.Ready -> renderState(state)
+                            RocketDryUiState.Loading -> showLoadingState()
+                        }
+                    }
+                }
+                // RP-FR-019 legacy-wide gate: hide the legacy equipment tab when the company is
+                // serialized (ON/UNKNOWN); fall back to the moisture tab. The equipment entry
+                // destinations (room / totals) additionally self-gate.
+                launch {
+                    viewModel.legacyEquipmentAllowed.collect { allowed ->
+                        equipmentButton.isVisible = allowed
+                        if (!allowed && viewModel.currentTab.value == RocketDryTab.EQUIPMENT) {
+                            selectTab(RocketDryTab.MOISTURE)
+                        }
                     }
                 }
             }

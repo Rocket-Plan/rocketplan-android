@@ -560,6 +560,101 @@ data class OfflineEquipmentEntity(
     val isDeleted: Boolean = false
 )
 
+/**
+ * RP-FR-019 — a serialized equipment unit in a company's asset pool. Separate
+ * subsystem from [OfflineEquipmentEntity] (count-based). Standard syncable shape:
+ * local PK + nullable serverId + unique uuid + sync bookkeeping.
+ *
+ * Date-only (`purchaseDate`, `warrantyExpiresAt`) and decimal (`purchasePrice`,
+ * `rentalDayRate`) fields are kept as raw String? — the server sends decimals as
+ * strings and these are display/metadata only, never arithmetic here.
+ */
+@Entity(
+    tableName = "offline_equipment_assets",
+    indices = [
+        Index(value = ["uuid"], unique = true),
+        Index(value = ["companyId"]),
+        Index(value = ["serverId"]),
+        Index(value = ["catalogUuid"]),
+        Index(value = ["syncStatus"]),
+        Index(value = ["companyId", "isDeleted"])
+    ]
+)
+data class OfflineEquipmentAssetEntity(
+    @PrimaryKey(autoGenerate = true)
+    val assetId: Long = 0,
+    val serverId: Long? = null,
+    val uuid: String,
+    val companyId: Long,
+    val catalogUuid: String? = null,
+    val name: String? = null,
+    val manufacturer: String? = null,
+    val model: String? = null,
+    val isStandard: Boolean = true,
+    val serialNumber: String? = null,
+    val assetTag: String? = null,
+    val status: String = "available",
+    /** Server id of the current open placement (informational; null when in pool). */
+    val currentPlacementServerId: Long? = null,
+    val purchaseDate: String? = null,
+    val purchasePrice: String? = null,
+    val vendor: String? = null,
+    val warrantyExpiresAt: String? = null,
+    val rentalDayRate: String? = null,
+    val note: String? = null,
+    val createdAt: Date = Date(),
+    val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
+    val lastSyncedAt: Date? = null,
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
+    val syncVersion: Int = 0,
+    val isDirty: Boolean = false,
+    val isDeleted: Boolean = false
+)
+
+/**
+ * RP-FR-019 — one placement record for a serialized asset (deploy → move → check-out).
+ * References its parent asset / room / project by LOCAL id; server ids are resolved
+ * at push time from the parent's serverId (SKIP-until-ready pattern).
+ */
+@Entity(
+    tableName = "offline_equipment_placements",
+    indices = [
+        Index(value = ["uuid"], unique = true),
+        Index(value = ["assetId"]),
+        Index(value = ["roomId"]),
+        Index(value = ["serverId"]),
+        Index(value = ["syncStatus"]),
+        Index(value = ["assetId", "isDeleted"]),
+        Index(value = ["roomId", "isDeleted"])
+    ]
+)
+data class OfflineEquipmentPlacementEntity(
+    @PrimaryKey(autoGenerate = true)
+    val placementId: Long = 0,
+    val serverId: Long? = null,
+    val uuid: String,
+    /** Local PK of the parent [OfflineEquipmentAssetEntity]. */
+    val assetId: Long,
+    /** Local PK of the room this placement is in (null after check-out to pool). */
+    val roomId: Long? = null,
+    /** Local PK of the project (for timeline/grouping); null when unknown. */
+    val projectId: Long? = null,
+    val dateIn: Date? = null,
+    val dateOut: Date? = null,
+    val placedByUserId: Long? = null,
+    val note: String? = null,
+    val isOpen: Boolean = true,
+    val createdAt: Date = Date(),
+    val updatedAt: Date = Date(),
+    val serverUpdatedAt: Date? = null,
+    val lastSyncedAt: Date? = null,
+    val syncStatus: SyncStatus = SyncStatus.PENDING,
+    val syncVersion: Int = 0,
+    val isDirty: Boolean = false,
+    val isDeleted: Boolean = false
+)
+
 @Entity(
     tableName = "offline_materials",
     indices = [

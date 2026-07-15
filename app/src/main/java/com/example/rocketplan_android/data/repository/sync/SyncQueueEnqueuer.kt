@@ -2,6 +2,8 @@ package com.example.rocketplan_android.data.repository.sync
 
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -159,6 +161,36 @@ interface SyncQueueEnqueuer {
     suspend fun enqueueEquipmentDeletion(
         equipment: OfflineEquipmentEntity,
         lockUpdatedAt: String? = null
+    )
+
+    // ============================================================================
+    // Serialized Equipment Operations (RP-FR-019)
+    // ============================================================================
+
+    suspend fun enqueueEquipmentAssetUpsert(
+        asset: OfflineEquipmentAssetEntity,
+        lockUpdatedAt: String? = null
+    )
+
+    /** Retire (soft-delete) a serialized asset. */
+    suspend fun enqueueEquipmentAssetRetire(
+        asset: OfflineEquipmentAssetEntity,
+        lockUpdatedAt: String? = null
+    )
+
+    /** Deploy (check-in) a serialized asset into a room. */
+    suspend fun enqueuePlacementDeploy(
+        placement: OfflineEquipmentPlacementEntity
+    )
+
+    /** Move a deployed asset to another room (Phase 1c). */
+    suspend fun enqueuePlacementMove(
+        placement: OfflineEquipmentPlacementEntity
+    )
+
+    /** Check a deployed asset back out to the pool (Phase 1c). */
+    suspend fun enqueuePlacementCheckout(
+        placement: OfflineEquipmentPlacementEntity
     )
 
     // ============================================================================

@@ -12,6 +12,8 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAlbumPhotoEntity
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineCompanyEntity
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
 import com.example.rocketplan_android.data.local.entity.OfflineDamageCauseEntity
@@ -831,6 +833,96 @@ interface OfflineDao {
 
     @Query("DELETE FROM offline_equipment WHERE roomId = :roomId")
     suspend fun deleteEquipmentByRoomId(roomId: Long): Int
+
+    // region Serialized Equipment Assets (RP-FR-019)
+    @Upsert
+    suspend fun upsertEquipmentAssets(assets: List<OfflineEquipmentAssetEntity>)
+
+    @Query("SELECT * FROM offline_equipment_assets WHERE companyId = :companyId AND isDeleted = 0 ORDER BY updatedAt DESC")
+    fun observeEquipmentAssetsForCompany(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>>
+
+    /** Available pool = not deployed/retired and not soft-deleted. */
+    @Query("SELECT * FROM offline_equipment_assets WHERE companyId = :companyId AND isDeleted = 0 AND status = 'available' ORDER BY name")
+    fun observeAvailableEquipmentAssets(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>>
+
+    @Query("SELECT * FROM offline_equipment_assets WHERE assetId = :assetId LIMIT 1")
+    suspend fun getEquipmentAsset(assetId: Long): OfflineEquipmentAssetEntity?
+
+    @Query("SELECT * FROM offline_equipment_assets WHERE uuid = :uuid LIMIT 1")
+    suspend fun getEquipmentAssetByUuid(uuid: String): OfflineEquipmentAssetEntity?
+
+    @Query("SELECT * FROM offline_equipment_assets WHERE serverId = :serverId LIMIT 1")
+    suspend fun getEquipmentAssetByServerId(serverId: Long): OfflineEquipmentAssetEntity?
+
+    @Query("SELECT * FROM offline_equipment_assets WHERE serverId IN (:serverIds)")
+    suspend fun getEquipmentAssetsByServerIds(serverIds: List<Long>): List<OfflineEquipmentAssetEntity>
+
+    @Query(
+        """
+        SELECT * FROM offline_equipment_assets
+        WHERE companyId = :companyId AND (isDirty = 1 OR syncStatus != :synced)
+        ORDER BY updatedAt DESC
+        """
+    )
+    suspend fun getPendingEquipmentAssets(
+        companyId: Long,
+        synced: SyncStatus = SyncStatus.SYNCED
+    ): List<OfflineEquipmentAssetEntity>
+
+    @Query("UPDATE offline_equipment_assets SET isDeleted = 1 WHERE serverId IN (:serverIds) AND isDirty = 0")
+    suspend fun markEquipmentAssetsDeleted(serverIds: List<Long>)
+
+    /** Clean, server-known, non-deleted assets — the set a pull snapshot reconciles against. */
+    @Query("SELECT * FROM offline_equipment_assets WHERE companyId = :companyId AND isDirty = 0 AND serverId IS NOT NULL AND isDeleted = 0")
+    suspend fun getSyncedEquipmentAssetsForCompany(companyId: Long): List<OfflineEquipmentAssetEntity>
+    // endregion
+
+    // region Serialized Equipment Placements (RP-FR-019)
+    @Upsert
+    suspend fun upsertEquipmentPlacements(placements: List<OfflineEquipmentPlacementEntity>)
+
+    @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId AND isDeleted = 0 ORDER BY dateIn DESC")
+    fun observePlacementsForAsset(assetId: Long): Flow<List<OfflineEquipmentPlacementEntity>>
+
+    /** Assets currently deployed to a room = open placements not soft-deleted. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE roomId = :roomId AND isOpen = 1 AND isDeleted = 0 ORDER BY dateIn DESC")
+    fun observeOpenPlacementsForRoom(roomId: Long): Flow<List<OfflineEquipmentPlacementEntity>>
+
+    @Query("SELECT * FROM offline_equipment_placements WHERE placementId = :placementId LIMIT 1")
+    suspend fun getEquipmentPlacement(placementId: Long): OfflineEquipmentPlacementEntity?
+
+    @Query("SELECT * FROM offline_equipment_placements WHERE uuid = :uuid LIMIT 1")
+    suspend fun getEquipmentPlacementByUuid(uuid: String): OfflineEquipmentPlacementEntity?
+
+    @Query("SELECT * FROM offline_equipment_placements WHERE serverId IN (:serverIds)")
+    suspend fun getEquipmentPlacementsByServerIds(serverIds: List<Long>): List<OfflineEquipmentPlacementEntity>
+
+    @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId AND isOpen = 1 AND isDeleted = 0 ORDER BY dateIn DESC LIMIT 1")
+    suspend fun getOpenPlacementForAsset(assetId: Long): OfflineEquipmentPlacementEntity?
+
+    @Query(
+        """
+        SELECT * FROM offline_equipment_placements
+        WHERE isDirty = 1 OR syncStatus != :synced
+        ORDER BY updatedAt DESC
+        """
+    )
+    suspend fun getPendingEquipmentPlacements(
+        synced: SyncStatus = SyncStatus.SYNCED
+    ): List<OfflineEquipmentPlacementEntity>
+
+    /** Clean, server-known, non-deleted placements for an asset — pull reconciliation set. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId AND isDirty = 0 AND serverId IS NOT NULL AND isDeleted = 0")
+    suspend fun getSyncedPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity>
+
+    /** Clean open placements currently in a room — authoritative room-set reconciliation. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE roomId = :roomId AND isOpen = 1 AND isDirty = 0 AND isDeleted = 0")
+    suspend fun getCleanOpenPlacementsForRoom(roomId: Long): List<OfflineEquipmentPlacementEntity>
+
+    /** All placements for an asset (any state) — used to collapse an unsynced asset graph. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId")
+    suspend fun getAllPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity>
+    // endregion
 
     // region Moisture Logs
     @Upsert

@@ -740,6 +740,29 @@
         <argument
             android:name="roomId"
             app:argType="long" />
+
+        <!-- RP-FR-019: when the company is in serialized mode, the equipment room
+             gates over to the serialized screen. -->
+        <action
+            android:id="@+id/action_equipmentRoomFragment_to_serializedRoomEquipmentFragment"
+            app:destination="@id/serializedRoomEquipmentFragment"
+            app:popUpTo="@id/equipmentRoomFragment"
+            app:popUpToInclusive="true" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/serializedRoomEquipmentFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SerializedRoomEquipmentFragment"
+        android:label="Equipment (Serialized)"
+        tools:layout="@layout/fragment_serialized_room_equipment">
+
+        <argument
+            android:name="projectId"
+            app:argType="long" />
+
+        <argument
+            android:name="roomId"
+            app:argType="long" />
     </fragment>
 
     <fragment

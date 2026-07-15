@@ -603,6 +603,24 @@
     <string name="materials_count">%d Materials</string>
     <string name="photo_viewer_title">Photo</string>
     <string name="retry">Retry</string>
+
+    <!-- RP-FR-019 serialized equipment -->
+    <string name="serialized_equipment_title">Serialized equipment</string>
+    <string name="serialized_equipment_register_cta">Register a unit</string>
+    <string name="serialized_equipment_register_pending">Registering a unit needs the equipment catalog (coming soon).</string>
+    <string name="serialized_equipment_deployed_header">Deployed in this room</string>
+    <string name="serialized_equipment_deployed_empty">No units deployed here yet.</string>
+    <string name="serialized_equipment_pool_header">Available pool</string>
+    <string name="serialized_equipment_pool_empty">No available units.</string>
+    <string name="serialized_equipment_deploy">Deploy</string>
+    <string name="serialized_equipment_check_out">Check out</string>
+    <string name="serialized_equipment_retire">Retire</string>
+    <string name="serialized_equipment_move">Move</string>
+    <string name="serialized_equipment_no_catalog">No equipment catalog available. Check your connection and try again.</string>
+    <string name="serialized_equipment_no_rooms">No rooms available to move to.</string>
+    <string name="serialized_equipment_retire_confirm">Retire %1$s? This removes it from the pool and can\'t be undone.</string>
+    <string name="equipment_mode_changed">Equipment mode changed. Please wait while this screen updates.</string>
+    <string name="serialized_equipment_unavailable">Equipment mode is still loading for this company.</string>
     <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>
 

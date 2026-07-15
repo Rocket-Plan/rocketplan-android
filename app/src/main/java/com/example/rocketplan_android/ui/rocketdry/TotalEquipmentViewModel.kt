@@ -67,8 +67,29 @@ class TotalEquipmentViewModel(
     private val _uiState = MutableStateFlow<TotalEquipmentUiState>(TotalEquipmentUiState.Loading)
     val uiState: StateFlow<TotalEquipmentUiState> = _uiState.asStateFlow()
 
+    /** RP-FR-019: one-shot feedback when a legacy write is rejected by the serialized-mode gate. */
+    private val _events = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val events: kotlinx.coroutines.flow.SharedFlow<String> = _events
+
     init {
         observeData()
+    }
+
+    /**
+     * RP-FR-019 (legacy-wide gate): hard write boundary for the total-equipment (count) screen.
+     * Legacy mutations are allowed only while the PROJECT owner-company is serialized-mode OFF.
+     */
+    private suspend fun legacyWritable(): Boolean {
+        val companyId = localDataService.getProject(projectId)?.companyId ?: return false
+        val mode = com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(
+            rocketPlanApp.secureStorage
+        ).modeFor(companyId)
+        if (mode != com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
+            Log.w(TAG, "Rejecting legacy total-equipment write — mode=$mode")
+            _events.tryEmit(rocketPlanApp.getString(com.example.rocketplan_android.R.string.equipment_mode_changed))
+            return false
+        }
+        return true
     }
 
     private fun observeData() {
@@ -178,12 +199,14 @@ class TotalEquipmentViewModel(
         val newQuantity = (item.quantity + delta).coerceAtLeast(1)
         if (newQuantity == item.quantity) return
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             persistUpdate(item, quantity = newQuantity)
         }
     }
 
     fun updateStartDate(item: RoomEquipmentItem, newStartDate: Date) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             val (_, end) = ensureDateOrder(newStartDate, item.endDate)
             persistUpdate(item, startDate = newStartDate, endDate = end)
         }
@@ -191,6 +214,7 @@ class TotalEquipmentViewModel(
 
     fun updateEndDate(item: RoomEquipmentItem, newEndDate: Date) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             val (start, end) = ensureDateOrder(item.startDate, newEndDate)
             persistUpdate(item, startDate = start, endDate = end)
         }
@@ -198,6 +222,7 @@ class TotalEquipmentViewModel(
 
     fun deleteEquipment(item: RoomEquipmentItem) {
         viewModelScope.launch(Dispatchers.IO) {
+            if (!legacyWritable()) return@launch
             offlineSyncRepository.deleteEquipmentOffline(
                 equipmentId = item.equipmentId,
                 uuid = item.uuid

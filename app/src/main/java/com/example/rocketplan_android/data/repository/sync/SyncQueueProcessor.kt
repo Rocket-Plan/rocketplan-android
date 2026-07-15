@@ -10,6 +10,8 @@ import com.example.rocketplan_android.data.sync.SyncOperationOutcome
 import com.example.rocketplan_android.data.sync.SyncQueueLogger
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -56,6 +58,8 @@ import kotlin.math.min
 import kotlin.text.Charsets
 import com.example.rocketplan_android.data.repository.sync.handlers.AtmosphericLogPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.EquipmentPushHandler
+import com.example.rocketplan_android.data.repository.sync.handlers.EquipmentAssetPushHandler
+import com.example.rocketplan_android.data.repository.sync.handlers.EquipmentAssetPlacementPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.LocationPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.MoistureLogPushHandler
 import com.example.rocketplan_android.data.repository.sync.handlers.NotePushHandler
@@ -89,7 +93,10 @@ class SyncQueueProcessor(
     private val imageProcessorRepositoryProvider: () -> ImageProcessorRepository?,
     private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val isNetworkAvailable: () -> Boolean = { false } // Default to offline for safety
+    private val isNetworkAvailable: () -> Boolean = { false }, // Default to offline for safety
+    // RP-FR-019 (review #2): resolves serialized-equipment mode per company for the
+    // serialized push handlers' write boundary. Null → gate defaults to ON (no-op).
+    private val serializedModeFor: (suspend (Long) -> com.example.rocketplan_android.data.feature.SerializedEquipmentMode)? = null
 ) : SyncQueueEnqueuer {
     private val gson = Gson()
     private val syncQueueLogger = SyncQueueLogger(remoteLogger)
@@ -111,7 +118,9 @@ class SyncQueueProcessor(
             syncProjectEssentials = syncProjectEssentials,
             persistProperty = persistProperty,
             imageProcessorQueueManagerProvider = imageProcessorQueueManagerProvider,
-            imageProcessorRepositoryProvider = imageProcessorRepositoryProvider
+            imageProcessorRepositoryProvider = imageProcessorRepositoryProvider,
+            serializedModeFor = serializedModeFor
+                ?: { com.example.rocketplan_android.data.feature.SerializedEquipmentMode.ON }
         )
     }
     private val projectHandler by lazy { ProjectPushHandler(handlerContext) }
@@ -120,6 +129,8 @@ class SyncQueueProcessor(
     private val roomHandler by lazy { RoomPushHandler(handlerContext, isNetworkAvailable) }
     private val noteHandler by lazy { NotePushHandler(handlerContext) }
     private val equipmentHandler by lazy { EquipmentPushHandler(handlerContext) }
+    private val equipmentAssetHandler by lazy { EquipmentAssetPushHandler(handlerContext) }
+    private val equipmentPlacementHandler by lazy { EquipmentAssetPlacementPushHandler(handlerContext) }
     private val moistureLogHandler by lazy { MoistureLogPushHandler(handlerContext) }
     private val photoHandler by lazy { PhotoPushHandler(handlerContext) }
     private val atmosphericLogHandler by lazy { AtmosphericLogPushHandler(handlerContext) }
@@ -148,6 +159,8 @@ class SyncQueueProcessor(
             "note" -> entityUuid?.let { localDataService.getNoteByUuid(it)?.isDeleted } == true
             "photo" -> localDataService.getPhoto(entityId)?.isDeleted == true
             "equipment" -> localDataService.getEquipment(entityId)?.isDeleted == true
+            "equipment_asset" -> entityUuid?.let { localDataService.getEquipmentAssetByUuid(it)?.isDeleted } == true
+            "equipment_asset_placement" -> entityUuid?.let { localDataService.getEquipmentPlacementByUuid(it)?.isDeleted } == true
             "moisture_log" -> entityUuid?.let { localDataService.getMoistureLogByUuid(it)?.isDeleted } == true
             "atmospheric_log" -> entityUuid?.let { localDataService.getAtmosphericLogByUuid(it)?.isDeleted } == true
             "timecard" -> entityUuid?.let { localDataService.getTimecardByUuid(it)?.isDeleted } == true
@@ -399,6 +412,21 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE,
                         SyncOperationType.UPDATE -> equipmentHandler.handleUpsert(operation).toLocal()
                         SyncOperationType.DELETE -> equipmentHandler.handleDelete(operation).toLocal()
+                    }
+                }
+                "equipment_asset" -> handleOperation(operation, "pending:equipment_asset") {
+                    when (operation.operationType) {
+                        SyncOperationType.CREATE,
+                        SyncOperationType.UPDATE -> equipmentAssetHandler.handleUpsert(operation).toLocal()
+                        SyncOperationType.DELETE -> equipmentAssetHandler.handleDelete(operation).toLocal()
+                    }
+                }
+                "equipment_asset_placement" -> handleOperation(operation, "pending:equipment_placement") {
+                    when (operation.operationType) {
+                        // CREATE = deploy, UPDATE = move, DELETE = check-out.
+                        SyncOperationType.CREATE -> equipmentPlacementHandler.handleDeploy(operation).toLocal()
+                        SyncOperationType.UPDATE -> equipmentPlacementHandler.handleMove(operation).toLocal()
+                        SyncOperationType.DELETE -> equipmentPlacementHandler.handleCheckOut(operation).toLocal()
                     }
                 }
                 "moisture_log" -> handleOperation(operation, "pending:moisture") {
@@ -928,6 +956,73 @@ class SyncQueueProcessor(
             entityId = equipment.equipmentId,
             entityUuid = equipment.uuid,
             operationType = SyncOperationType.DELETE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
+    // RP-FR-019 — serialized equipment
+    override suspend fun enqueueEquipmentAssetUpsert(
+        asset: OfflineEquipmentAssetEntity,
+        lockUpdatedAt: String?
+    ) {
+        val resolvedLockUpdatedAt = resolveLockUpdatedAt(
+            entityType = "equipment_asset",
+            entityId = asset.assetId,
+            fallback = lockUpdatedAt
+        )
+        val payload = PendingLockPayload(lockUpdatedAt = resolvedLockUpdatedAt)
+        val opType = if (asset.serverId == null) SyncOperationType.CREATE else SyncOperationType.UPDATE
+        enqueueOperation(
+            entityType = "equipment_asset",
+            entityId = asset.assetId,
+            entityUuid = asset.uuid,
+            operationType = opType,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
+    override suspend fun enqueueEquipmentAssetRetire(
+        asset: OfflineEquipmentAssetEntity,
+        lockUpdatedAt: String?
+    ) {
+        val payload = PendingLockPayload(lockUpdatedAt = lockUpdatedAt)
+        enqueueOperation(
+            entityType = "equipment_asset",
+            entityId = asset.assetId,
+            entityUuid = asset.uuid,
+            operationType = SyncOperationType.DELETE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
+    override suspend fun enqueuePlacementDeploy(
+        placement: OfflineEquipmentPlacementEntity
+    ) = enqueuePlacementOp(placement, SyncOperationType.CREATE)
+
+    override suspend fun enqueuePlacementMove(
+        placement: OfflineEquipmentPlacementEntity
+    ) = enqueuePlacementOp(placement, SyncOperationType.UPDATE)
+
+    override suspend fun enqueuePlacementCheckout(
+        placement: OfflineEquipmentPlacementEntity
+    ) = enqueuePlacementOp(placement, SyncOperationType.DELETE)
+
+    private suspend fun enqueuePlacementOp(
+        placement: OfflineEquipmentPlacementEntity,
+        operationType: SyncOperationType
+    ) {
+        // Move/check-out lock on the ASSET's updated_at (resolved in the handler), so no
+        // payload lock is needed here. Review #1: a FRESH operation-scoped idempotency key
+        // (persisted so retries reuse it) — never the placement uuid across operations.
+        val payload = PendingLockPayload(lockUpdatedAt = null, idempotencyKey = UuidUtils.generateUuidV7())
+        enqueueOperation(
+            entityType = "equipment_asset_placement",
+            entityId = placement.placementId,
+            entityUuid = placement.uuid,
+            operationType = operationType,
             payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
             priority = SyncPriority.MEDIUM
         )
