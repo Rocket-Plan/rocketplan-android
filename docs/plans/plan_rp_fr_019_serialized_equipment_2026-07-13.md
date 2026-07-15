@@ -1,6 +1,8 @@
 # RP-FR-019 — Serialized Equipment (Android client)
 
-**Status:** planned → in progress · **Branch:** `feat/RP-FR-019-serialized-equipment` · **Supersedes:** RP-FR-018 · **Absorbs:** RP-BUG-279
+**Status:** implementation complete (data / sync / gating / UI) + 8 review rounds + self-review; **pending on-device enabled-company verification** · **Branch:** `feat/RP-FR-019-serialized-equipment` (PR #8, draft, stacked on cleanup PR #7) · **Supersedes:** RP-FR-018 · **RP-BUG-279:** DESCOPED — still open (the legacy flag-OFF write-sync remains unfixed; this plan does not address it)
+
+> **Status update (2026-07-14).** Everything below landed and is unit-tested (APK builds clean): the contract, persistence + `MIGRATION_30_31`, the full sync spine (register/update/retire/deploy/move/check-out) with the authoritative pull + two-axis metadata/lifecycle merge, per-company **observable** mode + write-boundary gate, the **legacy-wide RocketDry cutover gate** (EquipmentRoom + TotalEquipment write guards + RocketDry tab hide), and the **register-catalog + move-room pickers**. What remains is external/verification only: on-device enabled-company E2E, instrumented Fragment/nav transition tests, and a backend company-scoped mode endpoint / push (currently a 60s foreground poll). NOTE: the "re-fix RP-BUG-279" goal in the Context below was **descoped** — RP-FR-019 replaces legacy equipment only for flag-ON companies; the legacy (flag-OFF) pivot write-sync is still broken and RP-BUG-279 stays open as its own item.
 **Backend:** `mongoose` (branch `dev`), `MONGOOSE-FR-014` / `WEBAPP-FR-007` (timeline). Contract verified against controllers/resources/form-requests 2026-07-13.
 
 ## Context
