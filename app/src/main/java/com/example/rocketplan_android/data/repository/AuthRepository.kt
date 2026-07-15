@@ -2,7 +2,6 @@ package com.example.rocketplan_android.data.repository
 
 import android.util.Log
 import com.example.rocketplan_android.data.api.AuthService
-import com.example.rocketplan_android.data.api.OfflineSyncApi
 import com.example.rocketplan_android.data.api.RetrofitClient
 import com.example.rocketplan_android.data.model.ApiError
 import com.example.rocketplan_android.data.model.ApiErrorException
@@ -29,7 +28,6 @@ import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.logging.RemoteLogger
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Repository for authentication operations
@@ -39,8 +37,7 @@ class AuthRepository(
     private val secureStorage: SecureStorage,
     private val remoteLogger: RemoteLogger? = null,
     private val localDataServiceProvider: () -> LocalDataService = { LocalDataService.getInstance() },
-    private val authService: AuthService = RetrofitClient.authService,
-    private val offlineSyncApi: OfflineSyncApi = RetrofitClient.createService()
+    private val authService: AuthService = RetrofitClient.authService
 ) {
     private val localDataService: LocalDataService by lazy { localDataServiceProvider() }
 
@@ -514,26 +511,6 @@ class AuthRepository(
         val userId = secureStorage.getUserIdSync()
         if (userId == null || userId <= 0L) {
             refreshUserContext().getOrElse { error -> throw error }
-        }
-    }
-
-    /**
-     * Fetch server-side feature flags and persist the ones the client gates on.
-     *
-     * Called from the post-auth bootstrap (SyncQueueManager's EnsureUserContext job) so a
-     * server-side toggle propagates on every launch/login and each foreground refresh. Failures
-     * are swallowed (network down, transient 5xx) so the previously-stored flag value is retained
-     * rather than silently reset to false. Cancellation is rethrown so structured concurrency is
-     * preserved.
-     */
-    suspend fun refreshFeatureFlags() {
-        try {
-            val response = offlineSyncApi.getFeatureFlags()
-            secureStorage.saveEquipmentMoveTransferEnabled(response.values.equipmentMoveTransfer ?: false)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to refresh feature flags; keeping prior stored values", e)
         }
     }
 

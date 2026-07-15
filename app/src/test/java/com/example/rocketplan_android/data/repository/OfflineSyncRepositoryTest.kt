@@ -15,7 +15,6 @@ import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.local.entity.OfflineWorkScopeEntity
 import com.example.rocketplan_android.data.model.NoteResourceResponse
 import com.example.rocketplan_android.data.model.DeleteProjectRequest
-import com.example.rocketplan_android.data.model.SingleDataResponse
 import com.example.rocketplan_android.data.model.ProjectDetailResourceResponse
 import com.example.rocketplan_android.data.model.PropertyResourceResponse
 import com.example.rocketplan_android.data.model.offline.AlbumDto
@@ -192,7 +191,7 @@ class OfflineSyncRepositoryTest {
         coEvery { api.getRoomMoistureLogs(any(), any()) } returns FlexibleDataResponse(data = null)
         coEvery { api.getRoomDamageMaterials(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomWorkScope(any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getRoomEquipment(any()) } returns SingleDataResponse(data = emptyList())
+        coEvery { api.getRoomEquipment(any()) } returns emptyList()
         coEvery { api.getProjectAtmosphericLogs(projectId) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectFloorPhotos(projectId, any()) } returns PaginatedResponse(
             data = emptyList()
@@ -376,7 +375,7 @@ class OfflineSyncRepositoryTest {
         coEvery { api.getRoomMoistureLogs(any(), any()) } returns FlexibleDataResponse(data = null)
         coEvery { api.getRoomDamageMaterials(any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getRoomWorkScope(any()) } returns PaginatedResponse(data = emptyList())
-        coEvery { api.getRoomEquipment(any()) } returns SingleDataResponse(data = emptyList())
+        coEvery { api.getRoomEquipment(any()) } returns emptyList()
         coEvery { api.getProjectAtmosphericLogs(projectId) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectFloorPhotos(projectId, any()) } returns PaginatedResponse(data = emptyList())
         coEvery { api.getProjectLocationPhotos(projectId, any(), any()) } returns PaginatedResponse(data = emptyList())

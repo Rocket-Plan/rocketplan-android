@@ -145,7 +145,5 @@ data class FeatureFlagValues(
     @SerializedName("use_image_processor")
     val useImageProcessor: Boolean? = null,
     @SerializedName("timecards")
-    val timecardsEnabled: Boolean? = null,
-    @SerializedName("equipmentMoveTransfer")
-    val equipmentMoveTransfer: Boolean? = null
+    val timecardsEnabled: Boolean? = null
 )
