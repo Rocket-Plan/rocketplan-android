@@ -263,14 +263,22 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
                 originalOperationId = operation.operationId
             )
         )
+        // Review round-9 (H7): reflect the conflict on the asset row (preserve isDirty so a pending
+        // metadata edit isn't clobbered) so its state isn't misreported as still-PENDING.
+        ctx.localDataService.saveEquipmentAssets(listOf(asset.copy(syncStatus = SyncStatus.CONFLICT)))
         return OperationOutcome.CONFLICT_PENDING
     }
 
-    /** Review #1: the operation-scoped idempotency key persisted in the queue payload. */
+    /**
+     * Review #1: the operation-scoped idempotency key persisted in the queue payload. Review round-9
+     * (H3): the fallback (only for a legacy/missing payload) must stay stable across retries AND be
+     * distinct per operation type — the bare placement uuid would collide across deploy/move/check-out
+     * and the backend ledger could treat a move as a replay of the deploy.
+     */
     private fun idempotencyKeyOf(operation: OfflineSyncQueueEntity): String =
         runCatching {
             ctx.gson.fromJson(String(operation.payload, Charsets.UTF_8), PendingLockPayload::class.java)?.idempotencyKey
-        }.getOrNull() ?: operation.entityUuid
+        }.getOrNull() ?: "${operation.entityUuid}:${operation.operationType}"
 
     /**
      * Review #4: a terminal deploy 422 must roll back the optimistic lifecycle state,

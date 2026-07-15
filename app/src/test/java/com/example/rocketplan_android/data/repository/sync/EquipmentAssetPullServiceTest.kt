@@ -56,6 +56,8 @@ class EquipmentAssetPullServiceTest {
         // Locally we have 900 (still present) and 901 (server dropped it).
         coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns
             listOf(localAsset(50L, 900L), localAsset(51L, 901L))
+        // #3 guard: neither is deployed locally, so the missing one is safe to delete.
+        coEvery { local.getOpenPlacementForAsset(any()) } returns null
         val saves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
         coEvery { local.saveEquipmentAssets(capture(saves), any()) } just Runs
         // No room server id → skip the room reconciliation branch.
@@ -66,6 +68,27 @@ class EquipmentAssetPullServiceTest {
         assertThat(result.isSuccess).isTrue()
         val deleted = saves.flatten().filter { it.isDeleted }
         assertThat(deleted.map { it.serverId }).containsExactly(901L)
+    }
+
+    @Test
+    fun `an asset missing from the pool but deployed locally is NOT deleted`() = runTest {
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns page(assetDto(900))
+        // 901 is absent from the pool response but still has a local open placement.
+        coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns
+            listOf(localAsset(50L, 900L), localAsset(51L, 901L))
+        coEvery { local.getOpenPlacementForAsset(51L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 70L, serverId = 12L, uuid = "open", assetId = 51L, roomId = 400L,
+            isOpen = true, createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getOpenPlacementForAsset(50L) } returns null
+        val saves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(saves), any()) } just Runs
+        coEvery { local.getRoom(any()) } returns null
+
+        service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        // #3: 901 is deployed locally → must NOT be marked deleted despite being absent from the pool.
+        assertThat(saves.flatten().none { it.isDeleted }).isTrue()
     }
 
     @Test

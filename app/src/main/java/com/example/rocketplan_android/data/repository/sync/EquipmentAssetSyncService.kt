@@ -1,6 +1,7 @@
 package com.example.rocketplan_android.data.repository.sync
 
 import com.example.rocketplan_android.data.local.LocalDataService
+import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
@@ -157,10 +158,13 @@ class EquipmentAssetSyncService(
             val roomCompanyId = localDataService.getProject(room.projectId)?.companyId
             if (roomCompanyId != null && roomCompanyId != asset.companyId) return@runInTransaction null
 
-            // Review round-9 #1 (H1): the server never saw this placement iff serverId == null
-            // (SYNCING is already excluded above). Key compaction on that, NOT op-status==PENDING —
-            // a deploy op that reached FAILED still has serverId==null and must not be lost.
-            val deployNotSynced = open.serverId == null
+            // Review round-10 #2: if the placement isn't server-known, only compact when the deploy is
+            // PROVEN never dispatched (PENDING). A FAILED deploy may already be committed server-side
+            // (lost response) — re-keying it as a fresh deploy/move could 422 against an already-
+            // deployed asset, so reject and let it reconcile.
+            if (open.serverId == null && !isDeployProvenNeverDispatched(open.placementId)) {
+                return@runInTransaction reject("move", asset.uuid, "deploy hasn't finished syncing — retry after it settles")
+            }
             val updated = open.copy(
                 roomId = toRoomLocalId,
                 projectId = room.projectId,
@@ -169,10 +173,9 @@ class EquipmentAssetSyncService(
                 isDirty = true
             )
             localDataService.saveEquipmentPlacements(listOf(updated))
-            if (deployNotSynced) {
-                // Never reached the server — (re)issue a DEPLOY to the new room. This also recovers
-                // a FAILED deploy op (enqueuePlacementDeploy replaces any prior op for this row).
-                syncQueueEnqueuer().enqueuePlacementDeploy(updated)
+            if (open.serverId == null) {
+                // PENDING deploy → retarget the ORIGINAL deploy op (same idempotency key); it will
+                // deploy to the new room. Do NOT enqueue a fresh op (that would change the key).
             } else {
                 syncQueueEnqueuer().enqueuePlacementMove(updated)
             }
@@ -196,8 +199,12 @@ class EquipmentAssetSyncService(
             }
             val timestamp = now()
 
-            // Review round-9 #1 (H1): collapse when the server never saw the placement (serverId
-            // == null), regardless of whether the deploy op is PENDING or FAILED.
+            // Review round-10 #2: only collapse when the deploy is PROVEN never dispatched (PENDING).
+            // A FAILED deploy may already be committed server-side, so collapsing it locally would
+            // leave the server deployed forever — reject and let it reconcile instead.
+            if (open.serverId == null && !isDeployProvenNeverDispatched(open.placementId)) {
+                return@runInTransaction reject("check-out", asset.uuid, "deploy hasn't finished syncing — retry after it settles")
+            }
             if (open.serverId == null) {
                 localDataService.removeSyncOperationsForEntity("equipment_asset_placement", open.placementId)
                 val closed = open.copy(
@@ -238,6 +245,17 @@ class EquipmentAssetSyncService(
         localDataService.getSyncOperationForEntity(
             "equipment_asset_placement", placementLocalId, SyncStatus.SYNCING
         ) != null
+
+    /**
+     * Review round-10 #2: a placement is PROVEN never dispatched only when its op is still PENDING
+     * (queued, never attempted). serverId==null alone is NOT proof — a FAILED op was dispatched and
+     * its response may have been lost, leaving the server deployed. Returns true only for a PENDING
+     * deploy CREATE, i.e. the sole case where local compaction is safe.
+     */
+    private suspend fun isDeployProvenNeverDispatched(placementLocalId: Long): Boolean =
+        localDataService.getSyncOperationForEntity(
+            "equipment_asset_placement", placementLocalId, SyncStatus.PENDING
+        )?.operationType == SyncOperationType.CREATE
 
     /**
      * Retire an asset. Review #7: if it never reached the server, collapse the WHOLE

@@ -86,10 +86,10 @@ class EquipmentAssetPullService(
             val resp = api.getCompanyEquipmentAssets(companyId = companyId, perPage = 100, page = page)
             val meta = resp.meta
             if (resp.data.isEmpty()) {
-                // Authoritative-empty only if meta confirms it; otherwise treat as uncertain.
-                val authoritativeEmpty = meta?.total == 0 ||
-                    (meta?.currentPage != null && meta.lastPage != null && meta.currentPage >= meta.lastPage)
-                return PoolSnapshot(seen, complete = authoritativeEmpty)
+                // Review round-10 #1: an empty page is authoritative-empty ONLY if meta.total == 0.
+                // An empty page claiming total > 0 (currentPage>=lastPage but total=40) is malformed/
+                // spurious and must NOT drive deletion.
+                return PoolSnapshot(seen, complete = meta?.total == 0)
             }
             saveAssetsProtectingLifecycle(resp.data)
             seen += resp.data.map { it.id }
@@ -99,7 +99,12 @@ class EquipmentAssetPullService(
                 // Malformed pagination — can't prove completeness; upsert what we got, delete nothing.
                 return PoolSnapshot(seen, complete = false)
             }
-            if (current >= last) return PoolSnapshot(seen, complete = true)
+            if (current >= last) {
+                // Review round-10 #1: cross-check the total. Only authoritative if we actually saw
+                // every row the server claims (guards a truncated last page that still says current>=last).
+                val total = meta.total
+                return PoolSnapshot(seen, complete = total == null || seen.size >= total)
+            }
             page = current + 1
         }
     }
@@ -183,6 +188,9 @@ class EquipmentAssetPullService(
     private suspend fun markMissingAssetsDeleted(companyId: Long, seen: Set<Long>) {
         val missing = localDataService.getSyncedEquipmentAssetsForCompany(companyId)
             .filter { it.serverId != null && it.serverId !in seen }
+            // Review #3: never delete an asset we still hold deployed locally, even if the company
+            // index omitted it (defends against a backend index that excludes deployed rows).
+            .filter { localDataService.getOpenPlacementForAsset(it.assetId) == null }
         if (missing.isNotEmpty()) {
             localDataService.saveEquipmentAssets(missing.map { it.markReconciledDeleted() })
         }

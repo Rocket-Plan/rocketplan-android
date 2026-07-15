@@ -172,28 +172,75 @@ class EquipmentAssetSyncServiceTest {
     }
 
     @Test
-    fun `move before deploy syncs re-issues a deploy to the new room, not a move`() = runTest {
+    fun `move with a PENDING deploy retargets the original op (no new op, same key)`() = runTest {
         val asset = OfflineEquipmentAssetEntity(
             assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
             status = "deployed", createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getEquipmentAsset(50L) } returns asset
-        // Deploy never reached the server (serverId == null) — regardless of PENDING/FAILED op state.
         coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
             placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
             isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getRoom(500L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createRoom(roomId = 500L, projectId = 100L)
         coEvery { local.getProject(100L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createProject(projectId = 100L, companyId = 7L)
-        val deployed = slot<OfflineEquipmentPlacementEntity>()
-        coEvery { enqueuer.enqueuePlacementDeploy(capture(deployed)) } just Runs
+        // PROVEN never dispatched: a PENDING deploy CREATE (SYNCING lookup stays null via @Before).
+        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, SyncStatus.PENDING) } returns
+            com.example.rocketplan_android.testing.PushHandlerTestFixtures.createSyncOperation(
+                entityType = "equipment_asset_placement", entityId = 60L, entityUuid = "p",
+                operationType = SyncOperationType.CREATE
+            )
+        val savedP = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { local.saveEquipmentPlacements(capture(savedP)) } just Runs
 
-        service.moveAsset(assetLocalId = 50L, toRoomLocalId = 500L)
+        val result = service.moveAsset(assetLocalId = 50L, toRoomLocalId = 500L)
 
-        // H1: server never saw it → re-issue a DEPLOY to the target room; NOT a move.
+        // Round-10 #2: retarget the ORIGINAL deploy op (same key) — NO new move/deploy op enqueued.
+        assertThat(result).isNotNull()
+        assertThat(savedP.captured.single().roomId).isEqualTo(500L)
         coVerify(exactly = 0) { enqueuer.enqueuePlacementMove(any()) }
-        coVerify(exactly = 1) { enqueuer.enqueuePlacementDeploy(any()) }
-        assertThat(deployed.captured.roomId).isEqualTo(500L)
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementDeploy(any()) }
+    }
+
+    @Test
+    fun `move rejected when the deploy is ambiguous (not proven never-dispatched)`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        // serverId == null but NO PENDING deploy op (e.g. FAILED) — @Before defaults the lookup to null.
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
+            isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getRoom(500L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createRoom(roomId = 500L, projectId = 100L)
+        coEvery { local.getProject(100L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createProject(projectId = 100L, companyId = 7L)
+
+        val result = service.moveAsset(assetLocalId = 50L, toRoomLocalId = 500L)
+
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementMove(any()) }
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementDeploy(any()) }
+    }
+
+    @Test
+    fun `checkout rejected when the deploy is ambiguous (not proven never-dispatched)`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "deployed", createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentAsset(50L) } returns asset
+        coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
+            isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
+        )
+
+        val result = service.checkOutAsset(50L)
+
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementCheckout(any()) }
+        coVerify(exactly = 0) { local.removeSyncOperationsForEntity(any(), any()) }
     }
 
     @Test

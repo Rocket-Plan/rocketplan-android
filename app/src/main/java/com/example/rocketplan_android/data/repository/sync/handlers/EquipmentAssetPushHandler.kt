@@ -70,9 +70,26 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
                 "body" to (body ?: "")
             )
         )
+        val now = ctx.now()
         ctx.localDataService.saveEquipmentAssets(
-            listOf(asset.copy(isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = ctx.now()))
+            listOf(asset.copy(isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = now))
         )
+        // Review round-9 (H4): if REGISTER failed (asset never got a serverId), its optimistic
+        // placement ops can never sync (they SKIP forever waiting for asset.serverId). Collapse the
+        // whole unsynced graph — drop placement ops + soft-delete the placements.
+        if (asset.serverId == null) {
+            val placements = ctx.localDataService.getAllPlacementsForAsset(asset.assetId)
+            placements.forEach {
+                ctx.localDataService.removeSyncOperationsForEntity("equipment_asset_placement", it.placementId)
+            }
+            if (placements.isNotEmpty()) {
+                ctx.localDataService.saveEquipmentPlacements(
+                    placements.map {
+                        it.copy(isDeleted = true, isOpen = false, isDirty = false, syncStatus = SyncStatus.FAILED, lastSyncedAt = now)
+                    }
+                )
+            }
+        }
         return OperationOutcome.DROP
     }
 
