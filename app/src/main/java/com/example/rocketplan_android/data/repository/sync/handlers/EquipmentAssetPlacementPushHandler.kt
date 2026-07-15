@@ -93,10 +93,15 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
             OperationOutcome.SUCCESS
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            if (e.isValidationError()) resolveDeploy422(asset, placement, e)
-            else {
-                Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler deploy error; retrying", e)
-                OperationOutcome.RETRY
+            when {
+                // Review round-9 (H2): a 409 on deploy (e.g. the server already has an open placement
+                // for the asset) must NOT blind-retry forever — record a conflict and hold.
+                e.isConflict() -> recordAssetConflict(e as HttpException, asset, operation, "DEPLOY_CONFLICT")
+                e.isValidationError() -> resolveDeploy422(asset, placement, e)
+                else -> {
+                    Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler deploy error; retrying", e)
+                    OperationOutcome.RETRY
+                }
             }
         }
     }

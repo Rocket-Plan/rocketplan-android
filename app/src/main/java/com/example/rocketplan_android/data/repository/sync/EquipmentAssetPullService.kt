@@ -36,9 +36,13 @@ class EquipmentAssetPullService(
     suspend fun refreshRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
         withContext(ioDispatcher) {
             runCatching {
-                // 1. Company pool — the completed pagination is an authoritative snapshot.
-                val seenAssetIds = pullCompanyPool(companyId)
-                markMissingAssetsDeleted(companyId, seenAssetIds)
+                // 1. Company pool. Review round-9 #1/#2: only treat it as an AUTHORITATIVE snapshot
+                //    (and delete missing rows) when the pagination is provably COMPLETE — otherwise a
+                //    null/omitted `meta` or a spurious empty 200 would silently wipe the local pool.
+                val pool = pullCompanyPool(companyId)
+                if (pool.complete) {
+                    markMissingAssetsDeleted(companyId, pool.seen)
+                }
 
                 // 2. Room deployed assets — authoritative set of open placements in this room.
                 val roomServerId = localDataService.getRoom(roomLocalId)?.serverId
@@ -54,32 +58,50 @@ class EquipmentAssetPullService(
                     reconcileAssetPlacements(local.assetId, placements)
                 }
 
-                // 4. Close clean local OPEN placements in this room whose asset the server no
-                //    longer lists here (moved out / checked out / retired by another client).
+                // 4. Close clean local OPEN placements in this room whose asset the server no longer
+                //    lists here (moved out / checked out / retired by another client). Review #5: only
+                //    close when we can positively confirm the asset is server-known and absent from the
+                //    room set — a serverId-less asset can't be proven missing, so leave it alone.
                 for (open in localDataService.getCleanOpenPlacementsForRoom(roomLocalId)) {
                     val serverId = localDataService.getEquipmentAsset(open.assetId)?.serverId
-                    if (serverId == null || serverId !in roomAssetServerIds) {
+                    if (serverId != null && serverId !in roomAssetServerIds) {
                         localDataService.saveEquipmentPlacements(listOf(open.markReconciledDeleted()))
                     }
                 }
             }
         }
 
-    /** @return the set of server asset ids the company pool authoritatively contains. */
-    private suspend fun pullCompanyPool(companyId: Long): Set<Long> {
+    private data class PoolSnapshot(val seen: Set<Long>, val complete: Boolean)
+
+    /**
+     * Pulls (and upserts) the whole company pool. `complete` is true ONLY when the pagination
+     * proves it — every page carried a well-formed `meta` and we reached currentPage >= lastPage,
+     * or an empty page was confirmed authoritative by `meta.total == 0`. A null/omitted `meta`
+     * yields `complete = false` so no reconciliation-deletion runs on a partial/uncertain pull.
+     */
+    private suspend fun pullCompanyPool(companyId: Long): PoolSnapshot {
         val seen = mutableSetOf<Long>()
         var page = 1
         while (true) {
             val resp = api.getCompanyEquipmentAssets(companyId = companyId, perPage = 100, page = page)
-            if (resp.data.isEmpty()) break
+            val meta = resp.meta
+            if (resp.data.isEmpty()) {
+                // Authoritative-empty only if meta confirms it; otherwise treat as uncertain.
+                val authoritativeEmpty = meta?.total == 0 ||
+                    (meta?.currentPage != null && meta.lastPage != null && meta.currentPage >= meta.lastPage)
+                return PoolSnapshot(seen, complete = authoritativeEmpty)
+            }
             saveAssetsProtectingLifecycle(resp.data)
             seen += resp.data.map { it.id }
-            val current = resp.meta?.currentPage ?: page
-            val last = resp.meta?.lastPage ?: current
-            if (current >= last) break
+            val current = meta?.currentPage
+            val last = meta?.lastPage
+            if (current == null || last == null) {
+                // Malformed pagination — can't prove completeness; upsert what we got, delete nothing.
+                return PoolSnapshot(seen, complete = false)
+            }
+            if (current >= last) return PoolSnapshot(seen, complete = true)
             page = current + 1
         }
-        return seen
     }
 
     /**

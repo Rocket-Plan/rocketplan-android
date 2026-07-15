@@ -172,29 +172,28 @@ class EquipmentAssetSyncServiceTest {
     }
 
     @Test
-    fun `move before deploy syncs keeps the CREATE and enqueues no move`() = runTest {
+    fun `move before deploy syncs re-issues a deploy to the new room, not a move`() = runTest {
         val asset = OfflineEquipmentAssetEntity(
             assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
             status = "deployed", createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getEquipmentAsset(50L) } returns asset
-        // Deploy not synced yet: open placement has no serverId and a PENDING CREATE.
+        // Deploy never reached the server (serverId == null) — regardless of PENDING/FAILED op state.
         coEvery { local.getOpenPlacementForAsset(50L) } returns OfflineEquipmentPlacementEntity(
             placementId = 60L, serverId = null, uuid = "p", assetId = 50L, roomId = 400L,
             isOpen = true, isDirty = true, createdAt = Date(), updatedAt = Date()
         )
         coEvery { local.getRoom(500L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createRoom(roomId = 500L, projectId = 100L)
         coEvery { local.getProject(100L) } returns com.example.rocketplan_android.testing.PushHandlerTestFixtures.createProject(projectId = 100L, companyId = 7L)
-        coEvery { local.getSyncOperationForEntity("equipment_asset_placement", 60L, SyncStatus.PENDING) } returns
-            com.example.rocketplan_android.testing.PushHandlerTestFixtures.createSyncOperation(
-                entityType = "equipment_asset_placement", entityId = 60L, entityUuid = "p",
-                operationType = SyncOperationType.CREATE
-            )
+        val deployed = slot<OfflineEquipmentPlacementEntity>()
+        coEvery { enqueuer.enqueuePlacementDeploy(capture(deployed)) } just Runs
 
         service.moveAsset(assetLocalId = 50L, toRoomLocalId = 500L)
 
-        // The pending deploy CREATE is retargeted, not replaced by a MOVE.
+        // H1: server never saw it → re-issue a DEPLOY to the target room; NOT a move.
         coVerify(exactly = 0) { enqueuer.enqueuePlacementMove(any()) }
+        coVerify(exactly = 1) { enqueuer.enqueuePlacementDeploy(any()) }
+        assertThat(deployed.captured.roomId).isEqualTo(500L)
     }
 
     @Test

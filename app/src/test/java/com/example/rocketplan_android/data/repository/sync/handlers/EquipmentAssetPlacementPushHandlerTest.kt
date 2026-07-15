@@ -145,6 +145,20 @@ class EquipmentAssetPlacementPushHandlerTest {
     }
 
     @Test
+    fun `deploy 409 records conflict instead of retrying`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { localDataService.getRoom(400L) } returns PushHandlerTestFixtures.createRoom(serverId = 4000L)
+        coEvery { api.deployEquipmentAsset(900L, any()) } throws PushHandlerTestFixtures.create409WithUpdatedAt()
+        coEvery { localDataService.upsertConflict(any()) } just io.mockk.Runs
+
+        val outcome = handler.handleDeploy(op)
+
+        assertThat(outcome).isEqualTo(OperationOutcome.CONFLICT_PENDING)
+        coVerify(exactly = 1) { localDataService.upsertConflict(any()) }
+    }
+
+    @Test
     fun `422 drops`() = runTest {
         coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement()
         coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)

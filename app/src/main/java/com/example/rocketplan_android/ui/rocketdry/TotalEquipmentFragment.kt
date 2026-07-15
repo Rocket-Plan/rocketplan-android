@@ -116,6 +116,10 @@ class TotalEquipmentFragment : Fragment() {
                 // project owner-company is not serialized-mode OFF (there is no serialized totals
                 // screen yet; returning to RocketDry is the correct "hide legacy" behavior).
                 launch { gateOnOwnerMode() }
+                // Review round-9 #5: refresh backend authority (immediately + every 60s) so a flip to
+                // ON while sitting here is detected — otherwise legacyWritable() would keep allowing
+                // writes off a stale OFF cache.
+                launch { pollOwnerModeRefresh() }
             }
         }
     }
@@ -136,6 +140,21 @@ class TotalEquipmentFragment : Fragment() {
                     leaveLegacyTotals()
                 }
             }
+    }
+
+    private suspend fun pollOwnerModeRefresh() {
+        val app = requireActivity().application as com.example.rocketplan_android.RocketPlanApplication
+        val companyId = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            app.localDataService.getProject(args.projectId)?.companyId
+        } ?: return
+        while (true) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                if (app.secureStorage.getCompanyIdSync() == companyId) {
+                    runCatching { app.authRepository.refreshFeatureFlags() }
+                }
+            }
+            kotlinx.coroutines.delay(60_000)
+        }
     }
 
     private fun leaveLegacyTotals() {

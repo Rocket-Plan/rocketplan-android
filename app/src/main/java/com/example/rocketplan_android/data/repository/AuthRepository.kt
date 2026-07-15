@@ -540,10 +540,27 @@ class AuthRepository(
      * Best-effort: on any failure the cache is left untouched, so the mode stays
      * UNKNOWN (retryable) rather than falling back to legacy (OFF).
      */
-    private suspend fun cacheSerializedEquipmentFlag(companyId: Long) {
-        // Review #1: start from UNKNOWN so a stale value never survives a failed/invalid
-        // refresh, and only cache after a valid response for THIS company.
-        secureStorage.clearSerializedEquipmentEnabled(companyId)
+    /**
+     * Establish the serialized-equipment flag for a company whose CONTEXT just changed
+     * (login / setActiveCompany). Clears to UNKNOWN first — the previous value can't be
+     * trusted for the new context — then caches the fetched value (review round-2 #1).
+     */
+    private suspend fun cacheSerializedEquipmentFlag(companyId: Long) =
+        fetchFeatureFlag(companyId, clearFirst = true)
+
+    /**
+     * RP-FR-019 (review round-9 #1): NON-destructive refresh, used by the periodic poll /
+     * onResume / retry. It must NOT clear-first — doing so emitted a transient UNKNOWN for the
+     * whole request round-trip that the reactive UI reacted to (flashing the serialized screen /
+     * bouncing OFF users every 60s). On failure it keeps the last known value.
+     */
+    suspend fun refreshFeatureFlags() {
+        val companyId = secureStorage.getCompanyIdSync() ?: return
+        fetchFeatureFlag(companyId, clearFirst = false)
+    }
+
+    private suspend fun fetchFeatureFlag(companyId: Long, clearFirst: Boolean) {
+        if (clearFirst) secureStorage.clearSerializedEquipmentEnabled(companyId)
         try {
             val response = authService.getFeatureFlags()
             val data = response.body()?.data
@@ -554,24 +571,16 @@ class AuthRepository(
                 Log.w(
                     "AuthRepository",
                     "Feature flags not cached for companyId=$companyId " +
-                        "(success=${response.isSuccessful}, valid=${data?.valid}, enabled=$enabled) → UNKNOWN"
+                        "(success=${response.isSuccessful}, valid=${data?.valid}, enabled=$enabled)" +
+                        if (clearFirst) " → UNKNOWN" else " → keeping last known"
                 )
             }
         } catch (e: kotlin.coroutines.cancellation.CancellationException) {
             throw e
         } catch (e: Exception) {
-            // Leaves the mode UNKNOWN (cleared above) rather than stranding a stale value.
+            // clearFirst path already reset to UNKNOWN; refresh path keeps the last known value.
             Log.w("AuthRepository", "Failed to fetch serialized equipment flag for companyId=$companyId", e)
         }
-    }
-
-    /**
-     * RP-FR-019: re-fetch + cache feature flags for the active company. Used by
-     * the serialized-equipment UI to recover from an UNKNOWN mode (retry).
-     */
-    suspend fun refreshFeatureFlags() {
-        val companyId = secureStorage.getCompanyIdSync() ?: return
-        cacheSerializedEquipmentFlag(companyId)
     }
 
     /**

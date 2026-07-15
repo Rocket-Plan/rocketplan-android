@@ -1,7 +1,6 @@
 package com.example.rocketplan_android.data.repository.sync
 
 import com.example.rocketplan_android.data.local.LocalDataService
-import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
@@ -158,7 +157,10 @@ class EquipmentAssetSyncService(
             val roomCompanyId = localDataService.getProject(room.projectId)?.companyId
             if (roomCompanyId != null && roomCompanyId != asset.companyId) return@runInTransaction null
 
-            val deployPending = open.serverId == null && pendingOpType(open.placementId) == SyncOperationType.CREATE
+            // Review round-9 #1 (H1): the server never saw this placement iff serverId == null
+            // (SYNCING is already excluded above). Key compaction on that, NOT op-status==PENDING —
+            // a deploy op that reached FAILED still has serverId==null and must not be lost.
+            val deployNotSynced = open.serverId == null
             val updated = open.copy(
                 roomId = toRoomLocalId,
                 projectId = room.projectId,
@@ -167,9 +169,13 @@ class EquipmentAssetSyncService(
                 isDirty = true
             )
             localDataService.saveEquipmentPlacements(listOf(updated))
-            if (!deployPending) {
+            if (deployNotSynced) {
+                // Never reached the server — (re)issue a DEPLOY to the new room. This also recovers
+                // a FAILED deploy op (enqueuePlacementDeploy replaces any prior op for this row).
+                syncQueueEnqueuer().enqueuePlacementDeploy(updated)
+            } else {
                 syncQueueEnqueuer().enqueuePlacementMove(updated)
-            } // else: the pending deploy CREATE now deploys to the new room — keep it, no MOVE op.
+            }
             updated
         }
 
@@ -190,7 +196,9 @@ class EquipmentAssetSyncService(
             }
             val timestamp = now()
 
-            if (open.serverId == null && pendingOpType(open.placementId) == SyncOperationType.CREATE) {
+            // Review round-9 #1 (H1): collapse when the server never saw the placement (serverId
+            // == null), regardless of whether the deploy op is PENDING or FAILED.
+            if (open.serverId == null) {
                 localDataService.removeSyncOperationsForEntity("equipment_asset_placement", open.placementId)
                 val closed = open.copy(
                     isDeleted = true, isOpen = false, dateOut = timestamp,
@@ -210,6 +218,9 @@ class EquipmentAssetSyncService(
 
             val updated = open.copy(
                 dateOut = timestamp,
+                // Review round-9 (H6): close the placement optimistically so it matches the asset's
+                // `available` status (and drops out of the room's deployed list) before the server confirms.
+                isOpen = false,
                 updatedAt = timestamp,
                 syncStatus = SyncStatus.PENDING,
                 isDirty = true
@@ -221,9 +232,6 @@ class EquipmentAssetSyncService(
             syncQueueEnqueuer().enqueuePlacementCheckout(updated)
             updated
         }
-
-    private suspend fun pendingOpType(placementLocalId: Long): SyncOperationType? =
-        localDataService.getSyncOperationForEntity("equipment_asset_placement", placementLocalId)?.operationType
 
     /** True if a placement op for this row is currently being synced (SYNCING) — don't touch it. */
     private suspend fun hasInFlightPlacementOp(placementLocalId: Long): Boolean =

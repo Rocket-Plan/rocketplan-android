@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -327,9 +328,14 @@ class SecureStorage internal constructor(
         return context.dataStore.data.map { it[serializedEquipmentKey(companyId)] }.first()
     }
 
-    /** Observe the per-company flag (review round-4 #7): emits on every change. */
+    /**
+     * Observe the per-company flag (review round-4 #7). distinctUntilChanged (round-9 #2) so an
+     * unrelated preferences write (company id, name, sms flag…) doesn't re-drive mode collectors.
+     */
     fun observeSerializedEquipmentEnabled(companyId: Long): Flow<Boolean?> =
-        context.dataStore.data.map { it[serializedEquipmentKey(companyId)] }
+        context.dataStore.data
+            .map { it[serializedEquipmentKey(companyId)] }
+            .distinctUntilChanged()
 
     suspend fun clearSerializedEquipmentEnabled(companyId: Long) {
         context.dataStore.edit { preferences ->
