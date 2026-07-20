@@ -94,7 +94,7 @@ class EquipmentAssetPlacementPushHandlerTest {
             assetDto().copy(name = "Server Name", updatedAt = "2026-09-09T00:00:00.000000Z")
         )
         val savedAssets = slot<List<OfflineEquipmentAssetEntity>>()
-        coEvery { localDataService.saveEquipmentAssets(capture(savedAssets)) } just io.mockk.Runs
+        coEvery { localDataService.saveEquipmentAssets(capture(savedAssets), preserveDirty = true) } just io.mockk.Runs
 
         val outcome = handler.handleDeploy(op)
 

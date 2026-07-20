@@ -7,6 +7,7 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.cache.PhotoCacheManager
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineNoteEntity
@@ -176,6 +177,7 @@ class OfflineSyncRepository(
         com.example.rocketplan_android.data.repository.sync.EquipmentAssetPullService(
             api = api,
             localDataService = localDataService,
+            remoteLogger = remoteLogger,
             ioDispatcher = ioDispatcher
         )
     }
@@ -1232,6 +1234,51 @@ class OfflineSyncRepository(
     suspend fun checkOutEquipmentAssetOffline(assetLocalId: Long) =
         equipmentAssetSyncService.checkOutAsset(assetLocalId)
 
+    /** RP-FR-029: edit an asset's metadata. Guard status to available/maintenance only.
+     *
+     * RP-CD-019 / #1 fix: a deployed/retired unit must NOT have its status changed via this
+     * method — the backend returns 422 on status change with an open placement. Only preserve
+     * the incoming status when current.status is already available or maintenance.
+     *
+     * NOTE: this is a full-replace call — omitted optional parameters are treated as "clear
+     * to null". The caller must pass the current value for any field that should be preserved. */
+    suspend fun updateEquipmentAssetOffline(
+        assetLocalId: Long,
+        serialNumber: String?,
+        assetTag: String?,
+        status: String?,
+        note: String?,
+        manufacturer: String? = null,
+        model: String? = null,
+        vendor: String? = null,
+        purchaseDate: String? = null,
+        purchasePrice: String? = null,
+        warrantyExpiresAt: String? = null,
+        rentalDayRate: String? = null
+    ): OfflineEquipmentAssetEntity? {
+        val current = localDataService.getEquipmentAsset(assetLocalId) ?: return null
+        val editableStatuses = setOf("available", "maintenance")
+        val safeStatus = if (current.status in editableStatuses) {
+            status?.takeIf { it in editableStatuses } ?: current.status
+        } else {
+            current.status
+        }
+        val edited = current.copy(
+            serialNumber = serialNumber,
+            assetTag = assetTag,
+            status = safeStatus,
+            note = note,
+            manufacturer = manufacturer,
+            model = model,
+            vendor = vendor,
+            purchaseDate = purchaseDate,
+            purchasePrice = purchasePrice,
+            warrantyExpiresAt = warrantyExpiresAt,
+            rentalDayRate = rentalDayRate
+        )
+        return equipmentAssetSyncService.updateAsset(edited)
+    }
+
     /** RP-FR-019 (review #1): inbound pull of the company pool + a room's deployed assets. */
     suspend fun refreshSerializedRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
         equipmentAssetPullService.refreshRoom(roomLocalId, companyId)
@@ -1242,6 +1289,17 @@ class OfflineSyncRepository(
     ): Result<List<com.example.rocketplan_android.data.model.offline.EquipmentCatalogItemDto>> =
         withContext(ioDispatcher) {
             runCatching { api.getCompanyEquipmentCatalog(companyId).data }
+                .onFailure { e ->
+                    if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                    remoteLogger?.log(
+                        com.example.rocketplan_android.logging.LogLevel.WARN, "API",
+                        "Equipment catalog fetch failed",
+                        mapOf(
+                            "companyId" to companyId.toString(),
+                            "error" to (e::class.java.simpleName + ": " + (e.message ?: ""))
+                        )
+                    )
+                }
         }
 
     suspend fun fetchWorkScopeCatalog(companyId: Long): List<WorkScopeSheetDto> =

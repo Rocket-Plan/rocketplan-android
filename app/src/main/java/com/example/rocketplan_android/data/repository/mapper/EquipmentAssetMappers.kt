@@ -155,7 +155,7 @@ internal fun OfflineEquipmentPlacementEntity.toMoveRequest(
 ): MoveEquipmentAssetRequest =
     MoveEquipmentAssetRequest(
         toRoomId = toRoomServerId,
-        movedAt = dateIn.toApiTimestamp(),
+        movedAt = now().toApiTimestamp(),
         note = note,
         idempotencyKey = idempotencyKey,
         updatedAt = lockUpdatedAt

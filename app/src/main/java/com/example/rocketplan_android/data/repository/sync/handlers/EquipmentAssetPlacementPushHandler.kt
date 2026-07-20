@@ -85,10 +85,15 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
             // pending placement op in the pull) and reconciles on the next successful refresh.
             runCatching {
                 val assetDto = ctx.api.getEquipmentAsset(assetServerId).data
-                ctx.localDataService.saveEquipmentAssets(listOf(mergeAfterLifecycleSuccess(asset, assetDto)))
+                ctx.localDataService.saveEquipmentAssets(listOf(mergeAfterLifecycleSuccess(asset, assetDto)), preserveDirty = true)
             }.onFailure { err ->
                 if (err is CancellationException) throw err
                 Log.w(SYNC_TAG, "Deploy succeeded but asset refresh failed for ${asset.uuid}", err)
+                ctx.remoteLogger?.log(
+                    LogLevel.WARN, SYNC_TAG, "Deploy ok but asset refresh failed",
+                    mapOf("assetServerId" to assetServerId.toString(),
+                          "error" to (err::class.java.simpleName + ": " + (err.message ?: "")))
+                )
             }
             OperationOutcome.SUCCESS
         } catch (e: Exception) {
@@ -100,6 +105,12 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
                 e.isValidationError() -> resolveDeploy422(asset, placement, e)
                 else -> {
                     Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler deploy error; retrying", e)
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Equipment deploy retry (unexpected error)",
+                        mapOf("placementUuid" to placement.uuid,
+                              "assetServerId" to assetServerId.toString(),
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
                     OperationOutcome.RETRY
                 }
             }
@@ -136,6 +147,12 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
                 e.isValidationError() -> resolve422(placement, e)
                 else -> {
                     Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler move error; retrying", e)
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Equipment move retry (unexpected error)",
+                        mapOf("placementUuid" to placement.uuid,
+                              "assetServerId" to assetServerId.toString(),
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
                     OperationOutcome.RETRY
                 }
             }
@@ -169,6 +186,12 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
                 e.isValidationError() -> resolve422(placement, e)
                 else -> {
                     Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler check-out error; retrying", e)
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Equipment check-out retry (unexpected error)",
+                        mapOf("placementUuid" to placement.uuid,
+                              "assetServerId" to assetServerId.toString(),
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
                     OperationOutcome.RETRY
                 }
             }
@@ -177,7 +200,7 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
 
     /** Save the returned asset + reconcile its placements (server-authoritative). */
     private suspend fun applyAssetResponse(existingAsset: OfflineEquipmentAssetEntity, assetDto: EquipmentAssetDto) {
-        ctx.localDataService.saveEquipmentAssets(listOf(mergeAfterLifecycleSuccess(existingAsset, assetDto)))
+        ctx.localDataService.saveEquipmentAssets(listOf(mergeAfterLifecycleSuccess(existingAsset, assetDto)), preserveDirty = true)
         assetDto.placements?.let { reconcilePlacements(existingAsset.assetId, it) }
     }
 

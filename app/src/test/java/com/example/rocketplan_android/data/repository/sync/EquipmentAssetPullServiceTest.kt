@@ -32,7 +32,7 @@ class EquipmentAssetPullServiceTest {
 
     private val api: OfflineSyncApi = mockk(relaxed = true)
     private val local: LocalDataService = mockk(relaxed = true)
-    private val service = EquipmentAssetPullService(api, local, Dispatchers.Unconfined)
+    private val service = EquipmentAssetPullService(api, local, null, Dispatchers.Unconfined)
 
     private fun assetDto(id: Long) = EquipmentAssetDto(
         id = id, uuid = "srv-$id", companyId = 7L, catalogUuid = "cat", name = "Air Mover",
@@ -92,13 +92,14 @@ class EquipmentAssetPullServiceTest {
     }
 
     @Test
-    fun `empty placement history removes a stale local open placement`() = runTest {
+    fun `empty placement history does NOT remove a stale local open placement`() = runTest {
         coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns page(assetDto(900))
         coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns listOf(localAsset(50L, 900L))
         coEvery { local.getRoom(400L) } returns PushHandlerTestFixtures.createRoom(roomId = 400L, serverId = 4000L)
         coEvery { api.getRoomEquipmentAssets(4000L) } returns SingleDataResponse(listOf(assetDto(900)))
         coEvery { local.getEquipmentAssetByServerId(900L) } returns localAsset(50L, 900L)
-        // Server says this asset has NO placements, but locally an open one lingers.
+        // Server says this asset has NO placements — a spurious empty response is non-authoritative
+        // and must NOT close the locally-open placement. Self-heals on next non-empty pull.
         coEvery { api.getEquipmentAssetPlacements(900L) } returns SingleDataResponse(emptyList<EquipmentAssetPlacementDto>())
         coEvery { local.getSyncedPlacementsForAsset(50L) } returns listOf(
             OfflineEquipmentPlacementEntity(
@@ -113,9 +114,9 @@ class EquipmentAssetPullServiceTest {
         val result = service.refreshRoom(roomLocalId = 400L, companyId = 7L)
 
         assertThat(result.isSuccess).isTrue()
+        // RP-BUG-334 fix: empty placement history is non-authoritative — stale placement NOT closed
         val deleted = placementSaves.flatten().filter { it.isDeleted }
-        assertThat(deleted.map { it.serverId }).contains(12L)
-        assertThat(deleted.all { !it.isOpen }).isTrue()
+        assertThat(deleted).isEmpty()
     }
 
     @Test
@@ -244,6 +245,48 @@ class EquipmentAssetPullServiceTest {
         // Only the page-1 upsert happened; no reconciliation-deletion was performed.
         assertThat(assetSaves.flatten().none { it.isDeleted }).isTrue()
         io.mockk.coVerify(exactly = 0) { local.getSyncedEquipmentAssetsForCompany(any()) }
+    }
+
+    @Test
+    fun `two server rows with same natural key only one adopts the local row — no assetId collision`() = runTest {
+        // RP-BUG-340: two incoming server rows (101, 102) share the same natural key
+        // (companyId=7, catalogUuid="cat", name="Air Mover", serialNumber=null).
+        // One local pending row (assetId=10, serverId=null) matches that key.
+        // Only the first server row adopts it; the second inserts as a fresh row.
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns
+            EquipmentAssetPageResponse(
+                listOf(
+                    assetDto(101L).copy(serialNumber = null),
+                    assetDto(102L).copy(serialNumber = null)
+                ),
+                PaginationMeta(1, 1, 100, 2)
+            )
+        coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()
+        coEvery { local.getRoom(400L) } returns null
+        coEvery { local.getPendingEquipmentPlacements() } returns emptyList()
+        val pendingLocal = OfflineEquipmentAssetEntity(
+            assetId = 10L, serverId = null, uuid = "pending-uuid", companyId = 7L,
+            catalogUuid = "cat", name = "Air Mover", serialNumber = null,
+            status = "available", isDirty = true, createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getUnsyncedEquipmentAssets(7L) } returns listOf(pendingLocal)
+        val saves = mutableListOf<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(saves), any()) } just Runs
+
+        service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        val merged = saves.flatten()
+        val assetIds = merged.map { it.assetId }
+        // No duplicate assetId — the collision is resolved.
+        assertThat(assetIds.toSet()).hasSize(2)
+        // Both server ids survive: one adopted assetId=10, the other is a fresh insert.
+        val byServerId = merged.associateBy { it.serverId }
+        assertThat(byServerId.keys).containsExactly(101L, 102L)
+        // The one that adopted the local row carries its assetId.
+        assertThat(byServerId[101L]?.assetId ?: byServerId[102L]?.assetId).isEqualTo(10L)
+        // The other is a distinct new local row.
+        val freshRow = byServerId[102L] ?: byServerId[101L]
+        assertThat(freshRow?.assetId).isNotEqualTo(10L)
     }
 
     @Test

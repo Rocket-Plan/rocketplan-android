@@ -18,14 +18,19 @@ import com.google.gson.annotations.SerializedName
  * ("1899.00"), not numbers — keep them String?.
  */
 data class EquipmentAssetDto(
+    @SerializedName("id")
     val id: Long,
+    @SerializedName("uuid")
     val uuid: String,
     @SerializedName("company_id")
     val companyId: Long,
     @SerializedName("catalog_uuid")
     val catalogUuid: String?,
+    @SerializedName("name")
     val name: String?,
+    @SerializedName("manufacturer")
     val manufacturer: String?,
+    @SerializedName("model")
     val model: String?,
     @SerializedName("is_standard")
     val isStandard: Boolean?,
@@ -33,6 +38,7 @@ data class EquipmentAssetDto(
     val serialNumber: String?,
     @SerializedName("asset_tag")
     val assetTag: String?,
+    @SerializedName("status")
     val status: String?,
     @SerializedName("current_placement_id")
     val currentPlacementId: Long?,
@@ -40,6 +46,7 @@ data class EquipmentAssetDto(
     val purchaseDate: String?,
     @SerializedName("purchase_price")
     val purchasePrice: String?,
+    @SerializedName("vendor")
     val vendor: String?,
     @SerializedName("warranty_expires_at")
     val warrantyExpiresAt: String?,
@@ -47,6 +54,7 @@ data class EquipmentAssetDto(
     val rentalDayRate: String?,
     @SerializedName("idempotency_key")
     val idempotencyKey: String?,
+    @SerializedName("note")
     val note: String?,
     @SerializedName("created_at")
     val createdAt: String?,
@@ -59,7 +67,9 @@ data class EquipmentAssetDto(
 )
 
 data class EquipmentAssetPlacementDto(
+    @SerializedName("id")
     val id: Long,
+    @SerializedName("uuid")
     val uuid: String,
     @SerializedName("equipment_asset_id")
     val equipmentAssetId: Long,
@@ -73,6 +83,7 @@ data class EquipmentAssetPlacementDto(
     val dateOut: String?,
     @SerializedName("placed_by_user_id")
     val placedByUserId: Long?,
+    @SerializedName("note")
     val note: String?,
     @SerializedName("idempotency_key")
     val idempotencyKey: String?,
@@ -99,6 +110,7 @@ data class EquipmentAssetResponse(
 
 data class EquipmentAssetPlacementResponse(
     val data: EquipmentAssetPlacementDto,
+    @SerializedName("idempotency")
     val idempotency: Boolean? = null
 )
 
@@ -123,15 +135,20 @@ data class EquipmentAssetTimelineEntryDto(
 )
 
 data class TimelineProjectDto(
+    @SerializedName("id")
     val id: Long,
+    @SerializedName("uid")
     val uid: String?,
+    @SerializedName("address")
     val address: String?
 )
 
 data class TimelineBarDto(
     @SerializedName("placement_id")
     val placementId: Long,
+    @SerializedName("asset")
     val asset: TimelineBarAssetDto?,
+    @SerializedName("room")
     val room: TimelineBarRoomDto?,
     @SerializedName("date_in")
     val dateIn: String?,
@@ -142,8 +159,11 @@ data class TimelineBarDto(
 )
 
 data class TimelineBarAssetDto(
+    @SerializedName("id")
     val id: Long,
+    @SerializedName("uuid")
     val uuid: String?,
+    @SerializedName("name")
     val name: String?,
     @SerializedName("serial_number")
     val serialNumber: String?,
@@ -152,7 +172,9 @@ data class TimelineBarAssetDto(
 )
 
 data class TimelineBarRoomDto(
+    @SerializedName("id")
     val id: Long,
+    @SerializedName("name")
     val name: String?
 )
 

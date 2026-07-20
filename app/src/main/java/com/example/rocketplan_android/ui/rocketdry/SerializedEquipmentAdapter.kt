@@ -16,12 +16,14 @@ data class SerializedRowUi(
     val title: String,
     val subtitle: String,
     val primaryLabel: String,
-    val secondaryLabel: String? = null
+    val secondaryLabel: String? = null,
+    val onEdit: (Long) -> Unit = {}
 )
 
 class SerializedEquipmentAdapter(
     private val onPrimary: (Long) -> Unit,
-    private val onSecondary: (Long) -> Unit = {}
+    private val onSecondary: (Long) -> Unit = {},
+    private val onEdit: (Long) -> Unit = {}
 ) : ListAdapter<SerializedRowUi, SerializedEquipmentAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -37,6 +39,7 @@ class SerializedEquipmentAdapter(
         private val subtitle = itemView.findViewById<android.widget.TextView>(R.id.serializedAssetSubtitle)
         private val primary = itemView.findViewById<MaterialButton>(R.id.serializedPrimaryButton)
         private val secondary = itemView.findViewById<MaterialButton>(R.id.serializedSecondaryButton)
+        private val titleContainer = itemView.findViewById<View>(R.id.serializedAssetTitleContainer)
 
         fun bind(item: SerializedRowUi) {
             title.text = item.title
@@ -47,6 +50,7 @@ class SerializedEquipmentAdapter(
             secondary.isVisible = item.secondaryLabel != null
             secondary.text = item.secondaryLabel
             secondary.setOnClickListener { onSecondary(item.assetId) }
+            titleContainer.setOnClickListener { onEdit(item.assetId) }
         }
     }
 

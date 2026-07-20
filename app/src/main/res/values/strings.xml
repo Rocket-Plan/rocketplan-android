@@ -621,6 +621,27 @@
     <string name="serialized_equipment_retire_confirm">Retire %1$s? This removes it from the pool and can\'t be undone.</string>
     <string name="equipment_mode_changed">Equipment mode changed. Please wait while this screen updates.</string>
     <string name="serialized_equipment_unavailable">Equipment mode is still loading for this company.</string>
+    <!-- RP-FR-029 edit -->
+    <string name="serialized_equipment_edit">Edit unit</string>
+    <string name="serialized_equipment_edit_serial_number">Serial number</string>
+    <string name="serialized_equipment_edit_asset_tag">Asset tag</string>
+    <string name="serialized_equipment_edit_status">Status</string>
+    <string name="serialized_equipment_edit_note">Note</string>
+    <string name="serialized_equipment_edit_manufacturer">Manufacturer</string>
+    <string name="serialized_equipment_edit_model">Model</string>
+    <string name="serialized_equipment_edit_vendor">Vendor</string>
+    <string name="serialized_equipment_edit_purchase_date">Purchase date</string>
+    <string name="serialized_equipment_edit_purchase_price">Purchase price</string>
+    <string name="serialized_equipment_edit_warranty_expires">Warranty expires</string>
+    <string name="serialized_equipment_edit_rental_rate">Rental day rate</string>
+    <string name="serialized_equipment_edit_maintenance_blocked">Check the unit out first to change its status to maintenance.</string>
+    <string name="serialized_equipment_edit_optional_section">Optional</string>
+    <string name="serialized_equipment_status_available">Available</string>
+    <string name="serialized_equipment_status_maintenance">Maintenance</string>
+    <string name="serialized_equipment_edit_success">Unit updated.</string>
+    <string name="serialized_equipment_edit_failed">Could not update unit. Please try again.</string>
+    <string name="serialized_equipment_edit_invalid_price">Purchase price must be a valid number.</string>
+    <string name="serialized_equipment_edit_invalid_rate">Rental day rate must be a valid number.</string>
     <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>
 

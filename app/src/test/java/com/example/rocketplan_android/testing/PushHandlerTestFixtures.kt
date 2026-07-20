@@ -176,6 +176,8 @@ object PushHandlerTestFixtures {
     fun createEquipment(
         equipmentId: Long = 600L,
         serverId: Long? = 6000L,
+        catalogServerId: Long? = 6000L,
+        catalogUuid: String? = null,
         uuid: String = "equipment-uuid",
         projectId: Long = 100L,
         roomId: Long? = 400L,
@@ -186,6 +188,8 @@ object PushHandlerTestFixtures {
     ) = OfflineEquipmentEntity(
         equipmentId = equipmentId,
         serverId = serverId,
+        catalogServerId = catalogServerId,
+        catalogUuid = catalogUuid,
         uuid = uuid,
         projectId = projectId,
         roomId = roomId,

@@ -47,6 +47,8 @@ class EquipmentSyncService(
         val entity = OfflineEquipmentEntity(
             equipmentId = resolvedId,
             serverId = existing?.serverId,
+            catalogServerId = existing?.catalogServerId,
+            catalogUuid = existing?.catalogUuid,
             uuid = resolvedUuid,
             projectId = existing?.projectId ?: projectId,
             roomId = roomId ?: existing?.roomId,

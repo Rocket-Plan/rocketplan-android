@@ -361,4 +361,27 @@ class EquipmentAssetSyncServiceTest {
         coVerify(exactly = 0) { enqueuer.enqueueEquipmentAssetRetire(any(), any()) }
         assertThat(placementSaves.captured.single().isDeleted).isTrue()
     }
+
+    @Test
+    fun `updateAsset saves dirty and enqueues upsert with lock timestamp`() = runTest {
+        val asset = OfflineEquipmentAssetEntity(
+            assetId = 50L, serverId = 900L, uuid = "asset-uuid", companyId = 7L,
+            status = "available", createdAt = Date(), updatedAt = Date(),
+            serverUpdatedAt = Date()
+        )
+        val saved = slot<List<OfflineEquipmentAssetEntity>>()
+        coEvery { local.saveEquipmentAssets(capture(saved)) } just Runs
+        val lock = slot<String>()
+        val capturedAsset = slot<OfflineEquipmentAssetEntity>()
+        coEvery { enqueuer.enqueueEquipmentAssetUpsert(capture(capturedAsset), capture(lock)) } just Runs
+
+        val edited = asset.copy(serialNumber = "SN-EDITED", status = "maintenance")
+        val result = service.updateAsset(edited)
+
+        assertThat(result).isNotNull()
+        assertThat(saved.captured.first().serialNumber).isEqualTo("SN-EDITED")
+        assertThat(saved.captured.first().isDirty).isTrue()
+        assertThat(lock.captured).isNotEmpty()
+        coVerify(exactly = 1) { enqueuer.enqueueEquipmentAssetUpsert(any(), any()) }
+    }
 }

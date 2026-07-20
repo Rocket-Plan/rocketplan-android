@@ -14,6 +14,9 @@ import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.UpdatedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
+import com.example.rocketplan_android.data.model.offline.CreateEquipmentCatalogRequest
+import com.example.rocketplan_android.data.model.offline.AttachRoomEquipmentRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentRoomUpdateRequest
 import com.example.rocketplan_android.data.model.SingleDataResponse
 import com.example.rocketplan_android.data.model.offline.CheckOutEquipmentAssetRequest
 import com.example.rocketplan_android.data.model.offline.DeployPlacementRequest
@@ -492,23 +495,29 @@ interface OfflineSyncApi {
     @GET("/api/rooms/{roomId}/equipment")
     suspend fun getRoomEquipment(
         @Path("roomId") roomId: Long
-    ): List<EquipmentDto>
+    ): SingleDataResponse<List<EquipmentDto>>
 
     @POST("/api/projects/{projectId}/equipment")
     suspend fun createProjectEquipment(
         @Path("projectId") projectId: Long,
-        @Body body: EquipmentRequest
+        @Body body: CreateEquipmentCatalogRequest
     ): EquipmentDto
 
-    @PUT("/api/equipment/{equipmentId}")
-    suspend fun updateEquipment(
-        @Path("equipmentId") equipmentId: Long,
-        @Body body: EquipmentRequest
+    @POST("/api/rooms/{roomId}/equipment")
+    suspend fun attachRoomEquipment(
+        @Path("roomId") roomId: Long,
+        @Body body: AttachRoomEquipmentRequest
     ): EquipmentDto
 
-    @HTTP(method = "DELETE", path = "/api/equipment/{equipmentId}", hasBody = true)
-    suspend fun deleteEquipment(
-        @Path("equipmentId") equipmentId: Long,
+    @PUT("/api/equipment-rooms/{id}")
+    suspend fun updateEquipmentRoom(
+        @Path("id") id: Long,
+        @Body body: EquipmentRoomUpdateRequest
+    ): EquipmentDto
+
+    @HTTP(method = "DELETE", path = "/api/equipment-rooms/{id}", hasBody = true)
+    suspend fun deleteEquipmentRoom(
+        @Path("id") id: Long,
         @Body body: DeleteWithTimestampRequest
     ): Response<Unit>
 

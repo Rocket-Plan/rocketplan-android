@@ -816,8 +816,14 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_equipment WHERE uuid = :uuid LIMIT 1")
     suspend fun getEquipmentByUuid(uuid: String): OfflineEquipmentEntity?
 
+    @Query("SELECT * FROM offline_equipment WHERE uuid IN (:uuids)")
+    suspend fun getEquipmentByUuids(uuids: List<String>): List<OfflineEquipmentEntity>
+
     @Query("SELECT * FROM offline_equipment WHERE serverId IN (:serverIds)")
     suspend fun getEquipmentByServerIds(serverIds: List<Long>): List<OfflineEquipmentEntity>
+
+    @Query("SELECT * FROM offline_equipment WHERE projectId = :projectId AND type = :type AND isDeleted = 0 LIMIT 1")
+    suspend fun getEquipmentByProjectAndType(projectId: Long, type: String): OfflineEquipmentEntity?
 
     @Query(
         """
@@ -856,6 +862,10 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_equipment_assets WHERE serverId IN (:serverIds)")
     suspend fun getEquipmentAssetsByServerIds(serverIds: List<Long>): List<OfflineEquipmentAssetEntity>
+
+    /** Unsynced assets (serverId IS NULL) — pending register rows available for natural-key adoption. */
+    @Query("SELECT * FROM offline_equipment_assets WHERE companyId = :companyId AND serverId IS NULL AND isDeleted = 0")
+    suspend fun getUnsyncedEquipmentAssets(companyId: Long): List<OfflineEquipmentAssetEntity>
 
     @Query(
         """

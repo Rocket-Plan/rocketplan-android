@@ -51,11 +51,13 @@ class SerializedRoomEquipmentFragment : Fragment() {
 
     private val deployedAdapter = SerializedEquipmentAdapter(
         onPrimary = { assetId -> viewModel.checkOut(assetId) },
-        onSecondary = { assetId -> showMoveDialog(assetId) }
+        onSecondary = { assetId -> showMoveDialog(assetId) },
+        onEdit = { assetId -> navigateToEdit(assetId) }
     )
     private val poolAdapter = SerializedEquipmentAdapter(
         onPrimary = { assetId -> viewModel.deployFromPool(assetId) },
-        onSecondary = { assetId -> confirmRetire(assetId) }
+        onSecondary = { assetId -> confirmRetire(assetId) },
+        onEdit = { assetId -> navigateToEdit(assetId) }
     )
 
     private var latestPool: List<PoolAssetItem> = emptyList()
@@ -165,6 +167,13 @@ class SerializedRoomEquipmentFragment : Fragment() {
             .show()
     }
 
+    /** RP-FR-029: open the edit screen for this asset. */
+    private fun navigateToEdit(assetId: Long) {
+        val action = SerializedRoomEquipmentFragmentDirections
+            .actionSerializedRoomEquipmentFragmentToSerializedAssetEditFragment(assetId)
+        findNavController().navigate(action)
+    }
+
     private fun render(state: SerializedRoomUiState) {
         loading.isVisible = state is SerializedRoomUiState.Loading
         content.isVisible = state is SerializedRoomUiState.Ready
@@ -193,7 +202,14 @@ class SerializedRoomEquipmentFragment : Fragment() {
                 poolEmpty.isVisible = pool.isEmpty()
             }
             // Flag flipped OFF while open — fall back to the legacy screen.
-            is SerializedRoomUiState.LegacyMode -> findNavController().popBackStack()
+            is SerializedRoomUiState.LegacyMode -> {
+                val action = SerializedRoomEquipmentFragmentDirections
+                    .actionSerializedRoomEquipmentFragmentToEquipmentRoomFragment(
+                        projectId = viewModel.projectId,
+                        roomId = viewModel.roomId
+                    )
+                findNavController().navigate(action)
+            }
             else -> Unit
         }
     }

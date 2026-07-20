@@ -198,6 +198,37 @@ data class DeleteWithTimestampRequest(
     val updatedAt: String? = null
 )
 
+data class CreateEquipmentCatalogRequest(
+    val name: String,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null
+)
+
+data class AttachRoomEquipmentRequest(
+    @SerializedName("equipment_ids")
+    val equipmentIds: List<Long>,
+    val quantity: Int? = null,
+    val uuid: String? = null,
+    @SerializedName("room_uuid")
+    val roomUuid: String? = null,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null,
+    @SerializedName("date_in")
+    val dateIn: String? = null
+)
+
+data class EquipmentRoomUpdateRequest(
+    val quantity: Int? = null,
+    val duration: String? = null,
+    @SerializedName("date_in")
+    val dateIn: String? = null,
+    @SerializedName("date_out")
+    val dateOut: String? = null,
+    @SerializedName("updated_at")
+    val updatedAt: String? = null
+)
+
+@Deprecated("Use CreateEquipmentCatalogRequest or AttachRoomEquipmentRequest")
 data class EquipmentRequest(
     @SerializedName("project_id")
     val projectId: Long,
@@ -672,7 +703,17 @@ data class EquipmentDto(
     @SerializedName("created_at")
     val createdAt: String?,
     @SerializedName("updated_at")
-    val updatedAt: String?
+    val updatedAt: String?,
+    @SerializedName("equipment_id")
+    val equipmentId: Long? = null,
+    val number: String? = null,
+    val duration: String? = null,
+    @SerializedName("date_in")
+    val dateIn: String? = null,
+    @SerializedName("date_out")
+    val dateOut: String? = null,
+    @SerializedName("display_name")
+    val displayName: String? = null
 )
 
 data class DamageMaterialDto(

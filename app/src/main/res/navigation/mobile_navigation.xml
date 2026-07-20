@@ -763,6 +763,30 @@
         <argument
             android:name="roomId"
             app:argType="long" />
+
+        <!-- RP-BUG-338 Fix 1: reverse action for flag rollback (ON→OFF) to land on legacy screen. -->
+        <action
+            android:id="@+id/action_serializedRoomEquipmentFragment_to_equipmentRoomFragment"
+            app:destination="@id/equipmentRoomFragment"
+            app:popUpTo="@id/serializedRoomEquipmentFragment"
+            app:popUpToInclusive="true" />
+
+        <!-- RP-FR-029: edit a serialized asset -->
+        <action
+            android:id="@+id/action_serializedRoomEquipmentFragment_to_serializedAssetEditFragment"
+            app:destination="@id/serializedAssetEditFragment" />
+    </fragment>
+
+    <!-- RP-FR-029: edit serialized asset metadata -->
+    <fragment
+        android:id="@+id/serializedAssetEditFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SerializedAssetEditFragment"
+        android:label="@string/serialized_equipment_edit"
+        tools:layout="@layout/fragment_serialized_asset_edit">
+
+        <argument
+            android:name="assetLocalId"
+            app:argType="long" />
     </fragment>
 
     <fragment

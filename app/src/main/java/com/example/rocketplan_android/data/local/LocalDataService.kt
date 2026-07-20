@@ -1186,18 +1186,29 @@ class LocalDataService private constructor(
             return@withContext
         }
         val serverIds = items.mapNotNull { it.serverId }
-        if (serverIds.isEmpty()) {
-            dao.upsertEquipment(items)
-            return@withContext
+        val uuids = items.mapNotNull { it.uuid }
+        val existingByServerId = if (serverIds.isNotEmpty()) {
+            dao.getEquipmentByServerIds(serverIds).associateBy { it.serverId }
+        } else {
+            emptyMap()
         }
-        val existing = dao.getEquipmentByServerIds(serverIds).associateBy { it.serverId }
+        val existingByUuid = if (uuids.isNotEmpty()) {
+            dao.getEquipmentByUuids(uuids).associateBy { it.uuid }
+        } else {
+            emptyMap()
+        }
         val merged = mergePulledRowsByServerId(
             incoming = items,
-            existingByServerId = existing,
+            existingByServerId = existingByServerId,
             serverIdOf = { it.serverId },
             isDirty = { it.isDirty },
             onPreserveDirty = { Log.w("LocalDataService", "⚠️ pull_sync_preserved_dirty_row: entity=equipment serverId=$it") },
             adoptLocalIdentity = { server, local -> server.copy(equipmentId = local.equipmentId, uuid = local.uuid) },
+            existingByUuid = existingByUuid,
+            uuidOf = { it.uuid },
+            adoptServerIdentity = { server, local ->
+                local.copy(serverId = server.serverId, catalogServerId = server.catalogServerId)
+            },
         )
         dao.upsertEquipment(merged)
     }
@@ -1208,6 +1219,10 @@ class LocalDataService private constructor(
 
     suspend fun getEquipmentByUuid(uuid: String): OfflineEquipmentEntity? = withContext(ioDispatcher) {
         dao.getEquipmentByUuid(uuid)
+    }
+
+    suspend fun getProjectEquipmentByType(projectId: Long, type: String): OfflineEquipmentEntity? = withContext(ioDispatcher) {
+        dao.getEquipmentByProjectAndType(projectId, type)
     }
 
     suspend fun getPendingEquipment(projectId: Long): List<OfflineEquipmentEntity> = withContext(ioDispatcher) {
@@ -1266,6 +1281,9 @@ class LocalDataService private constructor(
 
     suspend fun getEquipmentAssetsByServerIds(serverIds: List<Long>): List<OfflineEquipmentAssetEntity> =
         withContext(ioDispatcher) { dao.getEquipmentAssetsByServerIds(serverIds) }
+
+    suspend fun getUnsyncedEquipmentAssets(companyId: Long): List<OfflineEquipmentAssetEntity> =
+        withContext(ioDispatcher) { dao.getUnsyncedEquipmentAssets(companyId) }
 
     fun observeEquipmentAssetsForCompany(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>> =
         dao.observeEquipmentAssetsForCompany(companyId)
@@ -2416,6 +2434,8 @@ private data class ReferenceMigrationCounts(
  *                               a second row, since the server-minted uuid differs from the local uuid
  *                               so the unique(uuid) index does not collapse a blind server-id-PK insert).
  *
+ * When serverId is null (e.g., migrated rows), falls back to uuid-based matching via existingByUuid.
+ *
  * Kept as a pure function (no DB/IO) so the merge policy is unit-testable independently of Room.
  */
 internal fun <T> mergePulledRowsByServerId(
@@ -2425,13 +2445,17 @@ internal fun <T> mergePulledRowsByServerId(
     isDirty: (T) -> Boolean,
     onPreserveDirty: (Long?) -> Unit = {},
     adoptLocalIdentity: (server: T, local: T) -> T,
+    existingByUuid: Map<String, T> = emptyMap(),
+    uuidOf: ((T) -> String?)? = null,
+    adoptServerIdentity: ((server: T, local: T) -> T)? = null,
 ): List<T> = incoming.map { server ->
     val local = serverIdOf(server)?.let { existingByServerId[it] }
+        ?: uuidOf?.invoke(server)?.let { existingByUuid[it] }
     when {
         local == null -> server
         isDirty(local) -> {
             onPreserveDirty(serverIdOf(server))
-            local
+            adoptServerIdentity?.invoke(server, local) ?: local
         }
         else -> adoptLocalIdentity(server, local)
     }
