@@ -1288,6 +1288,10 @@ class LocalDataService private constructor(
     fun observeEquipmentAssetsForCompany(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>> =
         dao.observeEquipmentAssetsForCompany(companyId)
 
+    /** RP-FR-027 — reactive single-asset read for the detail screen (offline-first). */
+    fun observeEquipmentAsset(assetId: Long): Flow<OfflineEquipmentAssetEntity?> =
+        dao.observeEquipmentAsset(assetId)
+
     fun observeAvailableEquipmentAssets(companyId: Long): Flow<List<OfflineEquipmentAssetEntity>> =
         dao.observeAvailableEquipmentAssets(companyId)
     // endregion

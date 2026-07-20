@@ -45,7 +45,7 @@ class SerializedEquipmentPoolFragment : Fragment() {
     private lateinit var empty: TextView
 
     private val adapter = SerializedEquipmentAdapter(
-        onPrimary = { /* RP-FR-027 asset detail — lands with a later ticket. */ }
+        onPrimary = { assetId -> navigateToDetail(assetId) }
     )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
@@ -148,6 +148,14 @@ class SerializedEquipmentPoolFragment : Fragment() {
             is SerializedPoolUiState.Disabled -> findNavController().navigateUp()
             else -> Unit
         }
+    }
+
+    /** RP-FR-027: open the per-unit detail screen (the pool's primary "Details" action). */
+    private fun navigateToDetail(assetId: Long) {
+        findNavController().navigate(
+            SerializedEquipmentPoolFragmentDirections
+                .actionSerializedEquipmentPoolFragmentToSerializedAssetDetailFragment(assetId)
+        )
     }
 
     private fun statusLabel(status: String): String = when (status) {

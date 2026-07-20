@@ -1,0 +1,338 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background">
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/detailContent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Header -->
+            <TextView
+                android:id="@+id/detailName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dark_text_rp"
+                android:textSize="@dimen/text_size_title"
+                android:textStyle="bold"
+                tools:text="Air Mover" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/detailStatusChip"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:clickable="false"
+                tools:text="Available" />
+
+            <!-- Metadata -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/serialized_detail_metadata_header"
+                android:textColor="@color/main_purple"
+                android:textSize="@dimen/text_size_body_small"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:id="@+id/detailManufacturerRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_manufacturer" />
+
+                <TextView
+                    android:id="@+id/detailManufacturer"
+                    style="@style/SerializedDetailValue"
+                    tools:text="Phoenix" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailModelRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_model" />
+
+                <TextView
+                    android:id="@+id/detailModel"
+                    style="@style/SerializedDetailValue"
+                    tools:text="AirMax BC" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailSerialNumberRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_serial_number" />
+
+                <TextView
+                    android:id="@+id/detailSerialNumber"
+                    style="@style/SerializedDetailValue"
+                    tools:text="SN-12345" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailAssetTagRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_asset_tag" />
+
+                <TextView
+                    android:id="@+id/detailAssetTag"
+                    style="@style/SerializedDetailValue"
+                    tools:text="TAG-9" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailVendorRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_vendor" />
+
+                <TextView
+                    android:id="@+id/detailVendor"
+                    style="@style/SerializedDetailValue"
+                    tools:text="Acme" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailPurchaseDateRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_purchase_date" />
+
+                <TextView
+                    android:id="@+id/detailPurchaseDate"
+                    style="@style/SerializedDetailValue"
+                    tools:text="2025-01-10" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailPurchasePriceRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_purchase_price" />
+
+                <TextView
+                    android:id="@+id/detailPurchasePrice"
+                    style="@style/SerializedDetailValue"
+                    tools:text="1200.00" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailWarrantyRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_warranty_expires" />
+
+                <TextView
+                    android:id="@+id/detailWarranty"
+                    style="@style/SerializedDetailValue"
+                    tools:text="2027-01-10" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailRentalRateRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_rental_rate" />
+
+                <TextView
+                    android:id="@+id/detailRentalRate"
+                    style="@style/SerializedDetailValue"
+                    tools:text="35.00" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/detailNoteRow"
+                style="@style/SerializedDetailRow">
+
+                <TextView
+                    style="@style/SerializedDetailLabel"
+                    android:text="@string/serialized_equipment_edit_note" />
+
+                <TextView
+                    android:id="@+id/detailNote"
+                    style="@style/SerializedDetailValue"
+                    tools:text="Needs new filter" />
+            </LinearLayout>
+
+            <!-- Current placement -->
+            <LinearLayout
+                android:id="@+id/detailPlacementSection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="@string/serialized_detail_placement_header"
+                    android:textColor="@color/main_purple"
+                    android:textSize="@dimen/text_size_body_small"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/detailPlacementRoomRow"
+                    style="@style/SerializedDetailRow">
+
+                    <TextView
+                        style="@style/SerializedDetailLabel"
+                        android:text="@string/serialized_detail_placement_room" />
+
+                    <TextView
+                        android:id="@+id/detailPlacementRoom"
+                        style="@style/SerializedDetailValue"
+                        tools:text="Kitchen" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/detailPlacementProjectRow"
+                    style="@style/SerializedDetailRow">
+
+                    <TextView
+                        style="@style/SerializedDetailLabel"
+                        android:text="@string/serialized_detail_placement_project" />
+
+                    <TextView
+                        android:id="@+id/detailPlacementProject"
+                        style="@style/SerializedDetailValue"
+                        tools:text="123 Main St" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/detailPlacementDateRow"
+                    style="@style/SerializedDetailRow">
+
+                    <TextView
+                        style="@style/SerializedDetailLabel"
+                        android:text="@string/serialized_detail_placement_date_in" />
+
+                    <TextView
+                        android:id="@+id/detailPlacementDate"
+                        style="@style/SerializedDetailValue"
+                        tools:text="2025-06-01" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Actions -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/serialized_detail_actions_header"
+                android:textColor="@color/main_purple"
+                android:textSize="@dimen/text_size_body_small"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/detailDeployButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/serialized_equipment_deploy"
+                android:visibility="gone"
+                app:cornerRadius="16dp"
+                tools:visibility="visible" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/detailMoveButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/serialized_equipment_move"
+                android:visibility="gone"
+                app:cornerRadius="16dp"
+                tools:visibility="visible" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/detailCheckOutButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/serialized_equipment_check_out"
+                android:visibility="gone"
+                app:cornerRadius="16dp"
+                tools:visibility="visible" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/detailRetireButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/serialized_equipment_retire"
+                android:visibility="gone"
+                app:cornerRadius="16dp"
+                tools:visibility="visible" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/detailEditButton"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/serialized_equipment_edit"
+                app:cornerRadius="16dp" />
+
+            <!-- RP-FR-028: history screen not built yet; hidden until then. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/detailHistoryButton"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/serialized_detail_view_history"
+                android:visibility="gone" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <ProgressBar
+        android:id="@+id/detailLoading"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/detailNotFound"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:padding="24dp"
+        android:text="@string/serialized_detail_not_found"
+        android:textColor="@color/light_text_rp"
+        android:textSize="@dimen/text_size_body_large"
+        android:visibility="gone" />
+</FrameLayout>

@@ -793,6 +793,28 @@
             android:name="companyId"
             app:argType="long"
             android:defaultValue="-1L" />
+
+        <!-- RP-FR-027: open a unit's detail screen from the pool "Details" action. -->
+        <action
+            android:id="@+id/action_serializedEquipmentPoolFragment_to_serializedAssetDetailFragment"
+            app:destination="@id/serializedAssetDetailFragment" />
+    </fragment>
+
+    <!-- RP-FR-027: per-unit serialized asset detail screen -->
+    <fragment
+        android:id="@+id/serializedAssetDetailFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SerializedAssetDetailFragment"
+        android:label="@string/serialized_detail_title"
+        tools:layout="@layout/fragment_serialized_asset_detail">
+
+        <argument
+            android:name="assetLocalId"
+            app:argType="long" />
+
+        <!-- RP-FR-029: edit is hosted from the detail screen. -->
+        <action
+            android:id="@+id/action_serializedAssetDetailFragment_to_serializedAssetEditFragment"
+            app:destination="@id/serializedAssetEditFragment" />
     </fragment>
 
     <!-- RP-FR-029: edit serialized asset metadata -->

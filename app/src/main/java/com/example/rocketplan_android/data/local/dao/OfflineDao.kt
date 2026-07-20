@@ -854,6 +854,10 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_equipment_assets WHERE assetId = :assetId LIMIT 1")
     suspend fun getEquipmentAsset(assetId: Long): OfflineEquipmentAssetEntity?
 
+    /** RP-FR-027 — reactive single-asset read for the detail screen (offline-first). */
+    @Query("SELECT * FROM offline_equipment_assets WHERE assetId = :assetId LIMIT 1")
+    fun observeEquipmentAsset(assetId: Long): Flow<OfflineEquipmentAssetEntity?>
+
     @Query("SELECT * FROM offline_equipment_assets WHERE uuid = :uuid LIMIT 1")
     suspend fun getEquipmentAssetByUuid(uuid: String): OfflineEquipmentAssetEntity?
 

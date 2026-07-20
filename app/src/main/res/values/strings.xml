@@ -654,6 +654,23 @@
     <string name="serialized_equipment_edit_failed">Could not update unit. Please try again.</string>
     <string name="serialized_equipment_edit_invalid_price">Purchase price must be a valid number.</string>
     <string name="serialized_equipment_edit_invalid_rate">Rental day rate must be a valid number.</string>
+
+    <!-- RP-FR-027: per-unit serialized asset detail screen -->
+    <string name="serialized_detail_title">Unit details</string>
+    <string name="serialized_detail_metadata_header">Details</string>
+    <string name="serialized_detail_placement_header">Current placement</string>
+    <string name="serialized_detail_placement_room">Room</string>
+    <string name="serialized_detail_placement_project">Project</string>
+    <string name="serialized_detail_placement_date_in">Deployed on</string>
+    <string name="serialized_detail_actions_header">Actions</string>
+    <string name="serialized_detail_view_history">View history</string>
+    <string name="serialized_detail_not_found">This unit is no longer available.</string>
+    <string name="serialized_detail_no_rooms">No rooms available to deploy to.</string>
+    <string name="serialized_detail_action_deploy_failed">Couldn\'t deploy — unit isn\'t available.</string>
+    <string name="serialized_detail_action_move_failed">Couldn\'t move this unit.</string>
+    <string name="serialized_detail_action_check_out_failed">Nothing to check out.</string>
+    <string name="serialized_detail_action_retire_failed">Couldn\'t retire this unit.</string>
+
     <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>
 

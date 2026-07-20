@@ -167,6 +167,11 @@ class SerializedRoomEquipmentFragment : Fragment() {
             .show()
     }
 
+    // TODO(RP-FR-027/RP-FR-028): add a "Details" entry point from the room rows into
+    // SerializedAssetDetailFragment. The row's title-tap is currently claimed by Edit and the
+    // two action buttons by deploy/check-out/move/retire, so a dedicated affordance needs an
+    // item_serialized_equipment layout/adapter change — deferred as entry-point work.
+
     /** RP-FR-029: open the edit screen for this asset. */
     private fun navigateToEdit(assetId: Long) {
         val action = SerializedRoomEquipmentFragmentDirections
