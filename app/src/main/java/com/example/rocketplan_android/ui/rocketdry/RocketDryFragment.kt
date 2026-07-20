@@ -187,6 +187,15 @@ class RocketDryFragment : Fragment() {
             navigateToTotalEquipment()
         }
 
+        // RP-FR-026: interim entry point to the company-wide serialized asset pool. The pool
+        // screen self-gates on the serialized-equipment mode (shows a retry placeholder for
+        // UNKNOWN and pops itself for count-based/OFF companies), so this is safe to expose here.
+        equipmentTotalsOpenButton.setOnLongClickListener {
+            Log.d(TAG, "📦 Equipment totals long-pressed - navigating to serialized asset pool")
+            navigateToSerializedEquipmentPool()
+            true
+        }
+
         roomCard.setOnClickListener {
             Log.d(TAG, "➕ Add Room card tapped - opening room type picker")
             val action = RocketDryFragmentDirections
@@ -479,6 +488,13 @@ class RocketDryFragment : Fragment() {
                 projectId = args.projectId
             )
         findNavController().navigate(action)
+    }
+
+    private fun navigateToSerializedEquipmentPool() {
+        // companyId defaults to -1L in the nav graph → the pool ViewModel resolves the active company.
+        findNavController().navigate(
+            RocketDryFragmentDirections.actionRocketDryFragmentToSerializedEquipmentPoolFragment()
+        )
     }
 
     private fun navigateToExternalLogs() {

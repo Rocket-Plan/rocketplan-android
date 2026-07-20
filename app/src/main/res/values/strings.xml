@@ -621,6 +621,18 @@
     <string name="serialized_equipment_retire_confirm">Retire %1$s? This removes it from the pool and can\'t be undone.</string>
     <string name="equipment_mode_changed">Equipment mode changed. Please wait while this screen updates.</string>
     <string name="serialized_equipment_unavailable">Equipment mode is still loading for this company.</string>
+    <!-- RP-FR-026 company asset pool -->
+    <string name="serialized_pool_title">Equipment pool</string>
+    <string name="serialized_pool_search_hint">Search by name, serial, or tag</string>
+    <string name="serialized_pool_empty">No equipment matches.</string>
+    <string name="serialized_pool_filter_all">All</string>
+    <string name="serialized_pool_filter_available">Available</string>
+    <string name="serialized_pool_filter_deployed">Deployed</string>
+    <string name="serialized_pool_filter_maintenance">Maintenance</string>
+    <string name="serialized_pool_filter_retired">Retired</string>
+    <string name="serialized_pool_details">Details</string>
+    <string name="serialized_pool_registered">Unit registered.</string>
+    <string name="serialized_pool_stale_cache">Showing saved data — couldn\'t refresh from the server.</string>
     <!-- RP-FR-029 edit -->
     <string name="serialized_equipment_edit">Edit unit</string>
     <string name="serialized_equipment_edit_serial_number">Serial number</string>

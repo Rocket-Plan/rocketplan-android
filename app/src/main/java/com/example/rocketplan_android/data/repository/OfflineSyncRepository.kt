@@ -1283,6 +1283,10 @@ class OfflineSyncRepository(
     suspend fun refreshSerializedRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
         equipmentAssetPullService.refreshRoom(roomLocalId, companyId)
 
+    /** RP-FR-026: inbound pull of the whole company asset pool (no room scope). */
+    suspend fun refreshSerializedPool(companyId: Long): Result<Unit> =
+        equipmentAssetPullService.refreshPool(companyId)
+
     /** RP-FR-019: company equipment catalog (for the register picker). */
     suspend fun fetchEquipmentCatalog(
         companyId: Long

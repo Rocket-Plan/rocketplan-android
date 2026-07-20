@@ -36,6 +36,30 @@ class EquipmentAssetPullService(
         val EDITABLE_STATUSES = setOf("available", "maintenance")
     }
 
+    /**
+     * RP-FR-026 — inbound pull of the whole company asset pool ONLY (no room scope). Reuses the
+     * same bounded, completeness-guarded [pullCompanyPool] + authoritative reconcile the room pull
+     * uses for step 1; does NOT touch room placements. Used by the standalone pool screen.
+     */
+    suspend fun refreshPool(companyId: Long): Result<Unit> =
+        withContext(ioDispatcher) {
+            runCatching {
+                val pool = pullCompanyPool(companyId)
+                if (pool.complete) {
+                    markMissingAssetsDeleted(companyId, pool.seen)
+                }
+            }.onFailure { e ->
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                remoteLogger?.log(
+                    LogLevel.WARN, "API", "Serialized equipment pool pull failed",
+                    mapOf(
+                        "companyId" to companyId.toString(),
+                        "error" to (e::class.java.simpleName + ": " + (e.message ?: ""))
+                    )
+                )
+            }
+        }
+
     suspend fun refreshRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
         withContext(ioDispatcher) {
             runCatching {

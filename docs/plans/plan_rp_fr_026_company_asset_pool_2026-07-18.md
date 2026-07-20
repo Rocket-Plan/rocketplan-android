@@ -45,7 +45,9 @@ Gates before you call it done (run ALL gradle in the background per CLAUDE.md):
 
 ## Implementation steps
 
-1. **Layout** `res/layout/fragment_serialized_equipment_pool.xml` — copy `fragment_serialized_room_equipment.xml` as the template: loading spinner, retryable "unavailable" view, a search field (`TextInputEditText`), a status filter (chip group: All/Available/Deployed/Maintenance/Retired), one `RecyclerView`, an empty state, and a register FAB/button.
+1. **Layout** `res/layout/fragment_serialized_equipment_pool.xml` — copy `fragment_serialized_room_equipment.xml` as the template: loading spinner, retryable "unavailable" view, a search field (`TextInputEditText`), a status filter (chip group: **All/Available/Deployed/Maintenance** — NO "Retired", see note), one `RecyclerView`, an empty state, and a register FAB/button.
+
+   > **No Retired filter (resolved 2026-07-19):** the backend company index (`CompanyEquipmentAssetController@index`) has no `withTrashed()`, so retired units — which are soft-deleted (`deleted_at`) on retire — are never returned by the pool endpoint (only the *timeline* uses `withTrashed`); locally-retired rows are `isDeleted=true` and excluded by `contentFlow`. A Retired chip could therefore never populate, so it is omitted. Surfacing retired history would need a backend index change (or the timeline), out of this ticket's scope.
 2. **ViewModel** `ui/rocketdry/SerializedEquipmentPoolViewModel.kt` — mirror `SerializedRoomEquipmentViewModel`:
    - `provideFactory(application, companyId)` (resolve `companyId` from the active company, as the room VM does).
    - Expose `uiState: StateFlow<PoolUiState>` (Loading/Ready(items)/Unavailable) built from `observeEquipmentAssetsForCompany(companyId)`, with client-side `search` + `status` filter `StateFlow`s combined in.

@@ -541,6 +541,10 @@
         <action
             android:id="@+id/action_rocketDryFragment_to_totalEquipmentFragment"
             app:destination="@id/totalEquipmentFragment" />
+        <!-- RP-FR-026: company-wide serialized asset pool (serialized-mode companies only). -->
+        <action
+            android:id="@+id/action_rocketDryFragment_to_serializedEquipmentPoolFragment"
+            app:destination="@id/serializedEquipmentPoolFragment" />
         <action
             android:id="@+id/action_rocketDryFragment_to_externalAtmosphericLogsFragment"
             app:destination="@id/externalAtmosphericLogsFragment" />
@@ -775,6 +779,20 @@
         <action
             android:id="@+id/action_serializedRoomEquipmentFragment_to_serializedAssetEditFragment"
             app:destination="@id/serializedAssetEditFragment" />
+    </fragment>
+
+    <!-- RP-FR-026: company-wide serialized asset pool -->
+    <fragment
+        android:id="@+id/serializedEquipmentPoolFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SerializedEquipmentPoolFragment"
+        android:label="@string/serialized_pool_title"
+        tools:layout="@layout/fragment_serialized_equipment_pool">
+
+        <!-- <= 0 means "resolve the active company" in the ViewModel. -->
+        <argument
+            android:name="companyId"
+            app:argType="long"
+            android:defaultValue="-1L" />
     </fragment>
 
     <!-- RP-FR-029: edit serialized asset metadata -->
