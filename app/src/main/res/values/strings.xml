@@ -676,6 +676,16 @@
     <string name="serialized_history_currently_deployed">Currently deployed</string>
     <string name="serialized_history_unknown_room">Unknown room</string>
     <string name="serialized_history_empty">This unit has no placement history yet.</string>
+    <!-- RP-FR-030 / RP-FR-031 — closed-placement row actions -->
+    <string name="serialized_history_edit_dates">Edit dates</string>
+    <string name="serialized_history_delete">Delete</string>
+    <string name="serialized_history_edit_dates_title">Correct placement dates</string>
+    <string name="serialized_history_edit_date_in">Deploy date</string>
+    <string name="serialized_history_edit_date_out">Check-out date</string>
+    <string name="serialized_history_correct_failed">Couldn\'t update the placement dates. Please try again.</string>
+    <string name="serialized_history_delete_confirm_title">Delete placement?</string>
+    <string name="serialized_history_delete_confirm">Delete this placement record? This removes it from the unit\'s history and can\'t be undone.</string>
+    <string name="serialized_history_delete_failed">Couldn\'t delete the placement. Only checked-out placements can be deleted.</string>
 
     <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>

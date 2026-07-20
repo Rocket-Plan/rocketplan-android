@@ -384,4 +384,93 @@ class EquipmentAssetSyncServiceTest {
         assertThat(lock.captured).isNotEmpty()
         coVerify(exactly = 1) { enqueuer.enqueueEquipmentAssetUpsert(any(), any()) }
     }
+
+    // ===== RP-FR-030 correctPlacement =====
+
+    private fun closedServerKnownPlacement() = OfflineEquipmentPlacementEntity(
+        placementId = 60L, serverId = 12L, uuid = "p", assetId = 50L, roomId = 400L,
+        dateIn = Date(1_700_000_000_000L), dateOut = Date(1_700_600_000_000L),
+        isOpen = false, createdAt = Date(), updatedAt = Date(), serverUpdatedAt = Date()
+    )
+
+    @Test
+    fun `correctPlacement stages new dates dirty and enqueues correction`() = runTest {
+        coEvery { local.getEquipmentPlacement(60L) } returns closedServerKnownPlacement()
+        val saved = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { local.saveEquipmentPlacements(capture(saved)) } just Runs
+
+        val newIn = Date(1_700_100_000_000L)
+        val result = service.correctPlacement(placementLocalId = 60L, dateIn = newIn, dateOut = null)
+
+        assertThat(result).isNotNull()
+        val row = saved.captured.first()
+        assertThat(row.dateIn).isEqualTo(newIn)
+        assertThat(row.dateOut).isEqualTo(Date(1_700_600_000_000L)) // unchanged
+        assertThat(row.isDirty).isTrue()
+        assertThat(row.syncStatus).isEqualTo(SyncStatus.PENDING)
+        coVerify(exactly = 1) { enqueuer.enqueuePlacementCorrection(any()) }
+    }
+
+    @Test
+    fun `correctPlacement rejects an open placement`() = runTest {
+        coEvery { local.getEquipmentPlacement(60L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 60L, serverId = 12L, uuid = "p", assetId = 50L, roomId = 400L,
+            dateIn = Date(), dateOut = null, isOpen = true, createdAt = Date(), updatedAt = Date()
+        )
+        val result = service.correctPlacement(60L, dateIn = Date(), dateOut = null)
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementCorrection(any()) }
+    }
+
+    @Test
+    fun `correctPlacement rejects a not-yet-synced placement`() = runTest {
+        coEvery { local.getEquipmentPlacement(60L) } returns closedServerKnownPlacement().copy(serverId = null)
+        val result = service.correctPlacement(60L, dateIn = Date(), dateOut = Date())
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementCorrection(any()) }
+    }
+
+    // ===== RP-FR-031 deletePlacement =====
+
+    @Test
+    fun `deletePlacement marks a closed server-known placement deleted and enqueues delete`() = runTest {
+        coEvery { local.getEquipmentPlacement(60L) } returns closedServerKnownPlacement()
+        val saved = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { local.saveEquipmentPlacements(capture(saved)) } just Runs
+
+        val result = service.deletePlacement(60L)
+
+        assertThat(result).isNotNull()
+        val row = saved.captured.first()
+        assertThat(row.isDeleted).isTrue()
+        assertThat(row.isDirty).isTrue()               // dirty so a pull can't resurrect it pre-sync
+        assertThat(row.syncStatus).isEqualTo(SyncStatus.PENDING)
+        coVerify(exactly = 1) { enqueuer.enqueuePlacementDelete(any()) }
+    }
+
+    @Test
+    fun `deletePlacement refuses an open placement`() = runTest {
+        coEvery { local.getEquipmentPlacement(60L) } returns OfflineEquipmentPlacementEntity(
+            placementId = 60L, serverId = 12L, uuid = "p", assetId = 50L, roomId = 400L,
+            dateOut = null, isOpen = true, createdAt = Date(), updatedAt = Date()
+        )
+        val result = service.deletePlacement(60L)
+        assertThat(result).isNull()
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementDelete(any()) }
+    }
+
+    @Test
+    fun `deletePlacement collapses an unsynced closed placement locally without enqueuing`() = runTest {
+        coEvery { local.getEquipmentPlacement(60L) } returns closedServerKnownPlacement().copy(serverId = null)
+        val saved = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { local.saveEquipmentPlacements(capture(saved)) } just Runs
+
+        val result = service.deletePlacement(60L)
+
+        assertThat(result).isNotNull()
+        assertThat(saved.captured.first().isDeleted).isTrue()
+        assertThat(saved.captured.first().syncStatus).isEqualTo(SyncStatus.SYNCED)
+        coVerify(exactly = 1) { local.removeSyncOperationsForEntity("equipment_asset_placement", 60L) }
+        coVerify(exactly = 0) { enqueuer.enqueuePlacementDelete(any()) }
+    }
 }

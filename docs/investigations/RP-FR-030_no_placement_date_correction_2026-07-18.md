@@ -8,9 +8,9 @@ source: internal
 evidence: inferred
 found_in: "iOS parity review 2026-07-18"
 found_at: "2026-07-18 10:43:18 PDT"
-fixed_in: null
+fixed_in: "feat/RP-FR-019-serialized-equipment"
 released_in: null
-state: planned
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
@@ -18,7 +18,7 @@ related_plan: plans/plan_rp_fr_030_placement_date_correction_2026-07-18.md
 related_review: null
 related_test: null
 priority: P3
-last_updated: 2026-07-18
+last_updated: 2026-07-19
 ---
 
 > **Feature-parity gap** (Android RP-FR-019 vs iOS RP-BUG-344). Parent:

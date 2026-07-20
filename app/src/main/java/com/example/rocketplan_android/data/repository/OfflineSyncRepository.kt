@@ -1234,6 +1234,17 @@ class OfflineSyncRepository(
     suspend fun checkOutEquipmentAssetOffline(assetLocalId: Long) =
         equipmentAssetSyncService.checkOutAsset(assetLocalId)
 
+    /** RP-FR-030 — correct a closed placement's date_in/date_out (null = leave unchanged). */
+    suspend fun correctPlacementOffline(
+        placementLocalId: Long,
+        dateIn: Date? = null,
+        dateOut: Date? = null
+    ) = equipmentAssetSyncService.correctPlacement(placementLocalId, dateIn, dateOut)
+
+    /** RP-FR-031 — delete a closed placement. */
+    suspend fun deletePlacementOffline(placementLocalId: Long) =
+        equipmentAssetSyncService.deletePlacement(placementLocalId)
+
     /** RP-FR-029: edit an asset's metadata. Guard status to available/maintenance only.
      *
      * RP-CD-019 / #1 fix: a deployed/retired unit must NOT have its status changed via this

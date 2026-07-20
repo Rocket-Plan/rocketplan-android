@@ -66,6 +66,9 @@ internal fun now(): Date = Date()
 
 internal fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
 
+/** RP-FR-030 — date-only (`yyyy-MM-dd`, UTC) rendering for placement date corrections. */
+internal fun Date?.toApiDateOnly(): String? = this?.let(DateUtils::formatApiDateOnly)
+
 internal fun SyncCheckpointStore.updatedSinceParam(key: String): String? =
     getCheckpoint(key)?.let { DateUtils.formatApiDate(it) }
 

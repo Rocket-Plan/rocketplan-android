@@ -290,6 +290,43 @@ class EquipmentAssetPullServiceTest {
     }
 
     @Test
+    fun `RP-FR-031 a soft-deleted placement is not resurrected when the server still returns it`() = runTest {
+        // Pool + room reconcile so we reach reconcileAssetPlacements for asset 900.
+        coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns page(assetDto(900))
+        coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()
+        coEvery { local.getRoom(400L) } returns PushHandlerTestFixtures.createRoom(roomId = 400L, serverId = 4000L)
+        coEvery { api.getRoomEquipmentAssets(4000L) } returns SingleDataResponse(listOf(assetDto(900)))
+        coEvery { local.getEquipmentAssetByServerId(900L) } returns localAsset(50L, 900L)
+        // The server STILL returns placement 12 (soft-delete not filtered / not yet propagated).
+        val serverPlacement = EquipmentAssetPlacementDto(
+            id = 12L, uuid = "srv-p", equipmentAssetId = 900L, roomId = 4000L, projectId = 1000L,
+            dateIn = "2026-06-01T00:00:00.000000Z", dateOut = "2026-06-10T00:00:00.000000Z",
+            placedByUserId = null, note = null, idempotencyKey = null,
+            createdAt = "2026-06-01T00:00:00.000000Z", updatedAt = "2026-06-10T00:00:00.000000Z", isOpen = false
+        )
+        coEvery { api.getEquipmentAssetPlacements(900L) } returns SingleDataResponse(listOf(serverPlacement))
+        // Locally this placement was deleted (already synced clean).
+        val deletedLocal = OfflineEquipmentPlacementEntity(
+            placementId = 60L, serverId = 12L, uuid = "loc-p", assetId = 50L, roomId = 400L,
+            isOpen = false, isDeleted = true, isDirty = false,
+            syncStatus = com.example.rocketplan_android.data.local.SyncStatus.SYNCED,
+            createdAt = Date(), updatedAt = Date()
+        )
+        coEvery { local.getEquipmentPlacementsByServerIds(listOf(12L)) } returns listOf(deletedLocal)
+        coEvery { local.getRoomByServerId(4000L) } returns PushHandlerTestFixtures.createRoom(roomId = 400L, serverId = 4000L)
+        coEvery { local.getSyncedPlacementsForAsset(50L) } returns emptyList()
+        coEvery { local.getCleanOpenPlacementsForRoom(400L) } returns emptyList()
+        val placementSaves = mutableListOf<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { local.saveEquipmentPlacements(capture(placementSaves), any()) } just Runs
+
+        service.refreshRoom(roomLocalId = 400L, companyId = 7L)
+
+        // The reconciled entity for serverId 12 carries isDeleted=true — NOT resurrected.
+        val reconciled = placementSaves.flatten().first { it.serverId == 12L }
+        assertThat(reconciled.isDeleted).isTrue()
+    }
+
+    @Test
     fun `open placement whose asset left the room is closed`() = runTest {
         coEvery { api.getCompanyEquipmentAssets(7L, any(), any(), any(), 100, 1) } returns page()
         coEvery { local.getSyncedEquipmentAssetsForCompany(7L) } returns emptyList()

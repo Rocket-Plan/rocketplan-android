@@ -4,6 +4,7 @@ import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.model.offline.CheckOutEquipmentAssetRequest
+import com.example.rocketplan_android.data.model.offline.CorrectPlacementRequest
 import com.example.rocketplan_android.data.model.offline.DeployPlacementRequest
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetDto
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetPlacementDto
@@ -169,4 +170,22 @@ internal fun OfflineEquipmentPlacementEntity.toCheckOutRequest(
         dateOut = dateOut.toApiTimestamp(),
         idempotencyKey = idempotencyKey,
         updatedAt = lockUpdatedAt
+    )
+
+/**
+ * RP-FR-030 — build the date-correction body. [lockUpdatedAt] is the PLACEMENT's own
+ * optimistic-lock token (NOT the asset's). Dates are sent date-only (UTC) via
+ * [toApiDateOnly] so a correction never shifts by a day (mirrors iOS RP-BUG-345).
+ */
+internal fun OfflineEquipmentPlacementEntity.toCorrectPlacementRequest(
+    dateIn: java.util.Date?,
+    dateOut: java.util.Date?,
+    lockUpdatedAt: String,
+    idempotencyKey: String
+): CorrectPlacementRequest =
+    CorrectPlacementRequest(
+        dateIn = dateIn.toApiDateOnly(),
+        dateOut = dateOut.toApiDateOnly(),
+        updatedAt = lockUpdatedAt,
+        idempotencyKey = idempotencyKey
     )

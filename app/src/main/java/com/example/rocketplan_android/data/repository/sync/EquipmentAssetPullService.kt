@@ -281,13 +281,22 @@ class EquipmentAssetPullService(
         if (dtos.isEmpty()) {
             return
         }
+        // RP-FR-031 / RP-BUG-334: resolve the existing local row by serverId and pass it as
+        // `existing` so a locally-deleted placement is NOT resurrected if the server (still) returns
+        // it. toEntity carries `isDeleted = existing?.isDeleted ?: false`, and saveEquipmentPlacements'
+        // preserveDirty merge keeps a dirty pending-delete row untouched — so a soft-deleted placement
+        // stays deleted whether the delete is in-flight (dirty) or already synced (clean).
+        val existingByServer = localDataService
+            .getEquipmentPlacementsByServerIds(dtos.map { it.id })
+            .associateBy { it.serverId }
         val entities = dtos.map { dto ->
+            val ex = existingByServer[dto.id]
             val localRoom = dto.roomId?.let { localDataService.getRoomByServerId(it) }
             dto.toEntity(
-                existing = null,
+                existing = ex,
                 assetLocalId = assetLocalId,
-                roomLocalId = localRoom?.roomId,
-                projectLocalId = localRoom?.projectId
+                roomLocalId = localRoom?.roomId ?: ex?.roomId,
+                projectLocalId = localRoom?.projectId ?: ex?.projectId
             )
         }
         localDataService.saveEquipmentPlacements(entities, preserveDirty = true)

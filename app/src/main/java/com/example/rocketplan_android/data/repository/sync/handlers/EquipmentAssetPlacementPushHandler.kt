@@ -11,6 +11,7 @@ import com.example.rocketplan_android.data.model.offline.EquipmentAssetDto
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetPlacementDto
 import com.example.rocketplan_android.data.repository.mapper.PendingLockPayload
 import com.example.rocketplan_android.data.repository.mapper.toCheckOutRequest
+import com.example.rocketplan_android.data.repository.mapper.toCorrectPlacementRequest
 import com.example.rocketplan_android.data.repository.mapper.toDeployRequest
 import com.example.rocketplan_android.data.repository.mapper.toEntity
 import com.example.rocketplan_android.data.repository.mapper.toMoveRequest
@@ -198,6 +199,144 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
         }
     }
 
+    /**
+     * RP-FR-030 — CORRECT (PATCH /equipment-asset-placements/{id}). Unlike move/check-out this
+     * locks on the PLACEMENT's own `serverUpdatedAt ?: updatedAt` (the asset's timestamp is
+     * irrelevant here). SKIP-until-ready when the placement isn't server-known yet (can't correct
+     * a placement the server has never seen). The 200 response is authoritative for this write, so
+     * the returned placement is adopted (not preserveDirty).
+     */
+    suspend fun handleCorrect(operation: OfflineSyncQueueEntity): OperationOutcome {
+        val placement = ctx.localDataService.getEquipmentPlacementByUuid(operation.entityUuid)
+            ?: return OperationOutcome.DROP
+        if (placement.isDeleted) return OperationOutcome.DROP
+        val asset = ctx.localDataService.getEquipmentAsset(placement.assetId)
+            ?: return OperationOutcome.DROP
+        if (ctx.serializedModeFor(asset.companyId) != SerializedEquipmentMode.ON) return OperationOutcome.SKIP
+        // Can't correct a placement the server has never seen — wait for the deploy to sync.
+        val placementServerId = placement.serverId ?: return OperationOutcome.SKIP
+        // Lock on the PLACEMENT's own updated_at (NOT the asset's). serverUpdatedAt is the
+        // last server-known token; updatedAt was just bumped locally by the staging write, so
+        // it is only a fallback for a never-reconciled row.
+        val lockUpdatedAt = DateUtils.formatApiDate(placement.serverUpdatedAt ?: placement.updatedAt)
+        return try {
+            val dto = ctx.api.correctEquipmentPlacement(
+                placementServerId,
+                placement.toCorrectPlacementRequest(
+                    dateIn = placement.dateIn,
+                    dateOut = placement.dateOut,
+                    lockUpdatedAt = lockUpdatedAt,
+                    idempotencyKey = idempotencyKeyOf(operation)
+                )
+            ).data
+            val localRoom = dto.roomId?.let { ctx.localDataService.getRoomByServerId(it) }
+            val synced = dto.toEntity(
+                existing = placement,
+                assetLocalId = placement.assetId,
+                roomLocalId = localRoom?.roomId ?: placement.roomId,
+                projectLocalId = localRoom?.projectId ?: placement.projectId
+            )
+            ctx.localDataService.saveEquipmentPlacements(listOf(synced))
+            OperationOutcome.SUCCESS
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            when {
+                e.isConflict() -> recordPlacementConflict(e as HttpException, placement, operation, "CORRECT_CONFLICT")
+                e.isValidationError() -> resolve422(placement, e)
+                else -> {
+                    Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler correct error; retrying", e)
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Equipment placement correction retry (unexpected error)",
+                        mapOf("placementUuid" to placement.uuid,
+                              "placementServerId" to placementServerId.toString(),
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
+                    OperationOutcome.RETRY
+                }
+            }
+        }
+    }
+
+    /**
+     * RP-FR-031 — DELETE (DELETE /equipment-asset-placements/{id}). Soft-delete server-side;
+     * only CLOSED placements are deletable (the backend 422s an active one — that's a check-out).
+     * Client-side guard refuses to send for an open placement. 204 → mark the local row deleted
+     * (SYNCED); 404/410 → already-gone → SUCCESS; 422 (active) → drain + DROP + WARN.
+     */
+    suspend fun handleDeletePlacement(operation: OfflineSyncQueueEntity): OperationOutcome {
+        val placement = ctx.localDataService.getEquipmentPlacementByUuid(operation.entityUuid)
+            ?: return OperationOutcome.DROP
+        val asset = ctx.localDataService.getEquipmentAsset(placement.assetId)
+            ?: return OperationOutcome.DROP
+        if (ctx.serializedModeFor(asset.companyId) != SerializedEquipmentMode.ON) return OperationOutcome.SKIP
+        // Client-side guard: never delete an OPEN placement — that's a check-out, not a delete
+        // (the backend would 422 anyway). Resolve as a no-op DROP with a WARN.
+        if (placement.isOpen || placement.dateOut == null) {
+            Log.w(SYNC_TAG, "Refusing to delete OPEN placement ${placement.uuid} — use check-out")
+            ctx.remoteLogger?.log(
+                LogLevel.WARN, SYNC_TAG, "Placement delete refused - placement is open (use check-out)",
+                mapOf("placementUuid" to placement.uuid, "assetUuid" to asset.uuid)
+            )
+            return OperationOutcome.DROP
+        }
+        // Server never saw this placement. It's already collapsed locally by the service, so if
+        // it's marked deleted there is nothing to send → DROP; otherwise wait for it to sync.
+        val placementServerId = placement.serverId
+        if (placementServerId == null) {
+            return if (placement.isDeleted) OperationOutcome.DROP else OperationOutcome.SKIP
+        }
+        return try {
+            val response = ctx.api.deleteEquipmentPlacement(placementServerId)
+            when {
+                response.isSuccessful || response.code() in listOf(404, 410) -> {
+                    ctx.localDataService.saveEquipmentPlacements(listOf(placement.markReconciledDeleted()))
+                    OperationOutcome.SUCCESS
+                }
+                response.code() == 422 -> {
+                    val body = runCatching { response.errorBody()?.string() }.getOrNull()
+                    Log.w(SYNC_TAG, "Placement delete rejected ${placement.uuid}: 422 - $body")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Placement delete dropped - 422 (active placement)",
+                        mapOf("placementUuid" to placement.uuid, "body" to (body ?: ""))
+                    )
+                    OperationOutcome.DROP
+                }
+                else -> throw HttpException(response)
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            when {
+                e.isMissingOnServer() -> {
+                    ctx.localDataService.saveEquipmentPlacements(listOf(placement.markReconciledDeleted()))
+                    OperationOutcome.SUCCESS
+                }
+                e.isValidationError() -> {
+                    val body = (e as? HttpException)?.response()?.errorBody()?.string()
+                    Log.w(SYNC_TAG, "Placement delete rejected ${placement.uuid}: 422 - $body")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Placement delete dropped - 422 (active placement)",
+                        mapOf("placementUuid" to placement.uuid, "body" to (body ?: ""))
+                    )
+                    OperationOutcome.DROP
+                }
+                else -> {
+                    Log.w(SYNC_TAG, "EquipmentAssetPlacementPushHandler delete error; retrying", e)
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Equipment placement delete retry (unexpected error)",
+                        mapOf("placementUuid" to placement.uuid,
+                              "placementServerId" to placementServerId.toString(),
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
+                    OperationOutcome.RETRY
+                }
+            }
+        }
+    }
+
+    /** Mirror of the pull service's reconcile-delete shape (isDeleted + closed + clean/SYNCED). */
+    private fun OfflineEquipmentPlacementEntity.markReconciledDeleted() =
+        copy(isDeleted = true, isOpen = false, isDirty = false, syncStatus = SyncStatus.SYNCED, lastSyncedAt = ctx.now())
+
     /** Save the returned asset + reconcile its placements (server-authoritative). */
     private suspend fun applyAssetResponse(existingAsset: OfflineEquipmentAssetEntity, assetDto: EquipmentAssetDto) {
         ctx.localDataService.saveEquipmentAssets(listOf(mergeAfterLifecycleSuccess(existingAsset, assetDto)), preserveDirty = true)
@@ -289,6 +428,42 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
         // Review round-9 (H7): reflect the conflict on the asset row (preserve isDirty so a pending
         // metadata edit isn't clobbered) so its state isn't misreported as still-PENDING.
         ctx.localDataService.saveEquipmentAssets(listOf(asset.copy(syncStatus = SyncStatus.CONFLICT)))
+        return OperationOutcome.CONFLICT_PENDING
+    }
+
+    /**
+     * RP-FR-030 — placement-scoped optimistic-lock 409 (the correction locks on the placement's
+     * own updated_at, so the conflict is recorded against the placement, not the asset). Extracts
+     * the fresh server timestamp, records a conflict for user resolution, flips the placement to
+     * CONFLICT (preserving isDirty so the staged edit isn't lost), and holds.
+     */
+    private suspend fun recordPlacementConflict(
+        error: HttpException,
+        placement: OfflineEquipmentPlacementEntity,
+        operation: OfflineSyncQueueEntity,
+        conflictType: String
+    ): OperationOutcome {
+        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        ctx.remoteLogger?.log(
+            LogLevel.WARN, SYNC_TAG, "Serialized placement $conflictType (409)",
+            mapOf("placementUuid" to placement.uuid, "remoteUpdatedAt" to (freshUpdatedAt ?: "unknown"))
+        )
+        ctx.recordConflict(
+            OfflineConflictResolutionEntity(
+                conflictId = UuidUtils.generateUuidV7(),
+                entityType = "equipment_asset_placement",
+                entityId = placement.placementId,
+                entityUuid = placement.uuid,
+                localVersion = ctx.gson.toJson(
+                    mapOf<String, Any?>("dateIn" to placement.dateIn?.time, "dateOut" to placement.dateOut?.time)
+                ).toByteArray(Charsets.UTF_8),
+                remoteVersion = ctx.gson.toJson(mapOf<String, Any?>("updatedAt" to freshUpdatedAt)).toByteArray(Charsets.UTF_8),
+                conflictType = conflictType,
+                detectedAt = ctx.now(),
+                originalOperationId = operation.operationId
+            )
+        )
+        ctx.localDataService.saveEquipmentPlacements(listOf(placement.copy(syncStatus = SyncStatus.CONFLICT)))
         return OperationOutcome.CONFLICT_PENDING
     }
 

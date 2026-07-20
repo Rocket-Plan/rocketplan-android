@@ -240,6 +240,101 @@ class EquipmentAssetSyncService(
             updated
         }
 
+    /**
+     * RP-FR-030 — correct a CLOSED placement's dates. Stages the placement dirty with the new
+     * dates and enqueues a correction op (distinct entityType). Reads + invariant checks + write +
+     * enqueue all inside one transaction (#3). Returns null on any violation.
+     *
+     * [dateIn]/[dateOut] are date-only calendar values (UTC midnight) captured by the UI; a null
+     * argument means "leave this date unchanged". The placement must be server-known (serverId !=
+     * null) — you cannot correct a placement the server has never seen.
+     */
+    suspend fun correctPlacement(
+        placementLocalId: Long,
+        dateIn: Date?,
+        dateOut: Date?
+    ): OfflineEquipmentPlacementEntity? = localDataService.runInTransaction {
+        val placement = localDataService.getEquipmentPlacement(placementLocalId)
+            ?: return@runInTransaction null
+        if (placement.isDeleted) {
+            return@runInTransaction reject("correct", placement.uuid, "placement is deleted")
+        }
+        // Only server-known placements can be corrected (the lock is the placement's own updated_at).
+        if (placement.serverId == null) {
+            return@runInTransaction reject("correct", placement.uuid, "placement not server-known yet")
+        }
+        // Only CLOSED placements are date-corrected from the history screen; an open placement has
+        // no date_out and correcting it is out of scope (and would risk a reopen 422).
+        if (placement.isOpen || placement.dateOut == null) {
+            return@runInTransaction reject("correct", placement.uuid, "cannot correct an open placement")
+        }
+        if (hasInFlightPlacementOp(placement.placementId)) {
+            return@runInTransaction reject("correct", placement.uuid, "a placement op is in flight — retry after it settles")
+        }
+        val newDateIn = dateIn ?: placement.dateIn
+        val newDateOut = dateOut ?: placement.dateOut
+        if (newDateIn == null) {
+            return@runInTransaction reject("correct", placement.uuid, "a placement must have a deploy date")
+        }
+        if (newDateOut != null && newDateOut.before(newDateIn)) {
+            return@runInTransaction reject("correct", placement.uuid, "date_out is before date_in")
+        }
+        val updated = placement.copy(
+            dateIn = newDateIn,
+            dateOut = newDateOut,
+            updatedAt = now(),
+            syncStatus = SyncStatus.PENDING,
+            isDirty = true
+        )
+        localDataService.saveEquipmentPlacements(listOf(updated))
+        syncQueueEnqueuer().enqueuePlacementCorrection(updated)
+        updated
+    }
+
+    /**
+     * RP-FR-031 — delete a CLOSED placement. Marks the local row deleted and enqueues a delete op.
+     * Client-side guard: refuse to delete an OPEN placement (that's a check-out). If the placement
+     * never reached the server (serverId == null), collapse locally — drop its queued ops and
+     * soft-delete it — instead of sending a delete for a row the server doesn't know.
+     *
+     * The pending-delete row is kept `isDirty=true` so an authoritative pull cannot resurrect it
+     * before the delete syncs (mergePulledRowsByServerId preserves dirty local rows).
+     */
+    suspend fun deletePlacement(placementLocalId: Long): OfflineEquipmentPlacementEntity? =
+        localDataService.runInTransaction {
+            val placement = localDataService.getEquipmentPlacement(placementLocalId)
+                ?: return@runInTransaction null
+            if (placement.isDeleted) return@runInTransaction null
+            // Client-side guard: only CLOSED placements are deletable; end an active one via check-out.
+            if (placement.isOpen || placement.dateOut == null) {
+                return@runInTransaction reject("delete", placement.uuid, "cannot delete an open placement — check out first")
+            }
+            if (hasInFlightPlacementOp(placement.placementId)) {
+                return@runInTransaction reject("delete", placement.uuid, "a placement op is in flight — retry after it settles")
+            }
+            val timestamp = now()
+            if (placement.serverId == null) {
+                // Never synced — collapse locally: drop any queued lifecycle op and soft-delete.
+                localDataService.removeSyncOperationsForEntity("equipment_asset_placement", placement.placementId)
+                val deleted = placement.copy(
+                    isDeleted = true, isOpen = false, isDirty = false,
+                    syncStatus = SyncStatus.SYNCED, lastSyncedAt = timestamp
+                )
+                localDataService.saveEquipmentPlacements(listOf(deleted))
+                return@runInTransaction deleted
+            }
+            val deleted = placement.copy(
+                isDeleted = true,
+                isOpen = false,
+                updatedAt = timestamp,
+                syncStatus = SyncStatus.PENDING,
+                isDirty = true
+            )
+            localDataService.saveEquipmentPlacements(listOf(deleted))
+            syncQueueEnqueuer().enqueuePlacementDelete(deleted)
+            deleted
+        }
+
     /** True if a placement op for this row is currently being synced (SYNCING) — don't touch it. */
     private suspend fun hasInFlightPlacementOp(placementLocalId: Long): Boolean =
         localDataService.getSyncOperationForEntity(

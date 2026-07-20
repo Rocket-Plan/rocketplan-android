@@ -52,6 +52,19 @@ object DateUtils {
     fun formatApiDate(value: Date): String =
         apiOutputFormatter.format(value.toInstant().atOffset(ZoneOffset.UTC))
 
+    /**
+     * RP-FR-030 (mirrors iOS RP-BUG-345) — formats a date-only value (`yyyy-MM-dd`) in UTC.
+     * Placement date corrections are calendar dates, not instants: formatting (and parsing /
+     * displaying) them in a single fixed zone (UTC) is what prevents the off-by-one shift a
+     * local-zone round-trip would introduce near midnight.
+     */
+    fun formatApiDateOnly(value: Date): String {
+        val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+            timeZone = TimeZone.getTimeZone("UTC")
+        }
+        return formatter.format(value)
+    }
+
     fun parseHttpDate(value: String?): Date? {
         if (value.isNullOrBlank()) return null
         val formatter = httpDateFormatter.get() ?: return null

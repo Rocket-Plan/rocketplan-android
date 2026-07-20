@@ -53,6 +53,34 @@
             android:visibility="gone"
             tools:text="Needs new filter"
             tools:visibility="visible" />
+
+        <!-- RP-FR-030 / RP-FR-031 — edit-dates + delete, only on CLOSED placements. -->
+        <LinearLayout
+            android:id="@+id/placementActions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/placementEditDates"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/serialized_history_edit_dates" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/placementDelete"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:text="@string/serialized_history_delete"
+                android:textColor="@color/main_purple" />
+        </LinearLayout>
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>

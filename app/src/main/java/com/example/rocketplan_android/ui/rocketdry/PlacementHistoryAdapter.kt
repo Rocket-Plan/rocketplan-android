@@ -3,19 +3,24 @@ package com.example.rocketplan_android.ui.rocketdry
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.google.android.material.button.MaterialButton
 
 /**
- * RP-FR-028 — read-only list of a unit's placement spans. No row actions in this ticket
- * (edit/delete are RP-FR-030 / RP-FR-031). Mirrors [SerializedEquipmentAdapter].
+ * RP-FR-028 — list of a unit's placement spans. RP-FR-030 / RP-FR-031 add edit-dates + delete
+ * affordances, shown ONLY on CLOSED spans (the open placement offers neither — end it via
+ * check-out). Mirrors [SerializedEquipmentAdapter].
  */
-class PlacementHistoryAdapter :
-    ListAdapter<PlacementRowUi, PlacementHistoryAdapter.ViewHolder>(DiffCallback) {
+class PlacementHistoryAdapter(
+    private val onEditDates: (PlacementRowUi) -> Unit = {},
+    private val onDelete: (PlacementRowUi) -> Unit = {}
+) : ListAdapter<PlacementRowUi, PlacementHistoryAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -30,6 +35,9 @@ class PlacementHistoryAdapter :
         private val project = itemView.findViewById<TextView>(R.id.placementProject)
         private val dateRange = itemView.findViewById<TextView>(R.id.placementDateRange)
         private val note = itemView.findViewById<TextView>(R.id.placementNote)
+        private val actions = itemView.findViewById<LinearLayout>(R.id.placementActions)
+        private val editDates = itemView.findViewById<MaterialButton>(R.id.placementEditDates)
+        private val delete = itemView.findViewById<MaterialButton>(R.id.placementDelete)
 
         fun bind(item: PlacementRowUi) {
             val context = itemView.context
@@ -40,6 +48,10 @@ class PlacementHistoryAdapter :
             dateRange.text = item.dateRange
             note.text = item.note.orEmpty()
             note.isVisible = !item.note.isNullOrBlank()
+            // Edit/delete only on CLOSED placements — the open one is ended via check-out.
+            actions.isVisible = !item.isOpen
+            editDates.setOnClickListener { onEditDates(item) }
+            delete.setOnClickListener { onDelete(item) }
         }
     }
 

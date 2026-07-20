@@ -161,6 +161,11 @@ class SyncQueueProcessor(
             "equipment" -> localDataService.getEquipment(entityId)?.isDeleted == true
             "equipment_asset" -> entityUuid?.let { localDataService.getEquipmentAssetByUuid(it)?.isDeleted } == true
             "equipment_asset_placement" -> entityUuid?.let { localDataService.getEquipmentPlacementByUuid(it)?.isDeleted } == true
+            // RP-FR-030 correction resolves the placement by uuid like the base placement type; a
+            // locally-deleted placement drops a pending correction. (The RP-FR-031 delete op is a
+            // DELETE, so this check never runs for it — it is present for completeness/consistency.)
+            "equipment_asset_placement_correction",
+            "equipment_asset_placement_delete" -> entityUuid?.let { localDataService.getEquipmentPlacementByUuid(it)?.isDeleted } == true
             "moisture_log" -> entityUuid?.let { localDataService.getMoistureLogByUuid(it)?.isDeleted } == true
             "atmospheric_log" -> entityUuid?.let { localDataService.getAtmosphericLogByUuid(it)?.isDeleted } == true
             "timecard" -> entityUuid?.let { localDataService.getTimecardByUuid(it)?.isDeleted } == true
@@ -427,6 +432,23 @@ class SyncQueueProcessor(
                         SyncOperationType.CREATE -> equipmentPlacementHandler.handleDeploy(operation).toLocal()
                         SyncOperationType.UPDATE -> equipmentPlacementHandler.handleMove(operation).toLocal()
                         SyncOperationType.DELETE -> equipmentPlacementHandler.handleCheckOut(operation).toLocal()
+                    }
+                }
+                // RP-FR-030 — placement date-correction. Distinct entityType so it does not
+                // collide with the placement lifecycle ops (deploy/move/check-out already use all
+                // three SyncOperationTypes). Single op = UPDATE.
+                "equipment_asset_placement_correction" -> handleOperation(operation, "pending:equipment_placement_correct") {
+                    when (operation.operationType) {
+                        SyncOperationType.UPDATE -> equipmentPlacementHandler.handleCorrect(operation).toLocal()
+                        else -> OperationOutcome.DROP
+                    }
+                }
+                // RP-FR-031 — placement delete. Distinct entityType (check-out's DELETE is a
+                // different operation). Single op = DELETE.
+                "equipment_asset_placement_delete" -> handleOperation(operation, "pending:equipment_placement_delete") {
+                    when (operation.operationType) {
+                        SyncOperationType.DELETE -> equipmentPlacementHandler.handleDeletePlacement(operation).toLocal()
+                        else -> OperationOutcome.DROP
                     }
                 }
                 "moisture_log" -> handleOperation(operation, "pending:moisture") {
@@ -1023,6 +1045,39 @@ class SyncQueueProcessor(
             entityId = placement.placementId,
             entityUuid = placement.uuid,
             operationType = operationType,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
+    // RP-FR-030 — correction is a NEW entityType (op UPDATE) so it never collides with the
+    // placement lifecycle ops. The handler locks on the placement's own updated_at at push time;
+    // only a fresh, persisted idempotency key is carried here.
+    override suspend fun enqueuePlacementCorrection(
+        placement: OfflineEquipmentPlacementEntity
+    ) {
+        val payload = PendingLockPayload(lockUpdatedAt = null, idempotencyKey = UuidUtils.generateUuidV7())
+        enqueueOperation(
+            entityType = "equipment_asset_placement_correction",
+            entityId = placement.placementId,
+            entityUuid = placement.uuid,
+            operationType = SyncOperationType.UPDATE,
+            payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
+            priority = SyncPriority.MEDIUM
+        )
+    }
+
+    // RP-FR-031 — delete is a NEW entityType (op DELETE). No request body / lock; only a fresh
+    // idempotency key for consistency with the other placement ops.
+    override suspend fun enqueuePlacementDelete(
+        placement: OfflineEquipmentPlacementEntity
+    ) {
+        val payload = PendingLockPayload(lockUpdatedAt = null, idempotencyKey = UuidUtils.generateUuidV7())
+        enqueueOperation(
+            entityType = "equipment_asset_placement_delete",
+            entityId = placement.placementId,
+            entityUuid = placement.uuid,
+            operationType = SyncOperationType.DELETE,
             payload = gson.toJson(payload).toByteArray(Charsets.UTF_8),
             priority = SyncPriority.MEDIUM
         )

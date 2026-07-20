@@ -271,6 +271,25 @@ data class MoveEquipmentAssetRequest(
     val updatedAt: String
 )
 
+/**
+ * RP-FR-030 — correct a placement's dates. At least one of `date_in`/`date_out` must be
+ * present (server 422s otherwise). `updated_at` is the optimistic lock on the PLACEMENT's
+ * own `updated_at` (NOT the asset's — differs from move/check-out). Dates are sent date-only
+ * (UTC, `yyyy-MM-dd`) so a correction never shifts by a day across timezones (mirrors iOS
+ * RP-BUG-345). Explicit @SerializedName on every field (RP-CD-006).
+ */
+data class CorrectPlacementRequest(
+    @SerializedName("date_in")
+    val dateIn: String? = null,
+    @SerializedName("date_out")
+    val dateOut: String? = null,
+    /** Required optimistic lock — the placement's own updated_at. */
+    @SerializedName("updated_at")
+    val updatedAt: String,
+    @SerializedName("idempotency_key")
+    val idempotencyKey: String? = null
+)
+
 data class CheckOutEquipmentAssetRequest(
     @SerializedName("date_out")
     val dateOut: String? = null,

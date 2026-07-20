@@ -124,6 +124,7 @@ class PlacementHistoryViewModelTest {
         val application = mockk<RocketPlanApplication>()
         every { application.localDataService } returns localDataService
         every { application.remoteLogger } returns remoteLogger
+        every { application.offlineSyncRepository } returns mockk(relaxed = true)
         every { application.getString(any()) } returns "Currently deployed"
 
         return PlacementHistoryViewModel(application, assetLocalId)

@@ -243,4 +243,136 @@ class EquipmentAssetPlacementPushHandlerTest {
         assertThat(handler.handleCheckOut(checkoutOp)).isEqualTo(OperationOutcome.SKIP)
         coVerify(exactly = 0) { api.checkOutEquipmentAsset(any(), any()) }
     }
+
+    // ===== Correct dates (RP-FR-030) =====
+
+    /** A CLOSED, server-known placement (date_out set). */
+    private fun closedPlacement(serverId: Long? = 12L) = OfflineEquipmentPlacementEntity(
+        placementId = 60L, serverId = serverId, uuid = "placement-uuid", assetId = 50L,
+        roomId = 400L, projectId = 100L,
+        dateIn = Date(1_700_000_000_000L), dateOut = Date(1_700_600_000_000L),
+        isOpen = false, isDirty = true, createdAt = Date(), updatedAt = Date(),
+        serverUpdatedAt = Date(1_700_500_000_000L)
+    )
+
+    private fun closedPlacementDto() = EquipmentAssetPlacementDto(
+        id = 12L, uuid = "server-placement-uuid", equipmentAssetId = 900L, roomId = 4000L,
+        projectId = 1000L, dateIn = "2026-06-01T00:00:00.000000Z", dateOut = "2026-06-10T00:00:00.000000Z",
+        placedByUserId = null, note = null, idempotencyKey = null,
+        createdAt = "2026-06-01T00:00:00.000000Z", updatedAt = "2026-07-02T14:30:00.000000Z", isOpen = false
+    )
+
+    private val correctOp = PushHandlerTestFixtures.createSyncOperation(
+        "equipment_asset_placement_correction", 60L, "placement-uuid", SyncOperationType.UPDATE
+    )
+
+    @Test
+    fun `correct patches placement and adopts server dates`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { localDataService.getRoomByServerId(4000L) } returns PushHandlerTestFixtures.createRoom(serverId = 4000L)
+        coEvery { api.correctEquipmentPlacement(12L, any()) } returns EquipmentAssetPlacementResponse(closedPlacementDto())
+        val saved = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { localDataService.saveEquipmentPlacements(capture(saved), any()) } just Runs
+
+        val outcome = handler.handleCorrect(correctOp)
+
+        assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
+        coVerify(exactly = 1) { api.correctEquipmentPlacement(12L, any()) }
+        val row = saved.captured.single()
+        assertThat(row.isDirty).isFalse()          // server authoritative for this write
+        assertThat(row.isOpen).isFalse()
+    }
+
+    @Test
+    fun `correct skips when placement not server-known`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement(serverId = null)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        assertThat(handler.handleCorrect(correctOp)).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.correctEquipmentPlacement(any(), any()) }
+    }
+
+    @Test
+    fun `correct 409 records conflict as CONFLICT_PENDING`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { api.correctEquipmentPlacement(12L, any()) } throws PushHandlerTestFixtures.create409WithUpdatedAt()
+        coEvery { localDataService.upsertConflict(any()) } just Runs
+
+        val outcome = handler.handleCorrect(correctOp)
+
+        assertThat(outcome).isEqualTo(OperationOutcome.CONFLICT_PENDING)
+        coVerify(exactly = 1) { localDataService.upsertConflict(any()) }
+    }
+
+    @Test
+    fun `correct 422 drops and resolves the row clean`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { api.correctEquipmentPlacement(12L, any()) } throws PushHandlerTestFixtures.create422Response()
+        val saved = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { localDataService.saveEquipmentPlacements(capture(saved), any()) } just Runs
+
+        assertThat(handler.handleCorrect(correctOp)).isEqualTo(OperationOutcome.DROP)
+        assertThat(saved.captured.single().syncStatus).isEqualTo(com.example.rocketplan_android.data.local.SyncStatus.FAILED)
+    }
+
+    // ===== Delete (RP-FR-031) =====
+
+    private val deleteOp = PushHandlerTestFixtures.createSyncOperation(
+        "equipment_asset_placement_delete", 60L, "placement-uuid", SyncOperationType.DELETE
+    )
+
+    @Test
+    fun `delete 204 marks the placement deleted and succeeds`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { api.deleteEquipmentPlacement(12L) } returns retrofit2.Response.success(Unit)
+        val saved = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { localDataService.saveEquipmentPlacements(capture(saved), any()) } just Runs
+
+        val outcome = handler.handleDeletePlacement(deleteOp)
+
+        assertThat(outcome).isEqualTo(OperationOutcome.SUCCESS)
+        assertThat(saved.captured.single().isDeleted).isTrue()
+    }
+
+    @Test
+    fun `delete 404 treats as already-deleted and succeeds`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { api.deleteEquipmentPlacement(12L) } returns PushHandlerTestFixtures.errorResponse(404)
+        val saved = slot<List<OfflineEquipmentPlacementEntity>>()
+        coEvery { localDataService.saveEquipmentPlacements(capture(saved), any()) } just Runs
+
+        assertThat(handler.handleDeletePlacement(deleteOp)).isEqualTo(OperationOutcome.SUCCESS)
+        assertThat(saved.captured.single().isDeleted).isTrue()
+    }
+
+    @Test
+    fun `delete 422 active placement drops`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement()
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        coEvery { api.deleteEquipmentPlacement(12L) } returns PushHandlerTestFixtures.errorResponse(422)
+
+        assertThat(handler.handleDeletePlacement(deleteOp)).isEqualTo(OperationOutcome.DROP)
+    }
+
+    @Test
+    fun `delete refuses an OPEN placement without a network call`() = runTest {
+        // placement() is OPEN (isOpen=true, dateOut=null) — the client-side guard.
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns placement(serverId = 12L)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+
+        assertThat(handler.handleDeletePlacement(deleteOp)).isEqualTo(OperationOutcome.DROP)
+        coVerify(exactly = 0) { api.deleteEquipmentPlacement(any()) }
+    }
+
+    @Test
+    fun `delete skips when placement not server-known`() = runTest {
+        coEvery { localDataService.getEquipmentPlacementByUuid("placement-uuid") } returns closedPlacement(serverId = null)
+        coEvery { localDataService.getEquipmentAsset(50L) } returns asset(serverId = 900L)
+        assertThat(handler.handleDeletePlacement(deleteOp)).isEqualTo(OperationOutcome.SKIP)
+        coVerify(exactly = 0) { api.deleteEquipmentPlacement(any()) }
+    }
 }

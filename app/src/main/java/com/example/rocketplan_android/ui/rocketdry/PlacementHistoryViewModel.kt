@@ -27,7 +27,10 @@ data class PlacementRowUi(
     val projectName: String?,
     val dateRange: String,
     val isOpen: Boolean,
-    val note: String?
+    val note: String?,
+    /** UTC-midnight millis of date_in/date_out, for pre-filling the correction date pickers. */
+    val dateInUtcMillis: Long?,
+    val dateOutUtcMillis: Long?
 )
 
 /**
@@ -54,11 +57,16 @@ class PlacementHistoryViewModel(
 
     private val app = application as RocketPlanApplication
     private val localDataService = app.localDataService
+    private val offlineSyncRepository = app.offlineSyncRepository
 
     private val _uiState = MutableStateFlow<PlacementHistoryUiState>(PlacementHistoryUiState.Loading)
     val uiState: StateFlow<PlacementHistoryUiState> = _uiState
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    // RP-FR-030: display placement dates in UTC so a date-only correction (stored as UTC midnight)
+    // round-trips without shifting a day across timezones (mirrors iOS RP-BUG-345).
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+        timeZone = java.util.TimeZone.getTimeZone("UTC")
+    }
 
     init {
         observePlacements()
@@ -105,7 +113,9 @@ class PlacementHistoryViewModel(
                         projectName = placement.projectId?.let { projectNames[it] },
                         dateRange = formatDateRange(placement),
                         isOpen = placement.isOpen,
-                        note = placement.note?.takeIf { it.isNotBlank() }
+                        note = placement.note?.takeIf { it.isNotBlank() },
+                        dateInUtcMillis = placement.dateIn?.time,
+                        dateOutUtcMillis = placement.dateOut?.time
                     )
                 }
             )
@@ -125,6 +135,41 @@ class PlacementHistoryViewModel(
             else -> end
         }
     }
+
+    /**
+     * RP-FR-030 — correct a closed placement's dates. [dateInUtcMillis]/[dateOutUtcMillis] are the
+     * UTC-midnight selections from the pickers; null leaves that date unchanged. Emits a user
+     * message on failure. The list re-renders automatically via the placements Flow.
+     */
+    fun correctPlacement(placementId: Long, dateInUtcMillis: Long?, dateOutUtcMillis: Long?) {
+        viewModelScope.launch {
+            val result = runCatching {
+                offlineSyncRepository.correctPlacementOffline(
+                    placementId,
+                    dateInUtcMillis?.let { Date(it) },
+                    dateOutUtcMillis?.let { Date(it) }
+                )
+            }.getOrNull()
+            if (result == null) {
+                _messages.emit(app.getString(R.string.serialized_history_correct_failed))
+            }
+        }
+    }
+
+    /** RP-FR-031 — delete a closed placement. Emits a user message on failure. */
+    fun deletePlacement(placementId: Long) {
+        viewModelScope.launch {
+            val result = runCatching {
+                offlineSyncRepository.deletePlacementOffline(placementId)
+            }.getOrNull()
+            if (result == null) {
+                _messages.emit(app.getString(R.string.serialized_history_delete_failed))
+            }
+        }
+    }
+
+    private val _messages = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val messages: kotlinx.coroutines.flow.SharedFlow<String> = _messages
 
     companion object {
         fun provideFactory(application: Application, assetLocalId: Long): ViewModelProvider.Factory =
