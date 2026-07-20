@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
  * RP-FR-027 — per-unit serialized-asset detail screen. Mirrors [SerializedAssetEditFragment]
  * (ViewBinding idiom, repeatOnLifecycle STARTED, events Toast). Reads offline-first from Room via
  * [SerializedAssetDetailViewModel]; hosts the lifecycle actions and links out to the edit screen
- * ([RP-FR-029]). "View history" ([RP-FR-028]) is hidden until that screen lands.
+ * ([RP-FR-029]). "View history" navigates to the placement-history screen ([RP-FR-028]).
  */
 class SerializedAssetDetailFragment : Fragment() {
 
@@ -48,6 +48,12 @@ class SerializedAssetDetailFragment : Fragment() {
             findNavController().navigate(
                 SerializedAssetDetailFragmentDirections
                     .actionSerializedAssetDetailFragmentToSerializedAssetEditFragment(args.assetLocalId)
+            )
+        }
+        binding.detailHistoryButton.setOnClickListener {
+            findNavController().navigate(
+                SerializedAssetDetailFragmentDirections
+                    .actionSerializedAssetDetailFragmentToSerializedPlacementHistoryFragment(args.assetLocalId)
             )
         }
         binding.detailCheckOutButton.setOnClickListener { viewModel.checkOut() }

@@ -671,6 +671,12 @@
     <string name="serialized_detail_action_check_out_failed">Nothing to check out.</string>
     <string name="serialized_detail_action_retire_failed">Couldn\'t retire this unit.</string>
 
+    <!-- RP-FR-028: placement-history screen -->
+    <string name="serialized_history_title">Placement history</string>
+    <string name="serialized_history_currently_deployed">Currently deployed</string>
+    <string name="serialized_history_unknown_room">Unknown room</string>
+    <string name="serialized_history_empty">This unit has no placement history yet.</string>
+
     <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>
 

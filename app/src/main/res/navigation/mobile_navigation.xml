@@ -815,6 +815,23 @@
         <action
             android:id="@+id/action_serializedAssetDetailFragment_to_serializedAssetEditFragment"
             app:destination="@id/serializedAssetEditFragment" />
+
+        <!-- RP-FR-028: placement history is reached from the detail screen. -->
+        <action
+            android:id="@+id/action_serializedAssetDetailFragment_to_serializedPlacementHistoryFragment"
+            app:destination="@id/serializedPlacementHistoryFragment" />
+    </fragment>
+
+    <!-- RP-FR-028: read-only placement-history screen for a serialized unit -->
+    <fragment
+        android:id="@+id/serializedPlacementHistoryFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.PlacementHistoryFragment"
+        android:label="@string/serialized_history_title"
+        tools:layout="@layout/fragment_serialized_placement_history">
+
+        <argument
+            android:name="assetLocalId"
+            app:argType="long" />
     </fragment>
 
     <!-- RP-FR-029: edit serialized asset metadata -->

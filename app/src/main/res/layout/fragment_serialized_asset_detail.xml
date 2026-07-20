@@ -306,15 +306,14 @@
                 android:text="@string/serialized_equipment_edit"
                 app:cornerRadius="16dp" />
 
-            <!-- RP-FR-028: history screen not built yet; hidden until then. -->
+            <!-- RP-FR-028: opens the placement-history screen. -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/detailHistoryButton"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="@string/serialized_detail_view_history"
-                android:visibility="gone" />
+                android:text="@string/serialized_detail_view_history" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 

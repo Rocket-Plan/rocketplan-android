@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="10dp"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="0dp"
+    app:strokeColor="@color/light_purple"
+    app:strokeWidth="1dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <TextView
+            android:id="@+id/placementRoom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/dark_text_rp"
+            android:textSize="@dimen/text_size_card_title"
+            android:textStyle="bold"
+            tools:text="Kitchen" />
+
+        <TextView
+            android:id="@+id/placementProject"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/light_text_rp"
+            android:textSize="@dimen/text_size_caption"
+            tools:text="123 Main St" />
+
+        <TextView
+            android:id="@+id/placementDateRange"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/main_purple"
+            android:textSize="@dimen/text_size_body_small"
+            tools:text="2025-06-01 → Currently deployed" />
+
+        <TextView
+            android:id="@+id/placementNote"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/light_text_rp"
+            android:textSize="@dimen/text_size_caption"
+            android:visibility="gone"
+            tools:text="Needs new filter"
+            tools:visibility="visible" />
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
