@@ -45,7 +45,7 @@ class SerializedEquipmentPoolFragment : Fragment() {
     private lateinit var empty: TextView
 
     private val adapter = SerializedEquipmentAdapter(
-        onPrimary = { assetId -> navigateToDetail(assetId) }
+        onClick = { assetId -> navigateToDetail(assetId) }
     )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
@@ -137,8 +137,7 @@ class SerializedEquipmentPoolFragment : Fragment() {
                         assetId = it.assetId,
                         title = it.name,
                         subtitle = listOfNotNull(it.detail.takeIf(String::isNotBlank), statusLabel(it.status))
-                            .joinToString(" · "),
-                        primaryLabel = getString(R.string.serialized_pool_details)
+                            .joinToString(" · ")
                     )
                 }
                 adapter.submitList(rows)

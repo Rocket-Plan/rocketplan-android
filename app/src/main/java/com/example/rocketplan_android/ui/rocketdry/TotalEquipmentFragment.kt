@@ -136,10 +136,28 @@ class TotalEquipmentFragment : Fragment() {
         com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(app.secureStorage)
             .observeMode(companyId)
             .collect { mode ->
-                if (mode != com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF) {
-                    leaveLegacyTotals()
+                when (mode) {
+                    // RP-FR-032: serialized companies see the company pool in place of the legacy
+                    // totals screen (mirrors iOS TotalEquipmentContentView's mode switch).
+                    com.example.rocketplan_android.data.feature.SerializedEquipmentMode.ON ->
+                        navigateToSerializedPool(companyId)
+                    // No serialized totals content to hold on, so leaving is the correct "hide legacy".
+                    com.example.rocketplan_android.data.feature.SerializedEquipmentMode.UNKNOWN ->
+                        leaveLegacyTotals()
+                    com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF -> Unit
                 }
             }
+    }
+
+    /** RP-FR-032: replace the legacy totals screen with the company pool for serialized-mode companies. */
+    private fun navigateToSerializedPool(companyId: Long) {
+        val nav = findNavController()
+        if (nav.currentDestination?.id == R.id.totalEquipmentFragment) {
+            nav.navigate(
+                TotalEquipmentFragmentDirections
+                    .actionTotalEquipmentFragmentToSerializedEquipmentPoolFragment(companyId)
+            )
+        }
     }
 
     private suspend fun pollOwnerModeRefresh() {

@@ -63,6 +63,7 @@ data class EquipmentAssetDto(
     // Conditional (whenLoaded) relations — present only on show / some writes.
     @SerializedName("current_placement")
     val currentPlacement: EquipmentAssetPlacementDto? = null,
+    @SerializedName("placements")
     val placements: List<EquipmentAssetPlacementDto>? = null
 )
 
@@ -104,11 +105,14 @@ data class EquipmentAssetPlacementDto(
 // (non-replay) 201/200 still deserializes.
 // ---------------------------------------------------------------------------
 data class EquipmentAssetResponse(
+    @SerializedName("data")
     val data: EquipmentAssetDto,
+    @SerializedName("idempotent")
     val idempotent: Boolean? = null
 )
 
 data class EquipmentAssetPlacementResponse(
+    @SerializedName("data")
     val data: EquipmentAssetPlacementDto,
     @SerializedName("idempotency")
     val idempotency: Boolean? = null
@@ -116,7 +120,9 @@ data class EquipmentAssetPlacementResponse(
 
 /** Company `index` — Laravel pagination. Placement/room lists use SingleDataResponse<List<..>>. */
 data class EquipmentAssetPageResponse(
+    @SerializedName("data")
     val data: List<EquipmentAssetDto>,
+    @SerializedName("meta")
     val meta: PaginationMeta? = null
 )
 
@@ -125,12 +131,16 @@ data class EquipmentAssetPageResponse(
 // paginated by project. Has `meta` but no `links`.
 // ---------------------------------------------------------------------------
 data class EquipmentAssetTimelineResponse(
+    @SerializedName("data")
     val data: List<EquipmentAssetTimelineEntryDto>,
+    @SerializedName("meta")
     val meta: PaginationMeta? = null
 )
 
 data class EquipmentAssetTimelineEntryDto(
+    @SerializedName("project")
     val project: TimelineProjectDto?,
+    @SerializedName("bars")
     val bars: List<TimelineBarDto>?
 )
 
@@ -184,9 +194,11 @@ data class TimelineBarRoomDto(
  * stable logical catalog identity (EquipmentTypes::uuidFor(name) server-side).
  */
 data class EquipmentCatalogItemDto(
+    @SerializedName("id")
     val id: Long?,
     @SerializedName("catalog_uuid")
     val catalogUuid: String?,
+    @SerializedName("name")
     val name: String?,
     @SerializedName("display_name")
     val displayName: String?,
@@ -200,8 +212,11 @@ data class EquipmentCatalogItemDto(
 data class RegisterEquipmentAssetRequest(
     @SerializedName("catalog_uuid")
     val catalogUuid: String,
+    @SerializedName("name")
     val name: String,
+    @SerializedName("manufacturer")
     val manufacturer: String? = null,
+    @SerializedName("model")
     val model: String? = null,
     @SerializedName("is_standard")
     val isStandard: Boolean? = null,
@@ -213,26 +228,33 @@ data class RegisterEquipmentAssetRequest(
     val purchaseDate: String? = null,
     @SerializedName("purchase_price")
     val purchasePrice: String? = null,
+    @SerializedName("vendor")
     val vendor: String? = null,
     @SerializedName("warranty_expires_at")
     val warrantyExpiresAt: String? = null,
     @SerializedName("rental_day_rate")
     val rentalDayRate: String? = null,
+    @SerializedName("note")
     val note: String? = null,
     @SerializedName("idempotency_key")
     val idempotencyKey: String? = null
 )
 
 data class UpdateEquipmentAssetRequest(
+    @SerializedName("manufacturer")
     val manufacturer: String? = null,
+    @SerializedName("model")
     val model: String? = null,
     @SerializedName("serial_number")
     val serialNumber: String? = null,
     @SerializedName("asset_tag")
     val assetTag: String? = null,
+    @SerializedName("vendor")
     val vendor: String? = null,
+    @SerializedName("note")
     val note: String? = null,
     /** Only `available` / `maintenance` are settable here (server `in:` rule). */
+    @SerializedName("status")
     val status: String? = null,
     @SerializedName("purchase_date")
     val purchaseDate: String? = null,
@@ -253,6 +275,7 @@ data class DeployPlacementRequest(
     val roomId: Long,
     @SerializedName("date_in")
     val dateIn: String? = null,
+    @SerializedName("note")
     val note: String? = null,
     @SerializedName("idempotency_key")
     val idempotencyKey: String? = null
@@ -263,6 +286,7 @@ data class MoveEquipmentAssetRequest(
     val toRoomId: Long,
     @SerializedName("moved_at")
     val movedAt: String? = null,
+    @SerializedName("note")
     val note: String? = null,
     @SerializedName("idempotency_key")
     val idempotencyKey: String? = null,

@@ -49,18 +49,10 @@ class SerializedRoomEquipmentFragment : Fragment() {
     private lateinit var deployedEmpty: TextView
     private lateinit var poolEmpty: TextView
 
-    private val deployedAdapter = SerializedEquipmentAdapter(
-        onPrimary = { assetId -> viewModel.checkOut(assetId) },
-        onSecondary = { assetId -> showMoveDialog(assetId) },
-        onEdit = { assetId -> navigateToEdit(assetId) }
-    )
-    private val poolAdapter = SerializedEquipmentAdapter(
-        onPrimary = { assetId -> viewModel.deployFromPool(assetId) },
-        onSecondary = { assetId -> confirmRetire(assetId) },
-        onEdit = { assetId -> navigateToEdit(assetId) }
-    )
-
-    private var latestPool: List<PoolAssetItem> = emptyList()
+    // RP-FR-032: both lists open the per-unit detail hub on tap; lifecycle actions
+    // (deploy/check-out/move/retire) and edit all live there, mirroring iOS.
+    private val deployedAdapter = SerializedEquipmentAdapter(onClick = ::navigateToDetail)
+    private val poolAdapter = SerializedEquipmentAdapter(onClick = ::navigateToDetail)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_serialized_room_equipment, container, false)
@@ -137,45 +129,10 @@ class SerializedRoomEquipmentFragment : Fragment() {
         }
     }
 
-    /** Move a deployed unit to another room in this project. */
-    private fun showMoveDialog(assetId: Long) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val rooms = viewModel.roomChoices()
-            if (rooms.isEmpty()) {
-                Toast.makeText(requireContext(), R.string.serialized_equipment_no_rooms, Toast.LENGTH_LONG).show()
-                return@launch
-            }
-            val names = rooms.map { it.name }.toTypedArray()
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.serialized_equipment_move)
-                .setItems(names) { _, which -> viewModel.move(assetId, rooms[which].roomId) }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
-        }
-    }
-
-    /** Review #6: retiring is destructive — confirm and identify the unit first. */
-    private fun confirmRetire(assetId: Long) {
-        val item = latestPool.firstOrNull { it.assetId == assetId }
-        val identity = item?.let { listOfNotNull(it.name, it.detail.takeIf(String::isNotBlank)).joinToString(" — ") }
-            ?: getString(R.string.serialized_equipment_title)
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.serialized_equipment_retire)
-            .setMessage(getString(R.string.serialized_equipment_retire_confirm, identity))
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.serialized_equipment_retire) { _, _ -> viewModel.retire(assetId) }
-            .show()
-    }
-
-    // TODO(RP-FR-027/RP-FR-028): add a "Details" entry point from the room rows into
-    // SerializedAssetDetailFragment. The row's title-tap is currently claimed by Edit and the
-    // two action buttons by deploy/check-out/move/retire, so a dedicated affordance needs an
-    // item_serialized_equipment layout/adapter change — deferred as entry-point work.
-
-    /** RP-FR-029: open the edit screen for this asset. */
-    private fun navigateToEdit(assetId: Long) {
+    /** RP-FR-032: open the per-unit detail hub (all lifecycle + edit actions live there). */
+    private fun navigateToDetail(assetId: Long) {
         val action = SerializedRoomEquipmentFragmentDirections
-            .actionSerializedRoomEquipmentFragmentToSerializedAssetEditFragment(assetId)
+            .actionSerializedRoomEquipmentFragmentToSerializedAssetDetailFragment(assetId)
         findNavController().navigate(action)
     }
 
@@ -186,21 +143,8 @@ class SerializedRoomEquipmentFragment : Fragment() {
         when (state) {
             is SerializedRoomUiState.Ready -> {
                 roomTitle.text = state.roomName
-                latestPool = state.pool
-                val deployed = state.deployed.map {
-                    SerializedRowUi(
-                        it.assetId, it.name, it.detail,
-                        getString(R.string.serialized_equipment_check_out),
-                        getString(R.string.serialized_equipment_move)
-                    )
-                }
-                val pool = state.pool.map {
-                    SerializedRowUi(
-                        it.assetId, it.name, it.detail,
-                        getString(R.string.serialized_equipment_deploy),
-                        getString(R.string.serialized_equipment_retire)
-                    )
-                }
+                val deployed = state.deployed.map { SerializedRowUi(it.assetId, it.name, it.detail) }
+                val pool = state.pool.map { SerializedRowUi(it.assetId, it.name, it.detail) }
                 deployedAdapter.submitList(deployed)
                 poolAdapter.submitList(pool)
                 deployedEmpty.isVisible = deployed.isEmpty()

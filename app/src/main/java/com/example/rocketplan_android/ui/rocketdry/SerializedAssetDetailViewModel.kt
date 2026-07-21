@@ -77,7 +77,11 @@ class SerializedAssetDetailViewModel(
     private val _events = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val events: SharedFlow<String> = _events
 
-    private val dateInFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    // Deployed date is a date-only value stored as UTC midnight; format in UTC so it never shifts a
+    // day on a non-UTC device (matches PlacementHistoryViewModel / RP-BUG-345).
+    private val dateInFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US).apply {
+        timeZone = java.util.TimeZone.getTimeZone("UTC")
+    }
 
     init {
         observeAsset()

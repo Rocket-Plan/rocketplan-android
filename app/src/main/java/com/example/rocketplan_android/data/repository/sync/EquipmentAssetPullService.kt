@@ -89,11 +89,19 @@ class EquipmentAssetPullService(
                 //    lists here (moved out / checked out / retired by another client). Review #5: only
                 //    close when we can positively confirm the asset is server-known and absent from the
                 //    room set — a serverId-less asset can't be proven missing, so leave it alone.
+                var closedInRoom = 0
                 for (open in localDataService.getCleanOpenPlacementsForRoom(roomLocalId)) {
                     val serverId = localDataService.getEquipmentAsset(open.assetId)?.serverId
                     if (serverId != null && serverId !in roomAssetServerIds) {
                         localDataService.saveEquipmentPlacements(listOf(open.markReconciledDeleted()))
+                        closedInRoom++
                     }
+                }
+                if (closedInRoom > 0) {
+                    remoteLogger?.log(
+                        LogLevel.DEBUG, "API", "Pull reconcile closed room placements",
+                        mapOf("roomId" to roomLocalId.toString(), "count" to closedInRoom.toString())
+                    )
                 }
             }.onFailure { e ->
                 if (e is kotlin.coroutines.cancellation.CancellationException) throw e

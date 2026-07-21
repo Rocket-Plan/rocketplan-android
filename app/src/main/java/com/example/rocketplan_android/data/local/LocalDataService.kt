@@ -60,6 +60,14 @@ import kotlinx.coroutines.withContext
 import java.util.Date
 
 /**
+ * SQLite caps a single statement at 999 bound variables (SQLITE_MAX_VARIABLE_NUMBER). A
+ * `WHERE serverId IN (:serverIds)` deletion driven by /api/sync/deleted can exceed that after a
+ * large server-side cleanup, throwing "too many SQL variables" and failing the whole sync job.
+ * Chunk id lists to this size (headroom under 999 for the odd extra bound param).
+ */
+private const val SQLITE_MAX_BIND_VARS = 900
+
+/**
  * Primary entry-point for accessing and mutating offline data. The UI layer should depend on this
  * service so that the app can function fully while offline.
  */
@@ -1273,7 +1281,7 @@ class LocalDataService private constructor(
     }
 
     suspend fun markEquipmentAssetsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
-        dao.markEquipmentAssetsDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markEquipmentAssetsDeleted(it) }
     }
 
     suspend fun getSyncedEquipmentAssetsForCompany(companyId: Long): List<OfflineEquipmentAssetEntity> =
@@ -1356,6 +1364,9 @@ class LocalDataService private constructor(
 
     fun observeOpenPlacementsForRoom(roomId: Long): Flow<List<OfflineEquipmentPlacementEntity>> =
         dao.observeOpenPlacementsForRoom(roomId)
+
+    fun observeOpenPlacementsForProject(projectId: Long): Flow<List<OfflineEquipmentPlacementEntity>> =
+        dao.observeOpenPlacementsForProject(projectId)
     // endregion
 
     suspend fun saveMoistureLogs(
@@ -1424,7 +1435,7 @@ class LocalDataService private constructor(
 
     suspend fun markProjectsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markProjectsDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markProjectsDeleted(it) }
     }
 
     /**
@@ -1624,7 +1635,7 @@ class LocalDataService private constructor(
     /** Soft-deletes properties by server IDs, skipping dirty (locally modified) rows. */
     suspend fun markPropertiesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markPropertiesDeletedByServerIds(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markPropertiesDeletedByServerIds(it) }
     }
 
     /**
@@ -1656,14 +1667,16 @@ class LocalDataService private constructor(
 
     suspend fun markLocationsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markLocationsDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markLocationsDeleted(it) }
     }
 
     suspend fun markRoomsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        database.withTransaction {
-            dao.markRoomsDeleted(serverIds)
-            dao.clearRoomPhotoSnapshots(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { chunk ->
+            database.withTransaction {
+                dao.markRoomsDeleted(chunk)
+                dao.clearRoomPhotoSnapshots(chunk)
+            }
         }
     }
 
@@ -1755,7 +1768,7 @@ class LocalDataService private constructor(
 
     suspend fun markPhotosDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markPhotosDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markPhotosDeleted(it) }
     }
 
     /**
@@ -1831,32 +1844,32 @@ class LocalDataService private constructor(
 
     suspend fun markNotesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markNotesDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markNotesDeleted(it) }
     }
 
     suspend fun markDamagesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markDamagesDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markDamagesDeleted(it) }
     }
 
     suspend fun markEquipmentDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markEquipmentDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markEquipmentDeleted(it) }
     }
 
     suspend fun markAtmosphericLogsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markAtmosphericLogsDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markAtmosphericLogsDeleted(it) }
     }
 
     suspend fun markMoistureLogsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markMoistureLogsDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markMoistureLogsDeleted(it) }
     }
 
     suspend fun markWorkScopesDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markWorkScopesDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markWorkScopesDeleted(it) }
     }
 
     suspend fun saveMaterials(
@@ -2323,7 +2336,7 @@ class LocalDataService private constructor(
 
     suspend fun markTimecardsDeleted(serverIds: List<Long>) = withContext(ioDispatcher) {
         if (serverIds.isEmpty()) return@withContext
-        dao.markTimecardsDeleted(serverIds)
+        serverIds.chunked(SQLITE_MAX_BIND_VARS).forEach { dao.markTimecardsDeleted(it) }
     }
 
     suspend fun markTimecardsDeletedByProject(projectId: Long) = withContext(ioDispatcher) {

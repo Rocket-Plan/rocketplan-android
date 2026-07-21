@@ -936,6 +936,10 @@ interface OfflineDao {
     /** All placements for an asset (any state) — used to collapse an unsynced asset graph. */
     @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId")
     suspend fun getAllPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity>
+
+    /** Open placements for a project — used by RocketDry serialized equipment tab. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE projectId = :projectId AND isOpen = 1 AND isDeleted = 0 ORDER BY dateIn DESC")
+    fun observeOpenPlacementsForProject(projectId: Long): Flow<List<OfflineEquipmentPlacementEntity>>
     // endregion
 
     // region Moisture Logs

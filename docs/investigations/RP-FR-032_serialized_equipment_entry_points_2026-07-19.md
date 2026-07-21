@@ -10,7 +10,7 @@ found_in: "iOS parity review 2026-07-19"
 found_at: "2026-07-19 22:02:42 PDT"
 fixed_in: null
 released_in: null
-state: open
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
@@ -18,7 +18,7 @@ related_plan: null
 related_review: null
 related_test: null
 priority: P3
-last_updated: 2026-07-19
+last_updated: 2026-07-20
 ---
 
 > **Follow-up** surfaced by the post-implementation Android↔iOS equipment parity review (2026-07-19),
@@ -65,3 +65,32 @@ iOS mounts the pool and room-assets cleanly through the room/totals `equipmentMo
 
 ### Success Criteria
 - QA: a serialized-mode user reaches the company pool by an obvious control (no long-press), and can open any deployed unit's detail from its room; OFF/UNKNOWN companies never see the serialized entry points.
+
+## Resolution (2026-07-20 — full iOS parity)
+
+Read the iOS source (`ios.rocketplantech.com` branch `dev`) for the actual pattern:
+`TotalEquipmentContentView` switches on `equipmentMode` and renders `SerializedEquipmentContentView`
+(the pool) for `.serialized`; both the pool and `SerializedRoomAssetsView` rows are full-width
+`Button`s that push `SerializedAssetDetailView`, and all lifecycle actions live on the detail view
+(no inline row buttons). Android now mirrors this:
+
+1. **Pool entry — totals *becomes* pool.** `TotalEquipmentFragment.gateOnOwnerMode` now routes by
+   mode: `ON` → `navigateToSerializedPool(companyId)` (new nav action
+   `action_totalEquipmentFragment_to_serializedEquipmentPoolFragment`, `popUpTo` totals inclusive so
+   Back lands on RocketDry); `UNKNOWN` → leave legacy (unchanged); `OFF` → stay on legacy totals.
+   The interim long-press in `RocketDryFragment` and its `navigateToSerializedEquipmentPool` helper +
+   `action_rocketDryFragment_to_serializedEquipmentPoolFragment` are removed.
+2. **Row → detail hub.** `SerializedEquipmentAdapter` collapsed to a single `onClick(assetId)`;
+   `item_serialized_equipment.xml` drops the two `MaterialButton`s (whole card is a ripple tap
+   target with a trailing chevron). `SerializedRoomEquipmentFragment` (deployed + pool lists) and
+   `SerializedEquipmentPoolFragment` all navigate to `SerializedAssetDetailFragment`, which already
+   hosts deploy/check-out/move/retire/edit/history with status-gated affordances (RP-FR-027).
+
+Verified: `compileDevStandardDebugKotlin` + `compileDevFlirDebugKotlin` + serialized/equipment unit
+tests green. On-device verification folds into the RP-HD-010 offline E2E pass.
+
+### Known tradeoff
+Deploy-from-pool from *inside a room* is now a tap into detail → **Deploy** (pick room) rather than a
+one-tap room-scoped "Deploy" button on the pool row. This matches iOS's "detail is the hub" model but
+costs a tap of room context; if room-scoped one-tap check-in is wanted later, add a "+ Check in
+equipment" action to the room screen (small follow-up, no data-layer work).

@@ -9,14 +9,14 @@ found_in: "feat/RP-FR-019-serialized-equipment (unreleased, built as 1.30 (35)-d
 found_at: "2026-07-17 20:55:27 PDT"
 fixed_in: null
 released_in: null
-state: planned
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_hd_008_equipment_remote_logging_2026-07-17.md
 related_review: null
 related_test: null
-last_updated: 2026-07-17
+last_updated: 2026-07-20
 ---
 
 # RP-HD-008 — Remote-log the serialized-equipment (RP-FR-019) failure paths

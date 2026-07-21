@@ -209,21 +209,45 @@ class SerializedRoomEquipmentViewModel(
     fun registerAndDeploy(name: String, catalogUuid: String, serialNumber: String?) {
         if (!requireOn()) return
         val companyId = ownerCompanyId ?: return
+        // Review #1: guard against double-taps (no assetId yet, so a dedicated flag) and never let
+        // a staging-write throw escape viewModelScope uncaught (which crashes the app).
+        if (!registerInFlight.compareAndSet(false, true)) return
         viewModelScope.launch(Dispatchers.IO) {
-            val asset = offlineSyncRepository.registerEquipmentAssetOffline(
-                companyId = companyId, name = name, catalogUuid = catalogUuid, serialNumber = serialNumber
-            )
-            val deployed = offlineSyncRepository.deployEquipmentAssetOffline(asset.assetId, roomId, projectId)
-            if (deployed == null) {
-                app.remoteLogger.log(
-                    com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
-                    "Register succeeded but deploy returned null",
-                    mapOf("assetId" to asset.assetId.toString(), "roomId" to roomId.toString())
-                )
-                _events.emit("Registered, but couldn't deploy to this room.")
+            try {
+                runCatching {
+                    val asset = offlineSyncRepository.registerEquipmentAssetOffline(
+                        companyId = companyId, name = name, catalogUuid = catalogUuid, serialNumber = serialNumber
+                    )
+                    offlineSyncRepository.deployEquipmentAssetOffline(asset.assetId, roomId, projectId) to asset.assetId
+                }.onSuccess { (deployed, assetId) ->
+                    if (deployed == null) {
+                        app.remoteLogger.log(
+                            com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
+                            "Register succeeded but deploy returned null",
+                            mapOf("assetId" to assetId.toString(), "roomId" to roomId.toString())
+                        )
+                        _events.emit("Registered, but couldn't deploy to this room.")
+                    }
+                }.onFailure { e ->
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    app.remoteLogger.log(
+                        com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
+                        "Register-and-deploy failed (staging threw)",
+                        mapOf(
+                            "roomId" to roomId.toString(),
+                            "error" to (e::class.java.simpleName + ": " + (e.message ?: ""))
+                        )
+                    )
+                    _events.emit("Couldn't register this unit — please retry.")
+                }
+            } finally {
+                registerInFlight.set(false)
             }
         }
     }
+
+    /** Review #1: single-flight guard for register-and-deploy, which has no assetId to key on yet. */
+    private val registerInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
 
     fun deployFromPool(assetId: Long) = runAction(assetId, "Couldn't deploy — unit isn't available.") {
         offlineSyncRepository.deployEquipmentAssetOffline(assetId, roomId, projectId) != null

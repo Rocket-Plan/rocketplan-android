@@ -99,9 +99,11 @@ class SerializedAssetEditFragment : Fragment() {
                 binding.editManufacturer.setText(asset.manufacturer ?: "")
                 binding.editModel.setText(asset.model ?: "")
                 binding.editVendor.setText(asset.vendor ?: "")
-                binding.editPurchaseDate.setText(asset.purchaseDate ?: "")
+                // Show date-only in the field (API sends UTC-midnight ISO timestamps); the picker
+                // also writes yyyy-MM-dd, so an untouched value round-trips in the same format.
+                binding.editPurchaseDate.setText(asset.purchaseDate?.substringBefore('T') ?: "")
                 binding.editPurchasePrice.setText(asset.purchasePrice ?: "")
-                binding.editWarrantyExpires.setText(asset.warrantyExpiresAt ?: "")
+                binding.editWarrantyExpires.setText(asset.warrantyExpiresAt?.substringBefore('T') ?: "")
                 binding.editRentalRate.setText(asset.rentalDayRate ?: "")
                 if (statusEditable) {
                     binding.editStatusToggle.check(

@@ -93,9 +93,9 @@ class SerializedAssetDetailFragment : Fragment() {
         bindRow(binding.detailSerialNumberRow, binding.detailSerialNumber, asset.serialNumber)
         bindRow(binding.detailAssetTagRow, binding.detailAssetTag, asset.assetTag)
         bindRow(binding.detailVendorRow, binding.detailVendor, asset.vendor)
-        bindRow(binding.detailPurchaseDateRow, binding.detailPurchaseDate, asset.purchaseDate)
+        bindRow(binding.detailPurchaseDateRow, binding.detailPurchaseDate, formatDateOnly(asset.purchaseDate))
         bindRow(binding.detailPurchasePriceRow, binding.detailPurchasePrice, asset.purchasePrice)
-        bindRow(binding.detailWarrantyRow, binding.detailWarranty, asset.warrantyExpiresAt)
+        bindRow(binding.detailWarrantyRow, binding.detailWarranty, formatDateOnly(asset.warrantyExpiresAt))
         bindRow(binding.detailRentalRateRow, binding.detailRentalRate, asset.rentalDayRate)
         bindRow(binding.detailNoteRow, binding.detailNote, asset.note)
 
@@ -115,6 +115,14 @@ class SerializedAssetDetailFragment : Fragment() {
         binding.detailDeployButton.isVisible = !deployed && available
         binding.detailRetireButton.isVisible = !deployed && asset.status != "retired"
     }
+
+    /**
+     * Purchase date / warranty are date-only concepts the API sends as UTC-midnight ISO timestamps
+     * (e.g. "2026-07-09T00:00:00.000000Z"). Show just the calendar date — the UTC date part avoids a
+     * timezone off-by-one that parse→local-format would introduce.
+     */
+    private fun formatDateOnly(raw: String?): String? =
+        raw?.takeIf { it.isNotBlank() }?.substringBefore('T')
 
     /** Hide a label/value row when the value is blank (RP-FR-027 acceptance). */
     private fun bindRow(row: LinearLayout, valueView: TextView, value: String?) {
