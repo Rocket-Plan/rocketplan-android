@@ -32,7 +32,7 @@
         android:padding="24dp"
         android:text="@string/serialized_history_empty"
         android:textColor="@color/light_text_rp"
-        android:textSize="@dimen/text_size_body_large"
+        android:textSize="@dimen/text_size_body"
         android:visibility="gone" />
 
 </FrameLayout>

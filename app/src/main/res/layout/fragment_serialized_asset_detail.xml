@@ -263,7 +263,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/serialized_equipment_deploy"
                 android:visibility="gone"
-                app:cornerRadius="16dp"
+                app:cornerRadius="12dp"
                 tools:visibility="visible" />
 
             <com.google.android.material.button.MaterialButton
@@ -273,7 +273,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/serialized_equipment_move"
                 android:visibility="gone"
-                app:cornerRadius="16dp"
+                app:cornerRadius="12dp"
                 tools:visibility="visible" />
 
             <com.google.android.material.button.MaterialButton
@@ -283,7 +283,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/serialized_equipment_check_out"
                 android:visibility="gone"
-                app:cornerRadius="16dp"
+                app:cornerRadius="12dp"
                 tools:visibility="visible" />
 
             <com.google.android.material.button.MaterialButton
@@ -294,7 +294,7 @@
                 android:layout_marginTop="8dp"
                 android:text="@string/serialized_equipment_retire"
                 android:visibility="gone"
-                app:cornerRadius="16dp"
+                app:cornerRadius="12dp"
                 tools:visibility="visible" />
 
             <com.google.android.material.button.MaterialButton
@@ -304,7 +304,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
                 android:text="@string/serialized_equipment_edit"
-                app:cornerRadius="16dp" />
+                app:cornerRadius="12dp" />
 
             <!-- RP-FR-028: opens the placement-history screen. -->
             <com.google.android.material.button.MaterialButton
@@ -332,6 +332,6 @@
         android:padding="24dp"
         android:text="@string/serialized_detail_not_found"
         android:textColor="@color/light_text_rp"
-        android:textSize="@dimen/text_size_body_large"
+        android:textSize="@dimen/text_size_body"
         android:visibility="gone" />
 </FrameLayout>

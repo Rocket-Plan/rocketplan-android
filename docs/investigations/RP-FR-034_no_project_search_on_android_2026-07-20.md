@@ -10,7 +10,7 @@ found_in: "feat/RP-FR-019-serialized-equipment (35-dev) — pre-existing gap, su
 found_at: "2026-07-20 20:59:30 PDT"
 fixed_in: null
 released_in: null
-state: planned
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
@@ -31,6 +31,16 @@ last_updated: 2026-07-20
 On Android, the project list (`ui/projects/ProjectListFragment`) offers only **status tabs**
 (`statusFilter` — My Projects / WIP / etc.). There is **no way to search/filter projects by text**.
 A user with many projects must scroll. iOS lets you tap a magnifier and type to filter instantly.
+
+## Resolution scope note (2026-07-20)
+
+Implemented with an **intentional deviation from iOS**: the Android search is **global across every
+category** — a non-blank query filters the union of My Projects + all status lists (deduped by
+projectId) from whatever tab you're on. iOS, by contrast, scopes search to the active status tab
+(`ProjectListPageViewModel.fetchCompanyProjectsFromAPI` sends `status: projectStatus` together with
+`search`, and the offline/client-side filters are status-scoped; only the nil-status "My Projects"
+tab spans statuses within assigned). Product chose the broader Android behaviour. Search box
+placement still mirrors iOS (under the status tabs, above the list).
 
 ## iOS reference (verified in source, `ios.rocketplantech.com` branch `dev`)
 

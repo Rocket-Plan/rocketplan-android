@@ -137,11 +137,14 @@ class SerializedAssetDetailViewModel(
         val assetCompanyId = localDataService.getEquipmentAsset(assetLocalId)?.companyId
         val projects = localDataService.observeProjects().first()
             .filter { !it.isDeleted && (assetCompanyId == null || it.companyId == assetCompanyId) }
+            // Newest projects first (most recently created); rooms stay alphabetical within a project.
+            .sortedByDescending { it.createdAt }
         projects.flatMap { project ->
             localDataService.observeRooms(project.projectId).first()
                 .filter { !it.isDeleted }
+                .sortedBy { it.title.lowercase() }
                 .map { DeployRoomChoice(project.projectId, it.roomId, it.title, project.title) }
-        }.sortedWith(compareBy({ it.projectName.lowercase() }, { it.roomName.lowercase() }))
+        }
     }
 
     /** Rooms in the current placement's project the unit can be moved to (excludes its current room). */

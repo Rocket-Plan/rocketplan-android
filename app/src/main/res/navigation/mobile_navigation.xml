@@ -762,7 +762,7 @@
     <fragment
         android:id="@+id/serializedRoomEquipmentFragment"
         android:name="com.example.rocketplan_android.ui.rocketdry.SerializedRoomEquipmentFragment"
-        android:label="Equipment (Serialized)"
+        android:label="Equipment"
         tools:layout="@layout/fragment_serialized_room_equipment">
 
         <argument
