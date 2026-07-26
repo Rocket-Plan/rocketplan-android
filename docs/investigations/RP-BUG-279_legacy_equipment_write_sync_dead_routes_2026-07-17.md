@@ -6,17 +6,32 @@ type: functional
 classification: new_code_bug
 source: internal
 found_in: "1.30 (35)"
-fixed_in: null
+fixed_in: "feat/RP-FR-019 (35-dev)"
 released_in: null
-state: investigating
+state: fixed
 release_state: unreleased
 regression_of: null
 tracker: docs/BUG_TRACKER.md
 related_plan: docs/plans/plan_rp_bug_279_equipment_writesync_pivot_realignment_2026-07-09.md
-related_review: null
+related_review: docs/reviews/code_review_RP-FR-019_serialized_equipment_2026-07-26.md
 related_test: null
-last_updated: 2026-07-17
+last_updated: 2026-07-26
 ---
+
+> **Status note (2026-07-26 re-verification).** The dead-route defect this doc describes **is fixed** on
+> `feat/RP-FR-019-serialized-equipment` (`f2f7cf7`): `OfflineSyncApi.kt:502-520` declares the pivot routes,
+> `EquipmentPushHandler.kt:93/224/240/272` calls them, zero `/api/equipment/{id}` references remain, the
+> catalog/pivot id split landed with `MIGRATION_31_32`, and `EquipmentPushHandlerTest` (14 tests) passes.
+>
+> Two caveats before treating equipment write-sync as working:
+> 1. **`RP-BUG-365`** — the replacement endpoints declare the wrong *response* types (204-no-body update,
+>    unwrapped single, unwrapped list), so legacy equipment writes still fail to round-trip. The
+>    user-facing symptom of this bug persists through a different mechanism.
+> 2. **`master` is still at `9f6b540`** (the reverted wrong-contract version), so nothing is fixed for
+>    users until PR #8 lands. End-to-end correctness also remains gated on backend `MONGOOSE-BUG-036`.
+>
+> The "Affected Code" line references below (`OfflineSyncApi.kt:490,496`) are pre-fix and no longer resolve.
+
 
 # Investigation: [RP-BUG-279] Offline equipment write-sync targets non-existent backend routes
 
