@@ -101,8 +101,24 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
                     // Extract updated_at directly from the 409 response body.
                     // This avoids the paginated getProjectNotes endpoint which
                     // may not contain the target note on the first page.
-                    val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
-                    if (freshUpdatedAt == null) {
+                    val conflict = error.parse409(ctx.gson)
+                    if (conflict == null) {
+                        Log.w(SYNC_TAG, "⚠️ [handlePendingNoteUpsert] Could not parse 409 body for note ${note.serverId}; will retry later")
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Note update 409 recovery deferred - could not parse response body",
+                            mapOf("noteServerId" to note.serverId.toString(), "noteUuid" to note.uuid)
+                        )
+                        return OperationOutcome.SKIP
+                    }
+                    if (conflict.isModeRejection) {
+                        Log.w(SYNC_TAG, "⚠️ [handlePendingNoteUpsert] 409 mode rejection for note ${note.serverId}; dropping")
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "Note write dropped - mode rejection",
+                            mapOf("noteUuid" to note.uuid, "serverId" to note.serverId.toString())
+                        )
+                        return OperationOutcome.DROP
+                    }
+                    if (conflict.updatedAt == null) {
                         Log.w(SYNC_TAG, "⚠️ [handlePendingNoteUpsert] Could not extract updated_at from 409 body for note ${note.serverId}; will retry later")
                         ctx.remoteLogger?.log(
                             LogLevel.WARN, SYNC_TAG, "Note update 409 recovery deferred - no updated_at in response body",
@@ -110,6 +126,7 @@ class NotePushHandler(private val ctx: PushHandlerContext) {
                         )
                         return OperationOutcome.SKIP
                     }
+                    val freshUpdatedAt = conflict.updatedAt
 
                     // Retry with fresh updatedAt
                     val retryRequest = request.copy(updatedAt = freshUpdatedAt)

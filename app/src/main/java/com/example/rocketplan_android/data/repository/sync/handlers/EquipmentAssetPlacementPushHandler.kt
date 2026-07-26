@@ -407,7 +407,8 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
         operation: OfflineSyncQueueEntity,
         conflictType: String
     ): OperationOutcome {
-        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        val conflict409 = error.parse409(ctx.gson)
+        val freshUpdatedAt = conflict409?.updatedAt
         ctx.remoteLogger?.log(
             LogLevel.WARN, SYNC_TAG, "Serialized placement $conflictType (409)",
             mapOf("assetUuid" to asset.uuid, "remoteUpdatedAt" to (freshUpdatedAt ?: "unknown"))
@@ -443,7 +444,8 @@ class EquipmentAssetPlacementPushHandler(private val ctx: PushHandlerContext) {
         operation: OfflineSyncQueueEntity,
         conflictType: String
     ): OperationOutcome {
-        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        val conflict409 = error.parse409(ctx.gson)
+        val freshUpdatedAt = conflict409?.updatedAt
         ctx.remoteLogger?.log(
             LogLevel.WARN, SYNC_TAG, "Serialized placement $conflictType (409)",
             mapOf("placementUuid" to placement.uuid, "remoteUpdatedAt" to (freshUpdatedAt ?: "unknown"))

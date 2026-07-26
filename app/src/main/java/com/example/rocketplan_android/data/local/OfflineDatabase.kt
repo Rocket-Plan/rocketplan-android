@@ -592,14 +592,24 @@ abstract class OfflineDatabase : RoomDatabase() {
         @androidx.annotation.VisibleForTesting
         internal val MIGRATION_31_32 = object : Migration(31, 32) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE offline_equipment ADD COLUMN catalogServerId INTEGER")
-                database.execSQL("ALTER TABLE offline_equipment ADD COLUMN catalogUuid TEXT")
+                val existingColumns = mutableSetOf<String>()
+                database.query("PRAGMA table_info(offline_equipment)").use { c ->
+                    val nameIdx = c.getColumnIndex("name")
+                    while (c.moveToNext()) existingColumns.add(c.getString(nameIdx))
+                }
+                if (!existingColumns.contains("catalogServerId")) {
+                    database.execSQL("ALTER TABLE offline_equipment ADD COLUMN catalogServerId INTEGER")
+                }
+                if (!existingColumns.contains("catalogUuid")) {
+                    database.execSQL("ALTER TABLE offline_equipment ADD COLUMN catalogUuid TEXT")
+                }
                 database.execSQL("""
                     UPDATE offline_equipment
                     SET catalogServerId = serverId,
                         serverId = NULL
                     WHERE serverId IS NOT NULL
                 """.trimIndent())
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_catalogServerId ON offline_equipment(catalogServerId)")
             }
         }
 

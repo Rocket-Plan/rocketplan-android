@@ -503,19 +503,19 @@ interface OfflineSyncApi {
     suspend fun createProjectEquipment(
         @Path("projectId") projectId: Long,
         @Body body: CreateEquipmentCatalogRequest
-    ): EquipmentDto
+    ): SingleDataResponse<EquipmentDto>
 
     @POST("/api/rooms/{roomId}/equipment")
     suspend fun attachRoomEquipment(
         @Path("roomId") roomId: Long,
         @Body body: AttachRoomEquipmentRequest
-    ): EquipmentDto
+    ): SingleDataResponse<List<EquipmentDto>>
 
     @PUT("/api/equipment-rooms/{id}")
     suspend fun updateEquipmentRoom(
         @Path("id") id: Long,
         @Body body: EquipmentRoomUpdateRequest
-    ): EquipmentDto
+    ): Response<Unit>
 
     @HTTP(method = "DELETE", path = "/api/equipment-rooms/{id}", hasBody = true)
     suspend fun deleteEquipmentRoom(

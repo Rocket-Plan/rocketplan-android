@@ -422,6 +422,13 @@ object PushHandlerTestFixtures {
         return HttpException(response)
     }
 
+    fun create409ModeRejection(): HttpException {
+        val body = """{"message":"Equipment serialization is enabled for this company; use the equipment-asset endpoints instead of legacy equipment-room placements."}"""
+        val responseBody = body.toResponseBody("application/json".toMediaType())
+        val response = Response.error<Any>(409, responseBody)
+        return HttpException(response)
+    }
+
     fun create422Response(): HttpException {
         val body = """{"error":"validation failed"}"""
         val responseBody = body.toResponseBody("application/json".toMediaType())

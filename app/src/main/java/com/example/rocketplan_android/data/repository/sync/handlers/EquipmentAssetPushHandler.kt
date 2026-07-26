@@ -198,7 +198,8 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
         operation: OfflineSyncQueueEntity
     ): OperationOutcome {
         // RP-CD-005: read the 409 body exactly once, here, for the remote version.
-        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        val conflict409 = error.parse409(ctx.gson)
+        val freshUpdatedAt = conflict409?.updatedAt
         ctx.remoteLogger?.log(
             LogLevel.WARN, SYNC_TAG, "Equipment asset update 409 conflict → CONFLICT_PENDING",
             mapOf(

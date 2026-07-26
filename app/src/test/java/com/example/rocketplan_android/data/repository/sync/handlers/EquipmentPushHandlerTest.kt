@@ -5,6 +5,7 @@ import com.example.rocketplan_android.data.local.LocalDataService
 import com.example.rocketplan_android.data.local.SyncOperationType
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineConflictResolutionEntity
+import com.example.rocketplan_android.data.model.SingleDataResponse
 import com.example.rocketplan_android.data.model.offline.AttachRoomEquipmentRequest
 import com.example.rocketplan_android.data.model.offline.CreateEquipmentCatalogRequest
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
@@ -73,7 +74,7 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.attachRoomEquipment(4000L, any<AttachRoomEquipmentRequest>()) } returns pivotDto
+        coEvery { api.attachRoomEquipment(4000L, any<AttachRoomEquipmentRequest>()) } returns SingleDataResponse(listOf(pivotDto))
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleUpsert(operation)
@@ -150,7 +151,7 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipmentRoom(7000L, any<EquipmentRoomUpdateRequest>()) } returns pivotDto
+        coEvery { api.updateEquipmentRoom(7000L, any<EquipmentRoomUpdateRequest>()) } returns Response.success(Unit)
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleUpsert(operation)
@@ -191,13 +192,28 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
-        coEvery { api.updateEquipmentRoom(7000L, any<EquipmentRoomUpdateRequest>()) } answers {
-            throw PushHandlerTestFixtures.create409WithUpdatedAt("2026-01-30T12:00:00.000000Z")
-        }
+        coEvery { api.updateEquipmentRoom(7000L, any<EquipmentRoomUpdateRequest>()) } returns PushHandlerTestFixtures.create409RetrofitResponse("2026-01-30T12:00:00.000000Z")
 
         val result = handler.handleUpsert(operation)
 
         assertThat(result).isEqualTo(OperationOutcome.CONFLICT_PENDING)
+    }
+
+    @Test
+    fun `handleUpsert returns DROP on mode rejection 409`() = runTest {
+        val equipment = PushHandlerTestFixtures.createEquipment(serverId = 7000L, catalogServerId = 6000L)
+        val project = PushHandlerTestFixtures.createProject()
+        val room = PushHandlerTestFixtures.createRoom()
+        val operation = createOperation()
+
+        coEvery { localDataService.getEquipmentByUuid("equipment-uuid") } returns equipment
+        coEvery { localDataService.getProject(100L) } returns project
+        coEvery { localDataService.getRoom(400L) } returns room
+        coEvery { api.updateEquipmentRoom(7000L, any<EquipmentRoomUpdateRequest>()) } throws PushHandlerTestFixtures.create409ModeRejection()
+
+        val result = handler.handleUpsert(operation)
+
+        assertThat(result).isEqualTo(OperationOutcome.DROP)
     }
 
     @Test
@@ -401,8 +417,8 @@ class EquipmentPushHandlerTest {
         coEvery { localDataService.getProject(100L) } returns project
         coEvery { localDataService.getRoom(400L) } returns room
         coEvery { localDataService.getProjectEquipmentByType(100L, "Custom Tool") } returns null
-        coEvery { api.createProjectEquipment(1000L, any<CreateEquipmentCatalogRequest>()) } returns catalogDto
-        coEvery { api.attachRoomEquipment(4000L, any<AttachRoomEquipmentRequest>()) } returns pivotDto
+        coEvery { api.createProjectEquipment(1000L, any<CreateEquipmentCatalogRequest>()) } returns SingleDataResponse(catalogDto)
+        coEvery { api.attachRoomEquipment(4000L, any<AttachRoomEquipmentRequest>()) } returns SingleDataResponse(listOf(pivotDto))
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleUpsert(operation)
@@ -446,7 +462,7 @@ class EquipmentPushHandlerTest {
             links = null,
             meta = null
         )
-        coEvery { api.attachRoomEquipment(4000L, any<AttachRoomEquipmentRequest>()) } returns pivotDto
+        coEvery { api.attachRoomEquipment(4000L, any<AttachRoomEquipmentRequest>()) } returns SingleDataResponse(listOf(pivotDto))
         coEvery { localDataService.saveEquipment(any()) } just runs
 
         val result = handler.handleUpsert(operation)

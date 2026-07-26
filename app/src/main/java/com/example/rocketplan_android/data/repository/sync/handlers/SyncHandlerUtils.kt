@@ -76,15 +76,38 @@ internal fun Throwable.isMissingOnServer(): Boolean = (this as? HttpException)?.
 internal fun Throwable.isValidationError(): Boolean = (this as? HttpException)?.code() == 422
 
 /**
- * Attempts to extract the `updated_at` timestamp from a 409 error response body.
- * Useful for entities that lack a direct GET-by-ID endpoint (notes, equipment, etc.).
- * Tries top-level `updated_at`, then nested `data.updated_at`.
+ * RP-BUG-374 + RP-BUG-367: A single-read parse of a 409 error body that returns both the
+ * conflict timestamp and whether this is a mode rejection (terminal DROP) rather than an
+ * optimistic-lock conflict (retryable).
+ *
+ * Backend contract (authoritative — routes are absent from openapi.yaml):
+ * - Optimistic-lock conflict → `mongoose:app/Http/Controllers/Concerns/HandlesOptimisticLocking.php:64`
+ *   emits `{message, current_updated_at, resource_id}`. Retryable.
+ * - Mode rejection → `mongoose:EquipmentRoomController::abortIfSerialized:31-40` and
+ *   `RoomEquipmentRoomController::store:170-172` abort(409, 'Equipment serialization is enabled…')
+ *   emits `{message}` only. Terminal — retrying can never succeed while the flag is on.
+ *
+ * Until `MONGOOSE-BUG-059` ships a real discriminator (`code` key), absence of `current_updated_at`
+ * is the only available signal for mode rejection. Once that lands, switch `isModeRejection` to
+ * check for `code == "mode_rejection"` instead.
+ *
+ * Three outcomes:
+ * - body unreadable / unparseable → `updatedAt = null`, `isModeRejection = false` → caller SKIPs
+ * - parsed, has a conflict timestamp → `updatedAt = "…"`, `isModeRejection = false` → caller retries with it
+ * - parsed, no timestamp, message present → `updatedAt = null`, `isModeRejection = true` → caller DROP
  */
-internal fun HttpException.extractUpdatedAt(gson: Gson): String? {
+internal data class Conflict409(val updatedAt: String?, val isModeRejection: Boolean)
+
+internal fun HttpException.parse409(gson: Gson): Conflict409? {
     val body = runCatching { response()?.errorBody()?.string() }.getOrNull() ?: return null
     return runCatching {
         val json = gson.fromJson(body, JsonObject::class.java)
-        json.get("updated_at")?.asString
+        val updatedAt = json.get("current_updated_at")?.asString
+            ?: json.getAsJsonObject("data")?.get("current_updated_at")?.asString
+            ?: json.get("updated_at")?.asString
             ?: json.getAsJsonObject("data")?.get("updated_at")?.asString
+        val hasTimestamp = updatedAt != null
+        val isModeRejection = !hasTimestamp && json.has("message")
+        Conflict409(updatedAt, isModeRejection)
     }.getOrNull()
 }

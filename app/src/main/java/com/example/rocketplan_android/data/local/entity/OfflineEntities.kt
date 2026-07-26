@@ -530,6 +530,7 @@ data class OfflinePhotoEntity(
         Index(value = ["projectId"]),
         Index(value = ["roomId"]),
         Index(value = ["serverId"]),
+        Index(value = ["catalogServerId"]),
         Index(value = ["syncStatus"]),
         Index(value = ["projectId", "isDeleted"]),
         Index(value = ["roomId", "isDeleted"])

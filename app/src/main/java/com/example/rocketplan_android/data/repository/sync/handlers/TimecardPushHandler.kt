@@ -128,11 +128,20 @@ class TimecardPushHandler(private val ctx: PushHandlerContext) {
                     )
                 )
 
-                val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
-                if (freshUpdatedAt == null) {
-                    Log.w(SYNC_TAG, "⚠️ [syncPendingTimecard] Could not extract updated_at from 409 body for timecard ${timecard.serverId}; will retry later")
-                    return null // SKIP
+                val conflict = error.parse409(ctx.gson)
+                if (conflict == null) {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingTimecard] Could not parse 409 body for timecard ${timecard.serverId}; will retry later")
+                    return null
                 }
+                if (conflict.isModeRejection) {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingTimecard] 409 mode rejection for timecard ${timecard.serverId}; re-throwing for DROP")
+                    throw error
+                }
+                if (conflict.updatedAt == null) {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingTimecard] Could not extract updated_at from 409 body for timecard ${timecard.serverId}; will retry later")
+                    return null
+                }
+                val freshUpdatedAt = conflict.updatedAt
 
                 // Retry with fresh timestamp
                 val retryRequest = timecard.toUpdateRequest(freshUpdatedAt)
