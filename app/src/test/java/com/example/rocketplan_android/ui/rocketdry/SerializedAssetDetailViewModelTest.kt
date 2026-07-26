@@ -9,6 +9,7 @@ import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacemen
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
 import com.example.rocketplan_android.data.local.entity.OfflineRoomEntity
 import com.example.rocketplan_android.data.repository.OfflineSyncRepository
+import com.example.rocketplan_android.data.storage.SecureStorage
 import com.example.rocketplan_android.logging.RemoteLogger
 import com.example.rocketplan_android.testing.MainDispatcherRule
 import com.google.common.truth.Truth.assertThat
@@ -32,6 +33,46 @@ class SerializedAssetDetailViewModelTest {
 
     private val assetLocalId = 7L
     private val companyId = 99L
+
+    @Test
+    fun `RP-BUG-369 - mode OFF yields Disabled and refuses writes`() = runTest {
+        val repo = mockk<OfflineSyncRepository>(relaxed = true)
+        val vm = createViewModel(
+            asset = MutableStateFlow(fullAsset(status = "deployed")),
+            placements = MutableStateFlow(listOf(openPlacement())),
+            repo = repo,
+            mode = false
+        )
+
+        vm.uiState.test {
+            assertThat(awaitNonLoading()).isEqualTo(SerializedAssetDetailUiState.Disabled)
+            cancelAndConsumeRemainingEvents()
+        }
+
+        // Every write on the hub must be refused while the company is not in serialized mode.
+        vm.checkOut()
+        vm.retire()
+        vm.move(toRoomLocalId = 3L)
+        vm.deploy(roomLocalId = 3L, projectLocalId = 11L)
+        coVerify(exactly = 0) { repo.checkOutEquipmentAssetOffline(any()) }
+        coVerify(exactly = 0) { repo.retireEquipmentAssetOffline(any()) }
+        coVerify(exactly = 0) { repo.moveEquipmentAssetOffline(any(), any()) }
+        coVerify(exactly = 0) { repo.deployEquipmentAssetOffline(any(), any(), any()) }
+    }
+
+    @Test
+    fun `RP-BUG-369 - mode UNKNOWN yields Disabled`() = runTest {
+        val vm = createViewModel(
+            asset = MutableStateFlow(fullAsset(status = "available")),
+            placements = MutableStateFlow(emptyList()),
+            mode = null
+        )
+
+        vm.uiState.test {
+            assertThat(awaitNonLoading()).isEqualTo(SerializedAssetDetailUiState.Disabled)
+            cancelAndConsumeRemainingEvents()
+        }
+    }
 
     @Test
     fun `Ready renders all fields and current placement`() = runTest {
@@ -162,7 +203,10 @@ class SerializedAssetDetailViewModelTest {
         placements: MutableStateFlow<List<OfflineEquipmentPlacementEntity>>,
         repo: OfflineSyncRepository = mockk(relaxed = true),
         room: OfflineRoomEntity? = null,
-        project: OfflineProjectEntity? = null
+        project: OfflineProjectEntity? = null,
+        // RP-BUG-369: owner-company serialized mode. true = ON (the default for existing cases),
+        // false = OFF, null = UNKNOWN — both non-ON values must yield Disabled and block writes.
+        mode: Boolean? = true
     ): SerializedAssetDetailViewModel {
         val localDataService = mockk<LocalDataService>(relaxed = true)
         val remoteLogger = mockk<RemoteLogger>(relaxed = true)
@@ -172,10 +216,14 @@ class SerializedAssetDetailViewModelTest {
         coEvery { localDataService.getRoom(any()) } returns room
         coEvery { localDataService.getProject(any()) } returns project
 
+        val secureStorage = mockk<SecureStorage>()
+        every { secureStorage.observeSerializedEquipmentEnabled(companyId) } returns flowOf(mode)
+
         val application = mockk<RocketPlanApplication>()
         every { application.localDataService } returns localDataService
         every { application.offlineSyncRepository } returns repo
         every { application.remoteLogger } returns remoteLogger
+        every { application.secureStorage } returns secureStorage
         every { application.getString(any()) } returns "message"
 
         return SerializedAssetDetailViewModel(application, assetLocalId)

@@ -45,16 +45,23 @@ class SerializedAssetDetailFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.detailEditButton.setOnClickListener {
-            findNavController().navigate(
-                SerializedAssetDetailFragmentDirections
-                    .actionSerializedAssetDetailFragmentToSerializedAssetEditFragment(args.assetLocalId)
-            )
+            // RP-BUG-370: guard on the current destination so a double-tap can't double-navigate.
+            val nav = findNavController()
+            if (nav.currentDestination?.id == R.id.serializedAssetDetailFragment) {
+                nav.navigate(
+                    SerializedAssetDetailFragmentDirections
+                        .actionSerializedAssetDetailFragmentToSerializedAssetEditFragment(args.assetLocalId)
+                )
+            }
         }
         binding.detailHistoryButton.setOnClickListener {
-            findNavController().navigate(
-                SerializedAssetDetailFragmentDirections
-                    .actionSerializedAssetDetailFragmentToSerializedPlacementHistoryFragment(args.assetLocalId)
-            )
+            val nav = findNavController()
+            if (nav.currentDestination?.id == R.id.serializedAssetDetailFragment) {
+                nav.navigate(
+                    SerializedAssetDetailFragmentDirections
+                        .actionSerializedAssetDetailFragmentToSerializedPlacementHistoryFragment(args.assetLocalId)
+                )
+            }
         }
         binding.detailCheckOutButton.setOnClickListener { viewModel.checkOut() }
         binding.detailDeployButton.setOnClickListener { showDeployDialog() }
@@ -81,6 +88,19 @@ class SerializedAssetDetailFragment : Fragment() {
         binding.detailLoading.isVisible = state is SerializedAssetDetailUiState.Loading
         binding.detailNotFound.isVisible = state is SerializedAssetDetailUiState.NotFound
         binding.detailContent.isVisible = state is SerializedAssetDetailUiState.Ready
+
+        // RP-BUG-369: the owner company left serialized mode (flag rolled back, or the flags fetch
+        // is failing). This hub is the entire write surface, so leave rather than keep deploy /
+        // move / check-out / retire / edit live for a company that has switched systems. Mirrors
+        // SerializedEquipmentPoolFragment's Disabled -> navigateUp().
+        if (state is SerializedAssetDetailUiState.Disabled) {
+            val nav = findNavController()
+            if (nav.currentDestination?.id == R.id.serializedAssetDetailFragment) {
+                Toast.makeText(requireContext(), getString(R.string.equipment_mode_changed), Toast.LENGTH_LONG).show()
+                nav.navigateUp()
+            }
+            return
+        }
 
         if (state !is SerializedAssetDetailUiState.Ready) return
         val asset = state.asset
@@ -132,6 +152,12 @@ class SerializedAssetDetailFragment : Fragment() {
     }
 
     private fun showDeployDialog() {
+        // Opened from inside a room: the deploy target is already known — deploy straight there,
+        // no picker (RP-FR-032). The all-projects picker below is only for the pool entry point.
+        if (args.deployRoomId != -1L && args.deployProjectId != -1L) {
+            viewModel.deploy(args.deployRoomId, args.deployProjectId)
+            return
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             val rooms = viewModel.deployRoomChoices()
             if (rooms.isEmpty()) {

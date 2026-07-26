@@ -131,9 +131,20 @@ class SerializedRoomEquipmentFragment : Fragment() {
 
     /** RP-FR-032: open the per-unit detail hub (all lifecycle + edit actions live there). */
     private fun navigateToDetail(assetId: Long) {
+        // RP-BUG-370: RP-FR-032 made the whole row the tap target, so two near-simultaneous taps
+        // (two fingers, or a fast double-tap) both reach a still-attached hierarchy. Guard on the
+        // current destination — the repo-wide convention — so the second tap is a no-op instead of
+        // IllegalArgumentException: navigation destination ... is unknown to this NavController.
+        val nav = findNavController()
+        if (nav.currentDestination?.id != R.id.serializedRoomEquipmentFragment) return
+        // Carry the room context so Deploy on the detail hub targets THIS room directly.
         val action = SerializedRoomEquipmentFragmentDirections
-            .actionSerializedRoomEquipmentFragmentToSerializedAssetDetailFragment(assetId)
-        findNavController().navigate(action)
+            .actionSerializedRoomEquipmentFragmentToSerializedAssetDetailFragment(
+                assetLocalId = assetId,
+                deployProjectId = args.projectId,
+                deployRoomId = args.roomId
+            )
+        nav.navigate(action)
     }
 
     private fun render(state: SerializedRoomUiState) {
@@ -152,12 +163,17 @@ class SerializedRoomEquipmentFragment : Fragment() {
             }
             // Flag flipped OFF while open — fall back to the legacy screen.
             is SerializedRoomUiState.LegacyMode -> {
-                val action = SerializedRoomEquipmentFragmentDirections
-                    .actionSerializedRoomEquipmentFragmentToEquipmentRoomFragment(
-                        projectId = viewModel.projectId,
-                        roomId = viewModel.roomId
-                    )
-                findNavController().navigate(action)
+                // RP-BUG-370: render() can re-emit after the forward navigation has already
+                // committed; without the guard the second emission throws.
+                val nav = findNavController()
+                if (nav.currentDestination?.id == R.id.serializedRoomEquipmentFragment) {
+                    val action = SerializedRoomEquipmentFragmentDirections
+                        .actionSerializedRoomEquipmentFragmentToEquipmentRoomFragment(
+                            projectId = viewModel.projectId,
+                            roomId = viewModel.roomId
+                        )
+                    nav.navigate(action)
+                }
             }
             else -> Unit
         }

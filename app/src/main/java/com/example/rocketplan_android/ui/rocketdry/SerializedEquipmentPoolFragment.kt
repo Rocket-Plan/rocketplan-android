@@ -144,14 +144,21 @@ class SerializedEquipmentPoolFragment : Fragment() {
                 empty.isVisible = rows.isEmpty()
             }
             // Flag flipped OFF — no legacy company-wide pool exists, so leave this screen.
-            is SerializedPoolUiState.Disabled -> findNavController().navigateUp()
+            // RP-BUG-370: guard so a re-emission after the pop doesn't act on a stale destination.
+            is SerializedPoolUiState.Disabled -> {
+                val nav = findNavController()
+                if (nav.currentDestination?.id == R.id.serializedEquipmentPoolFragment) nav.navigateUp()
+            }
             else -> Unit
         }
     }
 
     /** RP-FR-027: open the per-unit detail screen (the pool's primary "Details" action). */
     private fun navigateToDetail(assetId: Long) {
-        findNavController().navigate(
+        // RP-BUG-370: whole-row tap target — guard against double-navigate on a fast double-tap.
+        val nav = findNavController()
+        if (nav.currentDestination?.id != R.id.serializedEquipmentPoolFragment) return
+        nav.navigate(
             SerializedEquipmentPoolFragmentDirections
                 .actionSerializedEquipmentPoolFragmentToSerializedAssetDetailFragment(assetId)
         )

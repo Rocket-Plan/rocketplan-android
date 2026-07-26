@@ -7,9 +7,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.feature.SerializedEquipmentMode
+import com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentAssetEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -17,6 +20,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
@@ -35,13 +41,21 @@ data class CurrentPlacementUi(
 /**
  * RP-FR-027 — sealed UI state for the per-unit serialized-asset detail screen. Mirrors the
  * neighbourhood convention ([AssetEditUiState], [SerializedRoomUiState]). Reads offline-first
- * from Room via a Flow; a single already-local asset just renders from cache (no mode gate).
+ * from Room via a Flow, gated on the asset's owner-company serialized mode (RP-BUG-369).
  */
 sealed class SerializedAssetDetailUiState {
     object Loading : SerializedAssetDetailUiState()
 
     /** The asset row is absent or soft-deleted — nothing to show. */
     object NotFound : SerializedAssetDetailUiState()
+
+    /**
+     * RP-BUG-369: the asset's OWNING company is no longer in serialized mode (flag rolled back to
+     * OFF, or the flags fetch is failing → UNKNOWN). This hub hosts the entire write surface
+     * (deploy/move/check-out/retire/edit), so it must mount no write UI in that state — mirrors
+     * [SerializedPoolUiState.Disabled], which the pool fragment resolves with `navigateUp()`.
+     */
+    object Disabled : SerializedAssetDetailUiState()
 
     data class Ready(
         val asset: OfflineEquipmentAssetEntity,
@@ -62,6 +76,7 @@ data class DeployRoomChoice(val projectId: Long, val roomId: Long, val roomName:
  * offline methods. A concurrent server edit reflects reactively (the row re-emits when the
  * pull/handler writes back) — no explicit 409 handling here.
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class SerializedAssetDetailViewModel(
     application: Application,
     val assetLocalId: Long
@@ -70,6 +85,22 @@ class SerializedAssetDetailViewModel(
     private val app = application as RocketPlanApplication
     private val localDataService = app.localDataService
     private val offlineSyncRepository = app.offlineSyncRepository
+    private val modeProvider = SerializedEquipmentModeProvider(app.secureStorage)
+
+    /**
+     * RP-BUG-369: latest observed owner-company mode. Gates every write so an in-flight tap cannot
+     * slip through between the flag flipping and the fragment navigating away.
+     */
+    @Volatile
+    private var currentMode: SerializedEquipmentMode = SerializedEquipmentMode.UNKNOWN
+
+    private fun requireOn(): Boolean {
+        if (currentMode != SerializedEquipmentMode.ON) {
+            _events.tryEmit(app.getString(R.string.equipment_mode_changed))
+            return false
+        }
+        return true
+    }
 
     private val _uiState = MutableStateFlow<SerializedAssetDetailUiState>(SerializedAssetDetailUiState.Loading)
     val uiState: StateFlow<SerializedAssetDetailUiState> = _uiState
@@ -93,14 +124,27 @@ class SerializedAssetDetailViewModel(
                 localDataService.observeEquipmentAsset(assetLocalId),
                 // Open placement is derived from the full placement history (avoids a second query).
                 localDataService.observePlacementsForAsset(assetLocalId)
-            ) { asset, placements ->
-                if (asset == null || asset.isDeleted) {
-                    SerializedAssetDetailUiState.NotFound
-                } else {
-                    val open = placements.firstOrNull { it.isOpen && !it.isDeleted }
-                    SerializedAssetDetailUiState.Ready(asset, open?.let { resolvePlacement(it) })
+            ) { asset, placements -> asset to placements }
+                // RP-BUG-369: OBSERVE the owner-company mode rather than rendering unconditionally.
+                // The mode is a property of the asset's own company, so it can only be resolved once
+                // the row is loaded. A mid-session flip to OFF/UNKNOWN switches to Disabled, which the
+                // fragment resolves by leaving the screen (same contract as the pool).
+                .flatMapLatest { (asset, placements) ->
+                    if (asset == null || asset.isDeleted) {
+                        currentMode = SerializedEquipmentMode.UNKNOWN
+                        flowOf(SerializedAssetDetailUiState.NotFound)
+                    } else {
+                        modeProvider.observeMode(asset.companyId).map { mode ->
+                            currentMode = mode
+                            if (mode != SerializedEquipmentMode.ON) {
+                                SerializedAssetDetailUiState.Disabled
+                            } else {
+                                val open = placements.firstOrNull { it.isOpen && !it.isDeleted }
+                                SerializedAssetDetailUiState.Ready(asset, open?.let { resolvePlacement(it) })
+                            }
+                        }
+                    }
                 }
-            }
                 .catch { e ->
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     app.remoteLogger.log(
@@ -183,6 +227,8 @@ class SerializedAssetDetailViewModel(
     private var actionInFlight = false
 
     private fun runAction(failureMessageRes: Int, block: suspend () -> Boolean) {
+        // RP-BUG-369: refuse writes unless the owner company is still in serialized mode.
+        if (!requireOn()) return
         if (actionInFlight) return
         actionInFlight = true
         viewModelScope.launch(Dispatchers.IO) {
