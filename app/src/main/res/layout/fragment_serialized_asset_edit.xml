@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:orientation="vertical"
     android:background="@color/background">
 
+    <!-- RP-FR-019: the whole form (Save button included) scrolls, so every control is reachable with
+         the keyboard up. ADJUST_RESIZE (set in the fragment) shrinks the scroll for the IME. -->
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:padding="16dp">
 
         <LinearLayout
@@ -253,6 +257,9 @@
                     android:maxLines="1" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- RP-FR-029: Save lives inside the scroll (not pinned) so it is always reachable by
+                 scrolling on this long form — a bottom-pinned button ends up behind the IME in this
+                 CoordinatorLayout host regardless of soft-input mode. -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/editSaveButton"
                 android:layout_width="match_parent"
@@ -265,9 +272,10 @@
                 android:id="@+id/editLoading"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center"
+                android:layout_gravity="center_horizontal"
                 android:layout_marginTop="16dp"
                 android:visibility="gone" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-</FrameLayout>
+</LinearLayout>

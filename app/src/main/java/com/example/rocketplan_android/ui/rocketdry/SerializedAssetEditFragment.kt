@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
@@ -51,6 +52,13 @@ class SerializedAssetEditFragment : Fragment() {
         binding.editWarrantyExpires.setOnClickListener { showDatePicker { binding.editWarrantyExpires.setText(it) } }
 
         binding.editSaveButton.setOnClickListener { save() }
+
+        // Keyboard handling matches the app's other full-screen forms (e.g. SetLatestAverageFragment):
+        // put the window in ADJUST_RESIZE so it shrinks for the IME, which lets the weighted
+        // NestedScrollView compress and keeps the pinned Save button visible above the keyboard.
+        // The window softInputMode is app-wide and other screens leave it in ADJUST_PAN, so we set it
+        // here and restore it in onDestroyView.
+        activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
 
         observe()
     }
@@ -175,6 +183,8 @@ class SerializedAssetEditFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        // Restore the app-wide default so we don't leave other screens in RESIZE.
+        activity?.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
         super.onDestroyView()
         _binding = null
     }

@@ -59,6 +59,7 @@ class RocketDryFragment : Fragment() {
     private lateinit var equipmentLocationsRecyclerView: RecyclerView
     private lateinit var equipmentTotalsOpenButton: MaterialButton
     private lateinit var equipmentTotalsCard: View
+    private lateinit var serializedTotalEquipmentButton: MaterialButton
     private lateinit var equipmentUnknownPlaceholder: TextView
     private lateinit var roomCard: View
     private lateinit var exteriorSpaceCard: View
@@ -143,6 +144,8 @@ class RocketDryFragment : Fragment() {
         equipmentLocationsRecyclerView = view.findViewById(R.id.equipmentLocationsRecyclerView)
         equipmentTotalsOpenButton = view.findViewById(R.id.equipmentTotalsOpenButton)
         equipmentTotalsCard = view.findViewById(R.id.equipmentTotalsCard)
+        serializedTotalEquipmentButton = view.findViewById(R.id.serializedTotalEquipmentButton)
+        serializedTotalEquipmentButton.setOnClickListener { navigateToTotalEquipment() }
         equipmentUnknownPlaceholder = view.findViewById(R.id.equipmentUnknownPlaceholder)
         roomCard = view.findViewById(R.id.roomCard)
         exteriorSpaceCard = view.findViewById(R.id.exteriorSpaceCard)
@@ -396,22 +399,26 @@ class RocketDryFragment : Fragment() {
     private fun renderEquipmentContent(mode: SerializedEquipmentMode) {
         when (mode) {
             SerializedEquipmentMode.OFF -> {
-                // Legacy mode: show count-based totals and status breakdown
+                // Legacy mode: count-based totals card is the Total Equipment entry.
                 equipmentTotalsCard.isVisible = true
+                serializedTotalEquipmentButton.isVisible = false
                 equipmentUnknownPlaceholder.isVisible = false
                 latestReadyState?.let { state ->
                     equipmentLevelAdapter.submitLevels(state.equipmentLevels)
                 }
             }
             SerializedEquipmentMode.ON -> {
-                // Serialized mode: hide legacy totals/status, show per-room deployed counts
+                // Serialized mode: hide legacy totals/status; per-room deployed counts + a
+                // Total Equipment button that opens the company-wide pool (RP-FR-032/033).
                 equipmentTotalsCard.isVisible = false
+                serializedTotalEquipmentButton.isVisible = true
                 equipmentUnknownPlaceholder.isVisible = false
                 equipmentLevelAdapter.submitLevels(viewModel.serializedEquipmentByRoom.value)
             }
             SerializedEquipmentMode.UNKNOWN -> {
-                // Unknown mode: show placeholder, hide legacy content
+                // Unknown mode: show placeholder, hide legacy + serialized content.
                 equipmentTotalsCard.isVisible = false
+                serializedTotalEquipmentButton.isVisible = false
                 equipmentUnknownPlaceholder.isVisible = true
                 equipmentLevelAdapter.submitLevels(emptyList())
             }

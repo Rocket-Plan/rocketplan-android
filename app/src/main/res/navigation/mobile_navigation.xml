@@ -821,6 +821,18 @@
             android:name="assetLocalId"
             app:argType="long" />
 
+        <!-- RP-FR-032: when the detail hub is opened from inside a room, the deploy target is already
+             known — carry the room context so Deploy goes straight there instead of showing the
+             all-projects/all-rooms picker. Defaults to -1 (no context) when opened from the pool. -->
+        <argument
+            android:name="deployProjectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <argument
+            android:name="deployRoomId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
         <!-- RP-FR-029: edit is hosted from the detail screen. -->
         <action
             android:id="@+id/action_serializedAssetDetailFragment_to_serializedAssetEditFragment"

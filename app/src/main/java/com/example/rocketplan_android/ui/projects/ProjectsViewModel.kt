@@ -89,7 +89,12 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
             }.collect { data ->
                 Log.d(TAG, "📊 Received ${data.projects.size} projects from database for company ${data.companyId ?: "unknown"} (assigned=${data.assignedIds.size}, syncCompleted=${data.syncCompleted}, assignedLoaded=${data.assignedLoaded})")
 
-                val mappedProjects = data.projects.map { it.toListItem() }
+                // Newest projects first (by server-preserved createdAt), matching iOS
+                // (ProjectListPageViewModel sorts createdAt descending). filter/associate below
+                // preserve this order for My Projects and each status tab.
+                val mappedProjects = data.projects
+                    .sortedByDescending { it.createdAt }
+                    .map { it.toListItem() }
                 val myProjects = mappedProjects.filter { data.assignedIds.contains(it.projectId) }
                 val projectsByStatus = ProjectStatus.orderedStatuses.associateWith { status ->
                     mappedProjects.filter { it.matchesStatus(status) }

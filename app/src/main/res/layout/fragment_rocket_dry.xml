@@ -276,6 +276,24 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
+                <!-- RP-FR-033: serialized companies reach the company-wide Total Equipment / pool from
+                     here (iOS parity: UnitContentView's "Total Equipment" box). Hidden in legacy mode
+                     (the totals card above is the legacy entry) and while mode is UNKNOWN. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/serializedTotalEquipmentButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/rocketdry_total_equipment"
+                    android:textAllCaps="false"
+                    android:textColor="@color/main_purple"
+                    android:textSize="@dimen/text_size_button"
+                    android:visibility="gone"
+                    app:cornerRadius="12dp"
+                    app:strokeColor="@color/main_purple"
+                    app:strokeWidth="1dp" />
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"

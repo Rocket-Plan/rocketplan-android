@@ -844,6 +844,7 @@
     <string name="project_status_paid">Paid</string>
     <string name="project_status_recon">Recon</string>
     <string name="projects_tab_my_projects">My Projects</string>
+    <string name="rocketdry_total_equipment">Total Equipment</string>
     <string name="projects_search_hint">Search projects</string>
     <string name="projects_no_search_results">No projects match your search</string>
     <string name="projects_uploading_title">Uploading photos</string>
