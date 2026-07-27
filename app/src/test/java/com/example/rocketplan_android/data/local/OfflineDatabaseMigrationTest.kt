@@ -131,6 +131,56 @@ class OfflineDatabaseMigrationTest {
         assertThat(placementIndexes).contains("index_offline_equipment_placements_assetId")
     }
 
+    /**
+     * RP-BUG-366 follow-up: a device already at v32 (from an earlier build of this branch) skips
+     * MIGRATION_31_32, so MIGRATION_32_33 is the only thing that can create the catalogServerId
+     * index. Without it the Room identity hash mismatched and the app crashed on launch
+     * ("Room cannot verify the data integrity") — reproduced on tablet 30407ef.
+     */
+    @Test
+    fun `migration 32 to 33 creates the catalogServerId index on a v32 db that lacks it`() {
+        // A v32 schema as produced by the earlier branch build: catalog columns present, index absent.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS offline_equipment (
+                equipmentId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                serverId INTEGER,
+                catalogServerId INTEGER,
+                catalogUuid TEXT,
+                uuid TEXT NOT NULL,
+                projectId INTEGER NOT NULL,
+                roomId INTEGER,
+                type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                syncStatus TEXT NOT NULL,
+                syncVersion INTEGER NOT NULL DEFAULT 0,
+                isDirty INTEGER NOT NULL DEFAULT 0,
+                isDeleted INTEGER NOT NULL DEFAULT 0
+            )
+            """.trimIndent()
+        )
+
+        fun indexNames(): List<String> {
+            val names = mutableListOf<String>()
+            db.query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'offline_equipment'").use { c ->
+                while (c.moveToNext()) names.add(c.getString(0))
+            }
+            return names
+        }
+
+        assertThat(indexNames()).doesNotContain("index_offline_equipment_catalogServerId")
+
+        OfflineDatabase.MIGRATION_32_33.migrate(db)
+        assertThat(indexNames()).contains("index_offline_equipment_catalogServerId")
+
+        // Idempotent: the v31 lineage already created it in 31->32, so re-running must not throw.
+        OfflineDatabase.MIGRATION_32_33.migrate(db)
+        assertThat(indexNames()).contains("index_offline_equipment_catalogServerId")
+    }
+
     /** RP-BUG-279: MIGRATION_31_32 adds catalogServerId and catalogUuid to offline_equipment.
      * Per the RP-BUG-279 plan, old serverId values were catalog ids and "cannot be trusted as
      * pivot ids." The migration neutralizes them by copying to catalogServerId and nulling serverId.

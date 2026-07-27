@@ -95,7 +95,7 @@ import io.sentry.Sentry
         OfflineClaimEntity::class,
         OfflineProjectUserEntity::class
     ],
-    version = 32,
+    version = 33,
     exportSchema = false
 )
 @TypeConverters(OfflineTypeConverters::class)
@@ -589,6 +589,24 @@ abstract class OfflineDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * RP-BUG-366 follow-up. Adding `Index(["catalogServerId"])` to [OfflineEquipmentEntity]
+         * changed the Room schema identity hash. Devices that had ALREADY reached v32 from an
+         * earlier build of this branch (every dev device) skip [MIGRATION_31_32] entirely, so the
+         * index was never created and the stored hash no longer matched the expected one —
+         * `IllegalStateException: Room cannot verify the data integrity` on the first DB access,
+         * i.e. a crash on launch. Reproduced on tablet 30407ef before this migration existed.
+         *
+         * A schema change needs its own version even when the DDL is idempotent. `IF NOT EXISTS`
+         * keeps this safe for the v31 lineage, which already created the index in 31→32.
+         */
+        @androidx.annotation.VisibleForTesting
+        internal val MIGRATION_32_33 = object : Migration(32, 33) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_offline_equipment_catalogServerId ON offline_equipment(catalogServerId)")
+            }
+        }
+
         @androidx.annotation.VisibleForTesting
         internal val MIGRATION_31_32 = object : Migration(31, 32) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -684,7 +702,7 @@ abstract class OfflineDatabase : RoomDatabase() {
 
         private fun buildDatabase(context: Context): OfflineDatabase =
             Room.databaseBuilder(context, OfflineDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32)
+                .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33)
                 .apply {
                     if (BuildConfig.ALLOW_DESTRUCTIVE_MIGRATION) {
                         fallbackToDestructiveMigration()
