@@ -78,6 +78,31 @@
             app:tabMode="scrollable"
             app:tabGravity="fill" />
 
+        <!-- RP-FR-034: project search UNDER the tabs (iOS parity — ProjectListContentView places the
+             search below the WIP/Recon/… status-tab selector, above the list). Per-active-tab filter. -->
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/projectSearchLayout"
+            style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/white"
+            android:paddingStart="16dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="8dp"
+            android:hint="@string/projects_search_hint"
+            app:startIconDrawable="@drawable/ic_search"
+            app:endIconMode="clear_text">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/projectSearchInput"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+
         <!-- Conflict Resolution Banner -->
         <include
             android:id="@+id/conflictBannerInclude"

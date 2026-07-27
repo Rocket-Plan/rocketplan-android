@@ -14,8 +14,12 @@ import com.example.rocketplan_android.data.model.offline.DeletedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.UpdatedRecordsResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
+import com.example.rocketplan_android.data.model.offline.CreateEquipmentCatalogRequest
+import com.example.rocketplan_android.data.model.offline.AttachRoomEquipmentRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentRoomUpdateRequest
 import com.example.rocketplan_android.data.model.SingleDataResponse
 import com.example.rocketplan_android.data.model.offline.CheckOutEquipmentAssetRequest
+import com.example.rocketplan_android.data.model.offline.CorrectPlacementRequest
 import com.example.rocketplan_android.data.model.offline.DeployPlacementRequest
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetPageResponse
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetPlacementDto
@@ -70,6 +74,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.HTTP
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
@@ -492,23 +497,29 @@ interface OfflineSyncApi {
     @GET("/api/rooms/{roomId}/equipment")
     suspend fun getRoomEquipment(
         @Path("roomId") roomId: Long
-    ): List<EquipmentDto>
+    ): SingleDataResponse<List<EquipmentDto>>
 
     @POST("/api/projects/{projectId}/equipment")
     suspend fun createProjectEquipment(
         @Path("projectId") projectId: Long,
-        @Body body: EquipmentRequest
-    ): EquipmentDto
+        @Body body: CreateEquipmentCatalogRequest
+    ): SingleDataResponse<EquipmentDto>
 
-    @PUT("/api/equipment/{equipmentId}")
-    suspend fun updateEquipment(
-        @Path("equipmentId") equipmentId: Long,
-        @Body body: EquipmentRequest
-    ): EquipmentDto
+    @POST("/api/rooms/{roomId}/equipment")
+    suspend fun attachRoomEquipment(
+        @Path("roomId") roomId: Long,
+        @Body body: AttachRoomEquipmentRequest
+    ): SingleDataResponse<List<EquipmentDto>>
 
-    @HTTP(method = "DELETE", path = "/api/equipment/{equipmentId}", hasBody = true)
-    suspend fun deleteEquipment(
-        @Path("equipmentId") equipmentId: Long,
+    @PUT("/api/equipment-rooms/{id}")
+    suspend fun updateEquipmentRoom(
+        @Path("id") id: Long,
+        @Body body: EquipmentRoomUpdateRequest
+    ): Response<Unit>
+
+    @HTTP(method = "DELETE", path = "/api/equipment-rooms/{id}", hasBody = true)
+    suspend fun deleteEquipmentRoom(
+        @Path("id") id: Long,
         @Body body: DeleteWithTimestampRequest
     ): Response<Unit>
 
@@ -564,6 +575,25 @@ interface OfflineSyncApi {
         @Path("assetId") assetId: Long,
         @Body body: DeployPlacementRequest
     ): EquipmentAssetPlacementResponse
+
+    // RP-FR-030 — correct a placement's date_in/date_out (contract verified against mongoose
+    // `dev` 2026-07-18: PATCH /api/equipment-asset-placements/{placement}, body date_in?/date_out?
+    // /updated_at(required, PLACEMENT's own)/idempotency_key?; 200 {data: placement}, 409 stale,
+    // 422 invalid). Returns the placement envelope (with the idempotent-replay flag).
+    @PATCH("/api/equipment-asset-placements/{placementId}")
+    suspend fun correctEquipmentPlacement(
+        @Path("placementId") placementId: Long,
+        @Body body: CorrectPlacementRequest
+    ): EquipmentAssetPlacementResponse
+
+    // RP-FR-031 — delete a CLOSED placement (soft-delete server-side, no request body; 204 on
+    // success, 422 when the placement is still active). Returns Response<Unit> so the handler can
+    // inspect the status (Retrofit does not throw on non-2xx for Response<T>), mirroring
+    // retireEquipmentAsset.
+    @DELETE("/api/equipment-asset-placements/{placementId}")
+    suspend fun deleteEquipmentPlacement(
+        @Path("placementId") placementId: Long
+    ): Response<Unit>
 
     @POST("/api/equipment-assets/{assetId}/move")
     suspend fun moveEquipmentAsset(

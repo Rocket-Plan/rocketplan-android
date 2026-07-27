@@ -193,6 +193,16 @@ interface SyncQueueEnqueuer {
         placement: OfflineEquipmentPlacementEntity
     )
 
+    /** RP-FR-030 — correct a placement's date_in/date_out (PATCH). */
+    suspend fun enqueuePlacementCorrection(
+        placement: OfflineEquipmentPlacementEntity
+    )
+
+    /** RP-FR-031 — delete a closed placement (DELETE). */
+    suspend fun enqueuePlacementDelete(
+        placement: OfflineEquipmentPlacementEntity
+    )
+
     // ============================================================================
     // Moisture Log Operations
     // ============================================================================

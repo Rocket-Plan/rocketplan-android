@@ -130,4 +130,114 @@ class OfflineDatabaseMigrationTest {
         }
         assertThat(placementIndexes).contains("index_offline_equipment_placements_assetId")
     }
+
+    /**
+     * RP-BUG-366 follow-up: a device already at v32 (from an earlier build of this branch) skips
+     * MIGRATION_31_32, so MIGRATION_32_33 is the only thing that can create the catalogServerId
+     * index. Without it the Room identity hash mismatched and the app crashed on launch
+     * ("Room cannot verify the data integrity") — reproduced on tablet 30407ef.
+     */
+    @Test
+    fun `migration 32 to 33 creates the catalogServerId index on a v32 db that lacks it`() {
+        // A v32 schema as produced by the earlier branch build: catalog columns present, index absent.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS offline_equipment (
+                equipmentId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                serverId INTEGER,
+                catalogServerId INTEGER,
+                catalogUuid TEXT,
+                uuid TEXT NOT NULL,
+                projectId INTEGER NOT NULL,
+                roomId INTEGER,
+                type TEXT NOT NULL,
+                status TEXT NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                syncStatus TEXT NOT NULL,
+                syncVersion INTEGER NOT NULL DEFAULT 0,
+                isDirty INTEGER NOT NULL DEFAULT 0,
+                isDeleted INTEGER NOT NULL DEFAULT 0
+            )
+            """.trimIndent()
+        )
+
+        fun indexNames(): List<String> {
+            val names = mutableListOf<String>()
+            db.query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'offline_equipment'").use { c ->
+                while (c.moveToNext()) names.add(c.getString(0))
+            }
+            return names
+        }
+
+        assertThat(indexNames()).doesNotContain("index_offline_equipment_catalogServerId")
+
+        OfflineDatabase.MIGRATION_32_33.migrate(db)
+        assertThat(indexNames()).contains("index_offline_equipment_catalogServerId")
+
+        // Idempotent: the v31 lineage already created it in 31->32, so re-running must not throw.
+        OfflineDatabase.MIGRATION_32_33.migrate(db)
+        assertThat(indexNames()).contains("index_offline_equipment_catalogServerId")
+    }
+
+    /** RP-BUG-279: MIGRATION_31_32 adds catalogServerId and catalogUuid to offline_equipment.
+     * Per the RP-BUG-279 plan, old serverId values were catalog ids and "cannot be trusted as
+     * pivot ids." The migration neutralizes them by copying to catalogServerId and nulling serverId.
+     */
+    @Test
+    fun `migration 31 to 32 adds catalogServerId and catalogUuid columns, preserving rows`() {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS offline_equipment (
+                equipmentId INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                serverId INTEGER,
+                uuid TEXT NOT NULL,
+                projectId INTEGER NOT NULL,
+                roomId INTEGER,
+                type TEXT NOT NULL,
+                brand TEXT,
+                model TEXT,
+                serialNumber TEXT,
+                quantity INTEGER NOT NULL DEFAULT 1,
+                status TEXT NOT NULL,
+                startDate INTEGER,
+                endDate INTEGER,
+                createdAt INTEGER NOT NULL,
+                updatedAt INTEGER NOT NULL,
+                serverUpdatedAt INTEGER,
+                lastSyncedAt INTEGER,
+                syncStatus TEXT NOT NULL,
+                syncVersion INTEGER NOT NULL DEFAULT 0,
+                isDirty INTEGER NOT NULL DEFAULT 0,
+                isDeleted INTEGER NOT NULL DEFAULT 0
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            "INSERT INTO offline_equipment " +
+                "(serverId, uuid, projectId, type, status, isDirty, isDeleted, syncStatus, " +
+                " createdAt, updatedAt, syncVersion, quantity) " +
+                "VALUES (6000, 'equip-uuid', 100, 'Dehumidifier', 'active', 0, 0, 'SYNCED', 0, 0, 0, 2)"
+        )
+
+        OfflineDatabase.MIGRATION_31_32.migrate(db)
+
+        val columns = mutableListOf<String>()
+        db.query("PRAGMA table_info(offline_equipment)").use { c ->
+            val nameIdx = c.getColumnIndex("name")
+            while (c.moveToNext()) columns.add(c.getString(nameIdx))
+        }
+        assertThat(columns).contains("catalogServerId")
+        assertThat(columns).contains("catalogUuid")
+
+        db.query("SELECT serverId, catalogServerId, catalogUuid, quantity FROM offline_equipment WHERE uuid = 'equip-uuid'").use { c ->
+            assertThat(c.count).isEqualTo(1)
+            c.moveToFirst()
+            assertThat(c.isNull(c.getColumnIndex("serverId"))).isTrue()
+            assertThat(c.getLong(c.getColumnIndex("catalogServerId"))).isEqualTo(6000L)
+            assertThat(c.isNull(c.getColumnIndex("catalogUuid"))).isTrue()
+            assertThat(c.getInt(c.getColumnIndex("quantity"))).isEqualTo(2)
+        }
+    }
 }

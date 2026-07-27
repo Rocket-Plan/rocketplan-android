@@ -25,7 +25,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/dark_text_rp"
-                android:textSize="@dimen/text_size_card_title"
+                android:textSize="@dimen/text_size_title"
                 android:textStyle="bold"
                 tools:text="Basement" />
 
@@ -35,7 +35,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
                 android:text="@string/serialized_equipment_register_cta"
-                app:cornerRadius="16dp" />
+                app:cornerRadius="12dp" />
 
             <TextView
                 android:layout_width="wrap_content"
@@ -61,7 +61,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/serialized_equipment_deployed_empty"
                 android:textColor="@color/light_text_rp"
-                android:textSize="@dimen/text_size_caption"
+                android:textSize="@dimen/text_size_body"
                 android:visibility="gone"
                 tools:visibility="visible" />
 
@@ -89,7 +89,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/serialized_equipment_pool_empty"
                 android:textColor="@color/light_text_rp"
-                android:textSize="@dimen/text_size_caption"
+                android:textSize="@dimen/text_size_body"
                 android:visibility="gone"
                 tools:visibility="visible" />
         </LinearLayout>
@@ -127,7 +127,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="@string/retry"
-            app:cornerRadius="16dp" />
+            app:cornerRadius="12dp" />
     </LinearLayout>
 
 </FrameLayout>

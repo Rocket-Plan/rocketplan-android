@@ -176,6 +176,8 @@ object PushHandlerTestFixtures {
     fun createEquipment(
         equipmentId: Long = 600L,
         serverId: Long? = 6000L,
+        catalogServerId: Long? = 6000L,
+        catalogUuid: String? = null,
         uuid: String = "equipment-uuid",
         projectId: Long = 100L,
         roomId: Long? = 400L,
@@ -186,6 +188,8 @@ object PushHandlerTestFixtures {
     ) = OfflineEquipmentEntity(
         equipmentId = equipmentId,
         serverId = serverId,
+        catalogServerId = catalogServerId,
+        catalogUuid = catalogUuid,
         uuid = uuid,
         projectId = projectId,
         roomId = roomId,
@@ -413,6 +417,13 @@ object PushHandlerTestFixtures {
 
     fun create409WithoutUpdatedAt(): HttpException {
         val body = """{"error":"conflict"}"""
+        val responseBody = body.toResponseBody("application/json".toMediaType())
+        val response = Response.error<Any>(409, responseBody)
+        return HttpException(response)
+    }
+
+    fun create409ModeRejection(): HttpException {
+        val body = """{"message":"Equipment serialization is enabled for this company; use the equipment-asset endpoints instead of legacy equipment-room placements."}"""
         val responseBody = body.toResponseBody("application/json".toMediaType())
         val response = Response.error<Any>(409, responseBody)
         return HttpException(response)

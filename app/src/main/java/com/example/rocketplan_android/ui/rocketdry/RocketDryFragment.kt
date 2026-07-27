@@ -20,6 +20,7 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
+import com.example.rocketplan_android.data.feature.SerializedEquipmentMode
 import com.example.rocketplan_android.ui.common.SinglePhotoCaptureFragment
 import com.example.rocketplan_android.ui.projects.addroom.RoomTypePickerMode
 import com.google.android.material.button.MaterialButton
@@ -57,6 +58,9 @@ class RocketDryFragment : Fragment() {
     private lateinit var equipmentStatusBreakdown: TextView
     private lateinit var equipmentLocationsRecyclerView: RecyclerView
     private lateinit var equipmentTotalsOpenButton: MaterialButton
+    private lateinit var equipmentTotalsCard: View
+    private lateinit var serializedTotalEquipmentButton: MaterialButton
+    private lateinit var equipmentUnknownPlaceholder: TextView
     private lateinit var roomCard: View
     private lateinit var exteriorSpaceCard: View
     private lateinit var addExternalLogButton: ImageButton
@@ -90,11 +94,13 @@ class RocketDryFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         initializeViews(view)
+        // RP-FR-033: set up the recyclers/adapters BEFORE the first selectTab — selectTab → showTab
+        // now renders equipment content, which touches equipmentLevelAdapter. It must exist first.
+        setupRecyclerViews()
         // Restore tab from ViewModel (survives navigation) or use initial tab
         val tabToSelect = viewModel.currentTab.value ?: initialTab
         selectTab(tabToSelect)
         setupClickListeners()
-        setupRecyclerViews()
         observeViewModel()
         observePhotoResult()
     }
@@ -137,6 +143,10 @@ class RocketDryFragment : Fragment() {
         equipmentStatusBreakdown = view.findViewById(R.id.equipmentStatusBreakdown)
         equipmentLocationsRecyclerView = view.findViewById(R.id.equipmentLocationsRecyclerView)
         equipmentTotalsOpenButton = view.findViewById(R.id.equipmentTotalsOpenButton)
+        equipmentTotalsCard = view.findViewById(R.id.equipmentTotalsCard)
+        serializedTotalEquipmentButton = view.findViewById(R.id.serializedTotalEquipmentButton)
+        serializedTotalEquipmentButton.setOnClickListener { navigateToTotalEquipment() }
+        equipmentUnknownPlaceholder = view.findViewById(R.id.equipmentUnknownPlaceholder)
         roomCard = view.findViewById(R.id.roomCard)
         exteriorSpaceCard = view.findViewById(R.id.exteriorSpaceCard)
         addExternalLogButton = view.findViewById(R.id.addExternalLogButton)
@@ -182,6 +192,9 @@ class RocketDryFragment : Fragment() {
             onTabSelected(selectedTab)
         }
 
+        // RP-FR-032: the totals button is the single equipment entry point. For serialized-mode
+        // companies TotalEquipmentFragment forwards to the company pool (mirrors iOS); the old
+        // interim long-press to the pool has been removed.
         equipmentTotalsOpenButton.setOnClickListener {
             Log.d(TAG, "📦 Equipment totals Open tapped - navigating to TotalEquipmentFragment")
             navigateToTotalEquipment()
@@ -252,6 +265,12 @@ class RocketDryFragment : Fragment() {
     private fun showTab(tab: RocketDryTab) {
         equipmentContentGroup.isVisible = tab == RocketDryTab.EQUIPMENT
         moistureContentGroup.isVisible = tab == RocketDryTab.MOISTURE
+        // RP-FR-033: render mode-appropriate equipment content whenever the Equipment tab becomes
+        // active — otherwise switching to it (vs landing on it) leaves the legacy totals card at its
+        // XML-default visibility, showing count-based content to a serialized company.
+        if (tab == RocketDryTab.EQUIPMENT) {
+            renderEquipmentContent(viewModel.equipmentMode.value)
+        }
     }
 
     private fun setupRecyclerViews() {
@@ -306,14 +325,23 @@ class RocketDryFragment : Fragment() {
                         }
                     }
                 }
-                // RP-FR-019 legacy-wide gate: hide the legacy equipment tab when the company is
-                // serialized (ON/UNKNOWN); fall back to the moisture tab. The equipment entry
-                // destinations (room / totals) additionally self-gate.
+                // RP-FR-033: observe tri-state equipment mode and log equip_ui for diagnostics.
+                // Tab is always visible; content swaps based on mode (OFF→legacy, ON→serialized,
+                // UNKNOWN→hold placeholder). Mid-session flip is handled reactively.
                 launch {
-                    viewModel.legacyEquipmentAllowed.collect { allowed ->
-                        equipmentButton.isVisible = allowed
-                        if (!allowed && viewModel.currentTab.value == RocketDryTab.EQUIPMENT) {
-                            selectTab(RocketDryTab.MOISTURE)
+                    viewModel.equipmentMode.collect { mode ->
+                        android.util.Log.d(TAG, "equip_ui: equipment mode=$mode")
+                        if (viewModel.currentTab.value == RocketDryTab.EQUIPMENT) {
+                            renderEquipmentContent(mode)
+                        }
+                    }
+                }
+                // RP-FR-033: observe serialized equipment data for ON mode
+                launch {
+                    viewModel.serializedEquipmentByRoom.collect { levels ->
+                        if (viewModel.equipmentMode.value == SerializedEquipmentMode.ON &&
+                            viewModel.currentTab.value == RocketDryTab.EQUIPMENT) {
+                            equipmentLevelAdapter.submitLevels(levels)
                         }
                     }
                 }
@@ -331,6 +359,10 @@ class RocketDryFragment : Fragment() {
         equipmentStatusBreakdown.text = ""
         latestReadyState = null
         viewModel.currentTab.value?.let { showTab(it) }
+        // RP-FR-033: during loading, show the UNKNOWN placeholder if Equipment tab is active
+        if (viewModel.currentTab.value == RocketDryTab.EQUIPMENT) {
+            renderEquipmentContent(SerializedEquipmentMode.UNKNOWN)
+        }
     }
 
     private fun renderState(state: RocketDryUiState.Ready) {
@@ -342,7 +374,6 @@ class RocketDryFragment : Fragment() {
         }
         renderExternalLogSummary(state.latestExternalLog, state.externalLogCount)
         locationLevelAdapter.submitLevels(state.locationLevels)
-        equipmentLevelAdapter.submitLevels(state.equipmentLevels)
         equipmentTotalCount.text = resources.getQuantityString(
             R.plurals.rocketdry_equipment_units,
             state.equipmentTotals.total,
@@ -355,6 +386,43 @@ class RocketDryFragment : Fragment() {
             state.equipmentTotals.damaged
         )
         viewModel.currentTab.value?.let { showTab(it) }
+        // RP-FR-033: render equipment content based on current mode
+        if (viewModel.currentTab.value == RocketDryTab.EQUIPMENT) {
+            renderEquipmentContent(viewModel.equipmentMode.value)
+        }
+    }
+
+    /**
+     * RP-FR-033: Render the equipment tab content based on tri-state mode.
+     * OFF → legacy views; ON → serialized views; UNKNOWN → hold placeholder.
+     */
+    private fun renderEquipmentContent(mode: SerializedEquipmentMode) {
+        when (mode) {
+            SerializedEquipmentMode.OFF -> {
+                // Legacy mode: count-based totals card is the Total Equipment entry.
+                equipmentTotalsCard.isVisible = true
+                serializedTotalEquipmentButton.isVisible = false
+                equipmentUnknownPlaceholder.isVisible = false
+                latestReadyState?.let { state ->
+                    equipmentLevelAdapter.submitLevels(state.equipmentLevels)
+                }
+            }
+            SerializedEquipmentMode.ON -> {
+                // Serialized mode: hide legacy totals/status; per-room deployed counts + a
+                // Total Equipment button that opens the company-wide pool (RP-FR-032/033).
+                equipmentTotalsCard.isVisible = false
+                serializedTotalEquipmentButton.isVisible = true
+                equipmentUnknownPlaceholder.isVisible = false
+                equipmentLevelAdapter.submitLevels(viewModel.serializedEquipmentByRoom.value)
+            }
+            SerializedEquipmentMode.UNKNOWN -> {
+                // Unknown mode: show placeholder, hide legacy + serialized content.
+                equipmentTotalsCard.isVisible = false
+                serializedTotalEquipmentButton.isVisible = false
+                equipmentUnknownPlaceholder.isVisible = true
+                equipmentLevelAdapter.submitLevels(emptyList())
+            }
+        }
     }
 
     private fun renderExternalLogSummary(latestLog: AtmosphericLogItem?, logCount: Int) {

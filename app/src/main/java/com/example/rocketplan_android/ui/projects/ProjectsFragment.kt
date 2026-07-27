@@ -15,6 +15,7 @@ import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -97,6 +98,9 @@ class ProjectsFragment : Fragment() {
 
         tabLayout = view.findViewById(R.id.tabLayout)
         viewPager = view.findViewById(R.id.viewPager)
+        // RP-FR-034: shared project search — feeds the query to every tab's list.
+        view.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.projectSearchInput)
+            .doAfterTextChanged { viewModel.setSearchQuery(it?.toString().orEmpty()) }
         userInitials = view.findViewById(R.id.userInitials)
         helpIcon = view.findViewById(R.id.helpIcon)
         fabNewProject = view.findViewById(R.id.fabNewProject)

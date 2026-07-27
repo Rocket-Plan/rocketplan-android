@@ -8,20 +8,21 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.rocketplan_android.R
-import com.google.android.material.button.MaterialButton
 
 /** RP-FR-019 — one row in a serialized-equipment list (deployed or pool). */
 data class SerializedRowUi(
     val assetId: Long,
     val title: String,
-    val subtitle: String,
-    val primaryLabel: String,
-    val secondaryLabel: String? = null
+    val subtitle: String
 )
 
+/**
+ * RP-FR-032: a row is a single tap target that opens the per-unit detail hub — lifecycle actions
+ * (deploy/check-out/move/retire) and edit all live on [SerializedAssetDetailFragment], mirroring
+ * iOS (whole-row `Button` → `SerializedAssetDetailView`). No inline row buttons.
+ */
 class SerializedEquipmentAdapter(
-    private val onPrimary: (Long) -> Unit,
-    private val onSecondary: (Long) -> Unit = {}
+    private val onClick: (Long) -> Unit
 ) : ListAdapter<SerializedRowUi, SerializedEquipmentAdapter.ViewHolder>(DiffCallback) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -35,18 +36,12 @@ class SerializedEquipmentAdapter(
     inner class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val title = itemView.findViewById<android.widget.TextView>(R.id.serializedAssetTitle)
         private val subtitle = itemView.findViewById<android.widget.TextView>(R.id.serializedAssetSubtitle)
-        private val primary = itemView.findViewById<MaterialButton>(R.id.serializedPrimaryButton)
-        private val secondary = itemView.findViewById<MaterialButton>(R.id.serializedSecondaryButton)
 
         fun bind(item: SerializedRowUi) {
             title.text = item.title
             subtitle.text = item.subtitle
             subtitle.isVisible = item.subtitle.isNotBlank()
-            primary.text = item.primaryLabel
-            primary.setOnClickListener { onPrimary(item.assetId) }
-            secondary.isVisible = item.secondaryLabel != null
-            secondary.text = item.secondaryLabel
-            secondary.setOnClickListener { onSecondary(item.assetId) }
+            itemView.setOnClickListener { onClick(item.assetId) }
         }
     }
 

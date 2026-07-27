@@ -8,16 +8,15 @@ import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
 import com.example.rocketplan_android.data.local.entity.OfflineSyncQueueEntity
 import com.example.rocketplan_android.data.model.offline.DeleteWithTimestampRequest
 import com.example.rocketplan_android.data.repository.mapper.toApiTimestamp
+import com.example.rocketplan_android.data.repository.mapper.toAttachRequest
+import com.example.rocketplan_android.data.repository.mapper.toCatalogRequest
 import com.example.rocketplan_android.data.repository.mapper.toEntity
-import com.example.rocketplan_android.data.repository.mapper.toRequest
+import com.example.rocketplan_android.data.repository.mapper.toPivotUpdateRequest
 import com.example.rocketplan_android.logging.LogLevel
 import com.example.rocketplan_android.util.UuidUtils
 import retrofit2.HttpException
 import kotlin.coroutines.cancellation.CancellationException
 
-/**
- * Handles pushing equipment upsert/delete operations to the server.
- */
 class EquipmentPushHandler(private val ctx: PushHandlerContext) {
 
     suspend fun handleUpsert(operation: OfflineSyncQueueEntity): OperationOutcome {
@@ -85,16 +84,13 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             ?: return OperationOutcome.DROP
         val serverId = equipment.serverId
         if (serverId == null) {
-            // Never reached server; resolve the delete locally.
             ctx.localDataService.saveEquipment(listOf(deletedCopy(equipment)))
             return OperationOutcome.SUCCESS
         }
         val lockUpdatedAt = (equipment.serverUpdatedAt ?: equipment.updatedAt).toApiTimestamp()
-        // RP-BUG-040: Response<Unit> never throws on HTTP errors — inspect the response, recover from a
-        // stale-timestamp 409 by retrying without the lock, and DROP on 422. Transient errors → RETRY.
         val outcome = try {
             resolveDeleteWithStaleRetry(lockUpdatedAt) { ts ->
-                ctx.api.deleteEquipment(serverId, DeleteWithTimestampRequest(updatedAt = ts))
+                ctx.api.deleteEquipmentRoom(serverId, DeleteWithTimestampRequest(updatedAt = ts))
             }
         } catch (e: CancellationException) {
             throw e
@@ -137,56 +133,83 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
             mapOf("equipmentServerId" to (equipment.serverId?.toString() ?: "null"), "equipmentUuid" to equipment.uuid)
         )
 
-        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
-        if (freshUpdatedAt == null) {
+        val conflict = error.parse409(ctx.gson)
+        if (conflict == null) {
+            Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Could not parse 409 body for equipment ${equipment.serverId}; will retry later")
+            return OperationOutcome.SKIP
+        }
+        if (conflict.isModeRejection) {
+            Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] 409 mode rejection for equipment ${equipment.serverId}; endpoint permanently closed, dropping")
+            ctx.remoteLogger?.log(
+                LogLevel.WARN, SYNC_TAG, "Equipment write dropped - mode rejection (serialization enabled)",
+                mapOf("equipmentUuid" to equipment.uuid, "serverId" to (equipment.serverId?.toString() ?: "null"))
+            )
+            return OperationOutcome.DROP
+        }
+        if (conflict.updatedAt == null) {
             Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Could not extract updated_at from 409 body for equipment ${equipment.serverId}; will retry later")
             return OperationOutcome.SKIP
         }
-
-        // Retry with fresh timestamp
-        val request = equipment.toRequest(projectServerId, roomServerId, freshUpdatedAt)
-        val retryResult = runCatching { ctx.api.updateEquipment(equipment.serverId!!, request) }
-            .onFailure { if (it is CancellationException) throw it }
-
-        retryResult.onFailure { retryError ->
-            if (retryError.isConflict()) {
-                Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Retry still got 409; recording conflict for user resolution")
-                val conflict = OfflineConflictResolutionEntity(
-                    conflictId = UuidUtils.generateUuidV7(),
-                    entityType = "equipment",
-                    entityId = equipment.equipmentId,
-                    entityUuid = equipment.uuid,
-                    localVersion = ctx.gson.toJson(mapOf<String, Any?>(
-                        "type" to equipment.type,
-                        "brand" to equipment.brand,
-                        "model" to equipment.model,
-                        "quantity" to equipment.quantity,
-                        "status" to equipment.status
-                    )).toByteArray(Charsets.UTF_8),
-                    remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
-                        "updatedAt" to freshUpdatedAt
-                    )).toByteArray(Charsets.UTF_8),
-                    conflictType = "UPDATE_CONFLICT",
-                    detectedAt = ctx.now(),
-                    originalOperationId = operation.operationId
-                )
-                ctx.recordConflict(conflict)
-                return OperationOutcome.CONFLICT_PENDING
-            }
-            if (retryError.isValidationError()) {
-                Log.w(SYNC_TAG, "Dropping equipment ${equipment.uuid}: server validation error (422)")
-                return OperationOutcome.DROP
-            }
-            throw retryError
+        val freshUpdatedAt = conflict.updatedAt
+        if (equipment.serverId == null) {
+            Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] 409 but no pivot serverId for equipment ${equipment.uuid}; will retry later")
+            return OperationOutcome.SKIP
         }
 
-        // Retry succeeded - save
-        val dto = retryResult.getOrThrow()
-        val synced = dto.toEntity().copy(
+        val request = equipment.toPivotUpdateRequest(freshUpdatedAt)
+        val resp = ctx.api.updateEquipmentRoom(equipment.serverId, request)
+        if (!resp.isSuccessful) {
+            val code = resp.code()
+            when {
+                code == 409 -> {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Retry still got 409; recording conflict for user resolution")
+                    val conflictEntity = OfflineConflictResolutionEntity(
+                        conflictId = UuidUtils.generateUuidV7(),
+                        entityType = "equipment",
+                        entityId = equipment.equipmentId,
+                        entityUuid = equipment.uuid,
+                        localVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                            "type" to equipment.type,
+                            "brand" to equipment.brand,
+                            "model" to equipment.model,
+                            "quantity" to equipment.quantity,
+                            "status" to equipment.status
+                        )).toByteArray(Charsets.UTF_8),
+                        remoteVersion = ctx.gson.toJson(mapOf<String, Any?>(
+                            "updatedAt" to freshUpdatedAt
+                        )).toByteArray(Charsets.UTF_8),
+                        conflictType = "UPDATE_CONFLICT",
+                        detectedAt = ctx.now(),
+                        originalOperationId = operation.operationId
+                    )
+                    ctx.recordConflict(conflictEntity)
+                    return OperationOutcome.CONFLICT_PENDING
+                }
+                code == 422 -> {
+                    Log.w(SYNC_TAG, "Dropping equipment ${equipment.uuid}: server validation error (422)")
+                    return OperationOutcome.DROP
+                }
+                code == 404 || code == 410 -> {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Pivot gone on server for equipment ${equipment.uuid}; resolving as delete")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Equipment pivot missing on server",
+                        mapOf("equipmentUuid" to equipment.uuid, "serverId" to equipment.serverId.toString())
+                    )
+                    return OperationOutcome.DROP
+                }
+                else -> {
+                    Log.w(SYNC_TAG, "Retrying equipment ${equipment.uuid} after conflict")
+                    return OperationOutcome.RETRY
+                }
+            }
+        }
+        val synced = equipment.copy(
             equipmentId = equipment.equipmentId,
             uuid = equipment.uuid,
             projectId = equipment.projectId,
-            roomId = equipment.roomId ?: dto.roomId,
+            roomId = equipment.roomId,
+            catalogServerId = equipment.catalogServerId,
+            catalogUuid = equipment.catalogUuid,
             isDirty = false,
             syncStatus = SyncStatus.SYNCED,
             isDeleted = false,
@@ -206,56 +229,130 @@ class EquipmentPushHandler(private val ctx: PushHandlerContext) {
         val roomServerId = roomServerIdOverride ?: equipment.roomId?.let { roomId ->
             ctx.localDataService.getRoom(roomId)?.serverId
         }
-        val request = equipment.toRequest(projectServerId, roomServerId, lockUpdatedAt)
-        val synced = runCatching {
-            val dto = if (equipment.serverId == null) {
-                ctx.api.createProjectEquipment(projectServerId, request.copy(updatedAt = null))
-            } else {
-                ctx.api.updateEquipment(equipment.serverId, request)
-            }
-            dto.toEntity().copy(
-                equipmentId = equipment.equipmentId,
-                uuid = equipment.uuid,
-                projectId = equipment.projectId,
-                roomId = equipment.roomId ?: dto.roomId,
-                isDirty = false,
-                syncStatus = SyncStatus.SYNCED,
-                isDeleted = false,
-                lastSyncedAt = ctx.now()
-            )
-        }.recoverCatching { error ->
+
+        return runCatching {
             when {
-                equipment.serverId != null && error.isMissingOnServer() -> {
-                    val created = ctx.api.createProjectEquipment(
-                        projectServerId,
-                        request.copy(updatedAt = null)
-                    )
-                    created.toEntity().copy(
+                equipment.serverId != null -> {
+                    val request = equipment.toPivotUpdateRequest(lockUpdatedAt)
+                    val resp = ctx.api.updateEquipmentRoom(equipment.serverId, request)
+                    if (!resp.isSuccessful) {
+                        throw HttpException(resp)
+                    }
+                    equipment.copy(
                         equipmentId = equipment.equipmentId,
                         uuid = equipment.uuid,
                         projectId = equipment.projectId,
-                        roomId = equipment.roomId ?: created.roomId,
+                        roomId = equipment.roomId,
+                        catalogServerId = equipment.catalogServerId,
+                        catalogUuid = equipment.catalogUuid,
                         isDirty = false,
                         syncStatus = SyncStatus.SYNCED,
                         isDeleted = false,
                         lastSyncedAt = ctx.now()
                     )
                 }
+                equipment.catalogServerId != null && roomServerId != null -> {
+                    val request = equipment.toAttachRequest(roomServerId)
+                    val resp = ctx.api.attachRoomEquipment(roomServerId, request)
+                    val dto = resp.data.firstOrNull()
+                        ?: throw IllegalStateException("Empty response from attach equipment")
+                    dto.toEntity().copy(
+                        equipmentId = equipment.equipmentId,
+                        uuid = equipment.uuid,
+                        projectId = equipment.projectId,
+                        roomId = equipment.roomId ?: dto.roomId,
+                        catalogServerId = dto.equipmentId ?: equipment.catalogServerId,
+                        catalogUuid = equipment.catalogUuid,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        isDeleted = false,
+                        lastSyncedAt = ctx.now()
+                    )
+                }
+                else -> {
+                    val catalogId = resolveOrMintCatalog(equipment, projectServerId)
+                    if (catalogId == null) {
+                        ctx.remoteLogger?.log(
+                            LogLevel.WARN, SYNC_TAG, "equipment_catalog_unresolved",
+                            mapOf(
+                                "equipmentUuid" to equipment.uuid,
+                                "projectId" to equipment.projectId.toString(),
+                                "typeName" to equipment.type
+                            )
+                        )
+                        throw IllegalStateException("Could not resolve catalog for equipment type: ${equipment.type}")
+                    }
+                    if (roomServerId == null) {
+                        throw IllegalStateException("Cannot attach equipment without room serverId")
+                    }
+                    val cataloged = equipment.copy(catalogServerId = catalogId)
+                    val request = cataloged.toAttachRequest(roomServerId)
+                    val resp = ctx.api.attachRoomEquipment(roomServerId, request)
+                    val dto = resp.data.firstOrNull()
+                        ?: throw IllegalStateException("Empty response from attach equipment")
+                    dto.toEntity().copy(
+                        equipmentId = equipment.equipmentId,
+                        uuid = equipment.uuid,
+                        projectId = equipment.projectId,
+                        roomId = equipment.roomId ?: dto.roomId,
+                        catalogServerId = dto.equipmentId ?: catalogId,
+                        catalogUuid = equipment.catalogUuid,
+                        isDirty = false,
+                        syncStatus = SyncStatus.SYNCED,
+                        isDeleted = false,
+                        lastSyncedAt = ctx.now()
+                    )
+                }
+            }
+        }.recoverCatching { error ->
+            when {
+                error.isMissingOnServer() && equipment.serverId != null -> {
+                    Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Pivot gone on server for equipment ${equipment.uuid}; logging warning and dropping")
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "equipment_pivot_id_missing",
+                        mapOf("equipmentUuid" to equipment.uuid, "serverId" to equipment.serverId.toString())
+                    )
+                    throw error
+                }
                 else -> throw error
             }
         }.onFailure { error ->
-            // RP-CD-005: a 409 error body is single-use and is consumed downstream by
-            // handle409Conflict/extractUpdatedAt. Never drain it here, or conflict recovery
-            // reads an empty body and silently SKIPs instead of retrying. Log the body only
-            // for non-conflict failures.
+            if (error.isConflict()) return@onFailure
             val errorBody = if (error.isConflict()) null
             else (error as? retrofit2.HttpException)?.response()?.errorBody()?.string()
             Log.w(SYNC_TAG, "⚠️ [syncPendingEquipment] Failed to push equipment ${equipment.uuid}: $errorBody", error)
         }.getOrElse { throw it }
-
-        return synced
     }
 
+    private suspend fun resolveOrMintCatalog(equipment: OfflineEquipmentEntity, projectServerId: Long): Long? {
+        val existing = ctx.localDataService.getProjectEquipmentByType(equipment.projectId, equipment.type)
+        if (existing != null && existing.catalogServerId != null) {
+            return existing.catalogServerId
+        }
+        return try {
+            val catalogRequest = equipment.toCatalogRequest()
+            val created = ctx.api.createProjectEquipment(projectServerId, catalogRequest)
+            created.data.id
+        } catch (e: Throwable) {
+            if (e.isValidationError()) {
+                Log.w(SYNC_TAG, "Could not mint catalog for type ${equipment.type}: 422, looking up existing")
+                lookupProjectEquipmentByTypeName(equipment.type, projectServerId)
+            } else {
+                throw e
+            }
+        }
+    }
+
+    private suspend fun lookupProjectEquipmentByTypeName(typeName: String, projectServerId: Long): Long? {
+        return try {
+            val resp = ctx.api.getProjectEquipment(projectServerId)
+            resp.data.find { it.type == typeName }?.equipmentId
+        } catch (e: Throwable) {
+            if (e is CancellationException) throw e
+            Log.w(SYNC_TAG, "Failed to look up project equipment for type $typeName", e)
+            null
+        }
+    }
 
     private suspend fun resolveServerProjectId(projectId: Long): Long? {
         val project = ctx.localDataService.getProject(projectId)

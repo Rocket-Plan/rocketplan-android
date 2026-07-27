@@ -18,7 +18,18 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.data.model.ProjectStatus
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+
+/**
+ * RP-FR-034 — pure, testable project-search predicate. [query] must already be trimmed + lowercased.
+ * Matches iOS (`ProjectListPageView`): address (title), project name (alias), and RP number
+ * (projectCode), case-insensitive substring.
+ */
+internal fun projectMatchesQuery(project: ProjectListItem, query: String): Boolean =
+    project.title.lowercase().contains(query) ||
+        project.projectCode.lowercase().contains(query) ||
+        (project.alias?.lowercase()?.contains(query) == true)
 
 class ProjectListFragment : Fragment() {
 
@@ -90,45 +101,66 @@ class ProjectListFragment : Fragment() {
     private fun observeViewModel() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.uiState.collect { state ->
-                    when (state) {
-                        is ProjectsUiState.Loading -> {
-                            progressBar.isVisible = true
-                            recyclerView.isVisible = false
-                            emptyStateLayout.isVisible = false
-                        }
-                        is ProjectsUiState.Success -> {
-                            progressBar.isVisible = false
-
-                            val projects = when {
-                                tabKey == TAB_MY_PROJECTS -> state.myProjects
-                                statusFilter != null -> state.projectsByStatus[statusFilter] ?: emptyList()
-                                else -> emptyList()
+                // RP-FR-034: fold the shared search query into the state so the list filters live.
+                combine(viewModel.uiState, viewModel.searchQuery) { state, query -> state to query }
+                    .collect { (state, query) ->
+                        when (state) {
+                            is ProjectsUiState.Loading -> {
+                                progressBar.isVisible = true
+                                recyclerView.isVisible = false
+                                emptyStateLayout.isVisible = false
                             }
+                            is ProjectsUiState.Success -> {
+                                progressBar.isVisible = false
 
-                            if (projects.isEmpty()) {
+                                val projects = if (query.isBlank()) {
+                                    // No search: show just this tab's category.
+                                    when {
+                                        tabKey == TAB_MY_PROJECTS -> state.myProjects
+                                        statusFilter != null -> state.projectsByStatus[statusFilter] ?: emptyList()
+                                        else -> emptyList()
+                                    }
+                                } else {
+                                    // RP-FR-034: global search — match across EVERY category (any status
+                                    // + My Projects), deduped, so a query finds any project from any tab.
+                                    (state.myProjects + state.projectsByStatus.values.flatten())
+                                        .distinctBy { it.projectId }
+                                        .let { filterBySearch(it, query) }
+                                }
+
+                                if (projects.isEmpty()) {
+                                    recyclerView.isVisible = false
+                                    emptyStateLayout.isVisible = true
+                                } else {
+                                    recyclerView.isVisible = true
+                                    emptyStateLayout.isVisible = false
+                                    adapter.submitList(projects)
+                                }
+                            }
+                            is ProjectsUiState.Error -> {
+                                progressBar.isVisible = false
                                 recyclerView.isVisible = false
                                 emptyStateLayout.isVisible = true
-                            } else {
-                                recyclerView.isVisible = true
-                                emptyStateLayout.isVisible = false
-                                adapter.submitList(projects)
+                                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
                             }
                         }
-                        is ProjectsUiState.Error -> {
-                            progressBar.isVisible = false
-                            recyclerView.isVisible = false
-                            emptyStateLayout.isVisible = true
-                            Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
-                        }
                     }
-                }
             }
         }
 
         viewModel.isRefreshing.observe(viewLifecycleOwner) { isRefreshing ->
             swipeRefreshLayout.isRefreshing = isRefreshing
         }
+    }
+
+    /**
+     * RP-FR-034: client-side project filter (iOS parity — matches address / name / RP number).
+     * Case-insensitive substring; blank query returns the full list. Works offline.
+     */
+    private fun filterBySearch(projects: List<ProjectListItem>, query: String): List<ProjectListItem> {
+        val q = query.trim().lowercase()
+        if (q.isEmpty()) return projects
+        return projects.filter { projectMatchesQuery(it, q) }
     }
 
     private fun onProjectClick(project: ProjectListItem) {

@@ -8,9 +8,12 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.rocketplan_android.R
 import com.example.rocketplan_android.RocketPlanApplication
+import com.example.rocketplan_android.data.feature.SerializedEquipmentMode
+import com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider
 import com.example.rocketplan_android.data.local.SyncStatus
 import com.example.rocketplan_android.data.local.entity.OfflineAtmosphericLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity
+import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacementEntity
 import com.example.rocketplan_android.data.local.entity.OfflineLocationEntity
 import com.example.rocketplan_android.data.local.entity.OfflineMoistureLogEntity
 import com.example.rocketplan_android.data.local.entity.OfflineProjectEntity
@@ -55,32 +58,84 @@ class RocketDryViewModel(
     val uiState: StateFlow<RocketDryUiState> = _uiState
 
     /**
-     * RP-FR-019 legacy-wide gate: the legacy count-based equipment tab is shown only when the
-     * PROJECT owner-company is serialized-mode OFF. ON/UNKNOWN → hidden (the serialized system
-     * owns equipment). Observed so a mid-session flip hides the tab immediately.
+     * RP-FR-033: tri-state equipment mode for the RocketDry Equipment tab.
+     * OFF → legacy count-based content; ON → serialized content; UNKNOWN → hold placeholder.
+     * Observed so a mid-session mode flip updates the tab content immediately.
      */
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val legacyEquipmentAllowed: StateFlow<Boolean> =
+    val equipmentMode: StateFlow<SerializedEquipmentMode> =
         localDataService.observeProjects()
             .map { projects -> projects.firstOrNull { it.projectId == projectId }?.companyId }
             .distinctUntilChanged()
             .flatMapLatest { companyId ->
-                // Review round-9 #4: react to the project appearing (a one-shot null read would
-                // strand the tab hidden if the project wasn't loaded yet). Loading → shown (writes
-                // are still hard-gated in the VM); resolved → follow the owner-company mode.
                 if (companyId == null) {
-                    kotlinx.coroutines.flow.flowOf(true)
+                    kotlinx.coroutines.flow.flowOf(SerializedEquipmentMode.UNKNOWN)
                 } else {
-                    com.example.rocketplan_android.data.feature.SerializedEquipmentModeProvider(rocketPlanApp.secureStorage)
+                    SerializedEquipmentModeProvider(rocketPlanApp.secureStorage)
                         .observeMode(companyId)
-                        .map { it == com.example.rocketplan_android.data.feature.SerializedEquipmentMode.OFF }
                 }
             }
             .stateIn(
                 viewModelScope,
                 kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
-                true // default to shown for the common OFF case; the observer corrects near-instantly
+                SerializedEquipmentMode.UNKNOWN
             )
+
+    /**
+     * Serialized equipment content: open placements for this project, grouped by room.
+     * Used when equipmentMode is ON to show the per-room deployed-unit list on the Equipment tab.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val serializedEquipmentByRoom: StateFlow<List<EquipmentLevel>> =
+        combine(
+            localDataService.observeRooms(projectId),
+            localDataService.observeOpenPlacementsForProject(projectId)
+        ) { rooms, placements ->
+            buildSerializedEquipmentLevels(rooms, placements)
+        }.stateIn(
+            viewModelScope,
+            kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000),
+            emptyList()
+        )
+
+    private fun buildSerializedEquipmentLevels(
+        rooms: List<OfflineRoomEntity>,
+        placements: List<OfflineEquipmentPlacementEntity>
+    ): List<EquipmentLevel> {
+        val placementsByRoom = placements.groupBy { it.roomId }
+        val roomIds = rooms.map { it.roomId }.toSet()
+        val roomSummaries = rooms.map { room ->
+            val count = placementsByRoom[room.roomId]?.size ?: 0
+            val label = if (count == 1) "1 deployed unit" else "$count deployed units"
+            DEFAULT_LEVEL_LABEL to EquipmentRoomSummary(
+                roomId = room.roomId,
+                roomName = room.title,
+                summary = if (count > 0) label else "No units deployed"
+            )
+        }.toMutableList()
+        val orphanedPlacements = placementsByRoom.filterKeys { key -> key != null && key !in roomIds }
+        val unassignedCount = orphanedPlacements.values.flatten().size
+        if (unassignedCount > 0) {
+            val label = if (unassignedCount == 1) "1 deployed unit" else "$unassignedCount deployed units"
+            roomSummaries.add(
+                UNASSIGNED_LABEL to EquipmentRoomSummary(
+                    roomId = null,
+                    roomName = UNASSIGNED_LABEL,
+                    summary = label
+                )
+            )
+        }
+        val groupedByLevel = roomSummaries.groupBy(
+            keySelector = { it.first },
+            valueTransform = { it.second }
+        )
+        return groupedByLevel.map { (levelName, roomsForLevel) ->
+            EquipmentLevel(
+                levelName = levelName,
+                rooms = roomsForLevel.sortedBy { it.roomName.lowercase(Locale.getDefault()) }
+            )
+        }.sortedBy { it.levelName.lowercase(Locale.getDefault()) }
+    }
 
     private val _currentTab = MutableStateFlow<RocketDryTab?>(null)
     val currentTab: StateFlow<RocketDryTab?> = _currentTab

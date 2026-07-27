@@ -558,6 +558,15 @@
         <argument
             android:name="projectId"
             app:argType="long" />
+
+        <!-- RP-FR-032: serialized-mode companies see the company pool in place of the legacy
+             totals screen (mirrors iOS TotalEquipmentContentView). popUpTo totals (inclusive) so
+             Back from the pool returns to RocketDry, not the transient legacy totals screen. -->
+        <action
+            android:id="@+id/action_totalEquipmentFragment_to_serializedEquipmentPoolFragment"
+            app:destination="@id/serializedEquipmentPoolFragment"
+            app:popUpTo="@id/totalEquipmentFragment"
+            app:popUpToInclusive="true" />
     </fragment>
 
     <fragment
@@ -753,7 +762,7 @@
     <fragment
         android:id="@+id/serializedRoomEquipmentFragment"
         android:name="com.example.rocketplan_android.ui.rocketdry.SerializedRoomEquipmentFragment"
-        android:label="Equipment (Serialized)"
+        android:label="Equipment"
         tools:layout="@layout/fragment_serialized_room_equipment">
 
         <argument
@@ -762,6 +771,100 @@
 
         <argument
             android:name="roomId"
+            app:argType="long" />
+
+        <!-- RP-BUG-338 Fix 1: reverse action for flag rollback (ON→OFF) to land on legacy screen. -->
+        <action
+            android:id="@+id/action_serializedRoomEquipmentFragment_to_equipmentRoomFragment"
+            app:destination="@id/equipmentRoomFragment"
+            app:popUpTo="@id/serializedRoomEquipmentFragment"
+            app:popUpToInclusive="true" />
+
+        <!-- RP-FR-029: edit a serialized asset -->
+        <action
+            android:id="@+id/action_serializedRoomEquipmentFragment_to_serializedAssetEditFragment"
+            app:destination="@id/serializedAssetEditFragment" />
+
+        <!-- RP-FR-032: a room row taps into the per-unit detail hub (lifecycle actions live there). -->
+        <action
+            android:id="@+id/action_serializedRoomEquipmentFragment_to_serializedAssetDetailFragment"
+            app:destination="@id/serializedAssetDetailFragment" />
+    </fragment>
+
+    <!-- RP-FR-026: company-wide serialized asset pool -->
+    <fragment
+        android:id="@+id/serializedEquipmentPoolFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SerializedEquipmentPoolFragment"
+        android:label="@string/serialized_pool_title"
+        tools:layout="@layout/fragment_serialized_equipment_pool">
+
+        <!-- <= 0 means "resolve the active company" in the ViewModel. -->
+        <argument
+            android:name="companyId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <!-- RP-FR-027: open a unit's detail screen from the pool "Details" action. -->
+        <action
+            android:id="@+id/action_serializedEquipmentPoolFragment_to_serializedAssetDetailFragment"
+            app:destination="@id/serializedAssetDetailFragment" />
+    </fragment>
+
+    <!-- RP-FR-027: per-unit serialized asset detail screen -->
+    <fragment
+        android:id="@+id/serializedAssetDetailFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SerializedAssetDetailFragment"
+        android:label="@string/serialized_detail_title"
+        tools:layout="@layout/fragment_serialized_asset_detail">
+
+        <argument
+            android:name="assetLocalId"
+            app:argType="long" />
+
+        <!-- RP-FR-032: when the detail hub is opened from inside a room, the deploy target is already
+             known — carry the room context so Deploy goes straight there instead of showing the
+             all-projects/all-rooms picker. Defaults to -1 (no context) when opened from the pool. -->
+        <argument
+            android:name="deployProjectId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+        <argument
+            android:name="deployRoomId"
+            app:argType="long"
+            android:defaultValue="-1L" />
+
+        <!-- RP-FR-029: edit is hosted from the detail screen. -->
+        <action
+            android:id="@+id/action_serializedAssetDetailFragment_to_serializedAssetEditFragment"
+            app:destination="@id/serializedAssetEditFragment" />
+
+        <!-- RP-FR-028: placement history is reached from the detail screen. -->
+        <action
+            android:id="@+id/action_serializedAssetDetailFragment_to_serializedPlacementHistoryFragment"
+            app:destination="@id/serializedPlacementHistoryFragment" />
+    </fragment>
+
+    <!-- RP-FR-028: read-only placement-history screen for a serialized unit -->
+    <fragment
+        android:id="@+id/serializedPlacementHistoryFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.PlacementHistoryFragment"
+        android:label="@string/serialized_history_title"
+        tools:layout="@layout/fragment_serialized_placement_history">
+
+        <argument
+            android:name="assetLocalId"
+            app:argType="long" />
+    </fragment>
+
+    <!-- RP-FR-029: edit serialized asset metadata -->
+    <fragment
+        android:id="@+id/serializedAssetEditFragment"
+        android:name="com.example.rocketplan_android.ui.rocketdry.SerializedAssetEditFragment"
+        android:label="@string/serialized_equipment_edit"
+        tools:layout="@layout/fragment_serialized_asset_edit">
+
+        <argument
+            android:name="assetLocalId"
             app:argType="long" />
     </fragment>
 

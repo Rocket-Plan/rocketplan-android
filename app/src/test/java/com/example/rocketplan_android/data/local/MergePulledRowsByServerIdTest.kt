@@ -91,4 +91,76 @@ class MergePulledRowsByServerIdTest {
 
         assertThat(merged).containsExactly(server)
     }
+
+    @Test
+    fun `migrated row with null serverId matches by uuid and adopts local identity`() {
+        val local = Row(pk = -100L, serverId = null, uuid = "migrated-uuid", content = "old")
+        val server = Row(pk = 0L, serverId = null, uuid = "migrated-uuid", content = "new")
+
+        val merged = mergePulledRowsByServerId(
+            incoming = listOf(server),
+            existingByServerId = emptyMap(),
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            adoptLocalIdentity = { s, l -> s.copy(pk = l.pk, uuid = l.uuid) },
+            existingByUuid = mapOf("migrated-uuid" to local),
+            uuidOf = { it.uuid },
+        )
+
+        assertThat(merged).hasSize(1)
+        assertThat(merged[0].pk).isEqualTo(-100L)
+        assertThat(merged[0].uuid).isEqualTo("migrated-uuid")
+        assertThat(merged[0].content).isEqualTo("new")
+    }
+
+    @Test
+    fun `mixed batch serverId match and uuid-only match reconcile correctly`() {
+        val localByServerId = Row(pk = -200L, serverId = 500L, uuid = "local-uuid", content = "by-server")
+        val localByUuid = Row(pk = -100L, serverId = null, uuid = "migrated-uuid", content = "by-uuid")
+        val incomingByServerId = Row(pk = 500L, serverId = 500L, uuid = "server-uuid", content = "new-server")
+        val incomingByUuid = Row(pk = 0L, serverId = null, uuid = "migrated-uuid", content = "new-migrated")
+
+        val merged = mergePulledRowsByServerId(
+            incoming = listOf(incomingByServerId, incomingByUuid),
+            existingByServerId = mapOf(500L to localByServerId),
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            adoptLocalIdentity = { s, l -> s.copy(pk = l.pk, uuid = l.uuid) },
+            existingByUuid = mapOf("migrated-uuid" to localByUuid),
+            uuidOf = { it.uuid },
+        )
+
+        assertThat(merged).hasSize(2)
+        val byServerId = merged.find { it.serverId == 500L }!!
+        val byUuid = merged.find { it.uuid == "migrated-uuid" }!!
+        assertThat(byServerId.pk).isEqualTo(-200L)
+        assertThat(byServerId.content).isEqualTo("new-server")
+        assertThat(byUuid.pk).isEqualTo(-100L)
+        assertThat(byUuid.content).isEqualTo("new-migrated")
+    }
+
+    @Test
+    fun `uuid match on migrated row preserves dirty local row and grafts server identity`() {
+        val local = Row(pk = -100L, serverId = null, uuid = "migrated-uuid", content = "local-edit", isDirty = true)
+        val server = Row(pk = 0L, serverId = 7001L, uuid = "migrated-uuid", content = "server")
+
+        val merged = mergePulledRowsByServerId(
+            incoming = listOf(server),
+            existingByServerId = emptyMap(),
+            serverIdOf = { it.serverId },
+            isDirty = { it.isDirty },
+            adoptLocalIdentity = { s, l -> s.copy(pk = l.pk, uuid = l.uuid) },
+            existingByUuid = mapOf("migrated-uuid" to local),
+            uuidOf = { it.uuid },
+            adoptServerIdentity = { s, l -> l.copy(serverId = s.serverId) },
+        )
+
+        assertThat(merged).hasSize(1)
+        val result = merged[0]
+        assertThat(result.pk).isEqualTo(-100L)
+        assertThat(result.uuid).isEqualTo("migrated-uuid")
+        assertThat(result.content).isEqualTo("local-edit")
+        assertThat(result.serverId).isEqualTo(7001L)
+        assertThat(result.isDirty).isTrue()
+    }
 }

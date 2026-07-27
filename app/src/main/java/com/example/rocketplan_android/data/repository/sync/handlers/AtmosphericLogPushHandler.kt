@@ -122,11 +122,24 @@ class AtmosphericLogPushHandler(private val ctx: PushHandlerContext) {
             mapOf("logServerId" to (log.serverId?.toString() ?: "null"), "logUuid" to log.uuid)
         )
 
-        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
-        if (freshUpdatedAt == null) {
+        val conflict = error.parse409(ctx.gson)
+        if (conflict == null) {
+            Log.w(TAG, "⚠️ [syncPendingAtmosphericLog] Could not parse 409 body for log ${log.serverId}; will retry later")
+            return OperationOutcome.SKIP
+        }
+        if (conflict.isModeRejection) {
+            Log.w(TAG, "⚠️ [syncPendingAtmosphericLog] 409 mode rejection for atmospheric log ${log.serverId}; dropping")
+            ctx.remoteLogger?.log(
+                LogLevel.WARN, TAG, "Atmospheric log write dropped - mode rejection",
+                mapOf("logUuid" to log.uuid, "serverId" to (log.serverId?.toString() ?: "null"))
+            )
+            return OperationOutcome.DROP
+        }
+        if (conflict.updatedAt == null) {
             Log.w(TAG, "⚠️ [syncPendingAtmosphericLog] Could not extract updated_at from 409 body for log ${log.serverId}; will retry later")
             return OperationOutcome.SKIP
         }
+        val freshUpdatedAt = conflict.updatedAt
 
         // Retry with fresh timestamp
         val retryRequest = request.copy(updatedAt = freshUpdatedAt)

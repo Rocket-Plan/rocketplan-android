@@ -49,16 +49,10 @@ class SerializedRoomEquipmentFragment : Fragment() {
     private lateinit var deployedEmpty: TextView
     private lateinit var poolEmpty: TextView
 
-    private val deployedAdapter = SerializedEquipmentAdapter(
-        onPrimary = { assetId -> viewModel.checkOut(assetId) },
-        onSecondary = { assetId -> showMoveDialog(assetId) }
-    )
-    private val poolAdapter = SerializedEquipmentAdapter(
-        onPrimary = { assetId -> viewModel.deployFromPool(assetId) },
-        onSecondary = { assetId -> confirmRetire(assetId) }
-    )
-
-    private var latestPool: List<PoolAssetItem> = emptyList()
+    // RP-FR-032: both lists open the per-unit detail hub on tap; lifecycle actions
+    // (deploy/check-out/move/retire) and edit all live there, mirroring iOS.
+    private val deployedAdapter = SerializedEquipmentAdapter(onClick = ::navigateToDetail)
+    private val poolAdapter = SerializedEquipmentAdapter(onClick = ::navigateToDetail)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View =
         inflater.inflate(R.layout.fragment_serialized_room_equipment, container, false)
@@ -135,34 +129,22 @@ class SerializedRoomEquipmentFragment : Fragment() {
         }
     }
 
-    /** Move a deployed unit to another room in this project. */
-    private fun showMoveDialog(assetId: Long) {
-        viewLifecycleOwner.lifecycleScope.launch {
-            val rooms = viewModel.roomChoices()
-            if (rooms.isEmpty()) {
-                Toast.makeText(requireContext(), R.string.serialized_equipment_no_rooms, Toast.LENGTH_LONG).show()
-                return@launch
-            }
-            val names = rooms.map { it.name }.toTypedArray()
-            com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-                .setTitle(R.string.serialized_equipment_move)
-                .setItems(names) { _, which -> viewModel.move(assetId, rooms[which].roomId) }
-                .setNegativeButton(R.string.cancel, null)
-                .show()
-        }
-    }
-
-    /** Review #6: retiring is destructive — confirm and identify the unit first. */
-    private fun confirmRetire(assetId: Long) {
-        val item = latestPool.firstOrNull { it.assetId == assetId }
-        val identity = item?.let { listOfNotNull(it.name, it.detail.takeIf(String::isNotBlank)).joinToString(" — ") }
-            ?: getString(R.string.serialized_equipment_title)
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
-            .setTitle(R.string.serialized_equipment_retire)
-            .setMessage(getString(R.string.serialized_equipment_retire_confirm, identity))
-            .setNegativeButton(R.string.cancel, null)
-            .setPositiveButton(R.string.serialized_equipment_retire) { _, _ -> viewModel.retire(assetId) }
-            .show()
+    /** RP-FR-032: open the per-unit detail hub (all lifecycle + edit actions live there). */
+    private fun navigateToDetail(assetId: Long) {
+        // RP-BUG-370: RP-FR-032 made the whole row the tap target, so two near-simultaneous taps
+        // (two fingers, or a fast double-tap) both reach a still-attached hierarchy. Guard on the
+        // current destination — the repo-wide convention — so the second tap is a no-op instead of
+        // IllegalArgumentException: navigation destination ... is unknown to this NavController.
+        val nav = findNavController()
+        if (nav.currentDestination?.id != R.id.serializedRoomEquipmentFragment) return
+        // Carry the room context so Deploy on the detail hub targets THIS room directly.
+        val action = SerializedRoomEquipmentFragmentDirections
+            .actionSerializedRoomEquipmentFragmentToSerializedAssetDetailFragment(
+                assetLocalId = assetId,
+                deployProjectId = args.projectId,
+                deployRoomId = args.roomId
+            )
+        nav.navigate(action)
     }
 
     private fun render(state: SerializedRoomUiState) {
@@ -172,28 +154,27 @@ class SerializedRoomEquipmentFragment : Fragment() {
         when (state) {
             is SerializedRoomUiState.Ready -> {
                 roomTitle.text = state.roomName
-                latestPool = state.pool
-                val deployed = state.deployed.map {
-                    SerializedRowUi(
-                        it.assetId, it.name, it.detail,
-                        getString(R.string.serialized_equipment_check_out),
-                        getString(R.string.serialized_equipment_move)
-                    )
-                }
-                val pool = state.pool.map {
-                    SerializedRowUi(
-                        it.assetId, it.name, it.detail,
-                        getString(R.string.serialized_equipment_deploy),
-                        getString(R.string.serialized_equipment_retire)
-                    )
-                }
+                val deployed = state.deployed.map { SerializedRowUi(it.assetId, it.name, it.detail) }
+                val pool = state.pool.map { SerializedRowUi(it.assetId, it.name, it.detail) }
                 deployedAdapter.submitList(deployed)
                 poolAdapter.submitList(pool)
                 deployedEmpty.isVisible = deployed.isEmpty()
                 poolEmpty.isVisible = pool.isEmpty()
             }
             // Flag flipped OFF while open — fall back to the legacy screen.
-            is SerializedRoomUiState.LegacyMode -> findNavController().popBackStack()
+            is SerializedRoomUiState.LegacyMode -> {
+                // RP-BUG-370: render() can re-emit after the forward navigation has already
+                // committed; without the guard the second emission throws.
+                val nav = findNavController()
+                if (nav.currentDestination?.id == R.id.serializedRoomEquipmentFragment) {
+                    val action = SerializedRoomEquipmentFragmentDirections
+                        .actionSerializedRoomEquipmentFragmentToEquipmentRoomFragment(
+                            projectId = viewModel.projectId,
+                            roomId = viewModel.roomId
+                        )
+                    nav.navigate(action)
+                }
+            }
             else -> Unit
         }
     }

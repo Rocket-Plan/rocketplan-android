@@ -816,8 +816,14 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_equipment WHERE uuid = :uuid LIMIT 1")
     suspend fun getEquipmentByUuid(uuid: String): OfflineEquipmentEntity?
 
+    @Query("SELECT * FROM offline_equipment WHERE uuid IN (:uuids)")
+    suspend fun getEquipmentByUuids(uuids: List<String>): List<OfflineEquipmentEntity>
+
     @Query("SELECT * FROM offline_equipment WHERE serverId IN (:serverIds)")
     suspend fun getEquipmentByServerIds(serverIds: List<Long>): List<OfflineEquipmentEntity>
+
+    @Query("SELECT * FROM offline_equipment WHERE projectId = :projectId AND type = :type AND isDeleted = 0 LIMIT 1")
+    suspend fun getEquipmentByProjectAndType(projectId: Long, type: String): OfflineEquipmentEntity?
 
     @Query(
         """
@@ -848,6 +854,10 @@ interface OfflineDao {
     @Query("SELECT * FROM offline_equipment_assets WHERE assetId = :assetId LIMIT 1")
     suspend fun getEquipmentAsset(assetId: Long): OfflineEquipmentAssetEntity?
 
+    /** RP-FR-027 — reactive single-asset read for the detail screen (offline-first). */
+    @Query("SELECT * FROM offline_equipment_assets WHERE assetId = :assetId LIMIT 1")
+    fun observeEquipmentAsset(assetId: Long): Flow<OfflineEquipmentAssetEntity?>
+
     @Query("SELECT * FROM offline_equipment_assets WHERE uuid = :uuid LIMIT 1")
     suspend fun getEquipmentAssetByUuid(uuid: String): OfflineEquipmentAssetEntity?
 
@@ -856,6 +866,10 @@ interface OfflineDao {
 
     @Query("SELECT * FROM offline_equipment_assets WHERE serverId IN (:serverIds)")
     suspend fun getEquipmentAssetsByServerIds(serverIds: List<Long>): List<OfflineEquipmentAssetEntity>
+
+    /** Unsynced assets (serverId IS NULL) — pending register rows available for natural-key adoption. */
+    @Query("SELECT * FROM offline_equipment_assets WHERE companyId = :companyId AND serverId IS NULL AND isDeleted = 0")
+    suspend fun getUnsyncedEquipmentAssets(companyId: Long): List<OfflineEquipmentAssetEntity>
 
     @Query(
         """
@@ -922,6 +936,10 @@ interface OfflineDao {
     /** All placements for an asset (any state) — used to collapse an unsynced asset graph. */
     @Query("SELECT * FROM offline_equipment_placements WHERE assetId = :assetId")
     suspend fun getAllPlacementsForAsset(assetId: Long): List<OfflineEquipmentPlacementEntity>
+
+    /** Open placements for a project — used by RocketDry serialized equipment tab. */
+    @Query("SELECT * FROM offline_equipment_placements WHERE projectId = :projectId AND isOpen = 1 AND isDeleted = 0 ORDER BY dateIn DESC")
+    fun observeOpenPlacementsForProject(projectId: Long): Flow<List<OfflineEquipmentPlacementEntity>>
     // endregion
 
     // region Moisture Logs

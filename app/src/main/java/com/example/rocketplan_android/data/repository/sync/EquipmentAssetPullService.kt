@@ -8,6 +8,8 @@ import com.example.rocketplan_android.data.local.entity.OfflineEquipmentPlacemen
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetDto
 import com.example.rocketplan_android.data.model.offline.EquipmentAssetPlacementDto
 import com.example.rocketplan_android.data.repository.mapper.toEntity
+import com.example.rocketplan_android.logging.LogLevel
+import com.example.rocketplan_android.logging.RemoteLogger
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -26,12 +28,37 @@ import java.util.Date
 class EquipmentAssetPullService(
     private val api: OfflineSyncApi,
     private val localDataService: LocalDataService,
+    private val remoteLogger: RemoteLogger? = null,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) {
     private companion object {
         /** Statuses a client may set via updateAsset (metadata edit), vs lifecycle "deployed"/"retired". */
         val EDITABLE_STATUSES = setOf("available", "maintenance")
     }
+
+    /**
+     * RP-FR-026 — inbound pull of the whole company asset pool ONLY (no room scope). Reuses the
+     * same bounded, completeness-guarded [pullCompanyPool] + authoritative reconcile the room pull
+     * uses for step 1; does NOT touch room placements. Used by the standalone pool screen.
+     */
+    suspend fun refreshPool(companyId: Long): Result<Unit> =
+        withContext(ioDispatcher) {
+            runCatching {
+                val pool = pullCompanyPool(companyId)
+                if (pool.complete) {
+                    markMissingAssetsDeleted(companyId, pool.seen)
+                }
+            }.onFailure { e ->
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                remoteLogger?.log(
+                    LogLevel.WARN, "API", "Serialized equipment pool pull failed",
+                    mapOf(
+                        "companyId" to companyId.toString(),
+                        "error" to (e::class.java.simpleName + ": " + (e.message ?: ""))
+                    )
+                )
+            }
+        }
 
     suspend fun refreshRoom(roomLocalId: Long, companyId: Long): Result<Unit> =
         withContext(ioDispatcher) {
@@ -62,12 +89,30 @@ class EquipmentAssetPullService(
                 //    lists here (moved out / checked out / retired by another client). Review #5: only
                 //    close when we can positively confirm the asset is server-known and absent from the
                 //    room set — a serverId-less asset can't be proven missing, so leave it alone.
+                var closedInRoom = 0
                 for (open in localDataService.getCleanOpenPlacementsForRoom(roomLocalId)) {
                     val serverId = localDataService.getEquipmentAsset(open.assetId)?.serverId
                     if (serverId != null && serverId !in roomAssetServerIds) {
                         localDataService.saveEquipmentPlacements(listOf(open.markReconciledDeleted()))
+                        closedInRoom++
                     }
                 }
+                if (closedInRoom > 0) {
+                    remoteLogger?.log(
+                        LogLevel.DEBUG, "API", "Pull reconcile closed room placements",
+                        mapOf("roomId" to roomLocalId.toString(), "count" to closedInRoom.toString())
+                    )
+                }
+            }.onFailure { e ->
+                if (e is kotlin.coroutines.cancellation.CancellationException) throw e
+                remoteLogger?.log(
+                    LogLevel.WARN, "API", "Serialized equipment pull failed",
+                    mapOf(
+                        "roomId" to roomLocalId.toString(),
+                        "companyId" to companyId.toString(),
+                        "error" to (e::class.java.simpleName + ": " + (e.message ?: ""))
+                    )
+                )
             }
         }
 
@@ -82,13 +127,11 @@ class EquipmentAssetPullService(
     private suspend fun pullCompanyPool(companyId: Long): PoolSnapshot {
         val seen = mutableSetOf<Long>()
         var page = 1
-        while (true) {
+        val maxPages = 1000
+        while (page <= maxPages) {
             val resp = api.getCompanyEquipmentAssets(companyId = companyId, perPage = 100, page = page)
             val meta = resp.meta
             if (resp.data.isEmpty()) {
-                // Review round-10 #1: an empty page is authoritative-empty ONLY if meta.total == 0.
-                // An empty page claiming total > 0 (currentPage>=lastPage but total=40) is malformed/
-                // spurious and must NOT drive deletion.
                 return PoolSnapshot(seen, complete = meta?.total == 0)
             }
             saveAssetsProtectingLifecycle(resp.data)
@@ -96,17 +139,19 @@ class EquipmentAssetPullService(
             val current = meta?.currentPage
             val last = meta?.lastPage
             if (current == null || last == null) {
-                // Malformed pagination — can't prove completeness; upsert what we got, delete nothing.
                 return PoolSnapshot(seen, complete = false)
             }
             if (current >= last) {
-                // Review round-10 #1: cross-check the total. Only authoritative if we actually saw
-                // every row the server claims (guards a truncated last page that still says current>=last).
                 val total = meta.total
                 return PoolSnapshot(seen, complete = total == null || seen.size >= total)
             }
-            page = current + 1
+            page += 1
         }
+        remoteLogger?.log(
+            LogLevel.WARN, "API", "Equipment pool pagination exceeded cap",
+            mapOf("companyId" to companyId.toString(), "pages" to maxPages.toString())
+        )
+        return PoolSnapshot(seen, complete = false)
     }
 
     /**
@@ -121,6 +166,9 @@ class EquipmentAssetPullService(
      *
      * "Live placement op" is narrowed to PENDING/SYNCING (#4) — a FAILED op must not protect
      * optimistic state indefinitely.
+     *
+     * RP-BUG-336: when no serverId match exists, attempt natural-key adoption of a pending
+     * register row (serverId==null) to prevent duplicate rows when the register response is lost.
      */
     private suspend fun saveAssetsProtectingLifecycle(dtos: List<EquipmentAssetDto>) {
         if (dtos.isEmpty()) return
@@ -128,61 +176,98 @@ class EquipmentAssetPullService(
         val existingByServer = localDataService
             .getEquipmentAssetsByServerIds(servers.mapNotNull { it.serverId })
             .associateBy { it.serverId }
+
+        // Hoist: one query per distinct companyId before the loop (RP-BUG-340 efficiency fix).
+        val unsyncedByNaturalKey = mutableMapOf<NaturalKey, OfflineEquipmentAssetEntity>()
+        val seenKeys = mutableMapOf<NaturalKey, Long>()
+        for (companyId in servers.map { it.companyId }.distinct()) {
+            val unsynced = localDataService.getUnsyncedEquipmentAssets(companyId)
+            for (asset in unsynced) {
+                val key = NaturalKey(asset.companyId, asset.catalogUuid, asset.serialNumber, asset.name)
+                val existingAssetId = seenKeys[key]
+                if (existingAssetId != null && existingAssetId != asset.assetId) {
+                    remoteLogger?.log(
+                        LogLevel.WARN, "API", "Multiple unsynced assets matching natural key — adopting oldest",
+                        mapOf("naturalKey" to key.toString(), "adoptingAssetId" to asset.assetId.toString())
+                    )
+                }
+                val current = unsyncedByNaturalKey[key]
+                if (current == null || asset.createdAt.before(current.createdAt)) {
+                    unsyncedByNaturalKey[key] = asset
+                    seenKeys[key] = asset.assetId
+                }
+            }
+        }
+
         val livePlacementAssetIds = localDataService.getPendingEquipmentPlacements()
             .filter { it.syncStatus == SyncStatus.PENDING || it.syncStatus == SyncStatus.SYNCING }
             .map { it.assetId }
             .toSet()
 
+        // RP-BUG-340: consume on adopt so each pending local row is adopted by at most one server row.
+        val adoptedAssetIds = mutableSetOf<Long>()
         val merged = servers.map { server ->
-            val local = existingByServer[server.serverId] ?: return@map server
-            val metadataDirty = local.isDirty
-            val hasLivePlacement = local.assetId in livePlacementAssetIds
-            if (!metadataDirty && !hasLivePlacement) {
-                // Fully authoritative: adopt the server row, keeping only local identity.
-                return@map server.copy(assetId = local.assetId, uuid = local.uuid)
+            val local = existingByServer[server.serverId]
+            if (local != null) {
+                adoptOrMerge(server, local, livePlacementAssetIds)
+            } else {
+                val key = NaturalKey(server.companyId, server.catalogUuid, server.serialNumber, server.name)
+                val naturalMatch = unsyncedByNaturalKey[key]?.takeIf { it.assetId !in adoptedAssetIds }
+                if (naturalMatch != null) {
+                    adoptedAssetIds += naturalMatch.assetId
+                    unsyncedByNaturalKey.remove(key)
+                    adoptOrMerge(server, naturalMatch, livePlacementAssetIds)
+                } else {
+                    server
+                }
             }
-            // Two-axis merge (review round-7): start from the authoritative server row and overlay
-            // ONLY the axis that is locally pending.
-            server.copy(
-                assetId = local.assetId,
-                uuid = local.uuid,
-                // Metadata axis — local only while a metadata edit is pending.
-                name = if (metadataDirty) local.name else server.name,
-                manufacturer = if (metadataDirty) local.manufacturer else server.manufacturer,
-                model = if (metadataDirty) local.model else server.model,
-                serialNumber = if (metadataDirty) local.serialNumber else server.serialNumber,
-                assetTag = if (metadataDirty) local.assetTag else server.assetTag,
-                vendor = if (metadataDirty) local.vendor else server.vendor,
-                note = if (metadataDirty) local.note else server.note,
-                purchaseDate = if (metadataDirty) local.purchaseDate else server.purchaseDate,
-                purchasePrice = if (metadataDirty) local.purchasePrice else server.purchasePrice,
-                warrantyExpiresAt = if (metadataDirty) local.warrantyExpiresAt else server.warrantyExpiresAt,
-                rentalDayRate = if (metadataDirty) local.rentalDayRate else server.rentalDayRate,
-                // Status is dual-axis (review round-8): metadata-editable to available/maintenance
-                // (updateAsset) AND lifecycle-driven to deployed (placement).
-                //  - live placement op   → keep the optimistic lifecycle status,
-                //  - pending metadata edit + server still in the editable range (available/maintenance)
-                //                          → keep the local edit,
-                //  - otherwise (incl. server moved to `deployed` cross-client) → server wins
-                //                          (the pending update will then conflict server-side).
-                status = when {
-                    hasLivePlacement -> local.status
-                    metadataDirty && server.status in EDITABLE_STATUSES -> local.status
-                    else -> server.status
-                },
-                currentPlacementServerId = if (hasLivePlacement) local.currentPlacementServerId else server.currentPlacementServerId,
-                // Lock token (review round-7 blocker #2): PRESERVE the edit-base token while a
-                // metadata edit is pending — do NOT rebase onto the server's newer timestamp, or a
-                // genuine cross-client change would never produce the intended 409. (Re-stamping
-                // happens only after a known-successful local lifecycle op, in the push handler.)
-                serverUpdatedAt = if (metadataDirty) local.serverUpdatedAt else server.serverUpdatedAt,
-                isDirty = metadataDirty,
-                syncStatus = if (metadataDirty) local.syncStatus else server.syncStatus,
-                isDeleted = if (metadataDirty) local.isDeleted else server.isDeleted,
-                lastSyncedAt = server.lastSyncedAt
-            )
         }
-        localDataService.saveEquipmentAssets(merged) // blind upsert — the merge is already applied
+        localDataService.saveEquipmentAssets(merged)
+    }
+
+    private data class NaturalKey(
+        val companyId: Long,
+        val catalogUuid: String?,
+        val serialNumber: String?,
+        val name: String?
+    )
+
+    private fun adoptOrMerge(
+        server: OfflineEquipmentAssetEntity,
+        local: OfflineEquipmentAssetEntity,
+        livePlacementAssetIds: Set<Long>
+    ): OfflineEquipmentAssetEntity {
+        val metadataDirty = local.isDirty
+        val hasLivePlacement = local.assetId in livePlacementAssetIds
+        if (!metadataDirty && !hasLivePlacement) {
+            return server.copy(assetId = local.assetId, uuid = local.uuid)
+        }
+        return server.copy(
+            assetId = local.assetId,
+            uuid = local.uuid,
+            name = if (metadataDirty) local.name else server.name,
+            manufacturer = if (metadataDirty) local.manufacturer else server.manufacturer,
+            model = if (metadataDirty) local.model else server.model,
+            serialNumber = if (metadataDirty) local.serialNumber else server.serialNumber,
+            assetTag = if (metadataDirty) local.assetTag else server.assetTag,
+            vendor = if (metadataDirty) local.vendor else server.vendor,
+            note = if (metadataDirty) local.note else server.note,
+            purchaseDate = if (metadataDirty) local.purchaseDate else server.purchaseDate,
+            purchasePrice = if (metadataDirty) local.purchasePrice else server.purchasePrice,
+            warrantyExpiresAt = if (metadataDirty) local.warrantyExpiresAt else server.warrantyExpiresAt,
+            rentalDayRate = if (metadataDirty) local.rentalDayRate else server.rentalDayRate,
+            status = when {
+                hasLivePlacement -> local.status
+                metadataDirty && server.status in EDITABLE_STATUSES -> local.status
+                else -> server.status
+            },
+            currentPlacementServerId = if (hasLivePlacement) local.currentPlacementServerId else server.currentPlacementServerId,
+            serverUpdatedAt = if (metadataDirty) local.serverUpdatedAt else server.serverUpdatedAt,
+            isDirty = metadataDirty,
+            syncStatus = if (metadataDirty) local.syncStatus else server.syncStatus,
+            isDeleted = if (metadataDirty) local.isDeleted else server.isDeleted,
+            lastSyncedAt = server.lastSyncedAt
+        )
     }
 
     private suspend fun markMissingAssetsDeleted(companyId: Long, seen: Set<Long>) {
@@ -193,29 +278,45 @@ class EquipmentAssetPullService(
             .filter { localDataService.getOpenPlacementForAsset(it.assetId) == null }
         if (missing.isNotEmpty()) {
             localDataService.saveEquipmentAssets(missing.map { it.markReconciledDeleted() })
+            remoteLogger?.log(
+                LogLevel.DEBUG, "API", "Pull reconcile removed missing pool assets",
+                mapOf("companyId" to companyId.toString(), "count" to missing.size.toString())
+            )
         }
     }
 
     private suspend fun reconcileAssetPlacements(assetLocalId: Long, dtos: List<EquipmentAssetPlacementDto>) {
-        if (dtos.isNotEmpty()) {
-            val entities = dtos.map { dto ->
-                val localRoom = dto.roomId?.let { localDataService.getRoomByServerId(it) }
-                dto.toEntity(
-                    existing = null,
-                    assetLocalId = assetLocalId,
-                    roomLocalId = localRoom?.roomId,
-                    projectLocalId = localRoom?.projectId
-                )
-            }
-            localDataService.saveEquipmentPlacements(entities, preserveDirty = true)
+        if (dtos.isEmpty()) {
+            return
         }
-        // Authoritative: any clean local placement the server didn't return is stale (incl. the
-        // empty-history case, which is why we DON'T early-return above when dtos is empty).
+        // RP-FR-031 / RP-BUG-334: resolve the existing local row by serverId and pass it as
+        // `existing` so a locally-deleted placement is NOT resurrected if the server (still) returns
+        // it. toEntity carries `isDeleted = existing?.isDeleted ?: false`, and saveEquipmentPlacements'
+        // preserveDirty merge keeps a dirty pending-delete row untouched — so a soft-deleted placement
+        // stays deleted whether the delete is in-flight (dirty) or already synced (clean).
+        val existingByServer = localDataService
+            .getEquipmentPlacementsByServerIds(dtos.map { it.id })
+            .associateBy { it.serverId }
+        val entities = dtos.map { dto ->
+            val ex = existingByServer[dto.id]
+            val localRoom = dto.roomId?.let { localDataService.getRoomByServerId(it) }
+            dto.toEntity(
+                existing = ex,
+                assetLocalId = assetLocalId,
+                roomLocalId = localRoom?.roomId ?: ex?.roomId,
+                projectLocalId = localRoom?.projectId ?: ex?.projectId
+            )
+        }
+        localDataService.saveEquipmentPlacements(entities, preserveDirty = true)
         val serverIds = dtos.map { it.id }.toSet()
         val stale = localDataService.getSyncedPlacementsForAsset(assetLocalId)
             .filter { it.serverId !in serverIds }
         if (stale.isNotEmpty()) {
             localDataService.saveEquipmentPlacements(stale.map { it.markReconciledDeleted() })
+            remoteLogger?.log(
+                LogLevel.DEBUG, "API", "Pull reconcile closed stale placements",
+                mapOf("assetId" to assetLocalId.toString(), "count" to stale.size.toString())
+            )
         }
     }
 

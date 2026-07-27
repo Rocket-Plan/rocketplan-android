@@ -82,6 +82,19 @@ class EquipmentAssetDtoParseTest {
     }
 
     @Test
+    fun `placement correction response parses closed placement with corrected dates`() {
+        // RP-FR-030 — PATCH 200 returns {data: EquipmentAssetPlacementResource}.
+        val resp = gson.fromJson(fixture("placement_correction_response.json"), EquipmentAssetPlacementResponse::class.java)
+        assertThat(resp.data.id).isEqualTo(12)
+        assertThat(resp.data.equipmentAssetId).isEqualTo(3)
+        assertThat(resp.data.dateIn).isEqualTo("2026-06-01T00:00:00.000000Z")
+        assertThat(resp.data.dateOut).isEqualTo("2026-06-10T00:00:00.000000Z")
+        assertThat(resp.data.isOpen).isFalse()
+        assertThat(resp.data.updatedAt).isEqualTo("2026-07-02T14:30:00.000000Z")
+        assertThat(resp.idempotency).isNull() // normal (non-replay) response has no flag
+    }
+
+    @Test
     fun `timeline parses project bars with meta but no links`() {
         val resp = gson.fromJson(fixture("timeline.json"), EquipmentAssetTimelineResponse::class.java)
         assertThat(resp.data).hasSize(1)

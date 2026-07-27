@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -49,8 +50,8 @@ data class CatalogChoice(val catalogUuid: String, val name: String)
 @OptIn(ExperimentalCoroutinesApi::class)
 class SerializedRoomEquipmentViewModel(
     application: Application,
-    private val projectId: Long,
-    private val roomId: Long
+    val projectId: Long,
+    val roomId: Long
 ) : AndroidViewModel(application) {
 
     private val app = application as RocketPlanApplication
@@ -114,6 +115,11 @@ class SerializedRoomEquipmentViewModel(
                                 pulled = true
                                 val pull = offlineSyncRepository.refreshSerializedRoom(roomId, companyId)
                                 if (pull.isFailure) {
+                                    app.remoteLogger.log(
+                                        com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
+                                        "Serialized room pull failed (UI)",
+                                        mapOf("roomId" to roomId.toString(), "companyId" to companyId.toString())
+                                    )
                                     val hasCache = localDataService.observeEquipmentAssetsForCompany(companyId)
                                         .first().isNotEmpty()
                                     if (!hasCache) return@flatMapLatest flowOf(SerializedRoomUiState.Unavailable)
@@ -123,6 +129,16 @@ class SerializedRoomEquipmentViewModel(
                             contentFlow(companyId)
                         }
                     }
+                }
+                .catch { e ->
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    app.remoteLogger.log(
+                        com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
+                        "Serialized room resolve flow threw",
+                        mapOf("roomId" to roomId.toString(),
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
+                    _uiState.value = SerializedRoomUiState.Unavailable
                 }
                 .collect { _uiState.value = it }
         }
@@ -175,7 +191,7 @@ class SerializedRoomEquipmentViewModel(
     /** Rooms in this project the user can move a unit to (the service rejects a same-room move). */
     suspend fun roomChoices(): List<RoomChoice> = withContext(Dispatchers.IO) {
         localDataService.observeRooms(projectId).first()
-            .filter { !it.isDeleted }
+            .filter { !it.isDeleted && it.roomId != roomId }
             .map { RoomChoice(it.roomId, it.title) }
             .sortedBy { it.name.lowercase() }
     }
@@ -193,14 +209,45 @@ class SerializedRoomEquipmentViewModel(
     fun registerAndDeploy(name: String, catalogUuid: String, serialNumber: String?) {
         if (!requireOn()) return
         val companyId = ownerCompanyId ?: return
+        // Review #1: guard against double-taps (no assetId yet, so a dedicated flag) and never let
+        // a staging-write throw escape viewModelScope uncaught (which crashes the app).
+        if (!registerInFlight.compareAndSet(false, true)) return
         viewModelScope.launch(Dispatchers.IO) {
-            val asset = offlineSyncRepository.registerEquipmentAssetOffline(
-                companyId = companyId, name = name, catalogUuid = catalogUuid, serialNumber = serialNumber
-            )
-            val deployed = offlineSyncRepository.deployEquipmentAssetOffline(asset.assetId, roomId, projectId)
-            if (deployed == null) _events.emit("Registered, but couldn't deploy to this room.")
+            try {
+                runCatching {
+                    val asset = offlineSyncRepository.registerEquipmentAssetOffline(
+                        companyId = companyId, name = name, catalogUuid = catalogUuid, serialNumber = serialNumber
+                    )
+                    offlineSyncRepository.deployEquipmentAssetOffline(asset.assetId, roomId, projectId) to asset.assetId
+                }.onSuccess { (deployed, assetId) ->
+                    if (deployed == null) {
+                        app.remoteLogger.log(
+                            com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
+                            "Register succeeded but deploy returned null",
+                            mapOf("assetId" to assetId.toString(), "roomId" to roomId.toString())
+                        )
+                        _events.emit("Registered, but couldn't deploy to this room.")
+                    }
+                }.onFailure { e ->
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    app.remoteLogger.log(
+                        com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
+                        "Register-and-deploy failed (staging threw)",
+                        mapOf(
+                            "roomId" to roomId.toString(),
+                            "error" to (e::class.java.simpleName + ": " + (e.message ?: ""))
+                        )
+                    )
+                    _events.emit("Couldn't register this unit — please retry.")
+                }
+            } finally {
+                registerInFlight.set(false)
+            }
         }
     }
+
+    /** Review #1: single-flight guard for register-and-deploy, which has no assetId to key on yet. */
+    private val registerInFlight = java.util.concurrent.atomic.AtomicBoolean(false)
 
     fun deployFromPool(assetId: Long) = runAction(assetId, "Couldn't deploy — unit isn't available.") {
         offlineSyncRepository.deployEquipmentAssetOffline(assetId, roomId, projectId) != null
@@ -226,8 +273,15 @@ class SerializedRoomEquipmentViewModel(
         if (!inFlight.add(assetId)) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val ok = runCatching { block() }.getOrElse {
-                    // Review #6: the transaction rolled back — nothing was queued, so it won't auto-retry.
+                val ok = runCatching { block() }.getOrElse { e ->
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    app.remoteLogger.log(
+                        com.example.rocketplan_android.logging.LogLevel.WARN, "equip_ui",
+                        "Equipment action failed (staging threw)",
+                        mapOf("assetId" to assetId.toString(),
+                              "message" to failureMessage,
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
                     _events.emit("Action failed — please retry.")
                     return@launch
                 }

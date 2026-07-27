@@ -49,6 +49,12 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
                 asset.serverId != null && e.isMissingOnServer() -> reconcileMissing(asset)
                 else -> {
                     Log.w(SYNC_TAG, "EquipmentAssetPushHandler unknown error; retrying", e)
+                    ctx.remoteLogger?.log(
+                        LogLevel.WARN, SYNC_TAG, "Equipment asset upsert retry (unexpected error)",
+                        mapOf("assetUuid" to asset.uuid,
+                              "serverId" to (asset.serverId?.toString() ?: "null"),
+                              "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+                    )
                     OperationOutcome.RETRY
                 }
             }
@@ -124,6 +130,11 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
             throw e
         } catch (e: Throwable) {
             Log.w(SYNC_TAG, "EquipmentAssetPushHandler retire error; retrying", e)
+            ctx.remoteLogger?.log(
+                LogLevel.WARN, SYNC_TAG, "Equipment asset retire retry (unexpected error)",
+                mapOf("assetUuid" to asset.uuid, "serverId" to serverId.toString(),
+                      "error" to (e::class.java.simpleName + ": " + (e.message ?: "")))
+            )
             return OperationOutcome.RETRY
         }
         return when {
@@ -187,7 +198,8 @@ class EquipmentAssetPushHandler(private val ctx: PushHandlerContext) {
         operation: OfflineSyncQueueEntity
     ): OperationOutcome {
         // RP-CD-005: read the 409 body exactly once, here, for the remote version.
-        val freshUpdatedAt = error.extractUpdatedAt(ctx.gson)
+        val conflict409 = error.parse409(ctx.gson)
+        val freshUpdatedAt = conflict409?.updatedAt
         ctx.remoteLogger?.log(
             LogLevel.WARN, SYNC_TAG, "Equipment asset update 409 conflict → CONFLICT_PENDING",
             mapOf(

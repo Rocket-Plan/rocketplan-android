@@ -90,13 +90,40 @@ class ProjectMetadataSyncService(
             }.isSuccess
         }
 
-        // Equipment (single request, independent)
+        // Equipment (per-room, fetches pivot data from getRoomEquipment)
+        // Note: pre-migration equipment won't auto-merge (serverId=null, no catalogUuid for matching).
+        // Post-migration equipment merges correctly. This is a known gap - future cleanup pass.
         queue.addItem("equipment") {
-            runCatching { api.getProjectEquipment(serverProjectId) }
-                .onSuccess { response ->
-                    localDataService.saveEquipment(response.data.map { it.toEntity() }, preserveDirty = true)
-                    itemCount.addAndGet(response.data.size)
-                }.isSuccess
+            val roomServerIds = localDataService.getServerRoomIdsForProject(projectId)
+            val existingByUuid = localDataService.observeEquipmentForProject(projectId)
+                .first()
+                .associateBy { it.uuid }
+            val roomsByServerId = roomServerIds.mapNotNull { serverId ->
+                localDataService.getRoomByServerId(serverId)?.let { serverId to it }
+            }.toMap()
+            val allEquipment = mutableListOf<com.example.rocketplan_android.data.local.entity.OfflineEquipmentEntity>()
+            var hasFailures = false
+            for (roomServerId in roomServerIds) {
+                runCatching { api.getRoomEquipment(roomServerId) }
+                    .onFailure { hasFailures = true }
+                    .onSuccess { response ->
+                        val localRoom = roomsByServerId[roomServerId]
+                        val entities = response.data.mapNotNull { dto ->
+                            val existing = dto.uuid?.let { existingByUuid[it] }
+                            dto.toEntity(
+                                existing = existing,
+                                localProjectId = localRoom?.projectId,
+                                localRoomId = localRoom?.roomId
+                            )
+                        }
+                        allEquipment.addAll(entities)
+                    }
+            }
+            if (allEquipment.isNotEmpty()) {
+                localDataService.saveEquipment(allEquipment, preserveDirty = true)
+                itemCount.addAndGet(allEquipment.size)
+            }
+            !hasFailures
         }
 
         // Atmospheric logs (independent)

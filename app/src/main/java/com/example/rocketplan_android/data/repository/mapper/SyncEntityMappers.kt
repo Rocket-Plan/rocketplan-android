@@ -29,6 +29,9 @@ import com.example.rocketplan_android.data.model.offline.AtmosphericLogDto
 import com.example.rocketplan_android.data.model.offline.DamageMaterialDto
 import com.example.rocketplan_android.data.model.offline.EquipmentDto
 import com.example.rocketplan_android.data.model.offline.EquipmentRequest
+import com.example.rocketplan_android.data.model.offline.CreateEquipmentCatalogRequest
+import com.example.rocketplan_android.data.model.offline.AttachRoomEquipmentRequest
+import com.example.rocketplan_android.data.model.offline.EquipmentRoomUpdateRequest
 import com.example.rocketplan_android.data.model.offline.LocationDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogDto
 import com.example.rocketplan_android.data.model.offline.MoistureLogRequest
@@ -62,6 +65,9 @@ import com.example.rocketplan_android.util.UuidUtils
 internal fun now(): Date = Date()
 
 internal fun Date?.toApiTimestamp(): String? = this?.let(DateUtils::formatApiDate)
+
+/** RP-FR-030 — date-only (`yyyy-MM-dd`, UTC) rendering for placement date corrections. */
+internal fun Date?.toApiDateOnly(): String? = this?.let(DateUtils::formatApiDateOnly)
 
 internal fun SyncCheckpointStore.updatedSinceParam(key: String): String? =
     getCheckpoint(key)?.let { DateUtils.formatApiDate(it) }
@@ -688,15 +694,19 @@ internal fun DamageMaterialDto.toMaterialEntity(): OfflineMaterialEntity {
 }
 
 internal fun EquipmentDto.toEntity(
-    existing: OfflineEquipmentEntity? = null
+    existing: OfflineEquipmentEntity? = null,
+    localProjectId: Long? = null,
+    localRoomId: Long? = null
 ): OfflineEquipmentEntity {
     val timestamp = now()
     return OfflineEquipmentEntity(
         equipmentId = existing?.equipmentId ?: id,
         serverId = id,
+        catalogServerId = equipmentId ?: existing?.catalogServerId,
+        catalogUuid = existing?.catalogUuid,
         uuid = uuid ?: existing?.uuid ?: UuidUtils.generateUuidV7(),
-        projectId = projectId,
-        roomId = roomId,
+        projectId = localProjectId ?: existing?.projectId ?: projectId,
+        roomId = localRoomId ?: existing?.roomId ?: roomId,
         type = type ?: "equipment",
         brand = brand,
         model = model,
@@ -716,24 +726,29 @@ internal fun EquipmentDto.toEntity(
     )
 }
 
-internal fun OfflineEquipmentEntity.toRequest(
-    projectServerId: Long,
-    roomServerId: Long?,
-    updatedAtOverride: String? = null
-): EquipmentRequest =
-    EquipmentRequest(
-        projectId = projectServerId,
-        roomId = roomServerId,
-        type = type,
-        brand = brand,
-        model = model,
-        serialNumber = serialNumber,
+internal fun OfflineEquipmentEntity.toCatalogRequest(): CreateEquipmentCatalogRequest =
+    CreateEquipmentCatalogRequest(
+        name = type,
+        idempotencyKey = uuid
+    )
+
+internal fun OfflineEquipmentEntity.toAttachRequest(roomServerId: Long): AttachRoomEquipmentRequest =
+    AttachRoomEquipmentRequest(
+        equipmentIds = listOfNotNull(catalogServerId),
         quantity = quantity,
-        status = status,
-        startDate = startDate.toApiTimestamp(),
-        endDate = endDate.toApiTimestamp(),
+        uuid = uuid,
+        roomUuid = null,
         idempotencyKey = uuid,
-        updatedAt = updatedAtOverride ?: updatedAt.toApiTimestamp()
+        dateIn = startDate.toApiTimestamp()
+    )
+
+internal fun OfflineEquipmentEntity.toPivotUpdateRequest(updatedAtOverride: String? = null): EquipmentRoomUpdateRequest =
+    EquipmentRoomUpdateRequest(
+        quantity = quantity,
+        duration = null,
+        dateIn = startDate.toApiTimestamp(),
+        dateOut = endDate.toApiTimestamp(),
+        updatedAt = updatedAtOverride ?: serverUpdatedAt?.toApiTimestamp() ?: updatedAt.toApiTimestamp()
     )
 
 internal fun NoteDto.toEntity(

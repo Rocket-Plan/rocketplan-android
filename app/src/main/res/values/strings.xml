@@ -621,6 +621,72 @@
     <string name="serialized_equipment_retire_confirm">Retire %1$s? This removes it from the pool and can\'t be undone.</string>
     <string name="equipment_mode_changed">Equipment mode changed. Please wait while this screen updates.</string>
     <string name="serialized_equipment_unavailable">Equipment mode is still loading for this company.</string>
+    <!-- RP-FR-026 company asset pool -->
+    <string name="serialized_pool_title">Equipment pool</string>
+    <string name="serialized_pool_search_hint">Search by name, serial, or tag</string>
+    <string name="serialized_pool_empty">No equipment matches.</string>
+    <string name="serialized_pool_filter_all">All</string>
+    <string name="serialized_pool_filter_available">Available</string>
+    <string name="serialized_pool_filter_deployed">Deployed</string>
+    <string name="serialized_pool_filter_maintenance">Maintenance</string>
+    <string name="serialized_pool_filter_retired">Retired</string>
+    <string name="serialized_pool_details">Details</string>
+    <string name="serialized_pool_registered">Unit registered.</string>
+    <string name="serialized_pool_stale_cache">Showing saved data — couldn\'t refresh from the server.</string>
+    <!-- RP-FR-029 edit -->
+    <string name="serialized_equipment_edit">Edit unit</string>
+    <string name="serialized_equipment_edit_serial_number">Serial number</string>
+    <string name="serialized_equipment_edit_asset_tag">Asset tag</string>
+    <string name="serialized_equipment_edit_status">Status</string>
+    <string name="serialized_equipment_edit_note">Note</string>
+    <string name="serialized_equipment_edit_manufacturer">Manufacturer</string>
+    <string name="serialized_equipment_edit_model">Model</string>
+    <string name="serialized_equipment_edit_vendor">Vendor</string>
+    <string name="serialized_equipment_edit_purchase_date">Purchase date</string>
+    <string name="serialized_equipment_edit_purchase_price">Purchase price</string>
+    <string name="serialized_equipment_edit_warranty_expires">Warranty expires</string>
+    <string name="serialized_equipment_edit_rental_rate">Rental day rate</string>
+    <string name="serialized_equipment_edit_maintenance_blocked">Check the unit out first to change its status to maintenance.</string>
+    <string name="serialized_equipment_edit_optional_section">Optional</string>
+    <string name="serialized_equipment_status_available">Available</string>
+    <string name="serialized_equipment_status_maintenance">Maintenance</string>
+    <string name="serialized_equipment_edit_success">Unit updated.</string>
+    <string name="serialized_equipment_edit_failed">Could not update unit. Please try again.</string>
+    <string name="serialized_equipment_edit_invalid_price">Purchase price must be a valid number.</string>
+    <string name="serialized_equipment_edit_invalid_rate">Rental day rate must be a valid number.</string>
+
+    <!-- RP-FR-027: per-unit serialized asset detail screen -->
+    <string name="serialized_detail_title">Unit details</string>
+    <string name="serialized_detail_metadata_header">Details</string>
+    <string name="serialized_detail_placement_header">Current placement</string>
+    <string name="serialized_detail_placement_room">Room</string>
+    <string name="serialized_detail_placement_project">Project</string>
+    <string name="serialized_detail_placement_date_in">Deployed on</string>
+    <string name="serialized_detail_actions_header">Actions</string>
+    <string name="serialized_detail_view_history">View history</string>
+    <string name="serialized_detail_not_found">This unit is no longer available.</string>
+    <string name="serialized_detail_no_rooms">No rooms available to deploy to.</string>
+    <string name="serialized_detail_action_deploy_failed">Couldn\'t deploy — unit isn\'t available.</string>
+    <string name="serialized_detail_action_move_failed">Couldn\'t move this unit.</string>
+    <string name="serialized_detail_action_check_out_failed">Nothing to check out.</string>
+    <string name="serialized_detail_action_retire_failed">Couldn\'t retire this unit.</string>
+
+    <!-- RP-FR-028: placement-history screen -->
+    <string name="serialized_history_title">Placement history</string>
+    <string name="serialized_history_currently_deployed">Currently deployed</string>
+    <string name="serialized_history_unknown_room">Unknown room</string>
+    <string name="serialized_history_empty">This unit has no placement history yet.</string>
+    <!-- RP-FR-030 / RP-FR-031 — closed-placement row actions -->
+    <string name="serialized_history_edit_dates">Edit dates</string>
+    <string name="serialized_history_delete">Delete</string>
+    <string name="serialized_history_edit_dates_title">Correct placement dates</string>
+    <string name="serialized_history_edit_date_in">Deploy date</string>
+    <string name="serialized_history_edit_date_out">Check-out date</string>
+    <string name="serialized_history_correct_failed">Couldn\'t update the placement dates. Please try again.</string>
+    <string name="serialized_history_delete_confirm_title">Delete placement?</string>
+    <string name="serialized_history_delete_confirm">Delete this placement record? This removes it from the unit\'s history and can\'t be undone.</string>
+    <string name="serialized_history_delete_failed">Couldn\'t delete the placement. Only checked-out placements can be deleted.</string>
+
     <string name="save">Save</string>
     <string name="room_photos_load_error">Could not load photos. Check your connection and retry.</string>
 
@@ -778,6 +844,9 @@
     <string name="project_status_paid">Paid</string>
     <string name="project_status_recon">Recon</string>
     <string name="projects_tab_my_projects">My Projects</string>
+    <string name="rocketdry_total_equipment">Total Equipment</string>
+    <string name="projects_search_hint">Search projects</string>
+    <string name="projects_no_search_results">No projects match your search</string>
     <string name="projects_uploading_title">Uploading photos</string>
     <string name="projects_uploading_progress">Uploading (%1$d%%)</string>
     <string name="projects_uploading_paused">Paused</string>

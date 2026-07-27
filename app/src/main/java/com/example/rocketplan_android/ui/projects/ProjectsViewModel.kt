@@ -33,6 +33,18 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
     private val _uiState = MutableStateFlow<ProjectsUiState>(ProjectsUiState.Loading)
     val uiState: StateFlow<ProjectsUiState> = _uiState
 
+    /**
+     * RP-FR-034: shared project-list search query (iOS parity). Client-side filter over the cached
+     * list, applied by each tab's [ProjectListFragment] — works offline, no API change. Lives on the
+     * shared (activity-scoped) VM so the query persists across tabs.
+     */
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
+
     private val _isRefreshing = MutableLiveData(false)
     val isRefreshing: LiveData<Boolean> = _isRefreshing
     private val _activeAssemblyUpload = MutableStateFlow<AssemblyUploadBubbleState?>(null)
@@ -77,7 +89,12 @@ class ProjectsViewModel(application: Application) : AndroidViewModel(application
             }.collect { data ->
                 Log.d(TAG, "📊 Received ${data.projects.size} projects from database for company ${data.companyId ?: "unknown"} (assigned=${data.assignedIds.size}, syncCompleted=${data.syncCompleted}, assignedLoaded=${data.assignedLoaded})")
 
-                val mappedProjects = data.projects.map { it.toListItem() }
+                // Newest projects first (by server-preserved createdAt), matching iOS
+                // (ProjectListPageViewModel sorts createdAt descending). filter/associate below
+                // preserve this order for My Projects and each status tab.
+                val mappedProjects = data.projects
+                    .sortedByDescending { it.createdAt }
+                    .map { it.toListItem() }
                 val myProjects = mappedProjects.filter { data.assignedIds.contains(it.projectId) }
                 val projectsByStatus = ProjectStatus.orderedStatuses.associateWith { status ->
                     mappedProjects.filter { it.matchesStatus(status) }

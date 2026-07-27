@@ -5,6 +5,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="10dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
     app:cardBackgroundColor="@color/white"
     app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
@@ -51,31 +54,13 @@
                 tools:text="SN AM-0001 · Tag TAG-1" />
         </LinearLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/serializedSecondaryButton"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
+        <ImageView
             android:layout_width="wrap_content"
-            android:layout_height="@dimen/button_height_small"
-            android:paddingHorizontal="12dp"
-            android:textColor="@color/main_purple"
-            android:textSize="@dimen/text_size_caption"
-            android:visibility="gone"
-            app:cornerRadius="16dp"
-            tools:text="Move"
-            tools:visibility="visible" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/serializedPrimaryButton"
-            style="@style/Widget.MaterialComponents.Button.TextButton"
-            android:layout_width="wrap_content"
-            android:layout_height="@dimen/button_height_small"
-            android:layout_marginStart="4dp"
-            android:paddingHorizontal="12dp"
-            android:textColor="@color/main_purple"
-            android:textSize="@dimen/text_size_caption"
-            app:backgroundTint="@color/light_purple"
-            app:cornerRadius="16dp"
-            tools:text="Deploy" />
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:contentDescription="@string/serialized_pool_details"
+            android:src="@drawable/ic_chevron_right"
+            app:tint="@color/light_text_rp" />
     </LinearLayout>
 
 </com.google.android.material.card.MaterialCardView>
